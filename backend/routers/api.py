@@ -14,6 +14,7 @@ from backend import queries
 from backend.config import APP_VERSION
 from backend.deps import get_db
 from pipeline.db import Evidence
+from pipeline.analytics import derive_all_switch_waves, derive_switch_waves
 from pipeline.export import CODE_LICENSE, DATA_LICENSE, PROJECT_URL
 from pipeline.poller import run_poll_cycle, source_health
 
@@ -243,3 +244,240 @@ def admin_poll(
 @router.get("/health")
 def health(db: Session = Depends(get_db)):
     return {"status": "ok", "sources": source_health(db)}
+
+
+@router.get("/analytics/waves")
+def analytics_waves(
+    chamber: str | None = Query(None, pattern="^(deputies|senate)$"),
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    window_days: int = Query(30, ge=1, le=180),
+    min_switches: int = Query(3, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """Detect party switch waves in the given chamber/legislature."""
+    count = derive_switch_waves(
+        db,
+        chamber=chamber,
+        legislature=legislature,
+        window_days=window_days,
+        min_switches=min_switches,
+    )
+    return {"status": "ok", "created": count}
+
+
+@router.get("/analytics/waves/recompute")
+def analytics_waves_recompute(
+    db: Session = Depends(get_db),
+):
+    """Recompute all switch waves from scratch."""
+    from pipeline.analytics import derive_all_switch_waves
+    count = derive_all_switch_waves(db)
+    return {"status": "ok", "created": count}
+
+
+@router.get("/analytics/switch-waves")
+def get_switch_waves(
+    chamber: str | None = Query(None, pattern="^(deputies|senate)$"),
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    db: Session = Depends(get_db),
+):
+    """Get stored switch waves."""
+    from pipeline.db import SwitchWave
+    from sqlalchemy import select
+    
+    stmt = select(SwitchWave).order_by(SwitchWave.start_date.desc())
+    if chamber:
+        stmt = stmt.where(SwitchWave.chamber == chamber)
+    if legislature:
+        stmt = stmt.where(SwitchWave.legislature == legislature)
+    
+    waves = db.scalars(stmt).all()
+    return [
+        {
+            "id": w.id,
+            "label": w.label,
+            "start_date": w.start_date.isoformat() if w.start_date else None,
+            "end_date": w.end_date.isoformat() if w.end_date else None,
+            "switch_count": w.switch_count,
+            "trigger_type": w.trigger_type,
+            "trigger_event": w.trigger_event,
+            "legislature": w.legislature,
+            "chamber": w.chamber,
+            "created_at": w.created_at.isoformat() if w.created_at else None,
+        }
+        for w in waves
+    ]
+
+
+@router.get("/analytics/party-cohesion")
+def get_party_cohesion(
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    db: Session = Depends(get_db),
+):
+    """Get party cohesion index per party per legislature."""
+    from pipeline.analytics import derive_party_cohesion
+    
+    # Run the analysis and return results
+    from pipeline.analytics import derive_party_cohesion as run_cohesion
+    from pipeline.db import Organization, Event, KeyEvent, Membership
+    from sqlalchemy import select
+    from collections import defaultdict
+    
+    stmt = select(Event).where(Event.type == "switch_party")
+    if legislature:
+        leg_key = db.scalars(
+            select(KeyEvent).where(KeyEvent.type == "legislature", KeyEvent.label == legislature)
+        ).first()
+        if leg_key and leg_key.start_date and leg_key.end_date:
+            stmt = stmt.where(
+                Event.event_date >= leg_key.start_date,
+                Event.event_date <= leg_key.end_date
+            )
+    stmt = stmt.where(Event.event_date.is_not(None))
+    
+    switches = list(db.scalars(stmt))
+    
+    from collections import defaultdict
+    party_switches: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    
+    for sw in switches:
+        if sw.to_org_id:
+            org = db.get(Organization, sw.to_org_id)
+            if org and org.classification == "party":
+                party_switches[sw.to_org_id][sw.person_id] += 1
+            elif org and org.classification == "group" and org.on_behalf_of_id:
+                party_switches[org.on_behalf_of_id][sw.person_id] += 1
+    
+    results = []
+    for party_id, person_switches in party_switches.items():
+        party = db.get(Organization, party_id)
+        if not party or party.classification != "party":
+            continue
+        
+        party_memberships = db.scalars(
+            select(Membership)
+            .join(Organization, Organization.id == Membership.org_id)
+            .where(Organization.id == party_id)
+        ).all()
+        
+        total_switches = sum(person_switches.values())
+        num_switchers = len(person_switches)
+        num_members = len(set(m.person_id for m in party_memberships))
+        
+        if num_members == 0:
+            continue
+        
+        total_tenure_years = 0
+        for m in party_memberships:
+            if m.start_date and m.end_date:
+                total_tenure_years += (m.end_date - m.start_date).days / 365.25
+            elif m.start_date:
+                total_tenure_years += (date.today() - m.start_date).days / 365.25
+        
+        avg_tenure = total_tenure_years / num_members if num_members > 0 else 0
+        
+        if avg_tenure == 0:
+            continue
+        
+        switch_rate = total_switches / (num_members * avg_tenure) if num_members * avg_tenure > 0 else 0
+        
+        party_label = party.short_name or party.name or "Unknown"
+        results.append({
+            "party_id": party.id,
+            "party_name": party_label,
+            "members": num_members,
+            "switches": total_switches,
+            "switchers": num_switchers,
+            "avg_tenure_years": round(avg_tenure, 1),
+            "switch_rate_per_mp_per_year": round(switch_rate, 4),
+        })
+    
+    return {"status": "ok", "data": results}
+
+
+@router.get("/analytics/cross-chamber")
+def get_cross_chamber(
+    db: Session = Depends(get_db),
+):
+    """Get MPs with memberships in both chambers."""
+    from pipeline.analytics import derive_cross_chamber_careers
+    from pipeline.db import Person, Membership
+    from sqlalchemy import select
+    
+    stmt = select(Person.id, Person.canonical_name).distinct()
+    persons = list(db.execute(stmt).all())
+    
+    results = []
+    for pid, name in persons:
+        chs = db.scalars(
+            select(Membership.chamber)
+            .where(Membership.person_id == pid)
+            .distinct()
+        ).all()
+        if len(chs) > 1:
+            results.append({
+                "person_id": pid,
+                "name": name,
+                "chambers": chs,
+            })
+    
+    return {"status": "ok", "count": len(results), "data": results}
+
+
+@router.get("/analytics/generational-shift")
+def get_generational_shift(
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    db: Session = Depends(get_db),
+):
+    """Get generational shift data per party."""
+    from pipeline.db import Person, Membership, Organization, KeyEvent
+    from sqlalchemy import select
+    
+    stmt = select(Person.id, Person.canonical_name, Person.birth_date)
+    if legislature:
+        leg_key = db.scalars(
+            select(KeyEvent).where(KeyEvent.type == "legislature", KeyEvent.label == legislature)
+        ).first()
+        if leg_key and leg_key.start_date and leg_key.end_date:
+            stmt = stmt.where(
+                Person.id.in_(
+                    select(Membership.person_id)
+                    .where(Membership.start_date <= leg_key.end_date)
+                    .where((Membership.end_date.is_(None)) | (Membership.end_date >= leg_key.start_date))
+                )
+            )
+    
+    persons = list(db.execute(stmt).all())
+    ages_by_party: dict[str, list[int]] = {}
+    
+    for pid, name, bdate in persons:
+        if not bdate:
+            continue
+        age = (date.today() - bdate).days / 365.25
+        
+        party_mems = db.scalars(
+            select(Membership)
+            .join(Organization, Organization.id == Membership.org_id)
+            .where(Membership.person_id == pid)
+            .where(Organization.classification == "party")
+        ).all()
+        
+        for pm in party_mems:
+            if pm.org and pm.org.short_name:
+                party_key = pm.org.short_name
+                ages_by_party.setdefault(party_key, []).append(int(age))
+    
+    results = []
+    for party, ages in ages_by_party.items():
+        if ages:
+            avg_age = sum(ages) / len(ages)
+            sorted_ages = sorted(ages)
+            median_age = sorted_ages[len(sorted_ages) // 2]
+            results.append({
+                "party": party,
+                "mps_with_birth_dates": len(ages),
+                "avg_age": round(avg_age, 1),
+                "median_age": median_age,
+            })
+    
+    return {"status": "ok", "data": results}

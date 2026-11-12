@@ -54,6 +54,7 @@ EVENT_TYPES = (
     "group_renamed", "committee_join", "committee_leave", "role_change",
     "mandate_start", "mandate_end",
 )
+WAVE_TRIGGERS = ("election", "government_formation", "party_congress", "coalition_breakup", "other")
 RUN_STATUS = ("SUCCESS", "FAILURE", "DATA_UNAVAILABLE", "DATA_UNCHANGED")
 MATCH_STATUS = ("auto", "review", "unmatched", "merged")
 
@@ -259,6 +260,25 @@ class Event(Base):
     summary_ro: Mapped[str | None] = mapped_column(Text, nullable=True)
     summary_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     dedup_key: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
+
+
+class SwitchWave(Base):
+    """Cluster of party switches detected within a time window, optionally labeled with a trigger event."""
+    __tablename__ = "switch_wave"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    label: Mapped[str | None] = mapped_column(String(255), nullable=True)  # e.g., "Post-2020 election wave"
+    start_date: Mapped[date] = mapped_column(Date, index=True)
+    end_date: Mapped[date] = mapped_column(Date, index=True)
+    switch_count: Mapped[int] = mapped_column(Integer, default=0)
+    trigger_type: Mapped[str | None] = mapped_column(String(32), nullable=True)  # WAVE_TRIGGERS
+    trigger_event: Mapped[str | None] = mapped_column(Text, nullable=True)  # human-readable description
+    legislature: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
+    chamber: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_switch_wave_leg_chamber", "legislature", "chamber"),
+    )
 
 
 class KeyEvent(Base):
