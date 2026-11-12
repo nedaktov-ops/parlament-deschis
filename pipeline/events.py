@@ -162,10 +162,12 @@ def derive_org_events(session: Session, org: Organization) -> int:
 
 
 def _party_memberships(session: Session, chamber: str | None) -> list[Membership]:
+    """Get all group memberships that are on behalf of a party."""
     stmt = (
         select(Membership)
         .join(Organization, Organization.id == Membership.org_id)
-        .where(Organization.classification == "party")
+        .where(Organization.classification == "group")
+        .where(Membership.on_behalf_of_id.isnot(None))
     )
     if chamber:
         stmt = stmt.where(Membership.chamber == chamber)
@@ -201,15 +203,19 @@ def derive_party_events(session: Session, chamber: str | None = None) -> int:
         ms.sort(key=lambda m: (m.start_date, m.end_date or date.max))
         pname = person_name(pid)
         for i, m in enumerate(ms):
-            to_label = org_name(m.org_id)
+            # Use on_behalf_of_id (party ID) for party events
+            party_id = m.on_behalf_of_id
+            if not party_id:
+                continue
+            to_label = org_name(party_id)
             prev = ms[i - 1] if i > 0 else None
             # A switch: previous tenure ended and this one begins.
-            if prev is not None and prev.org_id != m.org_id:
-                frm_label = org_name(prev.org_id)
-                key = f"switch_party:{pid}:{prev.org_id}:{m.org_id}:{m.start_date.isoformat()}"
+            if prev is not None and prev.on_behalf_of_id != party_id:
+                frm_label = org_name(prev.on_behalf_of_id)
+                key = f"switch_party:{pid}:{prev.on_behalf_of_id}:{party_id}:{m.start_date.isoformat()}"
                 ev = _upsert_event(
                     session, dedup_key=key, type="switch_party", person_id=pid,
-                    chamber=m.chamber, from_org_id=prev.org_id, to_org_id=m.org_id,
+                    chamber=m.chamber, from_org_id=prev.on_behalf_of_id, to_org_id=party_id,
                     event_date=m.start_date, precision=m.start_precision,
                     reason="CHANGED_PARTY", confidence=m.confidence,
                     group_acronym_at_event=to_label,
@@ -218,10 +224,10 @@ def derive_party_events(session: Session, chamber: str | None = None) -> int:
                 )
                 created += ev is not None
             elif prev is None:
-                key = f"join_party:{pid}:{m.org_id}:{m.start_date.isoformat()}"
+                key = f"join_party:{pid}:{party_id}:{m.start_date.isoformat()}"
                 ev = _upsert_event(
                     session, dedup_key=key, type="join", person_id=pid,
-                    chamber=m.chamber, to_org_id=m.org_id, event_date=m.start_date,
+                    chamber=m.chamber, to_org_id=party_id, event_date=m.start_date,
                     precision=m.start_precision, reason="GENERAL_ELECTION",
                     confidence=m.confidence, group_acronym_at_event=to_label,
                     summary_ro=_summary_ro("join", pname, None, to_label),
@@ -231,11 +237,11 @@ def derive_party_events(session: Session, chamber: str | None = None) -> int:
             # A leave: this tenure closed and no later tenure in the same party.
             if m.end_date is not None:
                 successor = ms[i + 1] if i + 1 < len(ms) else None
-                if successor is None or successor.org_id != m.org_id:
-                    key = f"leave_party:{pid}:{m.org_id}:{m.end_date.isoformat()}"
+                if successor is None or successor.on_behalf_of_id != party_id:
+                    key = f"leave_party:{pid}:{party_id}:{m.end_date.isoformat()}"
                     ev = _upsert_event(
                         session, dedup_key=key, type="leave", person_id=pid,
-                        chamber=m.chamber, from_org_id=m.org_id, event_date=m.end_date,
+                        chamber=m.chamber, from_org_id=party_id, event_date=m.end_date,
                         precision=m.end_precision, reason=m.end_reason or "UNKNOWN",
                         confidence=m.confidence, group_acronym_at_event=to_label,
                         summary_ro=_summary_ro("leave", pname, to_label, None),
