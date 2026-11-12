@@ -1,0 +1,11 @@
+{
+  "PSD": {"name_ro": "Partidul Social Democrat", "name_en": "Social Democratic Party", "color": "#E63946"},
+  "PNL": {"name_ro": "Partidul Național Liberal", "name_en": "National Liberal Party", "color": "#F4A261"},
+  "USR": {"name_ro": "Uniunea Salvați România", "name_en": "Save Romania Union", "color": "#2A9D8F"},
+  "AUR": {"name_ro": "Alianța pentru Unirea Românilor", "name_en": "Alliance for the Union of Romanians", "color": "#E9C46A"},
+  "UDMR": {"name_ro": "Uniunea Democrată Maghiară din România", "name_en": "Democratic Alliance of Hungarians in Romania", "color": "#457B9D"},
+  "SOS": {"name_ro": "SOS România", "name_en": "SOS Romania", "color": "#8D5B4C"},
+  "UPR": {"name_ro": "Uniţi pentru România", "name_en": "United for Romania", "color": "#6A4C93", "alt_labels": ["POT"]},
+  "MINORITATI": {"name_ro": "Grupul minorităților naționale", "name_en": "National minorities group", "color": "#999999"},
+  "NEAFILIATI": {"name_ro": "Neafiliați", "name_en": "Unaffiliated", "color": "#BBBBBB"}
+}

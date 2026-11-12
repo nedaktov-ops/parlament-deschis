@@ -1,0 +1,49 @@
+[project]
+name = "parlament-deschis"
+version = "0.1.0"
+description = "Romanian Parliament transparency tracker — party/group/committee memberships 1990→present, dated and source-cited."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "AGPL-3.0-or-later" }
+dependencies = [
+    "sqlalchemy>=2.0",
+    "requests>=2.32",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.0",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "apscheduler>=3.10",
+    "rapidfuzz>=3.9",
+    "python-dateutil>=2.9",
+    "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+parlament = "pipeline.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pipeline", "backend"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

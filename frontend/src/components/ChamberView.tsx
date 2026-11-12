@@ -1,0 +1,44 @@
+import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { api } from "../api/client";
+import GroupLegend from "./GroupLegend";
+import Hemicycle from "./Hemicycle";
+
+export default function ChamberView({
+  chamber,
+  asOf,
+  onSelect,
+}: {
+  chamber: "deputies" | "senate";
+  asOf: string;
+  onSelect: (id: string) => void;
+}) {
+  const { t } = useTranslation();
+  const data = useQuery({
+    queryKey: ["chamber", chamber, asOf],
+    queryFn: () => api.chamber(chamber, asOf),
+  });
+
+  return (
+    <div className="card p-4 flex flex-col">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="font-semibold">{t(chamber)}</h2>
+        <span className="text-xs text-slate-400">
+          {data.data?.total ?? 0} {t("totalSeats")}
+        </span>
+      </div>
+      {data.isLoading && <div className="text-slate-500 text-sm py-8">{t("loading")}</div>}
+      {data.data && data.data.total === 0 && (
+        <div className="text-slate-500 text-sm py-8">{t("noData")}</div>
+      )}
+      {data.data && data.data.total > 0 && (
+        <>
+          <Hemicycle groups={data.data.groups} onSelect={onSelect} />
+          <div className="mt-3">
+            <GroupLegend groups={data.data.groups} />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

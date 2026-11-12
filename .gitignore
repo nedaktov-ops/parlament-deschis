@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Data (DB + snapshots are generated; reference data is committed)
+data/parlament.db
+data/parlament.db-*
+data/snapshots/
+data/exports/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+
+# Env / editor
+.env
+.env.local
+.DS_Store
+.idea/
+.vscode/
