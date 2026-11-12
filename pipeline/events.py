@@ -159,3 +159,88 @@ def derive_org_events(session: Session, org: Organization) -> int:
             created += ev is not None
     session.flush()
     return created
+
+
+def _party_memberships(session: Session, chamber: str | None) -> list[Membership]:
+    stmt = (
+        select(Membership)
+        .join(Organization, Organization.id == Membership.org_id)
+        .where(Organization.classification == "party")
+    )
+    if chamber:
+        stmt = stmt.where(Membership.chamber == chamber)
+    return list(session.scalars(stmt))
+
+
+def derive_party_events(session: Session, chamber: str | None = None) -> int:
+    """Compute join/switch_party/leave events from party tenures. Returns count
+    of newly created events."""
+    memberships = _party_memberships(session, chamber)
+    by_person: dict[str, list[Membership]] = {}
+    for m in memberships:
+        by_person.setdefault(m.person_id, []).append(m)
+
+    org_cache: dict[str, Organization] = {}
+    person_cache: dict[str, Person] = {}
+
+    def org_name(oid):
+        if oid not in org_cache:
+            org_cache[oid] = session.get(Organization, oid)
+        o = org_cache[oid]
+        return (o.short_name or o.name) if o else "?"
+
+    def person_name(pid):
+        if pid not in person_cache:
+            person_cache[pid] = session.get(Person, pid)
+        p = person_cache[pid]
+        return p.canonical_name if p else "?"
+
+    created = 0
+    for pid, ms in by_person.items():
+        ms = [m for m in ms if m.start_date is not None]
+        ms.sort(key=lambda m: (m.start_date, m.end_date or date.max))
+        pname = person_name(pid)
+        for i, m in enumerate(ms):
+            to_label = org_name(m.org_id)
+            prev = ms[i - 1] if i > 0 else None
+            # A switch: previous tenure ended and this one begins.
+            if prev is not None and prev.org_id != m.org_id:
+                frm_label = org_name(prev.org_id)
+                key = f"switch_party:{pid}:{prev.org_id}:{m.org_id}:{m.start_date.isoformat()}"
+                ev = _upsert_event(
+                    session, dedup_key=key, type="switch_party", person_id=pid,
+                    chamber=m.chamber, from_org_id=prev.org_id, to_org_id=m.org_id,
+                    event_date=m.start_date, precision=m.start_precision,
+                    reason="CHANGED_PARTY", confidence=m.confidence,
+                    group_acronym_at_event=to_label,
+                    summary_ro=_summary_ro("switch_group", pname, frm_label, to_label),
+                    summary_en=_summary_en("switch_group", pname, frm_label, to_label),
+                )
+                created += ev is not None
+            elif prev is None:
+                key = f"join_party:{pid}:{m.org_id}:{m.start_date.isoformat()}"
+                ev = _upsert_event(
+                    session, dedup_key=key, type="join", person_id=pid,
+                    chamber=m.chamber, to_org_id=m.org_id, event_date=m.start_date,
+                    precision=m.start_precision, reason="GENERAL_ELECTION",
+                    confidence=m.confidence, group_acronym_at_event=to_label,
+                    summary_ro=_summary_ro("join", pname, None, to_label),
+                    summary_en=_summary_en("join", pname, None, to_label),
+                )
+                created += ev is not None
+            # A leave: this tenure closed and no later tenure in the same party.
+            if m.end_date is not None:
+                successor = ms[i + 1] if i + 1 < len(ms) else None
+                if successor is None or successor.org_id != m.org_id:
+                    key = f"leave_party:{pid}:{m.org_id}:{m.end_date.isoformat()}"
+                    ev = _upsert_event(
+                        session, dedup_key=key, type="leave", person_id=pid,
+                        chamber=m.chamber, from_org_id=m.org_id, event_date=m.end_date,
+                        precision=m.end_precision, reason=m.end_reason or "UNKNOWN",
+                        confidence=m.confidence, group_acronym_at_event=to_label,
+                        summary_ro=_summary_ro("leave", pname, to_label, None),
+                        summary_en=_summary_en("leave", pname, to_label, None),
+                    )
+                    created += ev is not None
+    session.flush()
+    return created

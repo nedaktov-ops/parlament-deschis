@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .db import PipelineRun, get_session
-from .events import derive_group_events
+from .events import derive_group_events, derive_party_events
 from .sources.cdep import CdepSource
 from .sources.client import PoliteClient
 from .sources.senat import SenatSource
@@ -40,6 +40,7 @@ def run_poll_cycle(session: Session, legislature: str = DEFAULT_LEGISLATURE,
         log.exception("senat poll failed")
         results["senat"] = {"error": str(exc)}
     results["new_events"] = derive_group_events(session)
+    results["new_party_events"] = derive_party_events(session)
     session.commit()
     return results
 
