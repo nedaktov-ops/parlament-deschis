@@ -201,6 +201,18 @@ class Evidence(Base):
     observed_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 
+class AssetDeclaration(Base):
+    __tablename__ = "asset_declaration"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    person_id: Mapped[str] = mapped_column(ForeignKey("person.id"), index=True)
+    year: Mapped[int] = mapped_column(Integer, index=True)
+    asset_type: Mapped[str] = mapped_column(String(64))
+    value_ron: Mapped[float | None] = mapped_column(Float, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
 class Fragment(Base):
     __tablename__ = "fragment"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)

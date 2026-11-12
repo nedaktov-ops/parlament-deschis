@@ -34,6 +34,7 @@ from .coverage import coverage_snapshot, refresh_coverage
 from .parse.cdep_group import parse_group_ledger
 from .parse.senat_profile import parse_senator_profile
 from .approxdate import parse_ro_date
+from .assets import process_assets_directory
 
 FX = Path(__file__).parent.parent / "tests" / "fixtures"
 REF = Path(__file__).parent.parent / "data" / "reference"
@@ -217,6 +218,13 @@ def cmd_enrich(args) -> int:
     return 0
 
 
+def cmd_assets(args) -> int:
+    """Extract asset declarations from PDFs in data/assets/{year}/"""
+    result = process_assets_directory(args.year, dry_run=args.dry_run)
+    print(f"Result: {result}")
+    return 0
+
+
 def cmd_coverage(args) -> int:
     """Derive and print coverage matrix; optionally refresh coverage table."""
     session = get_session(args.db)
@@ -362,6 +370,12 @@ def main(argv=None) -> int:
     p_enrich.add_argument("--apply", action="store_false", dest="dry_run", help="write changes to DB")
     p_enrich.add_argument("--legislature", default="2024", help="legislature to enrich")
     p_enrich.set_defaults(fn=cmd_enrich)
+
+    p_assets = sub.add_parser("assets", help="extract asset declarations from PDFs")
+    p_assets.add_argument("--year", type=int, required=True, help="year to process")
+    p_assets.add_argument("--dry-run", action="store_true", help="print actions without writing")
+    p_assets.add_argument("--apply", action="store_false", dest="dry_run", help="write to DB")
+    p_assets.set_defaults(fn=cmd_assets)
 
     p_cov = sub.add_parser("coverage", help="derive and print coverage matrix")
     p_cov.add_argument("--refresh", action="store_true", help="write to coverage table")
