@@ -183,6 +183,41 @@ def about(db: Annotated[Session, Depends(get_db)]):
     }
 
 
+@router.get("/party/{short_name}")
+def party_profile(
+    short_name: str,
+    as_of: str | None = None,
+    db: Session = Depends(get_db),
+):
+    d = _parse_date(as_of, date.today())
+    return queries.get_party_profile(db, short_name, d)
+
+
+@router.get("/party/{short_name}/movements")
+def party_movements(
+    short_name: str,
+    as_of: str | None = None,
+    limit: int = Query(50, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    d = _parse_date(as_of, date.today())
+    return queries.get_party_movements(db, short_name, d, limit)
+
+
+@router.get("/party/{short_name}/timeline")
+def party_timeline(
+    short_name: str,
+    from_date: str = Query(..., alias="from"),
+    to: str = Query(..., alias="to"),
+    db: Session = Depends(get_db),
+):
+    s = _parse_date(from_date, date(2024, 12, 21))
+    e = _parse_date(to, date.today())
+    if e < s:
+        raise HTTPException(status_code=422, detail="to must be >= from")
+    return queries.get_party_timeline(db, short_name, s, e)
+
+
 @router.post("/admin/poll")
 def admin_poll(
     db: Annotated[Session, Depends(get_db)],

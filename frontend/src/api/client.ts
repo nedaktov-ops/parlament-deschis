@@ -156,6 +156,43 @@ export interface AboutResponse {
   generated_at: string;
 }
 
+export interface PartyProfileResponse {
+  id: string;
+  name: string;
+  short_name: string | null;
+  color: string | null;
+  wikidata_qid: string | null;
+  current_members: number | null;
+  switches_in: number | null;
+  switches_out: number | null;
+  net_change: number | null;
+}
+
+export interface PartyMovementResponse {
+  id: string;
+  type: string;
+  event_date: string;
+  chamber: string | null;
+  person: { id: string; name: string } | null;
+  from_org: OrgBrief | null;
+  to_org: OrgBrief | null;
+  summary_ro: string | null;
+  summary_en: string | null;
+}
+
+export interface PartyTimelineResponse {
+  dates: string[];
+  groups: Record<string, number[]>;
+  total: number[];
+}
+
+export interface CommitteeResponse {
+  id: string;
+  name: string;
+  chamber: string;
+  party: OrgBrief | null;
+}
+
 const BASE = "/api";
 
 async function get<T>(path: string): Promise<T> {
@@ -181,6 +218,13 @@ export const api = {
   person: (id: string) => get<PersonDetail>(`/persons/${id}`),
   personHistory: (id: string) =>
     get<PersonHistoryResponse>(`/persons/${encodeURIComponent(id)}/history`),
+  partyProfile: (shortName: string, asOf: string) =>
+    get<PartyProfileResponse>(`/party/${encodeURIComponent(shortName)}?as_of=${asOf}`),
+  partyMovements: (shortName: string, asOf: string, limit = 50) =>
+    get<PartyMovementResponse[]>(`/party/${encodeURIComponent(shortName)}/movements?as_of=${asOf}&limit=${limit}`),
+  partyTimeline: (shortName: string, from: string, to: string) =>
+    get<PartyTimelineResponse>(`/party/${encodeURIComponent(shortName)}/timeline?from=${from}&to=${to}`),
+  committees: (asOf: string) => get<CommitteeResponse[]>(`/committees?as_of=${asOf}`),
   movements: (chamber?: string) =>
     get<EventItem[]>(`/movements${chamber ? `?chamber=${chamber}` : ""}`),
   recentEvents: (limit = 50) => get<EventItem[]>(`/events/recent?limit=${limit}`),

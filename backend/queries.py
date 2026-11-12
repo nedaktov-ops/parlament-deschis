@@ -406,3 +406,134 @@ def get_meta(session: Session) -> dict:
         select(Organization).where(Organization.classification == "group")
     )]
     return {"legislatures": legs, "groups": groups}
+
+def get_party_profile(session: Session, short_name: str, as_of: date) -> dict:
+    """Get party profile with membership counts and switch stats for a given date."""
+    org = session.scalars(
+        select(Organization).where(
+            Organization.short_name == short_name,
+            Organization.classification == "party"
+        )
+    ).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="party not found")
+
+    # Current members at as_of
+    group_memberships = session.scalars(
+        select(Membership)
+        .join(Organization, Organization.id == Membership.org_id)
+        .where(
+            Organization.classification == "group",
+            Membership.on_behalf_of_id == org.id,
+            Membership.chamber.in_(["deputies", "senate"]),
+        )
+    ).all()
+
+    current_members = 0
+    for m in group_memberships:
+        if m.start_date and m.start_date <= as_of and (m.end_date is None or m.end_date > as_of):
+            current_members += 1
+
+    # Switch stats for this party (all time)
+    from sqlalchemy import func
+    switches_in = session.scalar(
+        select(func.count()).select_from(
+            select(Event).where(
+                Event.type == "switch_party",
+                Event.to_org_id == org.id
+            ).subquery()
+        )
+    ) or 0
+
+    switches_out = session.scalar(
+        select(func.count()).select_from(
+            select(Event).where(
+                Event.type == "switch_party",
+                Event.from_org_id == org.id
+            ).subquery()
+        )
+    ) or 0
+
+    return {
+        "id": org.id,
+        "name": org.name,
+        "short_name": org.short_name,
+        "color": org.color,
+        "wikidata_qid": org.wikidata_qid,
+        "current_members": current_members,
+        "switches_in": switches_in,
+        "switches_out": switches_out,
+        "net_change": switches_in - switches_out,
+    }
+
+
+def get_party_movements(session: Session, short_name: str, as_of: date, limit: int = 50) -> list[dict]:
+    """Get movements (join/switch_party/leave) for a specific party."""
+    org = session.scalars(
+        select(Organization).where(
+            Organization.short_name == short_name,
+            Organization.classification == "party"
+        )
+    ).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="party not found")
+
+    stmt = select(Event).where(
+        Event.type.in_(["switch_party", "join", "leave"]),
+        Event.event_date is not None,
+        (Event.from_org_id == org.id) | (Event.to_org_id == org.id)
+    ).order_by(Event.event_date.desc()).limit(limit)
+
+    evs = session.scalars(stmt).all()
+    return [serialize_event(session, e) for e in evs]
+
+
+def get_party_timeline(session: Session, short_name: str, from_date: date, to_date: date) -> dict:
+    """Get group size timeline for a specific party over a date range."""
+    org = session.scalars(
+        select(Organization).where(
+            Organization.short_name == short_name,
+            Organization.classification == "party"
+        )
+    ).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="party not found")
+
+    from pipeline.queries import chamber_composition
+    from datetime import timedelta
+
+    dates = []
+    d = from_date
+    step = 30
+    while d <= to_date:
+        dates.append(d)
+        d += timedelta(days=step)
+    if dates[-1] != to_date:
+        dates.append(to_date)
+
+    groups_series: dict[str, list[int]] = {}
+    totals = []
+
+    for d in dates:
+        comp = chamber_composition(session, "deputies", d)
+        totals.append(sum(b["count"] for b in comp.values()))
+        for short, bucket in comp.items():
+            # Check if this group's party matches our target party by looking up membership
+            m = session.scalars(
+                select(Membership).where(
+                    Membership.org_id == bucket["org_id"],
+                    Membership.on_behalf_of_id == org.id,
+                    Membership.chamber == "deputies",
+                    Membership.start_date <= d,
+                    (Membership.end_date.is_(None)) | (Membership.end_date > d),
+                )
+            ).first()
+            if m:
+                groups_series.setdefault(short, [0] * len(dates))
+                groups_series[short][len(totals) - 1] = bucket["count"]
+
+    return {
+        "dates": [d.isoformat() for d in dates],
+        "total": totals,
+        "groups": groups_series,
+    }
