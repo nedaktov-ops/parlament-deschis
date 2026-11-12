@@ -1,564 +1,338 @@
 # Data Model Reference
 
-The schema is defined in `pipeline/db.py` with SQLAlchemy 2.x and stored in SQLite in WAL
-mode. It follows the Popolo vocabulary where it fits, adds bitemporal observation fields,
-and keeps provenance on every membership.
-
-- Database: `data/parlament.db` by default (`--db PATH` or `PARLAMENT_DB` overrides).
-- Engine pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`,
-  `busy_timeout=5000`.
-- Primary keys are UUID strings generated in Python, not database autoincrement values.
-- Timestamps default to `datetime.now(UTC)` in Python and are stored by SQLite as text.
-- Enum-like columns are plain strings; the allowed values live in `pipeline/db.py` and are
-  enforced by application code, not by database `CHECK` constraints.
+This document describes the SQLAlchemy ORM models in `pipeline/db.py` and their corresponding database tables.
 
 ---
 
-## Relationships at a glance
+## Core Tables
 
-```
-person ──< person_identifier
-   │
-   ├──< person_name
-   ├──< membership >── organization ──< post
-   │        │                │
-   │        │                └── organization.parent_id (self)
-   │        └──< evidence
-   ├──< event >── organization (from/to)
-   └──< merge_audit (winner); loser_id is a plain id, kept for audit
-
-fragment            independent raw snapshot record
-pipeline_run        independent run log per source
-key_event           independent legislature/election markers
-vacancy             chamber/post vacancy marker
-match_review        person_a / person_b proposed match
-coverage            chamber × legislature completeness
-```
-
----
-
-## `person`
-
-One row per real person across terms and chambers.
-
-| Column | Type | Null | Default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | VARCHAR(36) | no | UUID | Primary key. |
-| `canonical_name` | VARCHAR(255) | no | — | Display name as published. |
-| `normalized_name` | VARCHAR(255) | no | — | Lowercase, diacritics-stripped key for matching. |
-| `sort_key` | VARCHAR(255) | yes | — | Order-insensitive token key (`Popescu Ion` = `Ion Popescu`). |
-| `birth_date` | DATE | yes | — | Only when a source states it. |
-| `photo_path` | VARCHAR(512) | yes | — | Optional local photo path. |
-| `wikidata_qid` | VARCHAR(32) | yes | — | Enrichment identifier. |
-| `match_status` | VARCHAR(16) | no | `unmatched` | `auto`, `review`, `unmatched`, `merged`. |
-| `created_at` | DATETIME | no | now (UTC) | Creation timestamp. |
-
-**Indexes:** `normalized_name`, `sort_key`, `wikidata_qid`.
-
-**Relationships:** identifiers and names cascade-delete with the person. Memberships and
-events are *not* cascade-deleted; merges repoint them instead.
-
----
-
-## `person_identifier`
-
-Official or external identifiers, scoped to a legislature when the source id is per-term.
-
-| Column | Type | Null | Default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | VARCHAR(36) | no | UUID | Primary key. |
-| `person_id` | VARCHAR(36) | no | — | FK → `person.id`. |
-| `scheme` | VARCHAR(32) | no | — | `cdep_idm`, `senat_guid`, `ep_uuid`, `wikidata`. |
-| `identifier` | VARCHAR(128) | no | — | Source id value. |
-| `legislature` | VARCHAR(16) | yes | — | Term key (`2024`); null for term-independent schemes. |
-| `start_date` | DATE | yes | — | Optional validity start. |
-| `end_date` | DATE | yes | — | Optional validity end. |
-
-**Constraints:** `uq_identifier` on `(scheme, identifier, legislature)`.
-
-**Indexes:** `person_id`.
-
-**Note:** Camera `idm` and Senat GUID are per-term, so the same numeric/GUID value in two
-legislatures is stored as two identifiers. The unique constraint includes the legislature
-for this reason. SQLite treats `NULL`s as distinct in unique indexes; term-independent
-identifiers should not be duplicated by application code.
-
----
-
-## `person_name`
-
-Names and dated aliases for a person (former names, spelling variants, merge aliases).
-
-| Column | Type | Null | Default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | VARCHAR(36) | no | UUID | Primary key. |
-| `person_id` | VARCHAR(36) | no | — | FK → `person.id`. |
-| `type` | VARCHAR(16) | no | `name` | `name` or `alias`. |
-| `name` | VARCHAR(255) | no | — | Name text. |
-| `normalized_name` | VARCHAR(255) | no | — | Matching key. |
-| `sort_key` | VARCHAR(255) | yes | — | Order-insensitive key. |
-| `start_date` | DATE | yes | — | When the name applied, if known. |
-| `end_date` | DATE | yes | — | End-exclusive, if known. |
-
-**Indexes:** `person_id`, `normalized_name`, `sort_key`.
-
-**Merge behavior:** the loser's canonical name is converted to `type="alias"` on the
-winner, or appended if no matching name exists.
-
----
-
-## `organization`
-
-Chambers, parliamentary groups, parties, committees, bureaus, delegations, friendship
-groups, and other bodies.
-
-| Column | Type | Null | Default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | VARCHAR(36) | no | UUID | Primary key. |
-| `classification` | VARCHAR(16) | no | — | See organization classifications. |
-| `name` | VARCHAR(512) | no | — | Official label. |
-| `normalized_name` | VARCHAR(512) | no | — | Diacritics-stripped lowercase label. |
-| `short_name` | VARCHAR(64) | yes | — | Acronym (`PSD`, `UPR`). |
-| `alt_labels` | JSON | yes | — | Former names / aliases. |
-| `color` | VARCHAR(16) | yes | — | Hex color from reference data. |
-| `parent_id` | VARCHAR(36) | yes | — | FK → `organization.id` (self). |
-| `wikidata_qid` | VARCHAR(32) | yes | — | Optional QID. |
-| `founding_date` | DATE | yes | — | From the official ledger when published. |
-| `dissolution_date` | DATE | yes | — | When published. |
-| `localised_labels` | JSON | yes | — | `{"name": {"ro": …, "en": …}}`. |
-| `chamber` | VARCHAR(16) | yes | — | `deputies` or `senate` when chamber-specific. |
-
-**Constraints:** `uq_org` on `(classification, normalized_name, founding_date)`.
-
-**Indexes:** `classification`, `normalized_name`, `short_name`.
-
-**Note:** `founding_date` is nullable and part of the unique key. SQLite allows multiple
-`NULL` values in a unique index, so the application's `get_or_create_org` lookup remains
-the effective deduplication mechanism.
-
----
-
-## `post`
-
-A seat or leadership position within an organization (Popolo `Post`).
-
-| Column | Type | Null | Default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | VARCHAR(36) | no | UUID | Primary key. |
-| `org_id` | VARCHAR(36) | no | — | FK → `organization.id`. |
-| `label` | VARCHAR(255) | no | — | e.g. `Deputy`, `Group leader`. |
-| `role_type` | VARCHAR(16) | no | `seat` | `seat` or `leadership`. |
-| `importance` | INTEGER | no | 0 | Ordering hint. |
-| `maximum_memberships` | INTEGER | yes | — | Optional cap (e.g. one leader). |
-
-**Indexes:** `org_id`.
-
-The current pipeline models most roles directly on `membership.role`; the `post` table is
-part of the Popolo-compatible surface and is exported when referenced.
-
----
-
-## `membership`
-
-A dated tenure of a person in an organization. This is the central temporal table.
-
-| Column | Type | Null | Default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | VARCHAR(36) | no | UUID | Primary key. |
-| `person_id` | VARCHAR(36) | no | — | FK → `person.id`. |
-| `org_id` | VARCHAR(36) | no | — | FK → `organization.id`. |
-| `post_id` | VARCHAR(36) | yes | — | FK → `post.id`. |
-| `on_behalf_of_id` | VARCHAR(36) | yes | — | FK → `organization.id`; the party behind a group membership. |
-| `chamber` | VARCHAR(16) | no | — | `deputies` or `senate`. |
-| `legislature` | VARCHAR(16) | yes | — | Term key (`2024`). |
-| `role` | VARCHAR(255) | yes | — | Role within the organization (`leader`, `member`, …). |
-| `importance` | INTEGER | no | 0 | Ordering hint. |
-| `start_date` | DATE | yes | — | Inclusive start. |
-| `end_date` | DATE | yes | — | **Exclusive** end; `NULL` = open. |
-| `start_precision` | VARCHAR(10) | yes | — | `YYYY-MM-DD`, `YYYY-MM`, `YYYY`. |
-| `end_precision` | VARCHAR(10) | yes | — | Same. |
-| `start_reason` | VARCHAR(32) | yes | — | Reason enum. |
-| `end_reason` | VARCHAR(32) | yes | — | Reason enum. |
-| `confidence` | VARCHAR(32) | no | `derived` | Confidence enum. |
-| `source_url` | VARCHAR(1024) | yes | — | Official page for this fact. |
-| `group_acronym_at_event` | VARCHAR(64) | yes | — | Group acronym at the time. |
-| `first_seen_at` | DATETIME | no | now (UTC) | First observation by the pipeline. |
-| `last_seen_at` | DATETIME | no | now (UTC) | Most recent observation. |
-
-**Constraints:** `uq_stint` on `(org_id, person_id, post_id, end_date)`.
-
-**Indexes:** `person_id`, `org_id`, `chamber`, `legislature`;
-`ix_membership_person_end (person_id, end_date)`;
-`ix_membership_org_end (org_id, end_date)`.
-
-**Semantics**
-
-- As-of query: `start_date <= D AND (end_date IS NULL OR end_date > D)`.
-- An open tenure has `end_date IS NULL`.
-- A closed tenure is never reopened; a returning member gets a new row/id.
-- Repeat stints coexist because the unique key includes `end_date` (and `post_id`).
-- Inverted intervals are clamped so `end_date >= start_date`.
-- Confidence ranks `official_ledger` < `official_profile` < `derived` < `community`
-  (lower is stronger); a write may improve confidence but not downgrade it.
-
-**Note on `uq_stint`:** `post_id` and `end_date` are nullable. SQLite permits duplicate
-rows when a key component is `NULL`, so the writer's `_existing()` lookup is responsible
-for idempotency in the open-tenure case.
-
----
-
-## `evidence`
-
-Provenance attached to a membership.
-
-| Column | Type | Null | Default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | VARCHAR(36) | no | UUID | Primary key. |
-| `membership_id` | VARCHAR(36) | no | — | FK → `membership.id`. |
-| `type` | VARCHAR(32) | no | — | `official_ledger`, `profile`, `jo`, `intervention`, `scrutin`, `other`. |
-| `source_url` | VARCHAR(1024) | yes | — | Exact official page. |
-| `snapshot_hash` | VARCHAR(64) | yes | — | SHA-256 of the archived page; matches `fragment.checksum`. |
-| `note` | TEXT | yes | — | Human explanation, e.g. “start inferred (founding/continuing member)”. |
-| `observed_at` | DATETIME | no | now (UTC) | When the evidence was recorded. |
-
-**Indexes:** `membership_id`.
-
-One membership may have multiple evidence rows (ledger plus profile, for example). The
-API's `/api/evidence/{id}` resolves `snapshot_hash` to a `/snapshots/...` URL; a missing
-fragment yields `snapshot_url: null`, never a fake link.
-
----
-
-## `fragment`
-
-A raw archived fetch, decoupled from the normalized model.
-
-| Column | Type | Null | Default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | VARCHAR(36) | no | UUID | Primary key. |
-| `model` | VARCHAR(64) | no | — | Parser/model name (`group_ledger`, `senator_profile`, `group_roster`). |
-| `source_name` | VARCHAR(64) | no | — | `cdep` or `senat`. |
-| `source_id` | VARCHAR(255) | yes | — | `idg` or GUID. |
-| `source_url` | VARCHAR(1024) | yes | — | Fetched URL. |
-| `timestamp` | DATETIME | no | now (UTC) | Record creation time. |
-| `group_key` | VARCHAR(255) | yes | — | Deduplication key, e.g. `2024:1` or a GUID. |
-| `checksum` | VARCHAR(64) | no | — | SHA-256 of the content. |
-| `data` | JSON | no | — | Small parsed metadata (`short_name`, `name`, roster counts). |
-| `snapshot_path` | VARCHAR(512) | yes | — | `data/snapshots/<source>/<hash>.html`. |
-
-**Indexes:** `model`, `source_name`, `group_key`, `checksum`.
-
-Unchanged content is skipped unless `force=True`; the check compares the new checksum with
-the latest fragment for `(source_name, group_key)`.
-
----
-
-## `pipeline_run`
-
-One row per source ingestion/poll attempt.
-
-| Column | Type | Null | Default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | VARCHAR(36) | no | UUID | Primary key. |
-| `source` | VARCHAR(64) | no | — | `cdep` or `senat`. |
-| `status` | VARCHAR(32) | no | — | `SUCCESS`, `FAILURE`, `DATA_UNAVAILABLE`, `DATA_UNCHANGED`. |
-| `checksum` | VARCHAR(64) | yes | — | Optional run checksum. |
-| `idempotency_key` | VARCHAR(255) | yes | — | e.g. `groups:2024`, `profiles`. |
-| `started_at` | DATETIME | no | now (UTC) | Start. |
-| `finished_at` | DATETIME | yes | — | Finish. |
-| `rows` | INTEGER | no | 0 | Rows written or processed. |
-| `error` | TEXT | yes | — | Error text on failure. |
-
-**Indexes:** `source`.
-
-`/api/health` reads the latest row per source and reports `never_run` when none exists.
-
----
-
-## `event`
-
-A derived, typed movement or organizational change.
-
-| Column | Type | Null | Default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | VARCHAR(36) | no | UUID | Primary key. |
-| `type` | VARCHAR(32) | no | — | Event type enum. |
-| `person_id` | VARCHAR(36) | yes | — | FK → `person.id`; null for organization-only events. |
-| `chamber` | VARCHAR(16) | yes | — | `deputies` or `senate`. |
-| `from_org_id` | VARCHAR(36) | yes | — | FK → `organization.id`. |
-| `to_org_id` | VARCHAR(36) | yes | — | FK → `organization.id`. |
-| `post_id` | VARCHAR(36) | yes | — | FK → `post.id`. |
-| `role` | VARCHAR(255) | yes | — | Role, when relevant. |
-| `event_date` | DATE | yes | — | Date of the event. |
-| `precision` | VARCHAR(10) | yes | — | Date precision. |
-| `detected_at` | DATETIME | no | now (UTC) | Derivation timestamp. |
-| `reason` | VARCHAR(32) | yes | — | Reason enum. |
-| `confidence` | VARCHAR(32) | no | `derived` | Confidence enum. |
-| `group_acronym_at_event` | VARCHAR(64) | yes | — | Acronym at the time. |
-| `summary_ro` | TEXT | yes | — | Romanian summary. |
-| `summary_en` | TEXT | yes | — | English summary. |
-| `dedup_key` | VARCHAR(255) | yes | — | **Unique** deterministic key. |
-
-**Indexes:** `type`, `person_id`, `event_date`; unique on `dedup_key`.
-
-`dedup_key` examples: `switch:<person>:<from>:<to>:<date>`,
-`join:<person>:<org>:<date>`, `leave:<person>:<org>:<date>`,
-`founded:<org>:<date>`, `renamed:<org>:<old_label>`.
-
----
-
-## `key_event`
-
-Legislature and election markers seeded from `data/reference/legislatures.json`.
-
-| Column | Type | Null | Default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | VARCHAR(36) | no | UUID | Primary key. |
-| `type` | VARCHAR(32) | no | — | `legislature` or `election`. |
-| `chamber` | VARCHAR(16) | yes | — | `deputies` or `senate`. |
-| `start_date` | DATE | yes | — | Term start. |
-| `end_date` | DATE | yes | — | Term end; null for the current term. |
-| `label` | VARCHAR(255) | yes | — | Term key (`2024`). |
-
-No explicit indexes. Coverage and meta derive chamber/term boundaries from these rows.
-
----
-
-## `vacancy`
-
-A dated vacancy in a chamber or post.
-
-| Column | Type | Null | Default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | VARCHAR(36) | no | UUID | Primary key. |
-| `chamber` | VARCHAR(16) | no | — | `deputies` or `senate`. |
-| `post_id` | VARCHAR(36) | yes | — | FK → `post.id`. |
-| `start_date` | DATE | yes | — | Vacancy start. |
-| `end_date` | DATE | yes | — | Vacancy end (end-exclusive by convention). |
-| `reason` | VARCHAR(32) | yes | — | Reason enum. |
-
-The table is present for completeness of the temporal model; current ingestion focuses on
-memberships and events.
-
----
-
-## `match_review`
-
-Proposed person matches awaiting human review.
-
-| Column | Type | Null | Default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | VARCHAR(36) | no | UUID | Primary key. |
-| `person_a` | VARCHAR(36) | no | — | FK → `person.id`. |
-| `person_b` | VARCHAR(36) | no | — | FK → `person.id`. |
-| `score` | FLOAT | no | 0.0 | Similarity score. |
-| `reason` | TEXT | yes | — | Explanation. |
-| `status` | VARCHAR(16) | no | `pending` | `pending`, `approved`, `rejected`. |
-| `created_at` | DATETIME | no | now (UTC) | Creation timestamp. |
-
-No explicit indexes. A review row is a proposal, not a merge.
-
----
-
-## `coverage`
-
-Persisted completeness matrix per chamber and legislature.
-
-| Column | Type | Null | Default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | VARCHAR(36) | no | UUID | Primary key. |
-| `chamber` | VARCHAR(16) | no | — | `deputies` or `senate`. |
-| `legislature` | VARCHAR(16) | yes | — | Term key. |
-| `period_start` | DATE | yes | — | Term start. |
-| `period_end` | DATE | yes | — | Term end; null for current. |
-| `completeness` | VARCHAR(16) | no | `partial` | `full`, `partial`, `none`. |
-| `note` | TEXT | yes | — | Human explanation, e.g. “152 of ~330 seats ingested.” |
-
-No explicit indexes. The coverage upsert keys rows by `(chamber, legislature)`
-(`pipeline.coverage`; the `parlament coverage` subcommand is not wired in this checkout).
-
----
-
-## `merge_audit`
-
-Auditable, reversible person merges.
-
-| Column | Type | Null | Default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | VARCHAR(36) | no | UUID | Primary key. |
-| `winner_id` | VARCHAR(36) | no | — | FK → `person.id`. |
-| `loser_id` | VARCHAR(36) | no | — | Plain id; deliberately **not** a FK so the audit survives row changes. |
-| `operations` | JSON | no | — | Ordered list of `repoint` / `append` / `replace` operations. |
-| `created_at` | DATETIME | no | now (UTC) | Merge timestamp. |
-| `reverted` | BOOLEAN | no | false | Whether the merge was reversed. |
-
-`operations` examples:
-
-```json
-[
-  {"op": "repoint", "table": "person_identifier", "id": "…", "from": "loser", "to": "winner"},
-  {"op": "repoint", "table": "membership", "id": "…", "from": "loser", "to": "winner"},
-  {"op": "append", "table": "person_name", "name": "Former Name"},
-  {"op": "replace", "field": "birth_date", "value": "1972-09-20"}
-]
-```
-
-`revert_merge` replays these in reverse and sets `reverted=true`.
-
----
-
-## Enumerations
-
-Values are stored as strings. Keep application code, exports, and documentation in sync
-when adding one.
-
-### Chambers
-
-```text
-deputies
-senate
-```
-
-### Organization classifications
-
-```text
-chamber
-group
-party
-committee
-bureau
-delegation
-friendship
-other
-```
-
-### Confidence (strongest → weakest)
-
-```text
-official_ledger
-official_profile
-derived
-community
-```
-
-`CONFIDENCE_RANK` assigns 0–3; a lower rank is stronger. Writers may improve a row's
-confidence but do not downgrade it.
-
-### Reasons
-
-```text
-CHANGED_PARTY
-WHIP_REMOVED
-WHIP_RESTORED
-DIED
-RESIGNED
-BY_ELECTION
-GENERAL_ELECTION
-UNKNOWN
-```
-
-### Evidence types
-
-```text
-official_ledger
-profile
-jo
-intervention
-scrutin
-other
-```
-
-### Event types
-
-```text
-join
-leave
-switch_group
-switch_party
-group_founded
-group_renamed
-committee_join
-committee_leave
-role_change
-mandate_start
-mandate_end
-```
-
-The current derivation emits `join`, `leave`, `switch_group`, `group_founded`, and
-`group_renamed`; the remaining types are part of the vocabulary for committee/role/mandate
-events.
-
-### Pipeline run statuses
-
-```text
-SUCCESS
-FAILURE
-DATA_UNAVAILABLE
-DATA_UNCHANGED
-```
-
-`/api/health` also reports `never_run` when no run row exists.
-
-### Person match statuses
-
-```text
-auto
-review
-unmatched
-merged
-```
-
-### Match review statuses
-
-```text
-pending
-approved
-rejected
-```
-
-### Coverage completeness
-
-```text
-full
-partial
-none
-```
-
-### Post role types
-
-```text
-seat
-leadership
-```
-
-### Person name types
-
-```text
-name
-alias
-```
-
-### Identifier schemes (observed)
-
-```text
-cdep_idm     Camera Deputaților per-term member id
-senat_guid   Senat per-term profile GUID
-ep_uuid      reserved for EveryPolitician-style ids
-wikidata     Wikidata QID
-```
-
----
-
-## Date precision and storage
-
-`ApproxDate` produces a `precision` tag:
-
-| Source expression | `earliest` | `latest` | `precision` |
+### `person`
+| Column | Type | Constraints | Description |
 | --- | --- | --- | --- |
-| `15 iun. 2026` | 2026-06-15 | 2026-06-15 | `2026-06-15` |
-| `iunie 2026` | 2026-06-01 | 2026-06-30 | `2026-06` |
-| `2026` | 2026-01-01 | 2026-12-31 | `2026` |
+| `id` | UUID | PK | Primary key |
+| `canonical_name` | String(255) | NOT NULL | Display name |
+| `normalized_name` | String(255) | INDEX | Lowercased, diacritics stripped |
+| `sort_key` | String(255) | NULLABLE, INDEX | For sorting |
+| `birth_date` | Date | NULLABLE | From Wikidata |
+| `photo_path` | String(512) | NULLABLE | Local path |
+| `wikidata_qid` | String(32) | NULLABLE, INDEX | Wikidata entity |
+| `match_status` | String(16) | DEFAULT 'unmatched' | Reconciliation state |
+| `created_at` | DateTime | DEFAULT now() | |
 
-Membership rows store the **earliest** bound in `start_date` and the precision tag in
-`start_precision`; they never store a fabricated mid-month or mid-year day. `end_date` is
-end-exclusive in queries. See [METHODOLOGY.md](METHODOLOGY.md).
+**Relationships**: `identifiers`, `names`, `memberships`
+
+---
+
+### `person_identifier`
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | |
+| `person_id` | UUID | FK, INDEX | → person.id |
+| `scheme` | String(32) | | e.g., `cdep_idm`, `senat_guid` |
+| `identifier` | String(128) | | Value |
+| `legislature` | String(16) | NULLABLE | |
+| `start_date` | Date | NULLABLE | |
+| `end_date` | Date | NULLABLE | |
+
+**Unique**: `(scheme, identifier, legislature)`
+
+---
+
+### `person_name`
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | |
+| `person_id` | UUID | FK, INDEX | |
+| `type` | String(16) | DEFAULT 'name' | `name` / `alias` |
+| `name` | String(255) | | |
+| `normalized_name` | String(255) | INDEX | |
+| `sort_key` | String(255) | NULLABLE, INDEX | |
+| `start_date` | Date | NULLABLE | |
+| `end_date` | Date | NULLABLE | |
+
+---
+
+### `organization`
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | |
+| `classification` | String(16) | INDEX | chamber/group/party/... |
+| `name` | String(512) | | Full name |
+| `normalized_name` | String(512) | INDEX | |
+| `short_name` | String(64) | NULLABLE, INDEX | Acronym |
+| `alt_labels` | JSON | NULLABLE | Historical names |
+| `color` | String(16) | NULLABLE | Hex color for UI |
+| `parent_id` | UUID | FK, NULLABLE | Parent org |
+| `wikidata_qid` | String(32) | NULLABLE | Wikidata entity |
+| `founding_date` | Date | NULLABLE | |
+| `dissolution_date` | Date | NULLABLE | |
+| `localised_labels` | JSON | NULLABLE | i18n |
+| `chamber` | String(16) | NULLABLE | deputies/senate |
+| **`previous_party_id`** | UUID | FK, NULLABLE | **Genealogy: predecessor** |
+| **`successor_party_id`** | UUID | FK, NULLABLE | **Genealogy: successor** |
+
+**Unique**: `(classification, normalized_name, founding_date)`
+
+---
+
+### `post`
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | |
+| `org_id` | UUID | FK, INDEX | → organization.id |
+| `label` | String(255) | | Seat/role label |
+| `role_type` | String(16) | DEFAULT 'seat' | seat / leadership |
+| `importance` | Integer | DEFAULT 0 | Sort order |
+| `maximum_memberships` | Integer | NULLABLE | Capacity |
+
+---
+
+### `membership`
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | |
+| `person_id` | UUID | FK, INDEX | |
+| `org_id` | UUID | FK, INDEX | |
+| `post_id` | UUID | FK, NULLABLE | |
+| `on_behalf_of_id` | UUID | FK, NULLABLE | Party behind group |
+| `chamber` | String(16) | INDEX | deputies/senate |
+| `legislature` | String(16) | NULLABLE, INDEX | e.g., "2024" |
+| `role` | String(255) | NULLABLE | e.g., "president" |
+| `importance` | Integer | DEFAULT 0 | |
+| `start_date` | Date | NULLABLE | |
+| `end_date` | Date | NULLABLE | |
+| `start_precision` | String(10) | NULLABLE | day/month/year |
+| `end_precision` | String(10) | NULLABLE | |
+| `start_reason` | String(32) | NULLABLE | |
+| `end_reason` | String(32) | NULLABLE | |
+| `confidence` | String(32) | DEFAULT 'derived' | Enum |
+| `source_url` | String(1024) | NULLABLE | |
+| `group_acronym_at_event` | String(64) | NULLABLE | Denormalized |
+| `first_seen_at` | DateTime | DEFAULT now() | |
+| `last_seen_at` | DateTime | DEFAULT now() | |
+
+**Unique**: `(org_id, person_id, post_id, end_date)`
+
+**Indexes**: `ix_membership_person_end (person_id, end_date)`, `ix_membership_org_end (org_id, end_date)`
+
+---
+
+### `evidence`
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | |
+| `membership_id` | UUID | FK, INDEX | |
+| `type` | String(32) | | `official_ledger`, `profile`, etc. |
+| `source_url` | String(1024) | NULLABLE | |
+| `snapshot_hash` | String(64) | NULLABLE | SHA256 |
+| `note` | Text | NULLABLE | |
+| `observed_at` | DateTime | DEFAULT now() | |
+
+---
+
+### `asset_declaration`
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | |
+| `person_id` | UUID | FK, INDEX | |
+| `year` | Integer | INDEX | e.g., 2024 |
+| `asset_type` | String(64) | | real_estate, vehicle, etc. |
+| `value_ron` | Float | NULLABLE | Value in RON |
+| `description` | Text | NULLABLE | |
+| `source_url` | String(1024) | NULLABLE | |
+| `created_at` | DateTime | DEFAULT now() | |
+
+---
+
+### `event`
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | |
+| `type` | String(32) | INDEX | join/leave/switch_group/switch_party/... |
+| `person_id` | UUID | FK, INDEX, NULLABLE | |
+| `chamber` | String(16) | NULLABLE | |
+| `from_org_id` | UUID | FK, NULLABLE | |
+| `to_org_id` | UUID | FK, NULLABLE | |
+| `post_id` | UUID | FK, NULLABLE | |
+| `role` | String(255) | NULLABLE | |
+| `event_date` | Date | NULLABLE, INDEX | |
+| `precision` | String(10) | NULLABLE | |
+| `detected_at` | DateTime | DEFAULT now() | |
+| `reason` | String(32) | NULLABLE | Enum |
+| `confidence` | String(32) | DEFAULT 'derived' | Enum |
+| `group_acronym_at_event` | String(64) | NULLABLE | |
+| `summary_ro` | Text | NULLABLE | Romanian summary |
+| `summary_en` | Text | NULLABLE | English summary |
+| `dedup_key` | String(255) | UNIQUE, NULLABLE | Idempotency |
+
+**Event types**: `join`, `leave`, `switch_group`, `switch_party`, `group_founded`, `group_renamed`, `committee_join`, `committee_leave`, `role_change`, `mandate_start`, `mandate_end`
+
+---
+
+### `switch_wave`
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | |
+| `label` | String(255) | NULLABLE | e.g., "Post-2020 election wave" |
+| `start_date` | Date | INDEX | Window start |
+| `end_date` | Date | INDEX | Window end |
+| `switch_count` | Integer | DEFAULT 0 | Switches in window |
+| `trigger_type` | String(32) | NULLABLE | election/govt_formation/... |
+| `trigger_event` | Text | NULLABLE | Human-readable |
+| `legislature` | String(16) | NULLABLE, INDEX | |
+| `chamber` | String(16) | NULLABLE | |
+| `created_at` | DateTime | DEFAULT now() | |
+
+**Index**: `(legislature, chamber)`
+
+---
+
+### `key_event`
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | |
+| `type` | String(32) | | legislature / election |
+| `chamber` | String(16) | NULLABLE | |
+| `start_date` | Date | NULLABLE | |
+| `end_date` | Date | NULLABLE | |
+| `label` | String(255) | NULLABLE | e.g., "2024" |
+
+---
+
+### `vacancy`
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | |
+| `chamber` | String(16) | | |
+| `post_id` | UUID | FK, NULLABLE | |
+| `start_date` | Date | NULLABLE | |
+| `end_date` | Date | NULLABLE | |
+| `reason` | String(32) | NULLABLE | |
+
+---
+
+### `match_review`
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | |
+| `person_a` | UUID | FK | |
+| `person_b` | UUID | FK | |
+| `score` | Float | DEFAULT 0.0 | |
+| `reason` | Text | NULLABLE | |
+| `status` | String(16) | DEFAULT 'pending' | pending/approved/rejected |
+| `created_at` | DateTime | DEFAULT now() | |
+
+---
+
+### `coverage`
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | |
+| `chamber` | String(16) | | deputies/senate |
+| `legislature` | String(16) | NULLABLE | |
+| `period_start` | Date | NULLABLE | |
+| `period_end` | Date | NULLABLE | |
+| `completeness` | String(16) | DEFAULT 'partial' | full/partial/none |
+| `note` | Text | NULLABLE | |
+
+---
+
+### `merge_audit`
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | |
+| `winner_id` | UUID | FK | |
+| `loser_id` | UUID | | Original ID |
+| `operations` | JSON | | List of {op, table, ...} |
+| `created_at` | DateTime | DEFAULT now() | |
+| `reverted` | Boolean | DEFAULT false | |
+
+---
+
+### `pipeline_run`
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | |
+| `source` | String(64) | INDEX | cdep/senat/wikidata/... |
+| `status` | String(32) | | SUCCESS/FAILURE/... |
+| `checksum` | String(64) | NULLABLE | |
+| `idempotency_key` | String(255) | NULLABLE | |
+| `started_at` | DateTime | DEFAULT now() | |
+| `finished_at` | DateTime | NULLABLE | |
+| `rows` | Integer | DEFAULT 0 | |
+| `error` | Text | NULLABLE | |
+
+---
+
+### `fragment`
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | |
+| `model` | String(64) | INDEX | person/organization/... |
+| `source_name` | String(64) | INDEX | cdep/senat/... |
+| `source_id` | String(255) | NULLABLE | |
+| `source_url` | String(1024) | NULLABLE | |
+| `timestamp` | DateTime | DEFAULT now() | |
+| `group_key` | String(255) | NULLABLE, INDEX | |
+| `checksum` | String(64) | INDEX | |
+| `data` | JSON | | Raw source data |
+| `snapshot_path` | String(512) | NULLABLE | Local file |
+
+---
+
+## Enums (stored as strings)
+
+| Enum | Values |
+| --- | --- |
+| `CHAMBERS` | `deputies`, `senate` |
+| `ORG_CLASS` | `chamber`, `group`, `party`, `committee`, `bureau`, `delegation`, `friendship`, `other` |
+| `CONFIDENCE` | `official_ledger`, `official_profile`, `derived`, `community` |
+| `REASONS` | `CHANGED_PARTY`, `WHIP_REMOVED`, `WHIP_RESTORED`, `DIED`, `RESIGNED`, `BY_ELECTION`, `GENERAL_ELECTION`, `UNKNOWN` |
+| `EVIDENCE_TYPES` | `official_ledger`, `profile`, `jo`, `intervention`, `scrutin`, `other` |
+| `EVENT_TYPES` | `join`, `leave`, `switch_group`, `switch_party`, `group_founded`, `group_renamed`, `committee_join`, `committee_leave`, `role_change`, `mandate_start`, `mandate_end` |
+| `WAVE_TRIGGERS` | `election`, `government_formation`, `party_congress`, `coalition_breakup`, `other` |
+| `RUN_STATUS` | `SUCCESS`, `FAILURE`, `DATA_UNAVAILABLE`, `DATA_UNCHANGED` |
+| `MATCH_STATUS` | `auto`, `review`, `unmatched`, `merged` |
+
+---
+
+## Key Relationships
+
+```
+Person 1──M Membership M──1 Organization
+Person 1──M Membership M──1 Post
+Person 1──M Membership M──1 Organization (on_behalf_of_id = party)
+Person 1──M Event (person_id)
+Event M──1 Organization (from_org_id, to_org_id)
+Organization 1──M Organization (parent_id, previous_party_id, successor_party_id)
+Membership 1──M Evidence
+```
+
+---
+
+## Indexes Summary
+
+| Table | Index |
+| --- | --- |
+| `person` | `normalized_name`, `wikidata_qid`, `sort_key` |
+| `person_identifier` | `scheme, identifier, legislature` (unique), `person_id` |
+| `organization` | `classification`, `normalized_name`, `short_name`, `founding_date` (unique), `wikidata_qid` |
+| `membership` | `person_id, end_date`, `org_id, end_date`, `org_id, person_id, post_id, end_date` (unique) |
+| `event` | `type`, `person_id`, `event_date`, `dedup_key` (unique) |
+| `switch_wave` | `start_date`, `end_date`, `legislature`, `chamber`, `(legislature, chamber)` |
+| `coverage` | `chamber`, `legislature` |
+| `evidence` | `membership_id` |
+| `asset_declaration` | `person_id`, `year` |
+
+---
+
+## Derived / Analytics Tables (not in ORM, computed on demand)
+
+| Table | Purpose |
+| --- | --- |
+| `switch_wave` | Clustered party switches with trigger labels |
+| `party_cohesion` | Switch rate per MP per year per party |
+| `cross_chamber_career` | Persons with memberships in both chambers |
+| `generational_shift` | Avg/median age per party per legislature |
+
+*These are computed by `pipeline/analytics.py` and exposed via REST + GraphQL, not persisted as ORM models.*

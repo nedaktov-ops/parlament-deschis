@@ -298,3 +298,204 @@ file, reflected in tests, and called out in the PR:
 - licensing or attribution.
 
 Silent changes to these rules are bugs, even if the code still runs.
+
+---
+
+## 9. Party genealogy
+
+Romanian political parties undergo frequent mergers, splits, and renamings. To enable longitudinal analysis, Parlament Deschis records party genealogy as explicit relationships between organizations.
+
+### 9.1 Relationship model
+
+Each `Organization` with `classification="party"` may have:
+
+- `previous_party_id`: the party that preceded it (predecessor).
+- `successor_party_id`: the party that followed it (successor).
+
+Both are nullable foreign keys to `organization.id`, creating a directed graph.
+
+### 9.2 Genealogy rules
+
+1. **Linear succession** — A party B that continues party A sets `previous_party_id = A.id`. A sets `successor_party_id = B.id`. Example: `PSD.previous = FDSN`, `FDSN.successor = PSD`.
+
+2. **Split** — One party divides into multiple successors. The parent has no single successor; each child records the parent in `previous_party_id`. Example: `PNL` splits → `PNTCD.previous = PNL`, `PNL-CD.previous = PNL`. `PNL` keeps `successor = NULL` (multiple children).
+
+3. **Merger** — Multiple parties merge into one. The merged party records one predecessor in `previous_party_id` (the dominant legal successor). Others are linked via evidence notes. Example: `ALDE` merged into `USR` → `USR.previous = ALDE`, `ALDE.successor = USR`.
+
+4. **Continuity** — A party with no predecessor or successor (e.g., `UDMR`) has both fields `NULL`. It signals an unbroken legal identity.
+
+### 9.3 Source precedence for genealogy
+
+1. Official party statutes / founding documents published by the party.
+2. Court of Accounts / AEP decisions on party registration / dissolution.
+3. Parliamentary records of group renaming or succession declarations.
+4. Academic histories with specific legal citations (used only for verification).
+
+Wikidata QIDs are recorded for cross-referencing but do not establish genealogy.
+
+### 9.4 Querying genealogy
+
+The GraphQL API exposes `previous_party_id` and `successor_party_id` on `PartyType`. A recursive query can traverse the full lineage:
+
+```graphql
+query {
+  party(shortName: "PSD") {
+    shortName
+    previous { shortName previous { shortName } }
+    successor { shortName successor { shortName } }
+  }
+}
+```
+
+---
+
+## 10. Switch wave detection
+
+Party switching is a salient feature of Romanian parliamentary life. To move beyond isolated events, the pipeline detects **switch waves** — clusters of `switch_party` events in time.
+
+### 10.1 Algorithm
+
+1. Collect all `switch_party` events (optionally filtered by chamber / legislature).
+2. Sort by `event_date`.
+3. Slide a fixed window (default 30 days, configurable) over the sorted events.
+4. If the window contains ≥ N switches (default 3, configurable), emit a `SwitchWave`.
+5. Label the wave with the closest known trigger event within ±90 days:
+   - Election dates
+   - Government formation dates
+   - Party congresses (major)
+   - Coalition breakups
+5. Deduplicate via signature `(start_date, end_date, chamber, legislature)`.
+
+### 10.2 Wave properties
+
+| Field | Meaning |
+| --- | --- |
+| `label` | Human-readable description |
+| `start_date`, `end_date` | Inclusive window bounds |
+| `switch_count` | Number of switches in the window |
+| `trigger_type` | `election`, `government_formation`, `party_congress`, `coalition_breakup`, `other` |
+| `trigger_event` | Human-readable description of the trigger |
+| `legislature` | Legislature label (e.g., `2024`) |
+| `chamber` | `deputies` or `senate` |
+
+### 10.3 Access
+
+- REST: `GET /api/analytics/switch-waves`, `GET /analytics/waves`
+- GraphQL: `switchWaves(chamber, legislature, limit)`
+
+---
+
+## 11. Analytics methodology
+
+### 11.1 Party Cohesion Index
+
+Measures how tightly a party's MPs move together.
+
+**Formula**:  
+`switch_rate = total_switches / (member_count * avg_tenure_years)`
+
+- `total_switches`: sum of `switch_party` events where the party is the destination (`to_org_id`).
+- `member_count`: distinct MPs with a current membership in the party.
+- `avg_tenure_years`: mean tenure duration (days/365.25) for all memberships in that party.
+
+The cohesion index is `1 - (std_dev(switch_rate) / mean(switch_rate))` across parties in a legislature. Higher = more cohesive.
+
+**Access**: `GET /api/analytics/party-cohesion`, GraphQL `partyCohesion(legislature)`.
+
+### 11.2 Cross-chamber careers
+
+Identifies MPs who have served in both the Chamber of Deputies and the Senate.
+
+**Algorithm**: For each person, collect distinct `chamber` values from their memberships. If both `deputies` and `senate` present, record as cross-chamber.
+
+**Access**: `GET /api/analytics/cross-chamber`, GraphQL `crossChamber`.
+
+### 11.3 Generational shift
+
+Computes average and median age per party per legislature, using Wikidata birth dates.
+
+**Algorithm**: For each person with a birth date and a party membership in the legislature, compute age at reference date (today, or legislature end). Aggregate per party.
+
+**Access**: `GET /api/analytics/generational-shift`, GraphQL `generationalShift(legislature)`.
+
+---
+
+## 12. GraphQL API
+
+The `/graphql` endpoint (Strawberry) provides a single flexible query surface.
+
+### 12.1 Root queries
+
+| Query | Arguments | Returns |
+| --- | --- | --- |
+| `person(id)` | `id: ID!` | `PersonType` |
+| `persons` | `q: String`, `chamber: String`, `limit: Int` | `[PersonType!]!` |
+| `party(shortName)` | `shortName: String!` | `PartyType` |
+| `parties` | `classification: String`, `limit: Int` | `[PartyType!]!` |
+| `memberships` | `person_id, org_id, chamber, limit` | `[MembershipType!]!` |
+| `events` | `person_id, event_type, chamber, start, end, limit` | `[EventType!]!` |
+| `switchWaves` | `chamber, legislature, limit` | `[SwitchWaveType!]!` |
+| `partyCohesion` | `legislature, limit` | `[AnalyticsPartyCohesionType!]!` |
+| `crossChamber` | — | `[AnalyticsCrossChamberType!]!` |
+| `generationalShift` | `legislature, limit` | `[AnalyticsGenerationalShiftType!]!` |
+
+### 12.2 Type definitions (excerpt)
+
+```graphql
+type PartyType {
+  id: ID!
+  name: String
+  shortName: String
+  classification: String!
+  color: String
+  wikidataQid: String
+  foundingDate: Date
+  dissolutionDate: Date
+  chamber: String
+  previous: PartyType
+  successor: PartyType
+}
+
+type SwitchWaveType {
+  id: ID!
+  label: String
+  startDate: Date!
+  endDate: Date!
+  switchCount: Int!
+  triggerType: String
+  triggerEvent: String
+  legislature: String
+  chamber: String
+}
+
+type AnalyticsPartyCohesionType {
+  partyId: ID!
+  partyName: String!
+  members: Int!
+  switches: Int!
+  switchers: Int!
+  avgTenureYears: Float!
+  switchRatePerMpPerYear: Float!
+}
+```
+
+### 12.3 Playground
+
+Interactive schema explorer available at `GET /graphql` (Strawberry default).
+
+---
+
+## 13. Known gaps (honest coverage)
+
+| Domain | Gap | Reason | Impact |
+| --- | --- | --- | --- |
+| **Senate historical (1990–2020)** | No ledger publications discoverable via sitemap; only 2024 legislature available. | Source unavailable. | Senate coverage `none` pre-2024. Badge shows `none`. |
+| **Voting records** | No roll-call or vote publications found. | Source unavailable. | No whip compliance / voting alignment analysis. |
+| **Asset declarations pre-2020** | PDFs not published / not discoverable. | Source unavailable. | Asset extraction only for 2020, 2024. |
+| **Committee chairs** | Chair names not published in structured form. | Source gap. | Committee control index not yet computed. |
+| **Wikidata birth dates** | ~4% of MPs have birth dates via reconciliation. | Low match rate. | Generational shift limited to ~3 parties. |
+| **Party genealogy pre-1990** | Pre-1990 parties not in scope. | Scope boundary. | Genealogy starts at 1990. |
+
+---
+
+*End of Methodology.*

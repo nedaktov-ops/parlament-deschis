@@ -139,6 +139,9 @@ class Organization(Base):
     dissolution_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     localised_labels: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     chamber: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # Party genealogy
+    previous_party_id: Mapped[str | None] = mapped_column(ForeignKey("organization.id"), nullable=True)
+    successor_party_id: Mapped[str | None] = mapped_column(ForeignKey("organization.id"), nullable=True)
 
     __table_args__ = (
         UniqueConstraint("classification", "normalized_name", "founding_date", name="uq_org"),

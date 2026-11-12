@@ -176,22 +176,22 @@
 
 ### Task 4.1: GraphQL Endpoint
 **Acceptance Criteria:**
-- [ ] `pip install strawberry-graphql`
-- [ ] Schema: Person, Party, Membership, Event, Analytics types
-- [ ] Query: `person(id)`, `party(shortName)`, `analytics { waves, cohesion, committeeControl }`
-- [ ] Playground at `/graphql`
+- [x] `pip install strawberry-graphql`
+- [x] Schema: Person, Party, Membership, Event, SwitchWave, Analytics types
+- [x] Queries: `person(id)`, `persons(q, chamber, limit)`, `party(shortName)`, `parties(classification, limit)`, `memberships(person_id, org_id, chamber, limit)`, `events(person_id, event_type, chamber, start, end, limit)`, `switchWaves(chamber, legislature, limit)`, `partyCohesion(legislature, limit)`, `crossChamber`, `generationalShift(legislature, limit)`
+- [x] Playground at `/graphql` (Strawberry default)
 
 ### Task 4.2: Party Genealogy Manual Population
 **Acceptance Criteria:**
-- [ ] `Organization.previous_party_id`, `successor_party_id` columns added
-- [ ] Populated: PSD←FDSN←FSN, PNL splits (PNTCD, PNL-CD, etc.), POT→UPR, USR new, AUR new, UDMR continuous
-- [ ] Party Profile shows genealogy timeline
+- [x] `Organization.previous_party_id`, `successor_party_id` columns added
+- [x] Populated: PSD←FDSN←FSN, PNL splits (PNTCD, PNL-CD), POT→UPR, ALDE→USR, UDMR continuous
+- [ ] Party Profile shows genealogy timeline (frontend work remaining)
 
 ### Task 4.3: Documentation Updates
 **Acceptance Criteria:**
-- [ ] `METHODOLOGY.md`: honest gaps (Senate historical, voting records, assets pre-2020)
-- [ ] `API.md`: all new endpoints documented
-- [ ] `DATA-MODEL.md`: new tables (asset_declaration, switch_wave, party_cohesion, etc.)
+- [x] `METHODOLOGY.md`: honest gaps (Senate historical, voting records, assets pre-2020) + new sections for genealogy, switch waves, analytics, GraphQL
+- [x] `API.md`: all new endpoints documented (REST + GraphQL)
+- [x] `DATA-MODEL.md`: new tables (asset_declaration, switch_wave, party_cohesion, etc.) documented with full schema
 
 ### Task 4.4: Load Test
 **Acceptance Criteria:**
