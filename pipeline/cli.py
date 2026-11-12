@@ -204,9 +204,16 @@ def cmd_export(args) -> int:
 
 def cmd_enrich(args) -> int:
     """Wikidata cross-check/enrichment (conservative, never fabricates)."""
-    # Placeholder: implement in pipeline/enrich.py
-    print("Wikidata enrichment not yet wired (see docs/RESEARCH.md for plan).")
-    print("Required: pipeline/enrich.py with SPARQL batch + local cache + disambiguation.")
+    from .enrich import run_enrichment
+
+    results = run_enrichment(limit=args.limit, dry_run=args.dry_run, legislature=args.legislature)
+    print(f"\nResults:")
+    print(f"  Auto-accept: {results['auto_accept']}")
+    print(f"  Review queue: {results['review']}")
+    print(f"  Rejected: {results['reject']}")
+    print(f"  Errors: {results['error']}")
+    if args.dry_run:
+        print("\nDRY RUN - no changes written. Use --apply to persist.")
     return 0
 
 
@@ -349,9 +356,11 @@ def main(argv=None) -> int:
     p_export.add_argument("--legislature", help="filter legislature")
     p_export.set_defaults(fn=cmd_export)
 
-    p_enrich = sub.add_parser("enrich", help="Wikidata cross-check/enrichment (placeholder)")
+    p_enrich = sub.add_parser("enrich", help="Wikidata cross-check/enrichment (conservative, never fabricates)")
     p_enrich.add_argument("--limit", type=int, default=50, help="max persons to enrich")
     p_enrich.add_argument("--dry-run", action="store_true", help="print actions without writing")
+    p_enrich.add_argument("--apply", action="store_false", dest="dry_run", help="write changes to DB")
+    p_enrich.add_argument("--legislature", default="2024", help="legislature to enrich")
     p_enrich.set_defaults(fn=cmd_enrich)
 
     p_cov = sub.add_parser("coverage", help="derive and print coverage matrix")

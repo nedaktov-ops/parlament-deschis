@@ -88,6 +88,9 @@ class Person(Base):
     names: Mapped[list[PersonName]] = relationship(
         back_populates="person", cascade="all, delete-orphan"
     )
+    memberships: Mapped[list[Membership]] = relationship(
+        back_populates="person", cascade="all, delete-orphan"
+    )
 
 
 class PersonIdentifier(Base):
