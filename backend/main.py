@@ -10,8 +10,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from strawberry.fastapi import GraphQLRouter
 
 from backend.config import APP_VERSION, DB_PATH, FRONTEND_DIST, SNAPSHOT_DIR
+from backend.graphql.schema import schema
 from backend.routers.api import router as api_router
 from backend.routers.exports import router as exports_router
 from pipeline.poller import start_poller
@@ -69,6 +71,10 @@ def create_app() -> FastAPI:
     )
     app.include_router(api_router)
     app.include_router(exports_router)
+    
+    # GraphQL endpoint
+    graphql_app = GraphQLRouter(schema)
+    app.include_router(graphql_app, prefix="/graphql")
 
     if SNAPSHOT_DIR.exists():
         app.mount("/snapshots", StaticFiles(directory=str(SNAPSHOT_DIR)), name="snapshots")
