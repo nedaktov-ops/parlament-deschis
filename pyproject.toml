@@ -16,6 +16,9 @@ dependencies = [
     "rapidfuzz>=3.9",
     "python-dateutil>=2.9",
     "pydantic>=2.7",
+    "strawberry-graphql[fastapi]>=0.235",
+    "tabula-py>=2.9",
+    "pandas>=2.2",
 ]
 
 [project.optional-dependencies]

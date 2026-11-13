@@ -8,9 +8,13 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Data (DB + snapshots are generated; reference data is committed)
+# Data (DB, caches, snapshots and exports are generated; reference data is committed)
 data/parlament.db
 data/parlament.db-*
+data/wikidata_cache.db
+data/wikidata_cache.db-*
+data/enrichment_report_*.json
+data/assets/
 data/snapshots/
 data/exports/
 
