@@ -72,8 +72,13 @@ def collapse_observations(observations: list[Observation]) -> list[Interval]:
                 continue  # extend the current run
             else:
                 out.append(
-                    Interval(person, run_org, run_start, o.observed_on - timedelta(days=1),
-                             source_url=run_url)
+                    Interval(
+                        person,
+                        run_org,
+                        run_start,
+                        o.observed_on - timedelta(days=1),
+                        source_url=run_url,
+                    )
                 )
                 run_org, run_start, run_url = o.org_key, o.observed_on, o.source_url
         if run_org is not None:
@@ -142,32 +147,66 @@ class MembershipWriter:
                 return m
 
         # An open tenure with the same start can be closed / enriched.
+        # When start is None and end is None (current member), match any open
+        # tenure for this person+org to avoid duplicate open tenures.
+        # When start is None and end is not None (former member with unknown
+        # start), match an open tenure that also has start None and close it.
+        # When start is not None (former member with known start date), match
+        # open tenure with same start date to close it.
+        matched: Membership | None = None
         for m in existing:
-            if m.end_date is None and m.start_date == start:
-                if end is not None:
-                    m.end_date = end
-                    m.end_precision = end_precision
-                    m.end_reason = end_reason or m.end_reason
-                if on_behalf_of_id:
-                    m.on_behalf_of_id = on_behalf_of_id
-                if role:
-                    m.role = role
-                m.last_seen_at = _utcnow()
-                if source_url:
-                    m.source_url = source_url
-                if confidence and _rank(confidence) < _rank(m.confidence):
-                    m.confidence = confidence
-                return m
+            if m.end_date is None:
+                if start is None:
+                    if end is None:
+                        # Current member matching open current tenure → idempotent
+                        matched = m
+                        break
+                    if m.start_date is None:
+                        # Former member with unknown start closing open tenure
+                        matched = m
+                        break
+                elif m.start_date == start:
+                    # Former member with known start date closing open tenure
+                    matched = m
+                    break
+
+        if matched is not None:
+            m = matched
+            if end is not None:
+                m.end_date = end
+                m.end_precision = end_precision
+                m.end_reason = end_reason or m.end_reason
+            if on_behalf_of_id:
+                m.on_behalf_of_id = on_behalf_of_id
+            if role:
+                m.role = role
+            m.last_seen_at = _utcnow()
+            if source_url:
+                m.source_url = source_url
+            if confidence and _rank(confidence) < _rank(m.confidence):
+                m.confidence = confidence
+            return m
 
         # Otherwise create a new tenure (repeat stints coexist).
         m = Membership(
             id=str(uuid.uuid4()),
-            person_id=person_id, org_id=org_id, post_id=post_id,
-            on_behalf_of_id=on_behalf_of_id, chamber=chamber, legislature=legislature,
-            role=role, importance=importance, start_date=start, end_date=end,
-            start_precision=start_precision, end_precision=end_precision,
-            start_reason=start_reason, end_reason=end_reason, confidence=confidence,
-            source_url=source_url, group_acronym_at_event=group_acronym,
+            person_id=person_id,
+            org_id=org_id,
+            post_id=post_id,
+            on_behalf_of_id=on_behalf_of_id,
+            chamber=chamber,
+            legislature=legislature,
+            role=role,
+            importance=importance,
+            start_date=start,
+            end_date=end,
+            start_precision=start_precision,
+            end_precision=end_precision,
+            start_reason=start_reason,
+            end_reason=end_reason,
+            confidence=confidence,
+            source_url=source_url,
+            group_acronym_at_event=group_acronym,
         )
         self.session.add(m)
         self.session.flush()
@@ -216,9 +255,15 @@ class MembershipWriter:
 
         m = Membership(
             id=str(uuid.uuid4()),
-            person_id=person_id, org_id=org_id, post_id=post_id, chamber=chamber,
-            legislature=legislature, start_date=observed_on, end_date=None,
-            start_precision=observed_on.isoformat(), confidence="derived",
+            person_id=person_id,
+            org_id=org_id,
+            post_id=post_id,
+            chamber=chamber,
+            legislature=legislature,
+            start_date=observed_on,
+            end_date=None,
+            start_precision=observed_on.isoformat(),
+            confidence="derived",
             source_url=source_url,
         )
         self.session.add(m)
@@ -228,11 +273,13 @@ class MembershipWriter:
 
 def _rank(confidence: str) -> int:
     from .db import CONFIDENCE_RANK
+
     return CONFIDENCE_RANK.get(confidence, 99)
 
 
 def _utcnow():
     from datetime import datetime
+
     return datetime.now(UTC)
 
 
