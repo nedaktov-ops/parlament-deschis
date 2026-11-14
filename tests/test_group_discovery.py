@@ -1,9 +1,14 @@
 from pathlib import Path
 
+import pytest
+
 from pipeline.collect import _is_group_ledger_page
 from pipeline.parse.cdep_group import parse_group_ledger, parse_group_list
 
 CACHE = Path(__file__).resolve().parents[1] / "data" / "cache" / "cdep" / "deputies" / "2016"
+
+if not (CACHE / "group_5.html").exists() or not (CACHE / "list.html").exists():
+    pytest.skip("requires the optional archived cdep corpus", allow_module_level=True)
 
 
 def test_real_group_page_is_not_mistaken_for_generic_index():

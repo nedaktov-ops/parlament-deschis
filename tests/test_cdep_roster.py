@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from pipeline.parse.cdep_roster import parse_roster
 
 ROSTER = (
@@ -11,6 +13,9 @@ ROSTER = (
     / "2016"
     / "roster.html"
 )
+
+if not ROSTER.exists():
+    pytest.skip("requires the optional archived cdep corpus", allow_module_level=True)
 
 
 def test_parse_cached_2016_deputy_roster():

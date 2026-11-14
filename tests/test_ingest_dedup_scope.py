@@ -16,6 +16,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 from sqlalchemy import select
 
 from pipeline.collect import Corpus, LedgerRecord, MandateRef
@@ -30,6 +31,13 @@ from pipeline.ingest_corpus import CorpusIngestor
 from pipeline.parse.cdep_group import parse_group_ledger
 
 CACHE = Path("data/cache/cdep")
+
+_REQUIRED_PAGES = (
+    CACHE / "deputies" / "1992" / "group_11.html",
+    CACHE / "deputies" / "1996" / "group_2.html",
+)
+if not all(path.exists() for path in _REQUIRED_PAGES):
+    pytest.skip("requires the optional archived cdep corpus", allow_module_level=True)
 
 
 def _ledger(legislature: str, idg: str) -> LedgerRecord:

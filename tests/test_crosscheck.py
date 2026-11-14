@@ -17,12 +17,23 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from pipeline.collect import Corpus, LedgerRecord
 from pipeline.crosscheck import reconcile_current_membership
 from pipeline.parse.cdep_group import parse_group_ledger
 from pipeline.parse.cdep_roster import parse_roster
 
 CACHE = Path("data/cache/cdep")
+
+_REQUIRED_PAGES = (
+    CACHE / "deputies" / "2020" / "group_4.html",
+    CACHE / "deputies" / "2020" / "roster.html",
+    CACHE / "senate" / "2020" / "group_2.html",
+    CACHE / "senate" / "2020" / "roster.html",
+)
+if not all(path.exists() for path in _REQUIRED_PAGES):
+    pytest.skip("requires the optional archived cdep corpus", allow_module_level=True)
 
 
 def _ledger(chamber: str, legislature: str, idg: str) -> LedgerRecord:
