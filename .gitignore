@@ -11,7 +11,7 @@ htmlcov/
 # Data (DB, caches, snapshots and exports are generated; reference data is committed)
 data/parlament.db
 data/parlament.db-*
-data/parlament-real.db
+data/parlament-real.db*
 data/wikidata_cache.db
 data/wikidata_cache.db-*
 
@@ -34,5 +34,3 @@ frontend/.vite/
 .env.local
 .DS_Store
 .idea/
-.vscode/data/parlament-real.db-shm
-data/parlament-real.db-wal
