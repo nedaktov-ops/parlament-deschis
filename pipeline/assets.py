@@ -10,7 +10,7 @@ from pathlib import Path
 
 import tabula
 
-from pipeline.db import AssetDeclaration, Person, get_session
+from pipeline.db import AssetDeclaration, get_session
 
 log = logging.getLogger("parlament.assets")
 
@@ -129,20 +129,6 @@ def extract_assets_from_pdf(pdf_path: Path, year: int, source_url: str) -> list[
 
 def match_person(session, name: str, year: int) -> str | None:
     """Try to match a person by name and year (legislature)."""
-    from sqlalchemy import and_, select
-
-    # Normalize name
-    from pipeline.normalize import normalize_name
-
-    norm_name = normalize_name(name)
-
-    # Find persons with similar names in the relevant legislature
-    # This is a simplified matching - in production, use the full resolver
-    stmt = select(Person).where(
-        and_(
-            Person.normalized_name.like(f"%{norm_name}%"),
-        )
-    )
     # This is a simplified implementation
     return None
 

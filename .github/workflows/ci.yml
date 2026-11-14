@@ -25,7 +25,7 @@ jobs:
         run: uv sync --extra dev --locked
 
       - name: Lint
-        run: uv run ruff check pipeline backend tests
+        run: uv run ruff check pipeline backend scripts tests
 
       - name: Test
         run: uv run pytest -q
@@ -37,9 +37,8 @@ jobs:
           npm run build
 
   audit:
-    # The audit proves the corpus is complete: every parsed row reconciled
-    # against the count the source publishes, no membership without a source,
-    # no person in two groups at once.
+    # Recheck the latest published corpus. Findings include known source gaps
+    # documented in docs/VERIFICATION.md.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,13 +49,11 @@ jobs:
 
       - run: uv sync --locked
 
-      - name: Rebuild the database from the published archive
-        run: |
-          uv run python -m pipeline.cli --db data/parlament-real.db build-corpus \
-            --chamber both --cache data/cache/cdep --offline
+      - name: Download latest published dataset
+        run: uv run python scripts/download_dataset.py data/parlament.db
 
-      - name: Audit the corpus
-        run: uv run python -m pipeline.cli --db data/parlament-real.db audit-corpus
+      - name: Audit the published corpus
+        run: uv run python -m pipeline.cli --db data/parlament.db audit-corpus
 
   docker:
     runs-on: ubuntu-latest
@@ -64,19 +61,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download the database artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: parlament-db
-          path: data
-
       - name: Build the image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: false
           tags: parlament-deschis:ci
-          build-args: SOURCE_DB=data/parlament-real.db
 
       - name: Prove the image serves the tool
         run: |

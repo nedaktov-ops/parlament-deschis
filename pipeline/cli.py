@@ -138,9 +138,9 @@ def cmd_backfill(args) -> int:
 
     leg_list = sorted(legs.keys())
     if args.from_leg:
-        leg_list = [l for l in leg_list if l >= args.from_leg]
+        leg_list = [leg for leg in leg_list if leg >= args.from_leg]
     if args.to_leg:
-        leg_list = [l for l in leg_list if l <= args.to_leg]
+        leg_list = [leg for leg in leg_list if leg <= args.to_leg]
 
     print(f"Backfilling legislatures: {leg_list}")
     cdep = CdepSource(client)

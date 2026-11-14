@@ -7,9 +7,10 @@
 # makes it work on a free host, where a free web service has no persistent
 # disk and loses local files on every redeploy (render.com/docs/free).
 #
-# The database is prepared by scripts/prepare_db.py, which rewrites it into a
-# single file with journal_mode=DELETE. A WAL database cannot even be opened
-# on a read-only filesystem, because it needs to create its -wal/-shm files.
+# The database is downloaded from the latest public GitHub release and
+# prepared by scripts/prepare_db.py, which rewrites it into a single file with
+# journal_mode=DELETE. A WAL database cannot even be opened on a read-only
+# filesystem, because it needs to create its -wal/-shm files.
 
 # --- stage 1: the single-page app -----------------------------------------
 FROM node:22-alpine AS frontend
@@ -46,9 +47,8 @@ RUN uv sync --no-dev
 # The build must fail loudly when the database is missing: an image without
 # it would serve an empty tool, which is worse than no tool at all.
 FROM backend AS data
-ARG SOURCE_DB=data/parlament-real.db
-COPY ${SOURCE_DB} /tmp/source.db
-RUN python scripts/prepare_db.py /tmp/source.db /app/data/parlament.db \
+RUN python scripts/download_dataset.py /tmp/source.db \
+    && python scripts/prepare_db.py /tmp/source.db /app/data/parlament.db \
     && rm /tmp/source.db
 
 # --- stage 4: runtime ------------------------------------------------------

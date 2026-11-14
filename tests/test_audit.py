@@ -5,8 +5,8 @@ import pytest
 
 from pipeline.audit import audit, scope_totals
 from pipeline.db import (
-    Evidence,
     Event,
+    Evidence,
     Mandate,
     Membership,
     Organization,

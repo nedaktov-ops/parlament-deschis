@@ -7,7 +7,7 @@
 
 **Parlament Deschis** measures **traseism**: parliamentary-group and party switching by Romanian MPs, both chambers (Camera Deputaților ~330 seats, Senat ~136 seats), across all 10 legislatures 1990–2024.
 
-Every fact is **dated**, carries a **confidence level**, links to the **official publication** (`cdep.ro`), and points to an **archived snapshot** of the exact page it came from (SHA-256 manifest). Where the official record is incomplete, the tool says so instead of guessing — and the audit proves it.
+Every fact is **dated**, carries a **confidence level**, links to the **official publication** (`cdep.ro`), and points to an **archived snapshot** of the exact page it came from (SHA-256 manifest). Where the official record is incomplete, the corpus audit reports the gap rather than silently filling it.
 
 This is a transparency tool, not a news outlet. It reports what the chambers themselves publish.
 
@@ -28,7 +28,7 @@ The denominator is **members at risk**: distinct people who held a group seat in
 
 ---
 
-## Data: real, sourced, complete
+## Data: real, source-cited, with known limitations
 
 - **3,381 persons**, **6,623 memberships** (100% carry source URL + SHA-256 evidence), **7,429 events**, **1,217 switches** across all 20 scopes.
 - Primary source: `cdep.ro` — group ledgers (`structura2015.gp`) publish dated membership intervals ("Membru din" / "până în"); MP profiles (`structura2015.mp`) link every mandate a person ever held (`idm` is per-mandate, so identity is resolved via the mandate graph, never by name).
@@ -78,10 +78,16 @@ The service is **read-only at runtime**: the SQLite database is rebuilt from the
 - **CI**: `.github/workflows/ci.yml` (pytest + ruff + frontend build + image test) and `.github/workflows/data.yml` (daily corpus rebuild, audit, publish as a GitHub release).
 
 ```bash
-docker build -t parlament-deschis --build-arg SOURCE_DB=data/parlament-real.db .
+docker build -t parlament-deschis .
 docker run -p 8000:8000 parlament-deschis
 curl http://localhost:8000/api/health
 ```
+
+The Docker build downloads `parlament.db` from the latest public GitHub release.
+When the daily data workflow succeeds, it publishes a new release. A release
+alone does not rebuild the Render image; redeploy the Render service after a
+new dataset is published. If using a cached Docker build, clear the build cache
+so it fetches the latest release asset.
 
 ---
 

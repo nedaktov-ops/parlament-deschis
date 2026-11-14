@@ -487,7 +487,7 @@ class Query:
             persons = list(session.execute(stmt).all())
             ages_by_party: dict[str, list[int]] = {}
 
-            for pid, name, bdate in persons:
+            for pid, _name, bdate in persons:
                 if not bdate:
                     continue
                 age = (date.today() - bdate).days / 365.25

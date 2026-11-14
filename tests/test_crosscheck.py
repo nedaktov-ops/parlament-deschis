@@ -14,7 +14,7 @@ Uses the real cached pages:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pipeline.collect import Corpus, LedgerRecord
@@ -47,7 +47,7 @@ def _ledger(chamber: str, legislature: str, idg: str) -> LedgerRecord:
         ),
         sha256="test",
         ledger=ledger,
-        fetched_at=datetime.now(timezone.utc),
+        fetched_at=datetime.now(UTC),
     )
 
 

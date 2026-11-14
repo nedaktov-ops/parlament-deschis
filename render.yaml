@@ -15,11 +15,7 @@ services:
     dockerContext: .
     plan: free
     healthCheckPath: /api/health
-    # The build needs the database. It is produced by the data workflow
-    # (data/parlament-real.db) and fetched from the latest release asset;
-    # see .github/workflows/data.yml.
-    dockerBuildArgs:
-      - SOURCE_DB=data/parlament-real.db
+    # Docker downloads the latest public dataset release asset during build.
     envVars:
       - key: PARLAMENT_DB
         value: /app/data/parlament.db

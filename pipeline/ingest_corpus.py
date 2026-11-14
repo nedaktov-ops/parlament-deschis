@@ -388,8 +388,8 @@ class CorpusIngestor:
                     chosen[key] = (rec, row, person, group)
 
         for (
-            person_id,
-            group_id,
+            _person_id,
+            _group_id,
             _chamber,
             _legislature,
             _join,

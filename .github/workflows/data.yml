@@ -2,10 +2,10 @@ name: Data
 
 # Rebuild the corpus from the official sources and publish it.
 #
-# The schedule is the release mechanism: the web service is read-only and the
-# database is baked into its image, so a new dataset only reaches the public
-# after this workflow has published it. GitHub's scheduled workflows can be
-# delayed by up to an hour on a busy repository, and the run is skipped
+# The schedule publishes a dataset release. The web service is read-only and
+# the database is baked into its image, so Render must be redeployed after a
+# release before that dataset is served publicly. GitHub's scheduled workflows
+# can be delayed by up to an hour on a busy repository, and the run is skipped
 # entirely when the repository has had no activity for 60 days, so the
 # workflow_dispatch trigger is the manual fallback.
 
@@ -80,10 +80,3 @@ jobs:
           files: |
             data/parlament.db
             data/cache/cdep/manifest.jsonl
-
-      - name: Upload the database for the image build
-        uses: actions/upload-artifact@v4
-        with:
-          name: parlament-db
-          path: data/parlament-real.db
-          retention-days: 30

@@ -79,7 +79,7 @@ Of 1,004 consecutive tenures with both dates: same-day 663, next-day 19, one-day
 
 ## Known source inconsistencies (reported, not hidden)
 
-The 3 mandate-coverage errors are all cases where the chamber publishes **no dated unaffiliated roster** for that legislature, so the interval cannot be expressed by the source at all:
+Examples of mandate-coverage errors caused by the chamber publishing **no dated unaffiliated roster** for that legislature (the interval cannot be expressed by the source):
 - deputies 1996: Ion LAZIA (26 Jun 1997 → 9 Feb 1998), Ioan Adrian VILĂU (13 Apr 1999 → 25 Sep 2000)
 - deputies 2004: Ioan TIMIŞ (28 Jun 2006 → 4 Sep 2006)
 

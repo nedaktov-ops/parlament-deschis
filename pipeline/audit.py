@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session
 
 from .collect import roster_url
 from .db import Event, Evidence, Mandate, Membership, Organization, Person
-from .normalize import name_sort_key, normalize_name
+from .normalize import name_sort_key
 from .parse.cdep_group import parse_group_ledger, parse_group_list
 from .parse.cdep_roster import parse_roster
 
@@ -456,16 +456,6 @@ def check_roster_reconciliation(session: Session) -> list[Finding]:
                 continue
 
             roster_ids = {row.idm for row in roster.current + roster.former if row.idm}
-            ledger_ids = set(
-                session.scalars(
-                    select(Membership.person_id)
-                    .where(
-                        Membership.chamber == chamber,
-                        Membership.legislature == legislature,
-                    )
-                    .distinct()
-                )
-            )
             # The database stores people, the roster stores mandates, so the
             # comparison is on names. The two sides order the name parts
             # differently - the roster publishes "Ambrus Izabella-Agnes" while
