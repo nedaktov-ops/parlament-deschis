@@ -2,12 +2,9 @@ name: Data
 
 # Rebuild the corpus from the official sources and publish it.
 #
-# The schedule publishes a dataset release. The web service is read-only and
-# the database is baked into its image, so Render must be redeployed after a
-# release before that dataset is served publicly. GitHub's scheduled workflows
-# can be delayed by up to an hour on a busy repository, and the run is skipped
-# entirely when the repository has had no activity for 60 days, so the
-# workflow_dispatch trigger is the manual fallback.
+# A release is published only after strict validation. Updating the pinned
+# release marker then triggers Render's connected Git deployment. Scheduled
+# runs are best-effort; workflow_dispatch remains the recovery path.
 
 on:
   schedule:
@@ -26,9 +23,11 @@ concurrency:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   rebuild:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
@@ -54,29 +53,130 @@ jobs:
         run: |
           if [ -n "$FORCE" ]; then
             uv run python -m pipeline.cli --db data/parlament-real.db build-corpus \
-              --chamber both --cache data/cache/cdep --force
+              --chamber both --cache data/cache/cdep --strict --force \
+              --current-cache-ttl-hours 24 --historical-cache-ttl-hours 720
           else
             uv run python -m pipeline.cli --db data/parlament-real.db build-corpus \
-              --chamber both --cache data/cache/cdep
+              --chamber both --cache data/cache/cdep --strict \
+              --current-cache-ttl-hours 24 --historical-cache-ttl-hours 720
           fi
 
       - name: Audit the corpus
-        run: uv run python -m pipeline.cli --db data/parlament-real.db audit-corpus
+        run: >-
+          uv run python -m pipeline.cli --db data/parlament-real.db audit-corpus
+          --strict --baseline data/reference/corpus-audit-baseline.json
+          --json data/audit-report.json
 
       - name: Prepare the shippable database
         run: uv run python scripts/prepare_db.py data/parlament-real.db data/parlament.db
 
-      - name: Publish the dataset
+      - name: Choose immutable dataset release tag
+        id: release
+        run: |
+          echo "tag=data-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the validated dataset
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: data-${{ github.run_number }}
-          name: Dataset ${{ github.run_number }}
+          tag_name: ${{ steps.release.outputs.tag }}
+          name: Dataset ${{ steps.release.outputs.tag }}
           body: |
-            Snapshot of the corpus built from the official sources on
-            ${{ github.event.repository.updated_at }}.
+            Validated dataset built from official sources by workflow run
+            ${{ github.run_id }} (attempt ${{ github.run_attempt }}).
 
             * `parlament.db` - the SQLite database served by the API.
             * `manifest.jsonl` - every page fetched, with its URL and SHA-256.
+            * `audit-report.json` - complete audit findings and check totals.
           files: |
             data/parlament.db
             data/cache/cdep/manifest.jsonl
+            data/audit-report.json
+
+      - name: Pin the release and trigger Render
+        env:
+          DATASET_RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git checkout -B main origin/main
+            printf '%s\n' "$DATASET_RELEASE_TAG" > data/latest-release.txt
+            git add data/latest-release.txt
+            if git diff --cached --quiet; then
+              echo "Release marker already points to $DATASET_RELEASE_TAG"
+              exit 0
+            fi
+            git commit -m "Update dataset release marker to $DATASET_RELEASE_TAG"
+            if git push origin main; then
+              exit 0
+            fi
+            echo "Push attempt $attempt failed; retrying against current main"
+            sleep "$((attempt * 3))"
+          done
+          echo "Failed to update the pinned dataset release marker" >&2
+          exit 1
+
+      - name: Verify the deployed release
+        env:
+          DATASET_RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RENDER_API_URL: https://parlament-deschis.onrender.com
+        run: |
+          deadline=$((SECONDS + 900))
+          while (( SECONDS < deadline )); do
+            timeout=$((deadline - SECONDS))
+            if (( timeout > 60 )); then timeout=60; fi
+            if response="$(curl -fsS --connect-timeout 10 --max-time "$timeout" "$RENDER_API_URL/api/health")"; then
+              if printf '%s' "$response" | jq -e --arg tag "$DATASET_RELEASE_TAG" \
+                '.dataset.release_tag == $tag' >/dev/null; then
+                remaining=$((deadline - SECONDS))
+                if (( remaining <= 0 )); then break; fi
+                if (( remaining < timeout )); then timeout=$remaining; fi
+                if curl -fsS --max-time "$timeout" "$RENDER_API_URL/api/traseism/overview" >/dev/null; then
+                  echo "Render is serving dataset $DATASET_RELEASE_TAG"
+                  exit 0
+                fi
+                echo "Render dataset route is not ready yet"
+              fi
+              echo "Render has not activated dataset $DATASET_RELEASE_TAG yet"
+            else
+              echo "Render health endpoint is not ready yet"
+            fi
+            remaining=$((deadline - SECONDS))
+            if (( remaining > 0 )); then
+              sleep "$((remaining < 30 ? remaining : 30))"
+            fi
+          done
+          echo "Render did not confirm dataset $DATASET_RELEASE_TAG within 15 minutes" >&2
+          exit 1
+
+      - name: Report refresh or deployment failure
+        if: failure()
+        uses: actions/github-script@v7
+        env:
+          DATASET_RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        with:
+          script: |
+            const title = "Automated dataset refresh/deployment failure";
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const releaseTag = process.env.DATASET_RELEASE_TAG || "not published";
+            const note = `- ${new Date().toISOString()}: workflow run ${runUrl} failed; dataset release: ${releaseTag}.`;
+            const { data: issues } = await github.rest.issues.listForRepo({
+              ...context.repo,
+              state: "open",
+              per_page: 100,
+            });
+            const issue = issues.find((item) => item.title === title && !item.pull_request);
+            if (issue) {
+              await github.rest.issues.update({
+                ...context.repo,
+                issue_number: issue.number,
+                body: `${issue.body || ""}\n${note}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                ...context.repo,
+                title,
+                body: `${note}\n\nReview the workflow logs, failed validation gate, or Render deployment before rerunning.`,
+              });
+            }

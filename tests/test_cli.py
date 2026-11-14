@@ -74,3 +74,111 @@ def test_analytics_main_runs(tmp_path):
 def test_analytics_subcommand(tmp_path):
     db = tmp_path / "analytics.db"
     assert analytics_main(["--db", str(db), "waves"]) == 0
+
+
+def test_audit_strict_allows_only_fingerprinted_baseline_findings(tmp_path, monkeypatch):
+    import json
+
+    from pipeline.audit import audit
+
+    monkeypatch.chdir(tmp_path)
+    db = tmp_path / "audit.db"
+    _db_with_membership(db)
+    session = get_session(db)
+    try:
+        known_findings = [error.as_dict() for error in audit(session).errors]
+    finally:
+        session.close()
+
+    baseline = tmp_path / "baseline.json"
+    baseline.write_text(
+        json.dumps({"schema_version": 1, "findings": known_findings}),
+        encoding="utf-8",
+    )
+    assert cli_main(["--db", str(db), "audit-corpus", "--strict", "--baseline", str(baseline)]) == 0
+
+    baseline.write_text(json.dumps({"schema_version": 1, "findings": []}), encoding="utf-8")
+    assert cli_main(["--db", str(db), "audit-corpus", "--strict", "--baseline", str(baseline)]) == 1
+
+
+def test_audit_does_not_count_unevaluated_baseline_findings_as_resolved(
+    tmp_path, monkeypatch, capsys
+):
+    import json
+
+    from pipeline.audit import Finding, audit
+
+    monkeypatch.chdir(tmp_path)
+    db = tmp_path / "audit.db"
+    _db_with_membership(db)
+    session = get_session(db)
+    try:
+        baseline_findings = [error.as_dict() for error in audit(session).errors]
+    finally:
+        session.close()
+    baseline_findings.append(
+        Finding(
+            check="index_reconciliation",
+            severity="error",
+            chamber="deputies",
+            legislature="2024",
+            detail="reviewed finding from source pages unavailable to this audit",
+        ).as_dict()
+    )
+    baseline = tmp_path / "baseline.json"
+    baseline.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "error_findings": len(baseline_findings),
+                "findings": baseline_findings,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli_main(["--db", str(db), "audit-corpus", "--strict", "--baseline", str(baseline)]) == 0
+    assert "0 resolved baseline findings, 1 baseline findings not evaluated" in capsys.readouterr().out
+
+
+def test_build_corpus_strict_stops_before_ingesting_partial_sources(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    import pytest
+
+    import pipeline.collect
+    import pipeline.ingest_corpus
+
+    corpus = SimpleNamespace(
+        errors=["profile request timed out"],
+        ledgers=[],
+        profiles={},
+        clusters={},
+        rosters=[],
+        index_counts={},
+    )
+    monkeypatch.setattr(pipeline.collect, "build_corpus", lambda *args, **kwargs: corpus)
+    monkeypatch.setattr(
+        pipeline.ingest_corpus,
+        "ingest_corpus",
+        lambda *_args, **_kwargs: pytest.fail("partial corpus must not be ingested"),
+    )
+
+    assert cli_main(
+        ["--db", str(tmp_path / "strict.db"), "build-corpus", "--chamber", "deputies", "--strict"]
+    ) == 1
+
+
+def test_build_corpus_strict_rejects_empty_legislature_selection(tmp_path):
+    assert cli_main(
+        [
+            "--db",
+            str(tmp_path / "empty.db"),
+            "build-corpus",
+            "--chamber",
+            "deputies",
+            "--from",
+            "9999",
+            "--strict",
+        ]
+    ) == 1

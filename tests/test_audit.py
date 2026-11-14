@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from pipeline.audit import audit, scope_totals
+from pipeline.audit import audit, check_index_reconciliation, scope_totals
 from pipeline.db import (
     Event,
     Evidence,
@@ -146,6 +146,19 @@ def test_clean_database_has_no_audit_errors(session, monkeypatch):
         "missing_start",
         "batched_dates",
     }
+
+
+def test_index_reconciliation_warns_when_source_cache_is_missing(session, tmp_path, monkeypatch):
+    _seed_clean_database(session)
+    monkeypatch.chdir(tmp_path)
+
+    findings = check_index_reconciliation(session)
+
+    assert len(findings) == 1
+    assert findings[0].severity == "warning"
+    assert "not evaluated" in findings[0].detail
+    assert findings[0].context["not_evaluated"] is True
+    assert findings[0].context["missing_scopes"]
 
 
 def test_overlap_in_two_groups_is_an_error(session, monkeypatch):

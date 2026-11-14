@@ -46,23 +46,23 @@ python3 -m venv .venv
 .venv/bin/pip install -e '.[dev]'
 
 # 2. Build the real corpus from cdep.ro (cached on disk; a re-run is free)
-.venv/bin/python -m pipeline.cli --db data/parlament-real.db build-corpus --chamber both --cache data/cache/cdep
+.venv/bin/python -m pipeline.cli --db data/parlament-real.db build-corpus --chamber both --cache data/cache/cdep --strict
 
 # 3. Audit it (the gate — proves completeness and consistency)
-.venv/bin/python -m pipeline.cli --db data/parlament-real.db audit-corpus
+.venv/bin/python -m pipeline.cli --db data/parlament-real.db audit-corpus --strict --baseline data/reference/corpus-audit-baseline.json
 
 # 4. Serve
 .venv/bin/python -m pipeline.cli --db data/parlament-real.db serve
 ```
 
-The audit runs 11 checks: mandate coverage, no overlap, every membership evidenced, switch events backed by dated tenures, scope totals, roster reconciliation, index reconciliation, interval order, no missing starts, no batched-date smells.
+The audit runs 10 checks: mandate coverage, no overlap, every membership evidenced, switch events backed by dated tenures, scope totals, roster reconciliation, index reconciliation, interval order, no missing starts, and batched-date smells.
 
 ---
 
 ## Verify the data
 
 ```bash
-.venv/bin/python -m pipeline.cli --db data/parlament-real.db audit-corpus --json data/verification-report.json
+.venv/bin/python -m pipeline.cli --db data/parlament-real.db audit-corpus --strict --baseline data/reference/corpus-audit-baseline.json --json data/verification-report.json
 ```
 
 See `docs/VERIFICATION.md` for what each check proves and the full reconciliation table.
@@ -73,7 +73,7 @@ See `docs/VERIFICATION.md` for what each check proves and the full reconciliatio
 
 The service is **read-only at runtime**: the SQLite database is rebuilt from the official sources and **baked into the Docker image** (free hosts have no persistent disk, and a WAL database cannot even open on a read-only filesystem).
 
-- **Render** (free, no card): `render.yaml` — Docker runtime, `/api/health` healthcheck.
+- **Render** (free, no card): `render.yaml` — Docker runtime, `/api/health/ready` healthcheck.
 - **Vercel** (SPA): `vercel.json` — static frontend, `/api/*` rewritten to the Render API host.
 - **CI**: `.github/workflows/ci.yml` (pytest + ruff + frontend build + image test) and `.github/workflows/data.yml` (daily corpus rebuild, audit, publish as a GitHub release).
 
@@ -83,11 +83,16 @@ docker run -p 8000:8000 parlament-deschis
 curl http://localhost:8000/api/health
 ```
 
-The Docker build downloads `parlament.db` from the latest public GitHub release.
-When the daily data workflow succeeds, it publishes a new release. A release
-alone does not rebuild the Render image; redeploy the Render service after a
-new dataset is published. If using a cached Docker build, clear the build cache
-so it fetches the latest release asset.
+The Docker build downloads the exact public release pinned in
+`data/latest-release.txt` and verifies the GitHub asset SHA-256 before preparing
+the read-only database. The data workflow revalidates current-legislature
+pages daily and historical pages every 30 days by default; HTTP validators
+avoid redownloading unchanged pages. New releases are published only after
+source collection, database integrity, and strict audit gates pass. Updating
+the pinned release marker triggers Render's connected Git deployment, which
+is then checked against the expected release tag. The API reports liveness at
+`/api/health/live`, database readiness at `/api/health/ready`, and dataset
+identity/publication metadata at `/api/health`.
 
 ---
 

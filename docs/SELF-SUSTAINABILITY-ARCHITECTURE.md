@@ -14,32 +14,36 @@ limits. Render explicitly positions its Free services for hobby projects and
 testing, not production. A public service that requires an uptime commitment
 will eventually need a paid hosting plan or a different reliability model.
 
-## Current state and gaps
+## Current implementation state
 
 - The frontend is a static Vite application on Vercel. Its `/api/*` requests
   are rewritten to the Render API.
 - Render runs a Docker service with an ephemeral filesystem. The SQLite
   database is baked into the image and the running API is read-only; this is
   appropriate for Render Free.
-- `.github/workflows/data.yml` rebuilds the corpus daily, audits it, prepares a
-  database, and publishes a numbered GitHub Release. It has a manual
-  `workflow_dispatch` fallback and caches source pages between runs.
-- The data workflow does **not** currently trigger a Render deployment after
-  a successful release. A new release can therefore exist without being served
-  by the live API.
-- `Dockerfile` downloads the mutable `latest` release during an image build.
-  Render caches Docker build layers, so a deploy alone is not a reliable way
-  to prove that a new release was fetched.
-- A recent scheduled data run timed out while connecting to `www.cdep.ro`.
-  The correct failure behavior is to leave the current release and live
-  deployment untouched, not publish partial data.
-- The present audit has known findings: 223 mandate-coverage gaps, 50 overlap
-  findings documented as inference artifacts, and 2 index-reconciliation
-  errors. The audit command currently exits successfully despite findings, so
-  a green workflow is not by itself proof that all data-quality gates passed.
+- `.github/workflows/data.yml` refreshes and audits the corpus daily, prepares
+  a database, and publishes a uniquely tagged GitHub Release. It has a manual
+  `workflow_dispatch` fallback and a persisted source-page cache.
+- Publication is gated on complete required-source collection, the reviewed
+  audit baseline, database integrity, and the release asset checksum. Failed
+  candidates do not replace the pinned release.
+- `data/latest-release.txt` pins the exact release used by the Docker build.
+  The data workflow updates this marker only after publication, then checks
+  that Render serves the expected release and a representative API route.
+- The current audit baseline contains 275 known errors: 223
+  mandate-coverage gaps, 50 overlap findings, and 2 index-reconciliation
+  errors. The baseline stores the finding records for review; newly observed
+  errors block strict validation. Existing warnings remain visible in reports.
+- The source cache uses conditional revalidation and bounded freshness
+  windows. A recent scheduled source timeout confirmed why the pipeline must
+  fail closed and retain the last known-good release.
 - Render Free services spin down after 15 minutes without inbound traffic and
   take about a minute to wake. The frontend can load while API requests are
   waiting for the backend to wake.
+
+The code changes are implemented locally. The first pushed scheduled refresh
+and its Render deployment still need to verify the complete GitHub-to-Render
+path; provider-side behavior cannot be confirmed by local tests.
 
 ## Target architecture
 
@@ -112,10 +116,10 @@ version is a release tag, not the word `latest`.
    route. If Render does not deploy the automation-generated commit in the
    existing configuration, use a Render Deploy Hook from the workflow after
    the marker commit; store its URL only as a GitHub Actions secret.
-7. **Retain a recovery window.** Keep a small, documented number of recent
-   validated releases (for example, the latest 7) and prune older releases
-   only after a newer deployment passes verification. Do not delete the
-   previous good release as part of the publish step.
+7. **Retain a recovery window.** Preserve validated releases for rollback.
+   This implementation does not automatically delete releases: pruning would
+   remove recovery history and should be governed by a separately reviewed
+   retention policy.
 
 An immutable tag plus marker is the cache-invalidation mechanism; a deploy
 hook alone is not. Render documents Docker build-layer caching, so the data
@@ -172,9 +176,10 @@ visible until resolved and must not be hidden by a passing process exit code.
   of truth for the database. A Vercel Hobby Cron may be a watchdog, but its
   once-per-day limit and timing jitter make it a fallback trigger, not a
   reliability guarantee.
-- **GitHub Release retention:** avoid unbounded daily asset growth. Retain
-  enough validated versions for rollback and prune older assets/releases with
-  a documented policy after successful deployment.
+- **GitHub Release retention:** this implementation preserves release history
+  and does not automatically prune assets. Review repository storage and
+  retention needs before adopting a cleanup policy; never remove a release
+  needed for rollback.
 - **No paid monitoring or uptime pings:** use workflow summaries, GitHub
   Actions notifications/issues, provider logs, and the health endpoint. Do not
   add a third-party monitor that keeps the Render service awake.
@@ -183,6 +188,21 @@ Free-tier policies and quotas can change. Review the current provider limits
 before relying on this plan for a public service.
 
 ## Phased implementation plan
+
+### Implementation status
+
+- **Phase 1:** release gates, source completeness checks, checksum/integrity
+  validation, and the reviewable baseline are implemented.
+- **Phase 2:** immutable release pinning, marker-triggered Render deployment,
+  failure notifications, and bounded post-deploy verification are implemented.
+  End-to-end provider behavior remains pending a pushed workflow run.
+- **Phase 3:** liveness/readiness endpoints and dataset identity are
+  implemented; the frontend warns when the published dataset is over 48 hours
+  old. This freshness signal uses release publication time, not an independent
+  upstream-source timestamp.
+- **Phase 4:** GitHub scheduling remains best-effort. The optional Vercel Cron
+  watchdog is not configured, and no release-pruning automation is enabled.
+  Provider quotas and billing protections still require owner-side review.
 
 ### Phase 1 — Trustworthy release gates
 
@@ -248,9 +268,10 @@ The base design uses the existing GitHub, Render, and Vercel projects and
 requires no new paid service. A maintainer needs to:
 
 1. Confirm the Render service is connected to the repository and automatically
-   deploys commits to the intended branch.
-2. Add the release marker/deployment verification changes through the normal
-   CI-reviewed code path.
+   deploys commits to the intended branch. Verify this with the first pushed
+   marker update and post-deploy check.
+2. The release marker/deployment verification changes are implemented; push
+   them through the normal CI-reviewed code path.
 3. Grant the data workflow only the GitHub repository permissions it needs to
    publish releases and update the marker.
 4. Decide whether the optional Vercel Cron watchdog is warranted. If enabled,

@@ -132,6 +132,11 @@ export interface HealthResponse {
     persons: number;
     memberships: number;
   };
+  dataset: {
+    release_tag: string | null;
+    published_at: string | null;
+    asset_sha256: string | null;
+  };
   sources: Record<
     string,
     string | {

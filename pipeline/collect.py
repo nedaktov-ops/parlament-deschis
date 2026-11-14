@@ -19,10 +19,14 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import re
+import tempfile
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
+import requests
 
 from .parse.cdep_group import GroupLedger, parse_group_ledger, parse_group_list
 from .parse.cdep_profile import DeputyProfile, MandateRef, parse_deputy_profile
@@ -35,6 +39,7 @@ BASE = "https://www.cdep.ro/ords/pls/parlam/structura2015"
 CAM = {"deputies": "2", "senate": "1"}
 CHAMBERS = ("deputies", "senate")
 CACHE_ROOT = Path("data/cache/cdep")
+DEFAULT_CACHE_TTL = timedelta(days=1)
 
 
 def group_list_url(chamber: str, legislature: str) -> str:
@@ -133,35 +138,123 @@ def fetch_cached(
     html_path: Path,
     *,
     force: bool = False,
+    offline: bool = False,
+    cache_ttl: timedelta = DEFAULT_CACHE_TTL,
 ) -> tuple[str, str, datetime]:
-    """Return (text, sha256, fetched_at), using the on-disk cache when possible."""
+    """Return cached source text, revalidating entries older than ``cache_ttl``."""
     meta_path = html_path.with_suffix(".meta.json")
-    if not force and html_path.exists() and meta_path.exists():
+    if cache_ttl < timedelta(0):
+        raise ValueError("cache_ttl must not be negative")
+    cached: tuple[dict, str, datetime, datetime] | None = None
+    if html_path.exists() and meta_path.exists():
         try:
             meta = json.loads(meta_path.read_text(encoding="utf-8"))
-            if meta.get("url") == url:
-                return (
-                    html_path.read_text(encoding="utf-8", errors="replace"),
-                    meta["sha256"],
-                    datetime.fromisoformat(meta["fetched_at"]),
-                )
-        except (OSError, ValueError, KeyError):
-            pass  # corrupt cache entry → refetch
+            cached_text = html_path.read_text(encoding="utf-8", errors="replace")
+            fetched_at = datetime.fromisoformat(meta["fetched_at"])
+            last_checked_at = datetime.fromisoformat(
+                meta.get("last_checked_at", meta["fetched_at"])
+            )
+            if fetched_at.tzinfo is None:
+                fetched_at = fetched_at.replace(tzinfo=UTC)
+            if last_checked_at.tzinfo is None:
+                last_checked_at = last_checked_at.replace(tzinfo=UTC)
+            if meta.get("url") != url or meta.get("sha256") != _sha256(cached_text):
+                raise ValueError("cache URL or SHA-256 does not match its metadata")
+            cached = meta, cached_text, fetched_at, last_checked_at
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            if offline:
+                raise RuntimeError(
+                    f"no valid cached source page is available for offline use: {url}"
+                ) from exc
+            log.warning("ignoring invalid cached source page %s", html_path, exc_info=True)
 
-    res = client.get(url)
-    text = res.text
-    digest = _sha256(text)
-    now = datetime.now(UTC)
-    html_path.parent.mkdir(parents=True, exist_ok=True)
-    html_path.write_text(text, encoding="utf-8")
-    meta_path.write_text(
-        json.dumps(
-            {"url": url, "sha256": digest, "fetched_at": now.isoformat(), "status": res.status},
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
+    if cached is not None:
+        meta, cached_text, fetched_at, last_checked_at = cached
+        if offline or (
+            not force
+            and timedelta(0) <= datetime.now(UTC) - last_checked_at.astimezone(UTC) < cache_ttl
+        ):
+            return cached_text, meta["sha256"], fetched_at
+        if not force:
+            res = client.get(
+                url,
+                cached_text=cached_text,
+                etag=meta.get("etag"),
+                last_modified=meta.get("last_modified"),
+            )
+            now = datetime.now(UTC)
+            if res.status == 304:
+                meta["last_checked_at"] = now.isoformat()
+                meta["status"] = res.status
+                if res.etag:
+                    meta["etag"] = res.etag
+                if res.last_modified:
+                    meta["last_modified"] = res.last_modified
+                _atomic_write_text(
+                    meta_path, json.dumps(meta, ensure_ascii=False)
+                )
+                return cached_text, meta["sha256"], fetched_at
+            return _store_response(
+                html_path,
+                meta_path,
+                url,
+                res.text,
+                res.status,
+                res.etag,
+                res.last_modified,
+            )
+
+    if offline:
+        raise RuntimeError(f"no cached source page is available for offline use: {url}")
+
+    res = client.get(url, conditional=False)
+    return _store_response(
+        html_path,
+        meta_path,
+        url,
+        res.text,
+        res.status,
+        res.etag,
+        res.last_modified,
     )
+
+
+def _store_response(
+    html_path: Path,
+    meta_path: Path,
+    url: str,
+    text: str,
+    status: int,
+    etag: str | None,
+    last_modified: str | None,
+) -> tuple[str, str, datetime]:
+    now = datetime.now(UTC)
+    digest = _sha256(text)
+    metadata = {
+        "url": url,
+        "sha256": digest,
+        "fetched_at": now.isoformat(),
+        "last_checked_at": now.isoformat(),
+        "status": status,
+        "etag": etag,
+        "last_modified": last_modified,
+    }
+    _atomic_write_text(html_path, text)
+    _atomic_write_text(meta_path, json.dumps(metadata, ensure_ascii=False))
     return text, digest, now
+
+
+def _atomic_write_text(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", dir=path.parent, delete=False
+    ) as temporary:
+        temporary.write(content)
+        temporary_path = Path(temporary.name)
+    try:
+        os.replace(temporary_path, path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
 
 def _append_manifest(cache_dir: Path, record: dict) -> None:
@@ -194,6 +287,8 @@ def discover_group_ids(
     *,
     cache_dir: Path | None = None,
     force: bool = False,
+    offline: bool = False,
+    cache_ttl: timedelta = DEFAULT_CACHE_TTL,
     max_extra: int = 12,
     tail_misses: int = 4,
 ) -> dict[str, str]:
@@ -228,9 +323,13 @@ def discover_group_ids(
         url = group_ledger_url(chamber, legislature, str(idg))
         path = cache_dir / chamber / legislature / f"group_{idg}.html"
         try:
-            page, _digest, _fetched = fetch_cached(client, url, path, force=force)
-        except Exception as exc:  # noqa: BLE001
-            log.warning("group probe failed %s: %s", url, exc)
+            page, _digest, _fetched = fetch_cached(
+                client, url, path, force=force, offline=offline, cache_ttl=cache_ttl
+            )
+        except requests.HTTPError as exc:
+            if exc.response is None or exc.response.status_code not in {404, 410}:
+                raise
+            log.info("group probe returned %s for %s", exc.response.status_code, url)
             misses_in_a_row += 1
             continue
         if _is_group_ledger_page(page):
@@ -259,7 +358,9 @@ def collect_roster(
     *,
     cache_dir: Path | None = None,
     force: bool = False,
-) -> Roster | None:
+    offline: bool = False,
+    cache_ttl: timedelta = DEFAULT_CACHE_TTL,
+) -> Roster:
     """Fetch and parse the alphabetical roster of one legislature.
 
     The roster is a second view of the same source data as the group ledgers.
@@ -267,13 +368,14 @@ def collect_roster(
     """
     cache_dir = cache_dir or CACHE_ROOT
     url = roster_url(chamber, legislature)
-    try:
-        page, digest, fetched = fetch_cached(
-            client, url, cache_dir / chamber / legislature / "roster.html", force=force
-        )
-    except Exception as exc:  # noqa: BLE001
-        log.warning("roster fetch failed %s: %s", url, exc)
-        return None
+    page, digest, fetched = fetch_cached(
+        client,
+        url,
+        cache_dir / chamber / legislature / "roster.html",
+        force=force,
+        offline=offline,
+        cache_ttl=cache_ttl,
+    )
     _append_manifest(
         cache_dir,
         {
@@ -303,6 +405,8 @@ def collect_legislature(
     *,
     cache_dir: Path | None = None,
     force: bool = False,
+    offline: bool = False,
+    cache_ttl: timedelta = DEFAULT_CACHE_TTL,
     discover: bool = True,
 ) -> list[LedgerRecord]:
     """Fetch the group index and every group ledger for one chamber/legislature."""
@@ -314,6 +418,8 @@ def collect_legislature(
         list_url,
         cache_dir / chamber / legislature / "list.html",
         force=force,
+        offline=offline,
+        cache_ttl=cache_ttl,
     )
     _append_manifest(
         cache_dir,
@@ -340,6 +446,8 @@ def collect_legislature(
             {item.idg for item in items},
             cache_dir=cache_dir,
             force=force,
+            offline=offline,
+            cache_ttl=cache_ttl,
         )
 
     for item in items:
@@ -353,6 +461,8 @@ def collect_legislature(
                 short_name=item.short_name,
                 cache_dir=cache_dir,
                 force=force,
+                offline=offline,
+                cache_ttl=cache_ttl,
             )
         )
 
@@ -367,6 +477,8 @@ def collect_legislature(
             cache_dir=cache_dir,
             force=force,
             url=url,
+            offline=offline,
+            cache_ttl=cache_ttl,
         )
         if record is not None:
             out.append(record)
@@ -384,6 +496,8 @@ def _fetch_ledger(
     cache_dir: Path,
     force: bool,
     url: str | None = None,
+    offline: bool = False,
+    cache_ttl: timedelta = DEFAULT_CACHE_TTL,
 ) -> LedgerRecord | None:
     """Fetch and parse one group ledger page."""
     url = url or group_ledger_url(chamber, legislature, idg)
@@ -392,6 +506,8 @@ def _fetch_ledger(
         url,
         cache_dir / chamber / legislature / f"group_{idg}.html",
         force=force,
+        offline=offline,
+        cache_ttl=cache_ttl,
     )
     _append_manifest(
         cache_dir,
@@ -450,6 +566,7 @@ def collect_profiles(
     cache_dir: Path | None = None,
     force: bool = False,
     offline: bool = False,
+    cache_ttl_by_legislature: dict[str, timedelta] | None = None,
     progress_every: int = 25,
 ) -> dict[MandateRef, ProfileRecord]:
     """Fetch one MP profile per mandate and return the parsed records.
@@ -472,7 +589,17 @@ def collect_profiles(
             out[mandate] = ProfileRecord(mandate, url, None, None, error="not cached")
             continue
         try:
-            page, digest, fetched = fetch_cached(client, url, path, force=force)
+            cache_ttl = (cache_ttl_by_legislature or {}).get(
+                mandate.legislature, DEFAULT_CACHE_TTL
+            )
+            page, digest, fetched = fetch_cached(
+                client,
+                url,
+                path,
+                force=force,
+                offline=offline,
+                cache_ttl=cache_ttl,
+            )
         except Exception as exc:  # noqa: BLE001 - one bad profile must not stop the run
             log.warning("profile fetch failed %s: %s", url, exc)
             out[mandate] = ProfileRecord(mandate, url, None, None, error=str(exc))
@@ -544,18 +671,45 @@ def build_corpus(
     cache_dir: Path | None = None,
     force: bool = False,
     offline: bool = False,
+    current_legislature: str | None = None,
+    current_cache_ttl: timedelta = timedelta(days=1),
+    historical_cache_ttl: timedelta = timedelta(days=30),
 ) -> Corpus:
     """Collect every group ledger, then every profile, then resolve identities."""
     cache_dir = cache_dir or CACHE_ROOT
+    _atomic_write_text(cache_dir / "manifest.jsonl", "")
+    latest_legislature = current_legislature or max(legislatures, default=None)
+    cache_ttl_by_legislature = {
+        legislature: (
+            current_cache_ttl if legislature == latest_legislature else historical_cache_ttl
+        )
+        for legislature in legislatures
+    }
     corpus = Corpus()
     for chamber in chambers:
         for legislature in legislatures:
+            cache_ttl = cache_ttl_by_legislature[legislature]
             corpus.ledgers.extend(
-                collect_legislature(client, chamber, legislature, cache_dir=cache_dir, force=force)
+                collect_legislature(
+                    client,
+                    chamber,
+                    legislature,
+                    cache_dir=cache_dir,
+                    force=force,
+                    offline=offline,
+                    cache_ttl=cache_ttl,
+                )
             )
-            roster = collect_roster(client, chamber, legislature, cache_dir=cache_dir, force=force)
-            if roster is not None:
-                corpus.rosters.append(roster)
+            roster = collect_roster(
+                client,
+                chamber,
+                legislature,
+                cache_dir=cache_dir,
+                force=force,
+                offline=offline,
+                cache_ttl=cache_ttl,
+            )
+            corpus.rosters.append(roster)
             # The index publishes the member count of every group it lists.
             corpus.index_counts[(chamber, legislature)] = collect_index_counts(
                 cache_dir, chamber, legislature
@@ -566,6 +720,7 @@ def build_corpus(
         cache_dir=cache_dir,
         force=force,
         offline=offline,
+        cache_ttl_by_legislature=cache_ttl_by_legislature,
     )
     corpus.clusters = cluster_mandates(corpus.profiles, extra=mandates_in_ledgers(corpus.ledgers))
     corpus.errors = [r.error for r in corpus.profiles.values() if r.error]

@@ -53,7 +53,9 @@ jobs:
         run: uv run python scripts/download_dataset.py data/parlament.db
 
       - name: Audit the published corpus
-        run: uv run python -m pipeline.cli --db data/parlament.db audit-corpus
+        run: >-
+          uv run python -m pipeline.cli --db data/parlament.db audit-corpus
+          --strict --baseline data/reference/corpus-audit-baseline.json
 
   docker:
     runs-on: ubuntu-latest
@@ -72,9 +74,11 @@ jobs:
         run: |
           docker run -d --name pd -p 8000:8000 parlament-deschis:ci
           for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:8000/api/health >/dev/null; then break; fi
+            if curl -fsS http://127.0.0.1:8000/api/health/ready >/dev/null; then break; fi
             sleep 2
           done
-          curl -fsS http://127.0.0.1:8000/api/health
+          EXPECTED_RELEASE="$(cat data/latest-release.txt)"
+          curl -fsS http://127.0.0.1:8000/api/health \
+            | jq -e --arg release "$EXPECTED_RELEASE" '.dataset.release_tag == $release'
           curl -fsS http://127.0.0.1:8000/api/traseism/overview | head -c 400
           docker logs pd

@@ -14,8 +14,8 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     plan: free
-    healthCheckPath: /api/health
-    # Docker downloads the latest public dataset release asset during build.
+    healthCheckPath: /api/health/ready
+    # Docker downloads the exact release pinned in data/latest-release.txt.
     envVars:
       - key: PARLAMENT_DB
         value: /app/data/parlament.db

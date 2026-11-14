@@ -10,6 +10,23 @@ Run:
 .venv/bin/python -m pipeline.cli --db data/parlament-real.db audit-corpus --json data/verification-report.json
 ```
 
+For a release gate, use the reviewed exact-finding baseline:
+
+```bash
+.venv/bin/python -m pipeline.cli --db data/parlament-real.db audit-corpus \
+  --strict --baseline data/reference/corpus-audit-baseline.json \
+  --json data/verification-report.json
+```
+
+`--strict` without a baseline fails on every error. With the reviewed baseline,
+it permits only the exact existing error findings; new or changed errors fail
+the gate. Resolved baseline findings are reported so the allowlist can be
+reviewed and reduced. Warnings remain visible but do not fail the release.
+The index-reconciliation check depends on the cached source pages. If those
+pages are unavailable, it reports an explicit warning; its baseline findings
+are marked unevaluated rather than incorrectly reported as resolved. The
+scheduled refresh builds/revalidates this cache before the release audit.
+
 ## The checks
 
 | Check | Severity levels | What it proves |
@@ -25,7 +42,7 @@ Run:
 | `missing_start` | error | A tenure with no start date drops out of the movement analysis silently; it is reported loudly. |
 | `batched_dates` | warning | A date shared by many unrelated people is a smell (a default value, not a published fact). |
 
-Severities: `error` = data defect the build reports; `warning` = source inconsistency the tool publishes honestly; `info` = informational. Warnings do **not** fail the build — hiding them would be worse than publishing them.
+Severities: `error` = data defect the audit reports; `warning` = source inconsistency the tool publishes honestly; `info` = informational. Warnings do **not** fail the release gate — hiding them would be worse than publishing them.
 
 ## Reconciliation against the source's own counts
 
@@ -56,6 +73,29 @@ The group index publishes a member count per group ("N Membri"). The check compa
 **All evidence checks pass**: every membership carries a source URL, every switch event is backed by dated tenures, no interval is inverted, no start date is missing.
 
 The 223 mandate_coverage errors are genuine source gaps (members not listed in any group or as unaffiliated during an interval). The 50 overlap errors are inference artifacts (open-ended memberships that the source published without dates) — all flagged, none hidden.
+
+The initial release `data-initial-2026-11-14` (database SHA-256
+`8236e37760b7fd2e5e8d73e4ff4709c4bc0fb4a7915eea960c9cff6d562f0ab1`)
+contains 275 error findings, including the 2 index-reconciliation errors.
+Their full finding records are stored in
+[`../data/reference/corpus-audit-baseline.json`](../data/reference/corpus-audit-baseline.json).
+The CLI computes stable fingerprints from those records when comparing the
+baseline. This is an explicit, reviewable exception list, not a claim that
+those findings are correct or harmless; changes require review.
+
+## Scheduled source refresh and cache behavior
+
+The source-page cache is not treated as permanent truth. Current-legislature
+pages are revalidated after 24 hours and historical pages after 30 days.
+Where a source provides `ETag` or `Last-Modified`, the collector sends
+conditional requests and preserves the original content-fetch timestamp when
+the source confirms the page is unchanged. Offline mode uses cached pages only
+and fails explicitly when required cache entries are missing.
+
+The release workflow runs collection in strict mode: failed profile parsing,
+missing roster/index scopes, or incomplete profiles prevent ingestion and
+publication. The live API continues serving the last verified release until a
+new image with the pinned release passes deployment checks.
 
 ## Ground-truth cross-check
 

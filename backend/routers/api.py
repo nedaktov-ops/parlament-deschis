@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from backend import queries
-from backend.config import APP_VERSION
+from backend.config import APP_VERSION, DATASET_METADATA_PATH
 from backend.deps import get_db
 from pipeline.analytics import derive_all_switch_waves, derive_switch_waves
 from pipeline.db import Evidence
@@ -298,18 +298,47 @@ def admin_poll(
 
 @router.get("/health")
 def health(db: Session = Depends(get_db)):
+    return {
+        "status": "ok",
+        "database": _database_health(db),
+        "dataset": _dataset_metadata(),
+        "sources": source_health(db),
+    }
+
+
+@router.get("/health/live")
+def health_live():
+    return {"status": "ok"}
+
+
+@router.get("/health/ready")
+def health_ready(db: Session = Depends(get_db)):
+    return {"status": "ok", "database": _database_health(db)}
+
+
+def _database_health(db: Session) -> dict:
     from sqlalchemy import func, select
 
     from pipeline.db import Membership, Person
 
     return {
         "status": "ok",
-        "database": {
-            "status": "ok",
-            "persons": db.scalar(select(func.count()).select_from(Person)),
-            "memberships": db.scalar(select(func.count()).select_from(Membership)),
-        },
-        "sources": source_health(db),
+        "persons": db.scalar(select(func.count()).select_from(Person)),
+        "memberships": db.scalar(select(func.count()).select_from(Membership)),
+    }
+
+
+def _dataset_metadata() -> dict:
+    try:
+        metadata = json.loads(DATASET_METADATA_PATH.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        metadata = {}
+    if not isinstance(metadata, dict):
+        raise ValueError(f"dataset metadata must be a JSON object: {DATASET_METADATA_PATH}")
+    return {
+        "release_tag": metadata.get("release_tag"),
+        "published_at": metadata.get("published_at"),
+        "asset_sha256": metadata.get("asset_sha256"),
     }
 
 

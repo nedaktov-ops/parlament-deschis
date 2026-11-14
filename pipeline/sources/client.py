@@ -111,11 +111,26 @@ class PoliteClient:
             ]
         )
 
-    def get(self, url: str, *, conditional: bool = True) -> FetchResult:
+    def get(
+        self,
+        url: str,
+        *,
+        conditional: bool = True,
+        cached_text: str | None = None,
+        etag: str | None = None,
+        last_modified: str | None = None,
+    ) -> FetchResult:
         host = self._host(url)
         self._check_robots(url, host)
         if self.respect_robots and host.robots and not host.robots.can_fetch(self.user_agent, url):
             raise RobotsDisallowed(url)
+
+        if cached_text is not None:
+            self._conditional[url] = {
+                "text": cached_text,
+                "etag": etag,
+                "last_modified": last_modified,
+            }
 
         headers = {}
         if conditional and url in self._conditional:
@@ -140,13 +155,22 @@ class PoliteClient:
 
             if resp.status_code == 304:
                 cached = self._conditional.get(url, {})
+                if "text" not in cached:
+                    raise RuntimeError(f"source returned 304 without a cached response: {url}")
+                etag = resp.headers.get("ETag", cached.get("etag"))
+                last_modified = resp.headers.get("Last-Modified", cached.get("last_modified"))
+                self._conditional[url] = {
+                    "text": cached["text"],
+                    "etag": etag,
+                    "last_modified": last_modified,
+                }
                 return FetchResult(
                     url,
                     304,
-                    cached.get("text", ""),
+                    cached["text"],
                     from_cache=True,
-                    etag=cached.get("etag"),
-                    last_modified=cached.get("last_modified"),
+                    etag=etag,
+                    last_modified=last_modified,
                 )
             if resp.status_code == 429:
                 wait = int(resp.headers.get("Retry-After", "60"))

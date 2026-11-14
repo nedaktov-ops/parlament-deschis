@@ -10,7 +10,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from sqlalchemy import func, select
@@ -306,18 +306,57 @@ def cmd_verify(args) -> int:
 def cmd_audit_corpus(args) -> int:
     """Run the corpus audit and report what it found.
 
-    The audit is the gate of the project: it proves that the parsed corpus
-    is complete and internally consistent, and it fails the build when it
-    is not. Warnings are printed but do not fail the run, because some of
-    them are the source's own contradictions and hiding them would be
-    worse than publishing them.
+    Warnings are reported but do not fail the run. In strict mode, errors
+    fail unless they exactly match an explicitly reviewed baseline.
     """
     import json
 
-    from .audit import audit
+    from .audit import Finding, audit, finding_fingerprint
 
     session = get_session(args.db)
-    report = audit(session)
+    try:
+        report = audit(session)
+    finally:
+        session.close()
+
+    from collections import Counter
+
+    baseline: Counter[str] = Counter()
+    baseline_findings: list[dict] = []
+    if args.baseline:
+        baseline_data = json.loads(Path(args.baseline).read_text(encoding="utf-8"))
+        if not isinstance(baseline_data, dict) or baseline_data.get("schema_version") != 1:
+            raise ValueError(f"unsupported audit baseline schema: {args.baseline}")
+        known_findings = baseline_data.get("findings")
+        if not isinstance(known_findings, list) or not all(
+            isinstance(value, dict) for value in known_findings
+        ):
+            raise ValueError(f"invalid audit baseline findings: {args.baseline}")
+        if any(finding.get("severity") != "error" for finding in known_findings):
+            raise ValueError(f"audit baseline may contain only errors: {args.baseline}")
+        baseline_findings = known_findings
+        try:
+            baseline = Counter(
+                finding_fingerprint(Finding(**finding)) for finding in known_findings
+            )
+        except TypeError as exc:
+            raise ValueError(f"invalid audit baseline finding shape: {args.baseline}") from exc
+        if baseline_data.get("error_findings", len(known_findings)) != len(known_findings):
+            raise ValueError(f"audit baseline finding count does not match: {args.baseline}")
+
+    error_fingerprints = Counter(finding_fingerprint(finding) for finding in report.errors)
+    new_errors = error_fingerprints - baseline
+    unevaluated_checks = {
+        finding.check
+        for finding in report.findings
+        if finding.context.get("not_evaluated") is True
+    }
+    unevaluated_baseline = Counter(
+        finding_fingerprint(Finding(**finding))
+        for finding in baseline_findings
+        if finding["check"] in unevaluated_checks
+    )
+    resolved_baseline_findings = (baseline - unevaluated_baseline) - error_fingerprints
 
     print("corpus audit")
     print("-" * 62)
@@ -342,8 +381,14 @@ def cmd_audit_corpus(args) -> int:
         print(f"report written to {args.json}")
 
     print(f"\n{len(report.errors)} errors, {len(report.warnings)} warnings")
-    session.close()
-    if report.errors and args.strict:
+    if args.baseline:
+        print(
+            f"{sum((error_fingerprints & baseline).values())} known errors, "
+            f"{sum(new_errors.values())} new errors, "
+            f"{sum(resolved_baseline_findings.values())} resolved baseline findings, "
+            f"{sum(unevaluated_baseline.values())} baseline findings not evaluated"
+        )
+    if args.strict and sum(new_errors.values()):
         return 1
     return 0
 
@@ -390,8 +435,8 @@ def cmd_build_corpus(args) -> int:
 
     This is the command that builds a real database: every parliamentary group
     ledger for both chambers and every legislature, plus the MP profiles that
-    resolve who a member is across mandates. Responses are cached on disk with
-    a SHA-256 manifest, so a re-run is free and reproducible.
+    resolve who a member is across mandates. Cached pages are periodically
+    revalidated, while their source hashes remain recorded in the manifest.
     """
     import logging
 
@@ -401,13 +446,20 @@ def cmd_build_corpus(args) -> int:
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     log = logging.getLogger("parlament.cli")
+    if args.current_cache_ttl_hours < 0 or args.historical_cache_ttl_hours < 0:
+        raise ValueError("cache TTL hours must not be negative")
 
     chambers = ["deputies", "senate"] if args.chamber == "both" else [args.chamber]
-    legislatures = sorted(_load_legislatures())
+    all_legislatures = sorted(_load_legislatures())
+    current_legislature = all_legislatures[-1] if all_legislatures else None
+    legislatures = all_legislatures.copy()
     if args.from_leg:
         legislatures = [y for y in legislatures if y >= args.from_leg]
     if args.to_leg:
         legislatures = [y for y in legislatures if y <= args.to_leg]
+    if args.strict and not legislatures:
+        log.error("strict corpus collection selected no legislatures")
+        return 1
 
     client = PoliteClient(sleep=args.sleep)
     try:
@@ -418,6 +470,9 @@ def cmd_build_corpus(args) -> int:
             cache_dir=Path(args.cache),
             force=args.force,
             offline=args.offline,
+            current_legislature=current_legislature,
+            current_cache_ttl=timedelta(hours=args.current_cache_ttl_hours),
+            historical_cache_ttl=timedelta(hours=args.historical_cache_ttl_hours),
         )
     finally:
         client.close()
@@ -429,6 +484,41 @@ def cmd_build_corpus(args) -> int:
         len(set(corpus.clusters.values())),
         len(corpus.errors),
     )
+
+    if args.strict:
+        expected_scopes = {(chamber, legislature) for chamber in chambers for legislature in legislatures}
+        ledger_scopes = {(record.chamber, record.legislature) for record in corpus.ledgers}
+        profile_mandates = set(corpus.profiles)
+        expected_mandates = {
+            (record.chamber, record.legislature, row.idm)
+            for record in corpus.ledgers
+            for row in record.ledger.current + record.ledger.former + record.ledger.name_only
+            if row.idm
+        }
+        completed_mandates = {
+            (mandate.chamber, mandate.legislature, mandate.idm) for mandate in profile_mandates
+        }
+        failures = list(corpus.errors)
+        if len(corpus.rosters) != len(expected_scopes):
+            failures.append(
+                f"expected {len(expected_scopes)} roster pages, got {len(corpus.rosters)}"
+            )
+        if len(corpus.index_counts) != len(expected_scopes):
+            failures.append(
+                f"expected {len(expected_scopes)} group indexes, got {len(corpus.index_counts)}"
+            )
+        if expected_scopes - ledger_scopes:
+            failures.append(f"missing ledger scopes: {sorted(expected_scopes - ledger_scopes)}")
+        if expected_mandates - completed_mandates:
+            failures.append(
+                f"missing {len(expected_mandates - completed_mandates)} profiles referenced by ledgers"
+            )
+        if failures:
+            for failure in failures[:20]:
+                log.error("strict corpus collection failed: %s", failure)
+            if len(failures) > 20:
+                log.error("%d additional source failures omitted", len(failures) - 20)
+            return 1
 
     # The three-view cross-check: the group page, the index count and the
     # roster must agree before a row is treated as a current membership.
@@ -556,6 +646,23 @@ def main(argv=None) -> int:
     p_corpus.add_argument("--sleep", type=float, default=2.5, help="seconds between requests")
     p_corpus.add_argument("--force", action="store_true", help="refetch even if cached")
     p_corpus.add_argument(
+        "--current-cache-ttl-hours",
+        type=float,
+        default=24,
+        help="revalidate current-legislature pages after this many hours",
+    )
+    p_corpus.add_argument(
+        "--historical-cache-ttl-hours",
+        type=float,
+        default=720,
+        help="revalidate historical pages after this many hours (default: 30 days)",
+    )
+    p_corpus.add_argument(
+        "--strict",
+        action="store_true",
+        help="fail without ingesting if any required source page or profile is missing",
+    )
+    p_corpus.add_argument(
         "--offline",
         action="store_true",
         help="use only cached responses; never contact the official site",
@@ -574,7 +681,12 @@ def main(argv=None) -> int:
     p_audit.add_argument(
         "--strict",
         action="store_true",
-        help="exit non-zero when the audit reports an error",
+        help="exit non-zero when errors are not present in the optional reviewed baseline",
+    )
+    p_audit.add_argument(
+        "--baseline",
+        default=None,
+        help="JSON file of reviewed error findings allowed by --strict",
     )
     p_audit.set_defaults(fn=cmd_audit_corpus)
 

@@ -430,6 +430,46 @@ def test_health(api):
         "persons": 2,
         "memberships": 4,
     }
+    assert body["dataset"] == {
+        "release_tag": None,
+        "published_at": None,
+        "asset_sha256": None,
+    }
+
+
+def test_health_separates_liveness_readiness_and_dataset_metadata(api, tmp_path, monkeypatch):
+    import json
+
+    from backend.routers import api as api_router
+
+    metadata_path = tmp_path / "dataset-metadata.json"
+    metadata_path.write_text(
+        json.dumps(
+            {
+                "release_tag": "data-123-1",
+                "published_at": "2026-11-14T10:55:25Z",
+                "asset_sha256": "a" * 64,
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(api_router, "DATASET_METADATA_PATH", metadata_path)
+
+    live = api.client.get("/api/health/live")
+    assert live.status_code == 200
+    assert live.json() == {"status": "ok"}
+
+    ready = api.client.get("/api/health/ready")
+    assert ready.status_code == 200
+    assert ready.json()["database"]["status"] == "ok"
+
+    health = api.client.get("/api/health")
+    assert health.status_code == 200
+    assert health.json()["dataset"] == {
+        "release_tag": "data-123-1",
+        "published_at": "2026-11-14T10:55:25Z",
+        "asset_sha256": "a" * 64,
+    }
 
 
 def test_about(api):

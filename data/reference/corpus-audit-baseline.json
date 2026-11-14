@@ -1,0 +1,3714 @@
+{
+  "schema_version": 1,
+  "source_release": "data-initial-2026-11-14",
+  "source_asset_sha256": "8236e37760b7fd2e5e8d73e4ff4709c4bc0fb4a7915eea960c9cff6d562f0ab1",
+  "error_findings": 275,
+  "findings": [
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "1996",
+      "person_id": "f195718f-7f21-444f-a02a-07dcb16c71a8",
+      "name": "Ion LAZIA",
+      "detail": "gap in group membership between 1997-06-26 and 1998-02-09; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 228
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "ef15145c-c08d-406f-a20e-e849af73e94a",
+      "name": "Ioan TIMIŞ",
+      "detail": "gap in group membership between 2006-06-28 and 2006-09-04; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 68
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "1996",
+      "person_id": "59a1d5ee-66d1-49ff-8ab3-68745aaf107e",
+      "name": "Ioan Adrian VILĂU",
+      "detail": "gap in group membership between 1999-04-13 and 2000-09-25; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 531
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "1996",
+      "person_id": "b5aca1e2-3aab-4c0a-831e-17d2d88efceb",
+      "name": "Victor BABIUC",
+      "detail": "gap in group membership between 2000-02-17 and 2000-05-22; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 95
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2000",
+      "person_id": "b5aca1e2-3aab-4c0a-831e-17d2d88efceb",
+      "name": "Victor BABIUC",
+      "detail": "gap in group membership between 2002-04-22 and 2003-02-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 287
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "51dc7ff5-48e0-4efc-9acf-b6a1ba150b79",
+      "name": "Călin Constantin Anton POPESCU-TĂRICEANU",
+      "detail": "gap in group membership between 2014-03-10 and 2014-09-02; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 176
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "aac77157-8a83-46c9-9041-f4b0107773ce",
+      "name": "Marin DIACONESCU",
+      "detail": "gap in group membership between 2006-03-27 and 2006-05-15; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 49
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "aac77157-8a83-46c9-9041-f4b0107773ce",
+      "name": "Marin DIACONESCU",
+      "detail": "gap in group membership between 2007-12-04 and 2008-09-08; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 279
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "1996",
+      "person_id": "2cfd55d6-b17a-4711-a8b5-1e90066120fd",
+      "name": "Gheorghe CRISTEA",
+      "detail": "gap in group membership between 2000-02-01 and 2000-10-30; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 272
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "1996",
+      "person_id": "0b608ab6-82ba-4820-a2a2-2657177843a6",
+      "name": "Vasile MATEI",
+      "detail": "gap in group membership between 1998-02-03 and 2000-09-25; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 965
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "1996",
+      "person_id": "d3d75537-b153-48a1-aa50-0cee300f1250",
+      "name": "Ioan SONEA",
+      "detail": "gap in group membership between 1998-04-06 and 2000-10-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 925
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "4837cc3e-47df-4208-9adf-25aa7354360a",
+      "name": "Anghel STANCIU",
+      "detail": "gap in group membership between 2005-06-06 and 2005-11-28; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 175
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "987210ce-b47c-4f6b-a70a-fe7d3fdf84d0",
+      "name": "Ioan GHIŞE",
+      "detail": "gap in group membership between 2006-09-14 and 2006-11-22; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 69
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "987210ce-b47c-4f6b-a70a-fe7d3fdf84d0",
+      "name": "Ioan GHIŞE",
+      "detail": "gap in group membership between 2014-11-24 and 2015-09-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 281
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "1996",
+      "person_id": "d89f60c5-75af-400a-8949-8498806dc68b",
+      "name": "Nicolae GRĂDINARU",
+      "detail": "gap in group membership between 1998-03-11 and 2000-09-25; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 929
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "1996",
+      "person_id": "d37d3500-b1e4-4564-9d1e-a97a0e8bea6b",
+      "name": "Valentin Adrian ILIESCU",
+      "detail": "gap in group membership between 1999-10-18 and 2000-02-14; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 119
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "2752d8f6-9649-4fba-8b5e-332da34f4843",
+      "name": "Ion PÂRGARU",
+      "detail": "gap in group membership between 2015-03-18 and 2015-03-30; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 12
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "3ce28614-dcbb-4654-a4f9-e19d9d505d7b",
+      "name": "Dan Ioan POPESCU",
+      "detail": "gap in group membership between 2006-09-04 and 2006-11-06; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 63
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "1996",
+      "person_id": "28ed7039-30ee-41ae-ac25-7cd12faf8444",
+      "name": "Ioan PINTEA",
+      "detail": "gap in group membership between 1997-07-11 and 2000-03-15; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 978
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "b063dfc7-474d-4107-9c23-3ca3bf611937",
+      "name": "Nicolae POPA",
+      "detail": "gap in group membership between 2007-04-23 and 2007-05-22; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 29
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "1996",
+      "person_id": "b361cd33-d80f-4e90-b370-30a45931bd1a",
+      "name": "Liviu Gheorghe NEGOIŢĂ",
+      "detail": "gap in group membership between 1997-06-27 and 1998-06-18; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 356
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "1996",
+      "person_id": "c6440d3b-ae02-49de-889d-2a17e1046fdd",
+      "name": "George ŞERBAN",
+      "detail": "gap in group membership between 1999-10-04 and 2000-05-22; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 231
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2000",
+      "person_id": "c69519be-e979-491f-9d46-bed4d3095b50",
+      "name": "Ion MOGOŞ",
+      "detail": "gap in group membership between 2002-04-15 and 2003-09-09; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 512
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "d377bcbb-6eda-4c11-abd9-19fbd42a8546",
+      "name": "Corneliu CIONTU",
+      "detail": "gap in group membership between 2005-06-06 and 2007-06-26; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 750
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2000",
+      "person_id": "d55114f6-43c3-479b-91de-33b08bf86f94",
+      "name": "Sever MEŞCA",
+      "detail": "gap in group membership between 2002-02-25 and 2002-02-27; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 2
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2000",
+      "person_id": "ea19229f-2b83-43eb-90dc-e580b70af467",
+      "name": "Ilie NEACŞU",
+      "detail": "gap in group membership between 2002-02-25 and 2002-02-27; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 2
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2000",
+      "person_id": "71c27671-bfe4-4ece-9d24-44da5aea289b",
+      "name": "Luca ŞTEFĂNOIU",
+      "detail": "gap in group membership between 2001-02-13 and 2001-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 202
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2000",
+      "person_id": "69a72cbd-9807-446d-8c55-f07e56b623b7",
+      "name": "Dorel BAHRIN",
+      "detail": "gap in group membership between 2003-09-01 and 2003-12-02; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 92
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2000",
+      "person_id": "f8969cd1-5e66-4078-afd7-1d1705152a8d",
+      "name": "Amalia BĂLĂŞOIU",
+      "detail": "gap in group membership between 2003-09-01 and 2003-12-04; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 94
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2000",
+      "person_id": "350bc8f1-3100-4bbd-aae7-db6e12d18d57",
+      "name": "Mircea BUCUR",
+      "detail": "gap in group membership between 2001-05-17 and 2001-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 109
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2000",
+      "person_id": "51ddadcd-7246-49c7-bc97-40c86ccab5a9",
+      "name": "Cristian-Sorin DUMITRESCU",
+      "detail": "gap in group membership between 2001-05-28 and 2001-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 98
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "331f342e-b211-4646-9638-594bfaf5c2ff",
+      "name": "Scarlat IRIZA",
+      "detail": "gap in group membership between 2015-02-02 and 2015-10-02; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 242
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "331f342e-b211-4646-9638-594bfaf5c2ff",
+      "name": "Scarlat IRIZA",
+      "detail": "gap in group membership between 2016-02-01 and 2016-09-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 213
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2000",
+      "person_id": "e6c6b3e4-83de-4882-94ec-5a2ed0c73d0a",
+      "name": "Dorin Lazăr MAIOR",
+      "detail": "gap in group membership between 2001-05-17 and 2001-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 109
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2000",
+      "person_id": "f1d78dde-5003-4b06-baa0-e8db64fd1eed",
+      "name": "Valentin PĂDUROIU",
+      "detail": "gap in group membership between 2001-05-17 and 2001-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 109
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2000",
+      "person_id": "82682722-9903-4a4a-a919-2d6659aa5291",
+      "name": "Zisu STANCIU",
+      "detail": "gap in group membership between 2001-06-12 and 2001-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 83
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2000",
+      "person_id": "54847419-c085-4da9-b91c-52e321724df4",
+      "name": "Codrin ŞTEFĂNESCU",
+      "detail": "gap in group membership between 2001-05-17 and 2001-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 109
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "8ea36169-1b4b-46ee-bc57-ed7004289eb0",
+      "name": "Dumitru CHIRIŢĂ",
+      "detail": "gap in group membership between 2015-02-02 and 2015-09-21; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 231
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2000",
+      "person_id": "8942a8a1-5eb1-4cb9-a997-ee8ba85c045e",
+      "name": "Octavian Constantin PETRUŞ",
+      "detail": "gap in group membership between 2003-09-01 and 2003-12-15; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 105
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2000",
+      "person_id": "74d3fde4-083a-444e-88b1-bc82410119c0",
+      "name": "Vasile PREDICĂ",
+      "detail": "gap in group membership between 2002-02-05 and 2002-02-12; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 7
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "583b70fb-0457-4b48-8192-bedb3f8ff35c",
+      "name": "Florea VOINEA",
+      "detail": "gap in group membership between 2005-05-03 and 2005-05-30; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 27
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "578ec995-98f4-41ca-9f02-8e7bf65b79c4",
+      "name": "Vlad Gabriel HOGEA",
+      "detail": "gap in group membership between 2006-10-03 and 2008-02-04; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 489
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "8e292e57-7ee2-41c2-b4d6-402122f8a413",
+      "name": "Daniel IONESCU",
+      "detail": "gap in group membership between 2005-06-06 and 2006-03-07; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 274
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "21e6af32-f07f-4b6c-9621-fe4c4205b8d2",
+      "name": "Florina Ruxandra JIPA",
+      "detail": "gap in group membership between 2016-05-09 and 2016-06-28; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 50
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "95daef44-84cf-4b10-bf87-b53216a3a303",
+      "name": "Dumitru PUZDREA",
+      "detail": "gap in group membership between 2005-06-13 and 2006-03-16; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 276
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "8d25ebcb-2faa-4687-bc80-3e6c98265339",
+      "name": "Adrian GURZĂU",
+      "detail": "gap in group membership between 2014-02-03 and 2015-03-04; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 394
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "8d25ebcb-2faa-4687-bc80-3e6c98265339",
+      "name": "Adrian GURZĂU",
+      "detail": "gap in group membership between 2015-06-03 and 2016-07-20; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 413
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "8665ebe4-0325-49a6-80d5-fd4748158167",
+      "name": "Mihai STĂNIŞOARĂ",
+      "detail": "gap in group membership between 2014-07-02 and 2014-09-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 61
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "7e6a3d84-1deb-471f-ad46-a6c451ee181d",
+      "name": "Marin ANTON",
+      "detail": "gap in group membership between 2014-03-03 and 2015-03-09; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 371
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "2858f0f7-76fa-4ec7-bf8d-f203bb2ea5fa",
+      "name": "Radu STROE",
+      "detail": "gap in group membership between 2014-07-02 and 2014-09-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 61
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "d0986b91-483b-4b31-8f90-16201b7dfc3d",
+      "name": "Cornel ŞTIRBEŢ",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "7d9dbefd-6474-4155-bb14-c96049514693",
+      "name": "Eugen BEJINARIU",
+      "detail": "gap in group membership between 2006-03-23 and 2006-06-27; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 96
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "84067c96-adf1-445b-af16-0ba2fbcda579",
+      "name": "Ioan MUNTEANU",
+      "detail": "gap in group membership between 2010-06-21 and 2012-07-18; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 758
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "434d3919-12e0-4bda-a05a-6020707f58f7",
+      "name": "Cătălin Ovidiu BUHĂIANU-OBUF",
+      "detail": "gap in group membership between 2007-06-05 and 2007-06-12; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 7
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "2087abcb-083b-4388-9ea2-2377904d8422",
+      "name": "Petru LIFICIU",
+      "detail": "gap in group membership between 2005-06-07 and 2007-11-06; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 882
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "a7b5648a-1df7-47b2-b429-d40b9d4a6bbf",
+      "name": "Mugurel Liviu SÂRBU",
+      "detail": "gap in group membership between 2006-04-10 and 2006-10-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 176
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "34ac6949-cc72-4df5-94fe-179d37fe63be",
+      "name": "Constantin TUDOR",
+      "detail": "gap in group membership between 2005-02-01 and 2005-02-04; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 3
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "78da415c-cca7-43e7-a650-ca142282dee4",
+      "name": "Andrei Dominic GEREA",
+      "detail": "gap in group membership between 2014-07-02 and 2014-09-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 61
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "a92e4936-5e7b-48e9-9673-4eb86a1e784e",
+      "name": "Dan Horaţiu BUZATU",
+      "detail": "gap in group membership between 2006-12-19 and 2008-05-05; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 503
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "e7a4b4e6-d866-4446-b693-39d9df9b4a55",
+      "name": "Graţiela Leocadia GAVRILESCU",
+      "detail": "gap in group membership between 2014-07-02 and 2014-09-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 61
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "993b1874-fc84-4d70-b733-5c619d3610f5",
+      "name": "Pantelimon MANTA",
+      "detail": "gap in group membership between 2007-04-23 and 2007-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 133
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "932dd957-0b97-44e4-875b-ebf453cf6373",
+      "name": "Dan Mihai MARIAN",
+      "detail": "gap in group membership between 2009-11-02 and 2010-01-11; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 70
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "5524a80c-ab81-4d51-ad10-cd5319073fc2",
+      "name": "Andrian-Sirojea MIHEI",
+      "detail": "gap in group membership between 2006-09-11 and 2006-10-09; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 28
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "efba9783-4486-4a74-89ff-f343084492c0",
+      "name": "Alexandri NICOLAE",
+      "detail": "gap in group membership between 2014-07-02 and 2014-09-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 61
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "25666442-a83b-44a0-b450-4b91b2768853",
+      "name": "Ovidiu Ioan SILAGHI",
+      "detail": "gap in group membership between 2013-09-03 and 2014-06-11; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 281
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "6e2cf78e-7adc-469a-af6c-d540720182a9",
+      "name": "Mirel TALOŞ",
+      "detail": "gap in group membership between 2014-07-02 and 2014-09-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 61
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "e4025a2e-8b6e-49de-8967-b4919e0fa1e4",
+      "name": "Dragoş UJENIUC",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "04422b4b-b87e-47cb-9c93-e8ee7be30dec",
+      "name": "Liviu ALMĂŞAN",
+      "detail": "gap in group membership between 2005-06-13 and 2006-02-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 233
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "b8a005de-25bb-4025-b0d0-c150ccfd5374",
+      "name": "Romică ANDREICA",
+      "detail": "gap in group membership between 2006-12-19 and 2008-02-04; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 412
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "02285fd0-5ba1-470c-86ef-ae246067cf69",
+      "name": "Cristian Alexandru BOUREANU",
+      "detail": "gap in group membership between 2006-12-13 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 369
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "9196a149-0c3b-42e0-8397-87d6db461290",
+      "name": "Marian HOINARU",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "3bc906e4-c799-4fac-b066-af900003a272",
+      "name": "Mircea Teodor IUSTIAN",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "25ad6eef-0db7-44eb-8a2d-dad1a2c7d762",
+      "name": "Corneliu MOMANU",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "017a40b1-e8b2-4582-ade0-c8569fcee3f3",
+      "name": "Viorel OANCEA",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "59f10eaa-04c9-48b7-8bb7-3902fbebd9a6",
+      "name": "Dumitru PARDĂU",
+      "detail": "gap in group membership between 2006-12-19 and 2008-02-18; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 426
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "3821ca84-14d1-4a68-b653-b72104aa0071",
+      "name": "Marian Sorin PAVELIU",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "17f8de58-3173-4392-a811-a438afd92cc8",
+      "name": "Florin Aurelian POPESCU",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "ca00f327-dc08-4439-9c83-24cd355096a6",
+      "name": "Vasile PRUTEANU",
+      "detail": "gap in group membership between 2006-12-19 and 2008-02-04; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 412
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "b7fbb6cd-f4fe-4400-ab2f-5eadd57dd084",
+      "name": "Gabriel SANDU",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "80a2a3ef-d437-46af-ba01-28e119e02d92",
+      "name": "Raluca TURCAN",
+      "detail": "gap in group membership between 2006-12-13 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 369
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "5794e761-8d1e-4eea-b8d3-a29879576363",
+      "name": "Petre UNGUREANU",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "14f4cea9-4760-47a4-bc5a-929f39929c76",
+      "name": "Claudius Mihail ZAHARIA",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "cb874ccc-c064-482e-94a9-6d19f5d9cf7a",
+      "name": "William Gabriel BRÎNZĂ",
+      "detail": "gap in group membership between 2005-06-06 and 2006-02-20; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 259
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "3f50339b-97e0-46de-9c85-c1d55ef5e92f",
+      "name": "Bogdan CANTARAGIU",
+      "detail": "gap in group membership between 2005-06-06 and 2006-02-20; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 259
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "69683010-5eb6-40ed-a795-231ea62afbb3",
+      "name": "Alexandru CIOCÂLTEU",
+      "detail": "gap in group membership between 2005-06-13 and 2006-02-22; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 254
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "83bf8ebb-f7f9-471c-87d5-f4697db1f13e",
+      "name": "Dănuţ LIGA",
+      "detail": "gap in group membership between 2005-10-03 and 2006-02-20; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 140
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "f450a14f-1a2e-4329-ae68-ed884d834388",
+      "name": "Petru MOVILĂ",
+      "detail": "gap in group membership between 2014-02-03 and 2015-03-04; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 394
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "f450a14f-1a2e-4329-ae68-ed884d834388",
+      "name": "Petru MOVILĂ",
+      "detail": "gap in group membership between 2015-06-03 and 2016-07-20; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 413
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "65f7c4ec-06c2-4390-8da5-c59fa434775c",
+      "name": "Ion STOICA",
+      "detail": "gap in group membership between 2005-02-01 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 1049
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "ac6b4304-c65d-44fd-890d-58055918e975",
+      "name": "Dan GRIGORE",
+      "detail": "gap in group membership between 2005-06-13 and 2006-02-20; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 252
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "235783cf-a529-49f1-a986-4c40e1d6739b",
+      "name": "Nati MEIR",
+      "detail": "gap in group membership between 2005-04-11 and 2007-06-05; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 785
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2004",
+      "person_id": "e84a44da-55ad-4898-869a-b1cd963b8cd3",
+      "name": "Dragoş Petre DUMITRIU",
+      "detail": "gap in group membership between 2007-05-11 and 2007-05-15; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 4
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "1cc53502-f3ee-4200-be51-7ddf0c5a07b6",
+      "name": "Mircia GIURGIU",
+      "detail": "gap in group membership between 2011-05-24 and 2012-10-09; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 504
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "89be66bf-f73e-4b69-a2fd-7a210692a655",
+      "name": "Cristian-Ion BURLACU",
+      "detail": "gap in group membership between 2009-11-02 and 2010-01-11; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 70
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "29eb7a51-1e03-4316-a431-ca1ac3bcedd0",
+      "name": "Cristina Elena DOBRE",
+      "detail": "gap in group membership between 2009-11-02 and 2010-01-12; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 71
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "398cc7ba-b0ae-40b7-9035-fbb8c2d5876d",
+      "name": "Florian Daniel GEANTĂ",
+      "detail": "gap in group membership between 2014-02-03 and 2015-03-06; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 396
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "1a5a5e6c-14bd-4199-a868-346990700d53",
+      "name": "Clement NEGRUŢ",
+      "detail": "gap in group membership between 2013-09-02 and 2015-03-04; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 548
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "1a5a5e6c-14bd-4199-a868-346990700d53",
+      "name": "Clement NEGRUŢ",
+      "detail": "gap in group membership between 2015-06-03 and 2016-07-20; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 413
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "91222606-c74c-4d46-a8bb-590c1cd25260",
+      "name": "Theodor PALEOLOGU",
+      "detail": "gap in group membership between 2014-02-03 and 2015-02-02; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 364
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "9491ea6e-4f2b-4b60-937a-1c8e363f871d",
+      "name": "Dan PĂSAT",
+      "detail": "gap in group membership between 2009-11-02 and 2010-02-08; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 98
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "4c8fc9cf-4589-482f-9276-f62fb5da2d49",
+      "name": "Gabriel TIŢA-NICOLESCU",
+      "detail": "gap in group membership between 2010-05-03 and 2010-10-19; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 169
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "125c1e95-b676-4c28-92ac-4543c86d9178",
+      "name": "Valerian VREME",
+      "detail": "gap in group membership between 2013-05-14 and 2015-01-07; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 603
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "99190cd2-3ad4-4453-ba7f-d388cf236ced",
+      "name": "Viorel ARION",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "7950886f-b450-450d-b70b-a0dfdd8132b5",
+      "name": "Marian AVRAM",
+      "detail": "gap in group membership between 2015-12-22 and 2016-02-02; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 42
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "89da82b8-18d0-4465-86c4-a0d85f27d7e0",
+      "name": "Marin BOBEŞ",
+      "detail": "gap in group membership between 2009-11-02 and 2010-02-16; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 106
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "66469ffb-d134-4b28-9c22-ccc5635346dd",
+      "name": "Gheorghe COROAMĂ",
+      "detail": "gap in group membership between 2009-11-02 and 2010-02-02; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 92
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "3939e487-734d-47fb-8f29-436206dc9683",
+      "name": "Cătălin CROITORU",
+      "detail": "gap in group membership between 2015-02-02 and 2015-09-21; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 231
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "2ef12719-c60c-43c9-9545-8a9240ce8745",
+      "name": "Florentin GUST BĂLOŞIN",
+      "detail": "gap in group membership between 2011-11-28 and 2012-03-06; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 99
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "c70776e4-ec48-443a-aa93-e4af34ae4ae9",
+      "name": "Călin POTOR",
+      "detail": "gap in group membership between 2010-09-08 and 2010-12-07; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 90
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "77f817bc-2230-41f0-a305-3c3366e37e0a",
+      "name": "Gheorghe ROMAN",
+      "detail": "gap in group membership between 2012-05-08 and 2012-09-11; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 126
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "0071daf6-e83b-41dc-b443-acf11ff7f574",
+      "name": "Nicolae STAN",
+      "detail": "gap in group membership between 2010-05-31 and 2010-10-19; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 141
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "4eed5066-59ec-4f04-9219-becb60e74bc1",
+      "name": "Vasile POPEANGĂ",
+      "detail": "gap in group membership between 2016-03-09 and 2016-09-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 176
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "9fb542d4-15e1-4654-aa59-dc8236e6bdef",
+      "name": "Adrian MOCANU",
+      "detail": "gap in group membership between 2016-03-16 and 2016-09-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 169
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "8c45be98-2fec-4e7c-a9df-b75ba1ebbd6b",
+      "name": "Tudor CIUHODARU",
+      "detail": "gap in group membership between 2010-10-18 and 2011-02-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 106
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "7b3b797b-cf83-4f93-9b38-e84b01ad28a2",
+      "name": "Gheorghe ZOICAŞ",
+      "detail": "gap in group membership between 2010-04-26 and 2012-06-26; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 792
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "63cb1a45-11a2-41c1-90d9-ec0f4a683996",
+      "name": "Dan BORDEIANU",
+      "detail": "gap in group membership between 2009-10-19 and 2011-04-04; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 532
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "2a4262ff-540e-4e2e-ba5b-f1ffb796774e",
+      "name": "Daniel CHIŢOIU",
+      "detail": "gap in group membership between 2014-07-02 and 2014-09-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 61
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "3664c043-8788-478d-8eea-77db659c6d3f",
+      "name": "Mircea IRIMESCU",
+      "detail": "gap in group membership between 2010-04-19 and 2011-02-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 288
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "87fa57ab-ecf9-4da7-b6a2-cef8e67e6f0f",
+      "name": "Viorel PALAŞCĂ",
+      "detail": "gap in group membership between 2014-07-02 and 2014-09-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 61
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "583b3125-7559-4b8d-9455-75b4d2799dc3",
+      "name": "Octavian-Marius POPA",
+      "detail": "gap in group membership between 2016-06-06 and 2016-09-05; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 91
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "6dcb7af6-f10b-4b3b-8191-5e767b5f491e",
+      "name": "Claudiu ŢAGA",
+      "detail": "gap in group membership between 2010-12-23 and 2011-02-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 40
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "dfe82eb5-08db-4db9-9e4e-cd127680487e",
+      "name": "Valentin BLĂNARIU",
+      "detail": "gap in group membership between 2014-12-09 and 2015-06-29; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 202
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "5444a8e2-5d77-4a16-818c-dca530c638f4",
+      "name": "Cezar CIOATĂ",
+      "detail": "gap in group membership between 2013-05-07 and 2013-05-14; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 7
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "5444a8e2-5d77-4a16-818c-dca530c638f4",
+      "name": "Cezar CIOATĂ",
+      "detail": "gap in group membership between 2015-11-18 and 2015-12-21; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 33
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "35a0b1c3-3e40-4930-a0ea-237a83c30a10",
+      "name": "Adrian-Nicolae DIACONU",
+      "detail": "gap in group membership between 2014-05-27 and 2014-06-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 5
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "33b4f782-2f43-4bb6-a3e2-1ac6874e3f80",
+      "name": "Florin GHEORGHE",
+      "detail": "gap in group membership between 2014-02-03 and 2014-09-09; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 218
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2024",
+      "person_id": "b8d77875-3a6e-4cb8-ab9e-3e8a988d9f28",
+      "name": "Ninel PEIA",
+      "detail": "gap in group membership between 2025-06-30 and 2025-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 65
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2024",
+      "person_id": "9b7408b1-40ac-48c9-be4c-0d7a5d52734b",
+      "name": "Dorin Silviu PETREA",
+      "detail": "gap in group membership between 2025-06-30 and 2025-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 65
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "540c971f-40ce-46be-a8b6-feb81a58196a",
+      "name": "Viorel-Ionel BLĂJUŢ",
+      "detail": "gap in group membership between 2013-05-21 and 2014-12-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 561
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "540c971f-40ce-46be-a8b6-feb81a58196a",
+      "name": "Viorel-Ionel BLĂJUŢ",
+      "detail": "gap in group membership between 2015-12-22 and 2016-06-27; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 188
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "378b16dc-3a31-4681-9a0e-0cd4f4a0ed5c",
+      "name": "Camelia-Margareta BOGDĂNICI",
+      "detail": "gap in group membership between 2014-02-03 and 2015-02-09; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 371
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "f1780518-10b9-4e7b-bb4f-66903934e7be",
+      "name": "Constantin-Alin BUCUR",
+      "detail": "gap in group membership between 2013-04-15 and 2013-10-07; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 175
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "43fbab89-3cac-42bb-abfa-fb1ae39c4385",
+      "name": "Andrei-Răzvan CONDURĂŢEANU",
+      "detail": "gap in group membership between 2015-04-01 and 2016-07-13; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 469
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "4d2c969d-c802-4dd7-999f-028362d38229",
+      "name": "Aurel NICULAE",
+      "detail": "gap in group membership between 2014-04-07 and 2014-08-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 116
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "4d2c969d-c802-4dd7-999f-028362d38229",
+      "name": "Aurel NICULAE",
+      "detail": "gap in group membership between 2016-08-29 and 2016-09-06; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 8
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "ec9ed1bb-973e-465a-9e09-300a8ea7f816",
+      "name": "Dumitru NICULESCU",
+      "detail": "gap in group membership between 2014-12-09 and 2015-05-25; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 167
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "6570fcc1-a099-40d1-a5d1-d5645df4d251",
+      "name": "Radu Mihai POPA",
+      "detail": "gap in group membership between 2013-05-14 and 2013-09-18; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 127
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "6570fcc1-a099-40d1-a5d1-d5645df4d251",
+      "name": "Radu Mihai POPA",
+      "detail": "gap in group membership between 2015-02-02 and 2015-06-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 135
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "6570fcc1-a099-40d1-a5d1-d5645df4d251",
+      "name": "Radu Mihai POPA",
+      "detail": "gap in group membership between 2015-12-22 and 2016-07-13; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 204
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "e40cb149-4cf5-4b52-99de-d79b2a5f9211",
+      "name": "Florin Mihail SECARĂ",
+      "detail": "gap in group membership between 2014-02-03 and 2014-08-20; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 198
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "97de0e8e-9fcb-4dd7-af37-35bdbb69e96e",
+      "name": "Ion ŞCHEAU",
+      "detail": "gap in group membership between 2013-05-21 and 2013-10-21; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 153
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "94d3ee53-3475-41f9-8227-81aa7c7c40bd",
+      "name": "Ioan Viorel TEODORESCU",
+      "detail": "gap in group membership between 2014-07-02 and 2014-07-23; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 21
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "c7eac2ff-ece3-44d0-a853-21c15af9bd81",
+      "name": "Mihai TARARACHE",
+      "detail": "gap in group membership between 2013-04-22 and 2015-03-04; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 681
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "537b30b1-87b8-44b1-8370-55dc267431e9",
+      "name": "Gabriela-Lola ANGHEL",
+      "detail": "gap in group membership between 2015-12-22 and 2016-10-10; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 293
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "9e2d9e80-6a18-4156-a523-50380fe6f841",
+      "name": "Mihai DEACONU",
+      "detail": "gap in group membership between 2015-12-22 and 2016-10-10; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 293
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "7732ba24-d169-4bad-8921-fbab301c681e",
+      "name": "Maria DRAGOMIR",
+      "detail": "gap in group membership between 2014-12-09 and 2016-09-26; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 657
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "5b550d4d-e01f-469e-80bc-a7248869ee7a",
+      "name": "Paul DUMBRĂVANU",
+      "detail": "gap in group membership between 2015-02-02 and 2015-06-30; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 148
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "0ea08bbd-fa2f-4a9b-84ef-1d3ed324cc72",
+      "name": "Ovidiu-Ioan DUMITRU",
+      "detail": "gap in group membership between 2013-05-21 and 2015-02-02; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 622
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "c1f68bd2-8150-4c04-b8c5-4df15d62a810",
+      "name": "Cătălin-Daniel FENECHIU",
+      "detail": "gap in group membership between 2015-12-22 and 2016-10-10; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 293
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "43f3e080-e81c-4252-8b41-c00284ab011b",
+      "name": "Dragoş-Ionel GUNIA",
+      "detail": "gap in group membership between 2014-02-03 and 2015-02-02; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 364
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "f98902f6-1b87-42ae-a7b7-6a5f54b775cf",
+      "name": "Virgil GURAN",
+      "detail": "gap in group membership between 2015-02-23 and 2015-06-26; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 123
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "8b1b3ef7-145d-4956-a6c1-434a1ce42d30",
+      "name": "Niculina MOCIOI",
+      "detail": "gap in group membership between 2014-06-23 and 2014-09-08; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 77
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2016",
+      "person_id": "10cd8c36-af68-4b59-9ebe-48fab954c614",
+      "name": "Daniel-Cătălin ZAMFIR",
+      "detail": "gap in group membership between 2019-09-11 and 2019-09-23; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 12
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "b6efc60d-d2e0-4013-9a13-32461098cd50",
+      "name": "Ion CUPĂ",
+      "detail": "gap in group membership between 2014-07-02 and 2014-09-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 61
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "819d3a4d-40cd-4aee-babd-8a38232a035b",
+      "name": "Nicu MARCU",
+      "detail": "gap in group membership between 2014-07-02 and 2014-09-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 61
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "6d16c923-ad5a-4f50-9cd1-7add337f925d",
+      "name": "Aurelian MIHAI",
+      "detail": "gap in group membership between 2013-05-21 and 2015-02-02; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 622
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "d80ef133-be25-4b47-950d-46c01ae735f1",
+      "name": "Gheorghe UDRIŞTE",
+      "detail": "gap in group membership between 2016-02-01 and 2016-07-20; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 170
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "6488e2b2-e736-4f19-ac2f-bafd933b9a95",
+      "name": "Ştefan BURLACU",
+      "detail": "gap in group membership between 2015-12-21 and 2016-07-13; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 205
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "c7f09c9a-06be-40c6-b219-1e86f82adc18",
+      "name": "Ion Cristinel MARIAN",
+      "detail": "gap in group membership between 2013-05-21 and 2013-12-02; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 195
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "c7f09c9a-06be-40c6-b219-1e86f82adc18",
+      "name": "Ion Cristinel MARIAN",
+      "detail": "gap in group membership between 2015-12-22 and 2016-07-13; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 204
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "7dae4872-5a3a-438b-a47b-8a8f39a501c7",
+      "name": "Răzvan ROTARU",
+      "detail": "gap in group membership between 2014-06-23 and 2015-04-28; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 309
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "7dae4872-5a3a-438b-a47b-8a8f39a501c7",
+      "name": "Răzvan ROTARU",
+      "detail": "gap in group membership between 2015-12-22 and 2016-06-28; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 189
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "c85c353f-d3ac-4996-b512-fd96704ff987",
+      "name": "Eugen TOMAC",
+      "detail": "gap in group membership between 2013-09-02 and 2015-03-04; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 548
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2012",
+      "person_id": "c85c353f-d3ac-4996-b512-fd96704ff987",
+      "name": "Eugen TOMAC",
+      "detail": "gap in group membership between 2015-06-03 and 2016-07-20; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 413
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2024",
+      "person_id": "df696322-ec78-4535-b723-811c9c179e91",
+      "name": "Andrei-Cosmin GUŞĂ",
+      "detail": "gap in group membership between 2025-06-04 and 2025-09-29; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 117
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2020",
+      "person_id": "0b2603f7-98a4-4ee2-9e98-4f317fb3c3c7",
+      "name": "Ion IORDACHE",
+      "detail": "gap in group membership between 2021-11-03 and 2022-10-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 334
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "3fff2a03-0aae-4542-8c39-91dc74469a62",
+      "name": "Rodica Mihaela STĂNOIU",
+      "detail": "gap in group membership between 2006-09-06 and 2007-01-23; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 139
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2016",
+      "person_id": "17a232ca-151e-4258-bc99-38d4817d7b47",
+      "name": "Teodor Viorel MELEŞCANU",
+      "detail": "gap in group membership between 2019-09-11 and 2019-09-23; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 12
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2000",
+      "person_id": "fb4bfecf-166f-43a9-9037-85dbb1271612",
+      "name": "Viorel-Marian PANĂ",
+      "detail": "gap in group membership between 2003-06-07 and 2004-09-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 452
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "1996",
+      "person_id": "d58bdec1-d4c1-49b5-956c-b4807f3ca732",
+      "name": "Dumitru HUIDU",
+      "detail": "gap in group membership between 1999-02-01 and 2000-03-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 394
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2000",
+      "person_id": "90e49ce8-3016-4b2e-beaa-faaeda60e291",
+      "name": "Cornel FILIPESCU",
+      "detail": "gap in group membership between 2004-06-22 and 2004-08-31; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 70
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "554ec685-4548-4ca7-a87f-f5c6c41becbe",
+      "name": "Gheorghe FLUTUR",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "7b9d99fe-4b1e-4ea8-8820-eb294e7fc02e",
+      "name": "Ioan TALPEŞ",
+      "detail": "gap in group membership between 2005-05-23 and 2008-10-28; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 1254
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "7aacb19e-e2dd-4157-93d5-8b92863f7cb2",
+      "name": "Constantin GHEORGHE",
+      "detail": "gap in group membership between 2007-05-18 and 2007-05-28; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 10
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "bf3b6306-642a-4206-8c20-020cfb4bf756",
+      "name": "Mircea CINTEZĂ",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "2cfbf4be-e6d4-494c-bd9f-d8306f241bc5",
+      "name": "Ionel POPESCU",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "8e6e2bbc-eb18-41ef-9408-d501841cbf66",
+      "name": "Ovidiu RĂDOI",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "573a9792-11f0-41e7-80f4-c69e10871ccd",
+      "name": "Dan SABĂU",
+      "detail": "gap in group membership between 2006-12-19 and 2007-12-17; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 363
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "61f58636-3493-4d3c-8b44-09817bc6c046",
+      "name": "Marius MARINESCU",
+      "detail": "gap in group membership between 2007-09-19 and 2007-10-08; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 19
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "41086be9-5b49-4a71-a090-f1988f7670a1",
+      "name": "Mihai ŢÂBULEAC",
+      "detail": "gap in group membership between 2006-12-19 and 2008-02-20; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 428
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "98db0548-9031-47bc-a741-d8307d0db967",
+      "name": "Radu ŢÎRLE",
+      "detail": "gap in group membership between 2007-10-08 and 2008-04-07; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 182
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "e8e45fc4-646b-4446-9b5c-aadf61dfb337",
+      "name": "Ioan CORODAN",
+      "detail": "gap in group membership between 2007-02-08 and 2007-05-09; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 90
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2008",
+      "person_id": "6437ef24-2806-46fd-962b-f348df5b92d6",
+      "name": "Cezar Mircea MĂGUREANU",
+      "detail": "gap in group membership between 2012-04-10 and 2012-05-08; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 28
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2016",
+      "person_id": "6bbbba42-5f51-498c-af55-7d35e49175f8",
+      "name": "Marius Petre NICOARĂ",
+      "detail": "gap in group membership between 2019-09-11 and 2020-02-26; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 168
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "ccbe7352-7048-4eab-80ff-0d89f9bc3e0b",
+      "name": "Ionel AGRIGOROAIEI",
+      "detail": "gap in group membership between 2014-06-11 and 2015-02-24; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 258
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "ccbe7352-7048-4eab-80ff-0d89f9bc3e0b",
+      "name": "Ionel AGRIGOROAIEI",
+      "detail": "gap in group membership between 2016-04-26 and 2016-06-28; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 63
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "ce98c9ab-9980-4e05-9f1c-c5333ebd9a40",
+      "name": "Octavian-Liviu BUMBU",
+      "detail": "gap in group membership between 2016-04-25 and 2016-06-28; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 64
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "94855580-ceac-4a0e-924f-36455c286ebd",
+      "name": "Leonard CADĂR",
+      "detail": "gap in group membership between 2013-04-15 and 2013-09-23; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 161
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "cae31704-58c8-4a38-9bb6-afcfb2b1f608",
+      "name": "Iulian CRISTACHE",
+      "detail": "gap in group membership between 2016-06-28 and 2016-10-04; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 98
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "3fd03f84-ec8c-48a7-9f22-e552eb67e66e",
+      "name": "Sorin ILIEŞIU",
+      "detail": "gap in group membership between 2014-03-10 and 2014-09-02; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 176
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "3fd03f84-ec8c-48a7-9f22-e552eb67e66e",
+      "name": "Sorin ILIEŞIU",
+      "detail": "gap in group membership between 2015-03-16 and 2015-04-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 16
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "81c45ece-30ab-4f01-b134-eb67b59d223c",
+      "name": "Dan Aurel IONIŢĂ",
+      "detail": "gap in group membership between 2015-02-02 and 2016-06-28; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 512
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "52cc059d-0aca-4d0b-b7d0-3529e492ab78",
+      "name": "Ioan IOVESCU",
+      "detail": "gap in group membership between 2014-02-03 and 2015-04-27; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 448
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "52cc059d-0aca-4d0b-b7d0-3529e492ab78",
+      "name": "Ioan IOVESCU",
+      "detail": "gap in group membership between 2016-06-28 and 2016-09-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 65
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "4fe39863-3b07-4a54-a69c-acedd3de999d",
+      "name": "Teiu PĂUNESCU",
+      "detail": "gap in group membership between 2014-02-03 and 2014-11-18; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 288
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "4fe39863-3b07-4a54-a69c-acedd3de999d",
+      "name": "Teiu PĂUNESCU",
+      "detail": "gap in group membership between 2016-04-26 and 2016-06-28; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 63
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "39839928-a658-43b9-a7c0-1bf0652db533",
+      "name": "Mihai-Ciprian ROGOJAN",
+      "detail": "gap in group membership between 2014-02-03 and 2014-11-18; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 288
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "39839928-a658-43b9-a7c0-1bf0652db533",
+      "name": "Mihai-Ciprian ROGOJAN",
+      "detail": "gap in group membership between 2016-05-09 and 2016-06-13; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 35
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2016",
+      "person_id": "9d4fc325-b0b5-46ca-93db-21880da31419",
+      "name": "Ion POPA",
+      "detail": "gap in group membership between 2019-09-11 and 2020-02-26; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 168
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "0a9d0671-5ae2-4f7f-8307-31ba6dcbf429",
+      "name": "Vasilica Steliana MIRON",
+      "detail": "gap in group membership between 2014-02-03 and 2014-02-11; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 8
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "07054419-36d6-4cbf-a83e-12249679ed16",
+      "name": "Corneliu POPESCU",
+      "detail": "gap in group membership between 2014-02-03 and 2015-02-11; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 373
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2012",
+      "person_id": "631e5c0a-d89d-4fd3-a320-28d896f0213e",
+      "name": "Andrei-Liviu VOLOSEVICI",
+      "detail": "gap in group membership between 2014-02-03 and 2015-02-05; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 367
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2016",
+      "person_id": "398c61a1-745b-4522-870f-d1b5fc6afe63",
+      "name": "Emanuel-Gabriel BOTNARIU",
+      "detail": "gap in group membership between 2018-11-13 and 2020-02-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 447
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2016",
+      "person_id": "5ddae365-27e3-4b73-8caa-0ca322c387bb",
+      "name": "Emanoil SAVIN",
+      "detail": "gap in group membership between 2019-09-25 and 2020-02-19; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 147
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2016",
+      "person_id": "5ea58996-b2b7-4c11-9059-004a020b3e4b",
+      "name": "Ionuţ SIBINESCU",
+      "detail": "gap in group membership between 2019-09-11 and 2019-09-23; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 12
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2016",
+      "person_id": "aa0750b5-f278-4bd7-bcdd-b09a0dc67426",
+      "name": "Ioan SIMIONCA",
+      "detail": "gap in group membership between 2019-09-11 and 2020-07-07; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 300
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2016",
+      "person_id": "5f389a34-cfe7-4c9f-93d2-b3f8e3c14561",
+      "name": "Vergil CHIŢAC",
+      "detail": "gap in group membership between 2017-09-13 and 2019-11-26; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 804
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2016",
+      "person_id": "5e03a61c-99a3-43b1-9897-d35c5b82c39d",
+      "name": "Viorel ILIE",
+      "detail": "gap in group membership between 2019-09-11 and 2020-02-26; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 168
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2020",
+      "person_id": "ff57d422-a8c4-4bc0-b522-be242d49af2c",
+      "name": "Iulian-Mihail BÎCA",
+      "detail": "gap in group membership between 2023-09-17 and 2024-02-01; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 137
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2020",
+      "person_id": "fb4f60ff-a45a-4b49-a62c-0e46745cc425",
+      "name": "Gheorghiţă MÎNDRUŢĂ",
+      "detail": "gap in group membership between 2022-09-01 and 2022-10-10; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 39
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2020",
+      "person_id": "0f22288d-d55f-47b5-afb5-33267c097d7a",
+      "name": "Claudiu-Marinel MUREŞAN",
+      "detail": "gap in group membership between 2023-06-25 and 2023-09-12; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 79
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2020",
+      "person_id": "0c2c8705-fa32-46a3-9397-fc493bc02dac",
+      "name": "Ovidiu-Iosif FLOREAN",
+      "detail": "gap in group membership between 2021-10-26 and 2023-11-13; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 748
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2020",
+      "person_id": "f4153b52-3223-4058-ba7e-428ce39380ef",
+      "name": "Evdochia AELENEI",
+      "detail": "gap in group membership between 2022-09-01 and 2023-05-15; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 256
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2024",
+      "person_id": "e2c0d483-6874-4a1b-a3d2-af7ff644bfa3",
+      "name": "Ionel CARP",
+      "detail": "gap in group membership between 2025-02-03 and 2025-06-02; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 119
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2024",
+      "person_id": "3574cef8-d33a-40f0-b8b6-49600e055fb6",
+      "name": "Daniel-Paul-Romeo GHEORGHE",
+      "detail": "gap in group membership between 2025-02-03 and 2025-06-16; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 133
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2024",
+      "person_id": "3574cef8-d33a-40f0-b8b6-49600e055fb6",
+      "name": "Daniel-Paul-Romeo GHEORGHE",
+      "detail": "gap in group membership between 2025-10-22 and 2026-02-25; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 126
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2024",
+      "person_id": "7bb1789b-7a64-4a12-b959-83004892bc9b",
+      "name": "Grigore-Adrian PEIU",
+      "detail": "gap in group membership between 2025-06-30 and 2025-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 65
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2024",
+      "person_id": "3e2e91ae-9ef7-4646-96a6-b245c12da70c",
+      "name": "Nadia-Cosmina CERVA",
+      "detail": "gap in group membership between 2025-06-30 and 2025-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 65
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2024",
+      "person_id": "eb3aaeac-c485-4a3a-b19d-c81d0605a42d",
+      "name": "Ioan-Cristian RUSU",
+      "detail": "gap in group membership between 2025-06-30 and 2025-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 65
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2024",
+      "person_id": "7ea5c0a5-cf21-49d3-8afa-2dcebccb14fd",
+      "name": "Clement SAVA",
+      "detail": "gap in group membership between 2025-06-30 and 2025-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 65
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2024",
+      "person_id": "c2817ea5-878d-43bd-86e6-fca2dbaa36ee",
+      "name": "Rodica CUŞNIR",
+      "detail": "gap in group membership between 2025-06-30 and 2025-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 65
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2024",
+      "person_id": "cdfc89c1-701f-4df2-a330-7b6a7d8591c6",
+      "name": "Cristian BEM",
+      "detail": "gap in group membership between 2025-06-30 and 2025-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 65
+      }
+    },
+    {
+      "check": "mandate_coverage",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2024",
+      "person_id": "f9f9dbb5-0294-453f-b189-0394997ebffd",
+      "name": "Olga ONEA",
+      "detail": "gap in group membership between 2025-06-30 and 2025-09-03; the person is not listed in any group or as unaffiliated during this interval",
+      "context": {
+        "days": 65
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2008",
+      "person_id": "fe88806e-3858-4003-9267-134639787e29",
+      "name": "Viorel BALCAN",
+      "detail": "sits in PSD and PNL at the same time",
+      "context": {
+        "overlap_days": 448,
+        "a": [
+          "2008-12-08",
+          "2010-03-01"
+        ],
+        "b": [
+          "2008-12-08",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2016",
+      "person_id": "59c43f97-b880-46f1-914f-ba6030d34a4d",
+      "name": "Nicolae BĂNICIOIU",
+      "detail": "sits in PSD and PRO at the same time",
+      "context": {
+        "overlap_days": 524,
+        "a": [
+          "2016-12-21",
+          "2018-05-29"
+        ],
+        "b": [
+          "2016-12-21",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2016",
+      "person_id": "afd5ba44-3ce3-4fb6-89a2-9c92b9ee614b",
+      "name": "Mircea-Titus DOBRE",
+      "detail": "sits in PSD and PRO at the same time",
+      "context": {
+        "overlap_days": 519,
+        "a": [
+          "2016-12-21",
+          "2018-05-24"
+        ],
+        "b": [
+          "2016-12-21",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2016",
+      "person_id": "18a6504b-29ab-4af3-aca2-b60d2f453df8",
+      "name": "Mihaela HUNCĂ",
+      "detail": "sits in PSD and PRO at the same time",
+      "context": {
+        "overlap_days": 623,
+        "a": [
+          "2016-12-21",
+          "2018-09-05"
+        ],
+        "b": [
+          "2016-12-21",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2016",
+      "person_id": "7d7c1315-290a-445b-bd04-42740a7698cb",
+      "name": "Petru-Sorin MARICA",
+      "detail": "sits in PSD and PRO at the same time",
+      "context": {
+        "overlap_days": 845,
+        "a": [
+          "2016-12-21",
+          "2019-04-15"
+        ],
+        "b": [
+          "2016-12-21",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2016",
+      "person_id": "06cda0ee-13cb-4687-99a2-09702b303594",
+      "name": "Ion MOCIOALCĂ",
+      "detail": "sits in PSD and PRO at the same time",
+      "context": {
+        "overlap_days": 775,
+        "a": [
+          "2016-12-21",
+          "2019-02-04"
+        ],
+        "b": [
+          "2016-12-21",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2016",
+      "person_id": "7f08d9ff-24c2-49f7-81d8-08ce49265fef",
+      "name": "Cătălin-Ioan NECHIFOR",
+      "detail": "sits in PSD and PRO at the same time",
+      "context": {
+        "overlap_days": 516,
+        "a": [
+          "2016-12-21",
+          "2018-05-21"
+        ],
+        "b": [
+          "2016-12-21",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2016",
+      "person_id": "37657ccb-1a08-4325-9b67-d493360deee3",
+      "name": "Radu - Adrian PAU",
+      "detail": "sits in PSD and PRO at the same time",
+      "context": {
+        "overlap_days": 775,
+        "a": [
+          "2016-12-21",
+          "2019-02-04"
+        ],
+        "b": [
+          "2016-12-21",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2016",
+      "person_id": "426945c8-898e-4d97-aa84-50215498bfce",
+      "name": "Octavian PETRIC",
+      "detail": "sits in PSD and PRO at the same time",
+      "context": {
+        "overlap_days": 775,
+        "a": [
+          "2016-12-21",
+          "2019-02-04"
+        ],
+        "b": [
+          "2016-12-21",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2016",
+      "person_id": "2738ee2f-36d0-453f-ab07-674af96a8efb",
+      "name": "Gabriela-Maria PODAŞCĂ",
+      "detail": "sits in PSD and PRO at the same time",
+      "context": {
+        "overlap_days": 100,
+        "a": [
+          "2018-02-13",
+          "2018-05-24"
+        ],
+        "b": [
+          "2018-02-13",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2016",
+      "person_id": "c84109c2-d6eb-4710-81ec-e28bb3bff6ac",
+      "name": "Victor-Viorel PONTA",
+      "detail": "sits in PSD and PRO at the same time",
+      "context": {
+        "overlap_days": 258,
+        "a": [
+          "2016-12-21",
+          "2017-09-05"
+        ],
+        "b": [
+          "2016-12-21",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2016",
+      "person_id": "63488e08-b063-4bdb-81f1-60d0a220c182",
+      "name": "Ion SPÂNU",
+      "detail": "sits in PSD and PRO at the same time",
+      "context": {
+        "overlap_days": 719,
+        "a": [
+          "2016-12-21",
+          "2018-12-10"
+        ],
+        "b": [
+          "2016-12-21",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2016",
+      "person_id": "0dae404a-3e72-4c58-bf9c-5805e6db8213",
+      "name": "Alin Vasile VĂCARU",
+      "detail": "sits in PSD and PRO at the same time",
+      "context": {
+        "overlap_days": 258,
+        "a": [
+          "2016-12-21",
+          "2017-09-05"
+        ],
+        "b": [
+          "2016-12-21",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2016",
+      "person_id": "676d64ba-8f5b-49b3-a742-7acb098204ba",
+      "name": "Oana-Silvia VLĂDUCĂ",
+      "detail": "sits in PSD and PRO at the same time",
+      "context": {
+        "overlap_days": 775,
+        "a": [
+          "2016-12-21",
+          "2019-02-04"
+        ],
+        "b": [
+          "2016-12-21",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "2020",
+      "person_id": "4956cd5a-60a0-491d-8c99-a0d0949261c6",
+      "name": "Dumitru-Viorel FOCŞA",
+      "detail": "sits in AUR and NEAFILIATI at the same time",
+      "context": {
+        "overlap_days": 5,
+        "a": [
+          "2020-12-21",
+          "2023-02-06"
+        ],
+        "b": [
+          "2023-02-01",
+          "2023-11-13"
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "d5e23ca5-96c1-40fb-b143-3237dc11f5d2",
+      "name": "Dan Gabriel POPA",
+      "detail": "sits in PNL and PDL at the same time",
+      "context": {
+        "overlap_days": 1141,
+        "a": [
+          "2004-02-17",
+          "2007-04-03"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "47814db7-8de5-49a1-b133-7defa89d652d",
+      "name": "Gheorghe DAVID",
+      "detail": "sits in PNL and PDL at the same time",
+      "context": {
+        "overlap_days": 1141,
+        "a": [
+          "2004-02-17",
+          "2007-04-03"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "d4c2f6c3-14be-4213-85e5-0353e4ca0ad5",
+      "name": "Ştefan-Mihail ANTONIE",
+      "detail": "sits in PNL and PDL at the same time",
+      "context": {
+        "overlap_days": 1140,
+        "a": [
+          "2004-02-17",
+          "2007-04-02"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "9321d84f-f903-4c66-b338-da48069ade3e",
+      "name": "Vasile BLAGA",
+      "detail": "sits in PNL and PDL at the same time",
+      "context": {
+        "overlap_days": 1141,
+        "a": [
+          "2004-02-17",
+          "2007-04-03"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "7670b40a-42b6-4281-8890-b8f22436c466",
+      "name": "Cornelia CAZACU",
+      "detail": "sits in PNL and PDL at the same time",
+      "context": {
+        "overlap_days": 1141,
+        "a": [
+          "2004-02-17",
+          "2007-04-03"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "0fd0ef32-2cfb-4b5a-9da4-b1099e6f5a26",
+      "name": "Dan CÂRLAN",
+      "detail": "sits in PNL and PDL at the same time",
+      "context": {
+        "overlap_days": 1141,
+        "a": [
+          "2004-02-17",
+          "2007-04-03"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "344c5ee3-7c24-45aa-834d-e3ff6389ee64",
+      "name": "Ivan CISMARU",
+      "detail": "sits in PNL and PDL at the same time",
+      "context": {
+        "overlap_days": 1141,
+        "a": [
+          "2004-02-17",
+          "2007-04-03"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "be310442-dae3-4e00-8218-171d0279e1ca",
+      "name": "Cristian CUCUIAN",
+      "detail": "sits in PNL and PDL at the same time",
+      "context": {
+        "overlap_days": 1141,
+        "a": [
+          "2004-02-17",
+          "2007-04-03"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "87275f4f-0688-4423-a18d-6366d9d8012b",
+      "name": "Paula Maria IVĂNESCU",
+      "detail": "sits in PNL and PDL at the same time",
+      "context": {
+        "overlap_days": 1141,
+        "a": [
+          "2004-02-17",
+          "2007-04-03"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "d88d49ac-b2ca-433c-9c45-3e64a2ba02fe",
+      "name": "Dorel JURCAN",
+      "detail": "sits in PNL and PDL at the same time",
+      "context": {
+        "overlap_days": 1141,
+        "a": [
+          "2004-02-17",
+          "2007-04-03"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "cf3e7c22-d812-41df-9a7b-a9dc67be157f",
+      "name": "Dorel-Constantin ONACA",
+      "detail": "sits in PRM and PDL at the same time",
+      "context": {
+        "overlap_days": 488,
+        "a": [
+          "2004-02-17",
+          "2005-06-19"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "26b2cc3c-af27-47c9-b23f-f8cc1040f45e",
+      "name": "Alexandru PEREŞ",
+      "detail": "sits in PNL and PDL at the same time",
+      "context": {
+        "overlap_days": 1141,
+        "a": [
+          "2004-02-17",
+          "2007-04-03"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "c88760d5-5b99-45fa-a07f-758d5cb75baf",
+      "name": "Verginia ŞERBĂNESCU",
+      "detail": "sits in PNL and PDL at the same time",
+      "context": {
+        "overlap_days": 1141,
+        "a": [
+          "2004-02-17",
+          "2007-04-03"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "75116d8d-110e-4e39-a12e-68863e799900",
+      "name": "Jan VRACIU",
+      "detail": "sits in PNL and PDL at the same time",
+      "context": {
+        "overlap_days": 1141,
+        "a": [
+          "2004-02-17",
+          "2007-04-03"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "6394068f-d653-4ac6-b114-de7f3af810de",
+      "name": "Puiu HAŞOTTI",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "250650d4-7052-4c06-b284-c65b40c01bbd",
+      "name": "Ion Mihai DUMITRESCU",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "b965e5eb-e1e6-49e6-bed2-b9b84f9a4baf",
+      "name": "Mario-Ovidiu OPREA",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "774fa7d6-4256-423d-ae8a-b8786b947296",
+      "name": "Mircea Gheorghe MEREUŢĂ",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "6a6fc0d3-39ae-47b8-a339-b59cb77d5065",
+      "name": "Ion BASGAN",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "dfda9312-49ae-4e1a-877e-bbe024b968c0",
+      "name": "Radu Anton CÂMPEANU",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "f8179a79-ffbf-44f0-bb93-ca861478868a",
+      "name": "Adrian Mihai CIOROIANU",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "890afc7b-4145-49b0-9fb4-a82bb3fa7d0c",
+      "name": "Cristian DAVID",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "9ad3c12f-a75e-4e77-8187-f75b17cfa32f",
+      "name": "Daniel ILUŞCĂ",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "7d805943-8370-40d8-be92-d4c387e1c150",
+      "name": "Mihail LUPOI",
+      "detail": "sits in PRM and PNL at the same time",
+      "context": {
+        "overlap_days": 352,
+        "a": [
+          "2004-02-17",
+          "2005-02-03"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "17a232ca-151e-4258-bc99-38d4817d7b47",
+      "name": "Teodor Viorel MELEŞCANU",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "020ed7a5-7c0c-445c-8537-93976a671787",
+      "name": "Alexandru Ioan MORŢUN",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "2823d93f-6109-4099-9544-5bd8b51e74aa",
+      "name": "Norica NICOLAI",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "1943cb68-78e0-4b61-b84d-e3c4e07b6fa2",
+      "name": "Nicolae Paul Anton PĂCURARU",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "b3a70117-25c6-44cb-a4eb-d65fd6467ba7",
+      "name": "Tiberiu Aurelian PRODAN",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 835,
+        "a": [
+          "2004-12-20",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-12-20",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "4b451ecb-a46c-40d4-afb7-3466572f0788",
+      "name": "Şerban-Cezar STRĂTILĂ",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "2858f0f7-76fa-4ec7-bf8d-f203bb2ea5fa",
+      "name": "Radu STROE",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "923a9ad4-f14a-4e73-804d-37634929edf4",
+      "name": "Gheorghe Vergil ŞERBU",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2004",
+      "person_id": "a9210827-dc6d-4a03-b191-903fe6c18270",
+      "name": "Varujan VOSGANIAN",
+      "detail": "sits in PNL and PNL at the same time",
+      "context": {
+        "overlap_days": 1142,
+        "a": [
+          "2004-02-17",
+          "2007-04-04"
+        ],
+        "b": [
+          "2004-02-17",
+          null
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2008",
+      "person_id": "fca8e761-a4d8-4eaa-a213-2e752472960e",
+      "name": "Dan VOICULESCU",
+      "detail": "sits in PNL and PSD at the same time",
+      "context": {
+        "overlap_days": 1295,
+        "a": [
+          "2001-02-01",
+          "2012-06-25"
+        ],
+        "b": [
+          "2008-12-08",
+          "2011-02-01"
+        ]
+      }
+    },
+    {
+      "check": "overlap",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2008",
+      "person_id": "7b5508f0-90d9-43b5-88e0-d468120f9592",
+      "name": "Ovidius MĂRCUŢIANU",
+      "detail": "sits in PNL and PPG at the same time",
+      "context": {
+        "overlap_days": 2,
+        "a": [
+          "2008-12-08",
+          "2009-10-15"
+        ],
+        "b": [
+          "2009-10-13",
+          null
+        ]
+      }
+    },
+    {
+      "check": "index_reconciliation",
+      "severity": "error",
+      "chamber": "deputies",
+      "legislature": "1992",
+      "person_id": null,
+      "name": null,
+      "detail": "group Deputaţi neafiliaţi: index publishes 25 members, the ledger yields 38, the roster confirms 38",
+      "context": {
+        "idg": "0",
+        "published": 25,
+        "parsed": 38,
+        "agreeing": 38
+      }
+    },
+    {
+      "check": "index_reconciliation",
+      "severity": "error",
+      "chamber": "senate",
+      "legislature": "2020",
+      "person_id": null,
+      "name": null,
+      "detail": "group Senatorii neafiliaţi: index publishes 5 members, the ledger yields 6, the roster confirms 6",
+      "context": {
+        "idg": "0",
+        "published": 5,
+        "parsed": 6,
+        "agreeing": 6
+      }
+    }
+  ]
+}

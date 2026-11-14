@@ -25,4 +25,7 @@ def _rooted(env_name: str, default: str) -> Path:
 
 DB_PATH = _rooted("PARLAMENT_DB", "data/parlament-real.db")
 SNAPSHOT_DIR = _rooted("PARLAMENT_SNAPSHOT_DIR", "data/snapshots")
+DATASET_METADATA_PATH = _rooted(
+    "PARLAMENT_DATASET_METADATA", "data/dataset-metadata.json"
+)
 FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"

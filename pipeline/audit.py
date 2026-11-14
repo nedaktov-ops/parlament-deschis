@@ -18,6 +18,8 @@ they are reported with the evidence needed to judge them.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import re
 from collections import defaultdict
@@ -79,6 +81,21 @@ class AuditReport:
             "errors": len(self.errors),
             "warnings": len(self.warnings),
         }
+
+
+def finding_fingerprint(finding: Finding) -> str:
+    """Return a stable identity for an audit finding, excluding display names."""
+    identity = {
+        "check": finding.check,
+        "severity": finding.severity,
+        "chamber": finding.chamber,
+        "legislature": finding.legislature,
+        "person_id": finding.person_id,
+        "detail": finding.detail,
+        "context": finding.context,
+    }
+    encoded = json.dumps(identity, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
 def _interval(m: Membership) -> tuple[date | None, date | None]:
@@ -537,10 +554,40 @@ def check_index_reconciliation(session: Session) -> list[Finding]:
     """
     findings: list[Finding] = []
     cache = Path("data/cache/cdep")
-    if not cache.exists():
-        return findings
+    expected_scopes = set(
+        session.execute(
+            select(Membership.chamber, Membership.legislature).distinct()
+        ).all()
+    )
+    cached_scopes: set[tuple[str, str]] = set()
+    if cache.is_dir():
+        for chamber_dir in cache.iterdir():
+            if not chamber_dir.is_dir():
+                continue
+            for leg_dir in chamber_dir.iterdir():
+                if (leg_dir / "list.html").is_file():
+                    cached_scopes.add((chamber_dir.name, leg_dir.name))
+    missing_scopes = sorted(expected_scopes - cached_scopes)
+    if missing_scopes:
+        findings.append(
+            Finding(
+                check="index_reconciliation",
+                severity="warning",
+                detail=(
+                    f"source group indexes are unavailable for {len(missing_scopes)} "
+                    "chamber/legislature scopes; those reconciliations were not evaluated"
+                ),
+                context={
+                    "not_evaluated": True,
+                    "missing_scopes": [
+                        {"chamber": chamber, "legislature": legislature}
+                        for chamber, legislature in missing_scopes
+                    ],
+                },
+            )
+        )
 
-    for chamber_dir in sorted(cache.iterdir()):
+    for chamber_dir in sorted(cache.iterdir()) if cache.is_dir() else ():
         if not chamber_dir.is_dir():
             continue
         chamber = chamber_dir.name

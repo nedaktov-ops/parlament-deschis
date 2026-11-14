@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api, type EventItem, type HealthResponse } from "../api/client";
 
 type SourceHealth = Exclude<HealthResponse["sources"][string], string>;
+const DATASET_STALE_AFTER_MS = 48 * 60 * 60 * 1000;
 
 function typeColor(type: string): string {
   switch (type) {
@@ -50,6 +51,13 @@ export default function LiveFeed({ onSelect }: { onSelect: (id: string) => void 
             : new Date(mostRecentRefresh).toLocaleString(i18n.language),
         })
       : t("dataRefreshUnavailable");
+  const dataset = health.data?.dataset;
+  const publishedAt = dataset?.published_at ? Date.parse(dataset.published_at) : Number.NaN;
+  const datasetIsStale =
+    Number.isFinite(publishedAt) && Date.now() - publishedAt > DATASET_STALE_AFTER_MS;
+  const formattedPublishedAt = Number.isFinite(publishedAt)
+    ? new Date(publishedAt).toLocaleString(i18n.language)
+    : null;
 
   const summary = (e: EventItem) =>
     i18n.language === "en" ? e.summary_en || e.summary_ro : e.summary_ro || e.summary_en;
@@ -75,15 +83,28 @@ export default function LiveFeed({ onSelect }: { onSelect: (id: string) => void 
     <div className="card p-4 flex flex-col h-full">
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-semibold">{t("liveFeed")}</h2>
-        <span className="flex items-center gap-1.5 text-xs text-slate-300" role="status">
-          <span
-            aria-hidden="true"
-            className={`w-2 h-2 rounded-full ${
-              refreshFailed ? "bg-rose-400" : mostRecentRefresh ? "bg-emerald-400" : "bg-slate-400"
-            }`}
-          />
-          {refreshLabel}
-        </span>
+        <div className="text-right text-xs text-slate-300">
+          <span className="flex items-center justify-end gap-1.5" role="status">
+            <span
+              aria-hidden="true"
+              className={`w-2 h-2 rounded-full ${
+                refreshFailed ? "bg-rose-400" : mostRecentRefresh ? "bg-emerald-400" : "bg-slate-400"
+              }`}
+            />
+            {refreshLabel}
+          </span>
+          {dataset?.release_tag ? (
+            <div className="mt-1 text-slate-400">{t("datasetRelease", { tag: dataset.release_tag })}</div>
+          ) : null}
+          <div className={`mt-1 ${datasetIsStale ? "text-amber-200" : "text-slate-400"}`}>
+            {formattedPublishedAt
+              ? t("datasetPublished", { date: formattedPublishedAt })
+              : t("datasetPublicationUnavailable")}
+          </div>
+          {datasetIsStale ? (
+            <div className="mt-1 text-amber-200" role="status">{t("datasetStale")}</div>
+          ) : null}
+        </div>
       </div>
       <div className="overflow-y-auto flex-1 space-y-2 max-h-[420px] pr-1">
         {events.isLoading && <div className="text-slate-500 text-sm">{t("loading")}</div>}
