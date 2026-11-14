@@ -17,5 +17,16 @@ export default defineConfig(({ mode }) => {
         "/snapshots": apiTarget,
       },
     },
+    build: {
+      rollupOptions: {
+        // Allow Rollup to tree-shake ECharts lib/* files even though the
+        // package.json marks lib/component/*.js as side-effectful. We
+        // manually call echarts.use([...]) in TimelineChart.tsx so the
+        // package-level side effects are not needed.
+        treeshake: {
+          moduleSideEffects: (id) => !id.includes("echarts"),
+        },
+      },
+    },
   };
 });

@@ -1,13 +1,15 @@
-import { useMemo } from "react";
+import { Suspense, lazy, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import ChamberView from "../components/ChamberView";
 import LiveFeed from "../components/LiveFeed";
-import TimelineChart from "../components/TimelineChart";
 import TimeSlider from "../components/TimeSlider";
 import { localISODate } from "../utils/date";
+
+// Lazy-load TimelineChart (bundles ECharts ~220 KB) so it doesn't block initial paint
+const TimelineChart = lazy(() => import("../components/TimelineChart"));
 
 const TODAY = localISODate();
 
@@ -128,7 +130,9 @@ export function LiveDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        <TimelineChart from={min} to={clamped} groups={meta.data?.groups} />
+        <Suspense fallback={<div className="card p-4 h-64 animate-pulse bg-slate-800/50 rounded-xl" aria-busy="true" aria-label={t("loading")} />}>
+          <TimelineChart from={min} to={clamped} groups={meta.data?.groups} />
+        </Suspense>
       </div>
     </div>
   );

@@ -266,6 +266,39 @@ def test_timeline_preserves_temporal_membership_scope(api):
     assert body["switches"] == []
 
 
+def test_timeline_include_switches(api):
+    response = api.client.get(
+        "/api/timeline",
+        params={
+            "chamber": "deputies",
+            "from": "2024-12-21",
+            "to": "2025-01-10",
+            "step_days": 20,
+            "include_switches": "true",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert "switches" in body
+    assert isinstance(body["switches"], list)
+
+
+def test_cache_control_isolates_health_and_writes(api):
+    """Reads may be cached; health, writes, and errors must never be."""
+    read = api.client.get("/api/chamber", params={"chamber": "deputies", "as_of": "2025-01-01"})
+    assert "s-maxage=86400" in read.headers.get("cache-control", "")
+
+    live = api.client.get("/api/health/live")
+    assert "no-store" in live.headers.get("cache-control", "")
+
+    missing = api.client.get("/api/not-a-route")
+    assert missing.status_code == 404
+    assert "no-store" in missing.headers.get("cache-control", "")
+
+    write = api.client.post("/api/admin/poll")
+    assert "no-store" in write.headers.get("cache-control", "")
+
+
 def test_persons_search(api):
     response = api.client.get("/api/persons", params={"q": "popescu"})
     assert response.status_code == 200
@@ -387,6 +420,41 @@ def test_coverage_detailed_derives_metrics_without_persisted_rows(api):
     assert senate["sourced_pct"] is None
     assert senate["total_switches"] == 0
     assert senate["sourced_switches_pct"] is None
+
+
+def test_coverage_last_refresh_sees_non_switch_events(api):
+    """``last_refresh`` must reflect the newest event of any type, while the
+    switch counters stay restricted to switch events."""
+    session = api.factory()
+    session.add(
+        Event(
+            type="switch_group",
+            person_id=api.ids.p1,
+            chamber="deputies",
+            legislature="2024",
+            event_date=date(2025, 1, 1),
+            detected_at=datetime(2025, 1, 1, 1, 0, 0),
+            dedup_key="coverage-detail:switch",
+        )
+    )
+    session.add(
+        Event(
+            type="mandate_start",
+            person_id=api.ids.p1,
+            chamber="deputies",
+            legislature="2024",
+            event_date=date(2025, 2, 3),
+            detected_at=datetime(2030, 2, 3, 4, 5, 6),
+            dedup_key="coverage-detail:non-switch",
+        )
+    )
+    session.commit()
+    session.close()
+
+    rows = {row["chamber"]: row for row in api.client.get("/api/coverage/detailed").json()}
+    deputies = rows["deputies"]
+    assert deputies["last_refresh"] == "2030-02-03T04:05:06"
+    assert deputies["total_switches"] == 1
 
 
 def test_coverage_persisted_rows_enriched(api):
