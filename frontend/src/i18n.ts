@@ -192,6 +192,7 @@ const resources = {
       traseismMedianMonths: "Mediană de luni între două schimbări",
       traseismFlowDesc:
         "Fluxul de schimbări între grupuri parlamentare. Lățimea fiecărei legături este proporțională cu numărul de parlamentari care au trecut de la un grup la altul. Ambele direcții sunt afișate, inclusiv fluxurile inversate.",
+      traseismLegend: "Grupuri parlamentare",
       traseismSankeyOmitted:
         "Diagrama omite {{count}} legături pentru a evita ciclurile; matricea și registrul de mai jos păstrează toate schimbările.",
       traseismNoFlowPairs: "Există schimbări în perimetru, dar lipsesc perechi de grupuri utilizabile pentru diagramă.",
@@ -439,6 +440,7 @@ const resources = {
       traseismMedianMonths: "Median months between two switches",
       traseismFlowDesc:
         "Flow of switches between parliamentary groups. The width of each link is proportional to the number of members who moved from one group to another. Both directions are shown, including reversed flows.",
+      traseismLegend: "Parliamentary groups",
       traseismSankeyOmitted:
         "The diagram omits {{count}} links to avoid cycles; the matrix and ledger below retain all switches.",
       traseismNoFlowPairs: "There are switches in this scope, but no usable group pairs for the diagram.",

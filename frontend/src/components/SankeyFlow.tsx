@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import * as d3 from "d3";
+// Tree-shakeable D3 imports: only scaleOrdinal + schemeCategory10 (~12 KB vs ~240 KB full d3)
+import { scaleOrdinal } from "d3-scale";
+import { schemeCategory10 } from "d3-scale-chromatic";
 import { sankey } from "d3-sankey";
 import { traseismSummary } from "../api/client";
 
@@ -206,7 +208,7 @@ export default function SankeyFlow({
   const sankeyLinks = layout?.links ?? [];
 
   // Color scale for nodes.
-  const color = d3.scaleOrdinal<string, string>(d3.schemeCategory10);
+  const color = scaleOrdinal<string, string>(schemeCategory10);
 
   return (
     <div className="card p-4 flex flex-col">
@@ -269,24 +271,6 @@ export default function SankeyFlow({
                 strokeWidth={1}
                 rx={3}
               />
-              <foreignObject
-                x={4}
-                y={4}
-                width={Math.max(0, (node.x1 ?? 0) - (node.x0 ?? 0) - 8)}
-                height={Math.max(0, (node.y1 ?? 0) - (node.y0 ?? 0) - 8)}
-              >
-                <div
-                  className="text-[10px] font-medium text-white leading-tight"
-                  style={{
-                    maxWidth: Math.max(
-                      0,
-                      (node.x1 ?? 0) - (node.x0 ?? 0) - 8,
-                    ),
-                  }}
-                >
-                  {node.name}
-                </div>
-              </foreignObject>
               <title>
                 {`${node.name}\n${node.value} switch${
                   node.value === 1 ? "" : "s"
@@ -300,24 +284,29 @@ export default function SankeyFlow({
             {width <= 2 ? t("loading") : t("layoutUnavailable")}
           </div>
         )}
-
-        {layout && sankeyLinks.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-400">
-            {sankeyNodes.map((node) => (
-              <span
-                key={node.name}
-                className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800/50 border border-slate-700/50"
-              >
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: color(node.name) }}
-                />
-                {node.name}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
+      {layout && sankeyLinks.length > 0 && (
+        <div
+          className="mt-2 flex flex-wrap gap-2 text-xs text-slate-400"
+          role="list"
+          aria-label={t("traseismLegend")}
+        >
+          {sankeyNodes.map((node) => (
+            <span
+              key={node.name}
+              className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800/50 border border-slate-700/50"
+              role="listitem"
+            >
+              <span
+                className="w-2 h-2 shrink-0 rounded-full"
+                style={{ backgroundColor: color(node.name) }}
+                aria-hidden="true"
+              />
+              <span className="break-words">{node.name}</span>
+            </span>
+          ))}
+        </div>
+      )}
       {omitted > 0 && (
         <p className="text-xs text-amber-200 mt-2" role="note">
           {t("traseismSankeyOmitted", { count: omitted })}

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from fastapi import HTTPException
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.orm import Session
 
 from pipeline.coverage import coverage_snapshot
@@ -160,14 +160,25 @@ def _daterange(start: date, end: date, step_days: int):
 
 
 def get_timeline(
-    session: Session, chamber: str, start: date, end: date, step_days: int = 30
+    session: Session,
+    chamber: str,
+    start: date,
+    end: date,
+    step_days: int = 30,
+    include_switches: bool = False,
 ) -> dict:
     dates = list(_daterange(start, end, step_days))
     if dates and dates[-1] != end:
         dates.append(end)
 
-    memberships = session.execute(
-        select(Membership, Organization.short_name, Organization.name)
+    membership_rows = session.execute(
+        select(
+            Membership.start_date,
+            Membership.end_date,
+            Membership.legislature,
+            Organization.short_name,
+            Organization.name,
+        )
         .join(Organization, Organization.id == Membership.org_id)
         .where(
             Membership.chamber == chamber,
@@ -176,66 +187,67 @@ def get_timeline(
             or_(Membership.end_date.is_(None), Membership.end_date > start),
         )
     ).all()
-    legislatures = list(
-        session.scalars(
-            select(KeyEvent)
-            .where(
-                KeyEvent.type == "legislature",
-                KeyEvent.start_date <= end,
-                or_(KeyEvent.end_date.is_(None), KeyEvent.end_date > start),
-            )
-            .order_by(KeyEvent.start_date)
+    m_tuples = [
+        (m_start, m_end, m_leg, short_name or name)
+        for m_start, m_end, m_leg, short_name, name in membership_rows
+    ]
+
+    legislatures = session.execute(
+        select(KeyEvent.label, KeyEvent.start_date, KeyEvent.end_date)
+        .where(
+            KeyEvent.type == "legislature",
+            KeyEvent.start_date <= end,
+            or_(KeyEvent.end_date.is_(None), KeyEvent.end_date > start),
         )
-    )
+        .order_by(KeyEvent.start_date)
+    ).all()
+    rev_legislatures = list(reversed(legislatures))
 
     counts_by_date: list[dict[str, int]] = []
     for day in dates:
         active_legislature = next(
             (
-                item.label
-                for item in reversed(legislatures)
-                if item.start_date <= day
-                and (item.end_date is None or item.end_date > day)
+                label
+                for label, k_start, k_end in rev_legislatures
+                if k_start <= day and (k_end is None or k_end > day)
             ),
             None,
         )
         counts: dict[str, int] = {}
-        for membership, short_name, name in memberships:
+        for m_start, m_end, m_leg, group in m_tuples:
             if (
-                membership.start_date <= day
-                and (membership.end_date is None or membership.end_date > day)
-                and (
-                    active_legislature is None
-                    or membership.legislature == active_legislature
-                )
+                m_start <= day
+                and (m_end is None or m_end > day)
+                and (active_legislature is None or m_leg == active_legislature)
             ):
-                group = short_name or name
                 counts[group] = counts.get(group, 0) + 1
         counts_by_date.append(counts)
 
     group_names = sorted({name for counts in counts_by_date for name in counts})
-    series = {
-        name: [counts.get(name, 0) for counts in counts_by_date]
-        for name in group_names
-    }
+    series = {name: [counts.get(name, 0) for counts in counts_by_date] for name in group_names}
     totals = [sum(counts.values()) for counts in counts_by_date]
-    # Switch events in range.
-    evs = session.scalars(
-        select(Event)
-        .where(
-            Event.chamber == chamber,
-            Event.type == "switch_group",
-            Event.event_date >= start,
-            Event.event_date <= end,
-        )
-        .order_by(Event.event_date)
-    ).all()
+
+    if include_switches:
+        evs = session.scalars(
+            select(Event)
+            .where(
+                Event.chamber == chamber,
+                Event.type == "switch_group",
+                Event.event_date >= start,
+                Event.event_date <= end,
+            )
+            .order_by(Event.event_date)
+        ).all()
+        switches = [serialize_event(session, e) for e in evs]
+    else:
+        switches = []
+
     return {
         "chamber": chamber,
         "dates": [d.isoformat() for d in dates],
         "totals": totals,
         "groups": series,
-        "switches": [serialize_event(session, e) for e in evs],
+        "switches": switches,
     }
 
 
@@ -567,6 +579,8 @@ def get_coverage_detailed(session: Session) -> list[dict]:
     For each chamber/legislature scope: total memberships, % dated
     (start_date present), % with source URL, % of switch events with
     source URL, and last refresh timestamp.
+
+    Optimised: two GROUP BY queries replace N×5 per-scope scalar queries.
     """
     derived = coverage_snapshot(session)
     by_key = {(r["chamber"], r["legislature"]): r for r in derived}
@@ -587,6 +601,41 @@ def get_coverage_detailed(session: Session) -> list[dict]:
         else derived
     )
 
+    # --- Batched membership stats (1 query) ---
+    mem_rows = session.execute(
+        select(
+            Membership.chamber,
+            Membership.legislature,
+            func.count(Membership.id).label("total"),
+            func.sum(case((Membership.start_date.is_not(None), 1), else_=0)).label("dated"),
+            func.sum(case((Membership.source_url.is_not(None), 1), else_=0)).label("sourced"),
+        ).group_by(Membership.chamber, Membership.legislature)
+    ).all()
+    mem_stats: dict[tuple, tuple] = {
+        (r.chamber, r.legislature): (r.total or 0, r.dated or 0, r.sourced or 0) for r in mem_rows
+    }
+
+    # --- Batched event stats (1 query) ---
+    # ``last_refresh`` keeps its original meaning: the newest event of ANY type
+    # in the scope. Only the switch counters are restricted to switch events,
+    # so those are computed with conditional aggregates.
+    switch_types = ("switch_group", "switch_party")
+    is_switch = Event.type.in_(switch_types)
+    ev_rows = session.execute(
+        select(
+            Event.chamber,
+            Event.legislature,
+            func.sum(case((is_switch, 1), else_=0)).label("total"),
+            func.sum(case((and_(is_switch, Event.source_url.is_not(None)), 1), else_=0)).label(
+                "sourced"
+            ),
+            func.max(Event.detected_at).label("last_refresh"),
+        ).group_by(Event.chamber, Event.legislature)
+    ).all()
+    ev_stats: dict[tuple, tuple] = {
+        (r.chamber, r.legislature): (r.total or 0, r.sourced or 0, r.last_refresh) for r in ev_rows
+    }
+
     out = []
     for c in scopes:
         chamber = c["chamber"]
@@ -594,67 +643,8 @@ def get_coverage_detailed(session: Session) -> list[dict]:
         key = (chamber, legislature)
         snap = by_key.get(key)
 
-        # Membership stats for this scope.
-        total_memberships = (
-            session.scalar(
-                select(func.count(Membership.id)).where(
-                    Membership.chamber == chamber,
-                    Membership.legislature == legislature,
-                )
-            )
-            or 0
-        )
-        dated_memberships = (
-            session.scalar(
-                select(func.count(Membership.id)).where(
-                    Membership.chamber == chamber,
-                    Membership.legislature == legislature,
-                    Membership.start_date.is_not(None),
-                )
-            )
-            or 0
-        )
-        sourced_memberships = (
-            session.scalar(
-                select(func.count(Membership.id)).where(
-                    Membership.chamber == chamber,
-                    Membership.legislature == legislature,
-                    Membership.source_url.is_not(None),
-                )
-            )
-            or 0
-        )
-
-        # Switch event stats for this scope.
-        total_switches = (
-            session.scalar(
-                select(func.count(Event.id)).where(
-                    Event.chamber == chamber,
-                    Event.legislature == legislature,
-                    Event.type.in_(["switch_group", "switch_party"]),
-                )
-            )
-            or 0
-        )
-        sourced_switches = (
-            session.scalar(
-                select(func.count(Event.id)).where(
-                    Event.chamber == chamber,
-                    Event.legislature == legislature,
-                    Event.type.in_(["switch_group", "switch_party"]),
-                    Event.source_url.is_not(None),
-                )
-            )
-            or 0
-        )
-
-        # Last refresh: newest detected_at among events in this scope.
-        last_refresh = session.scalar(
-            select(func.max(Event.detected_at)).where(
-                Event.chamber == chamber,
-                Event.legislature == legislature,
-            )
-        )
+        total_memberships, dated_memberships, sourced_memberships = mem_stats.get(key, (0, 0, 0))
+        total_switches, sourced_switches, last_refresh = ev_stats.get(key, (0, 0, None))
 
         item = {
             "chamber": chamber,

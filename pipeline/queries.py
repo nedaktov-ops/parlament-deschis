@@ -56,21 +56,38 @@ def chamber_composition(
     counted. This prevents historical memberships with open-ended end dates
     from inflating the count for a date in a different legislature.
     """
-    ms = memberships_at(session, org_class="group", chamber=chamber, on_date=on_date)
+    stmt = (
+        select(
+            Membership.org_id,
+            Membership.person_id,
+            Membership.role,
+            Organization.short_name,
+            Organization.name,
+            Person.canonical_name,
+        )
+        .join(Organization, Organization.id == Membership.org_id)
+        .outerjoin(Person, Person.id == Membership.person_id)
+        .where(
+            Organization.classification == "group",
+            Membership.chamber == chamber,
+            Membership.start_date <= on_date,
+            (Membership.end_date.is_(None)) | (Membership.end_date > on_date),
+        )
+    )
     if legislature is not None:
-        ms = [m for m in ms if m.legislature == legislature]
+        stmt = stmt.where(Membership.legislature == legislature)
+
+    rows = session.execute(stmt).all()
     out: dict[str, dict] = {}
-    for m in ms:
-        org = session.get(Organization, m.org_id)
-        person = session.get(Person, m.person_id)
-        key = (org.short_name or org.name) if org else "?"
-        bucket = out.setdefault(key, {"org_id": m.org_id, "count": 0, "members": []})
+    for org_id, person_id, role, org_short_name, org_name, person_name in rows:
+        key = (org_short_name or org_name) if (org_short_name or org_name) else "?"
+        bucket = out.setdefault(key, {"org_id": org_id, "count": 0, "members": []})
         bucket["count"] += 1
         bucket["members"].append(
             {
-                "person_id": m.person_id,
-                "name": person.canonical_name if person else "?",
-                "role": m.role,
+                "person_id": person_id,
+                "name": person_name if person_name else "?",
+                "role": role,
             }
         )
     return out

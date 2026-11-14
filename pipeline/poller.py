@@ -71,7 +71,10 @@ def source_health(session: Session) -> dict:
 
 
 def start_poller(
-    interval_minutes: int = 30, legislature: str = DEFAULT_LEGISLATURE, db_path=None
+    interval_minutes: int = 30,
+    legislature: str = DEFAULT_LEGISLATURE,
+    db_path=None,
+    on_cycle=None,
 ) -> BackgroundScheduler:
     scheduler = BackgroundScheduler()
 
@@ -79,6 +82,9 @@ def start_poller(
         session = get_session(db_path)
         try:
             run_poll_cycle(session, legislature)
+            # Let the caller drop any caches whose data this cycle changed.
+            if on_cycle is not None:
+                on_cycle()
         finally:
             session.close()
 

@@ -8,12 +8,16 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 from strawberry.fastapi import GraphQLRouter
 
 from backend.config import APP_VERSION, DB_PATH, FRONTEND_DIST, SNAPSHOT_DIR
 from backend.graphql.schema import schema
+from backend.routers.api import invalidate_traseism_overview_cache
 from backend.routers.api import router as api_router
 from backend.routers.exports import router as exports_router
 from pipeline.poller import start_poller
@@ -26,6 +30,36 @@ SPA_EXCLUDED = ("api", "docs", "openapi.json", "redoc", "snapshots")
 # Module-level guard so a second app instance (e.g. repeated create_app calls
 # in one process) never starts a duplicate background scheduler.
 _scheduler = None
+
+# ---------------------------------------------------------------------------
+# Cache-Control middleware
+# ---------------------------------------------------------------------------
+# Health endpoints MUST never be cached so container probes reflect live state.
+# Write endpoints (POST) and any error response must never be cached either.
+# Only successful read-only /api/* responses get the public CDN cache.
+_NO_STORE = "no-store, no-cache, must-revalidate"
+_PUBLIC_CACHE = "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800"
+_HEALTH_PATHS = {"/api/health", "/api/health/live", "/api/health/ready"}
+_CACHEABLE_METHODS = {"GET", "HEAD"}
+
+
+class CacheControlMiddleware(BaseHTTPMiddleware):
+    """Attach Cache-Control headers to API responses."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        uncacheable = (
+            path in _HEALTH_PATHS
+            or request.method not in _CACHEABLE_METHODS
+            or response.status_code >= 400
+        )
+        if uncacheable:
+            response.headers["Cache-Control"] = _NO_STORE
+        elif path.startswith("/api/"):
+            # Respect an endpoint's own stricter Cache-Control if it set one.
+            response.headers.setdefault("Cache-Control", _PUBLIC_CACHE)
+        return response
 
 
 @asynccontextmanager
@@ -41,7 +75,9 @@ async def lifespan(app: FastAPI):
             log.warning("PARLAMENT_POLL_INTERVAL_MIN is not an integer: %r", raw)
     if minutes > 0 and _scheduler is None:
         try:
-            _scheduler = start_poller(minutes, db_path=DB_PATH)
+            _scheduler = start_poller(
+                minutes, db_path=DB_PATH, on_cycle=invalidate_traseism_overview_cache
+            )
             app.state.poller = _scheduler
             log.info("background poller enabled (every %s min)", minutes)
         except Exception:  # noqa: BLE001 - never let polling break serving
@@ -69,6 +105,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # Compress JSON responses ≥ 1 KB before they hit the network
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
+    app.add_middleware(CacheControlMiddleware)
     app.include_router(api_router)
     app.include_router(exports_router)
 

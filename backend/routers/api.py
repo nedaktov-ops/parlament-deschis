@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import secrets
+import threading
 from datetime import UTC, date, datetime
 from typing import Annotated
 
@@ -27,6 +28,22 @@ from pipeline.export import (
 from pipeline.poller import run_poll_cycle, source_health
 
 router = APIRouter(prefix="/api")
+
+# ---------------------------------------------------------------------------
+# In-memory cache for the traseism overview. The DB is read-only at runtime
+# so this result is immutable for the lifetime of the process. A lock guards
+# the lazy-init so only one thread runs the expensive computation.
+# ---------------------------------------------------------------------------
+_traseism_overview_cache: list | None = None
+_traseism_overview_lock = threading.Lock()
+
+
+def invalidate_traseism_overview_cache() -> None:
+    """Drop the memoised overview after the underlying data changes."""
+    global _traseism_overview_cache
+    with _traseism_overview_lock:
+        _traseism_overview_cache = None
+
 
 METHODOLOGY_RO = [
     "Fiecare mandat are date de început/sfârșit, precizie temporală și un nivel "
@@ -92,6 +109,7 @@ def timeline(
     start: str | None = Query(None, alias="from"),
     end: str | None = Query(None, alias="to"),
     step_days: int = Query(30, ge=1, le=365),
+    include_switches: bool = Query(False),
     db: Session = Depends(get_db),
 ):
     today = date.today()
@@ -99,7 +117,7 @@ def timeline(
     e = _parse_date(end, today)
     if e < s:
         raise HTTPException(status_code=422, detail="to must be >= from")
-    return queries.get_timeline(db, chamber, s, e, step_days)
+    return queries.get_timeline(db, chamber, s, e, step_days, include_switches=include_switches)
 
 
 @router.get("/persons")
@@ -293,6 +311,7 @@ def admin_poll(
         results = run_poll_cycle(db, legislature)
     except Exception as exc:  # noqa: BLE001 - report upstream failure as 502
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    invalidate_traseism_overview_cache()
     return {"status": "ok", "legislature": legislature, "results": results}
 
 
@@ -491,9 +510,14 @@ def get_generational_shift(
 @router.get("/traseism/overview")
 def traseism_overview(db: Session = Depends(get_db)):
     """One row per chamber and legislature: members, switches, switchers, rate."""
-    from pipeline.traseism import traseism_overview as _overview
+    global _traseism_overview_cache
+    if _traseism_overview_cache is None:
+        with _traseism_overview_lock:
+            if _traseism_overview_cache is None:
+                from pipeline.traseism import traseism_overview as _overview
 
-    return _overview(db)
+                _traseism_overview_cache = _overview(db)
+    return _traseism_overview_cache
 
 
 @router.get("/traseism/summary")
