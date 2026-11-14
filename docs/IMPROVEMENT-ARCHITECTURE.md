@@ -146,6 +146,9 @@ Each action should remain a focused change with a regression test where
 behavior changes. Data-methodology changes must also update
 [`METHODOLOGY.md`](METHODOLOGY.md), and schema/API changes must update
 [`DATA-MODEL.md`](DATA-MODEL.md) or [`API.md`](API.md), respectively.
+For the detailed free-tier data refresh, release, deployment, and recovery
+architecture, see
+[`SELF-SUSTAINABILITY-ARCHITECTURE.md`](SELF-SUSTAINABILITY-ARCHITECTURE.md).
 
 ## Current implementation checkpoint
 
