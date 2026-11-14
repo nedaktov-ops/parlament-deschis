@@ -109,6 +109,16 @@ export interface CoverageItem {
   note: string | null;
 }
 
+export interface CoverageRow extends CoverageItem {
+  persons: number;
+  total_memberships: number;
+  dated_pct: number;
+  sourced_pct: number;
+  total_switches: number;
+  sourced_switches_pct: number;
+  last_refresh: string | null;
+}
+
 export interface MetaResponse {
   legislatures: Record<string, { label: string; start: string | null; end: string | null }>;
   groups: OrgBrief[];
@@ -230,6 +240,7 @@ export const api = {
     get<EventItem[]>(`/movements${chamber ? `?chamber=${chamber}` : ""}`),
   recentEvents: (limit = 50) => get<EventItem[]>(`/events/recent?limit=${limit}`),
   coverage: () => get<CoverageItem[]>("/coverage"),
+  coverage_detailed: () => get<CoverageRow[]>("/coverage/detailed"),
   about: () => get<AboutResponse>("/about"),
   health: () => get<HealthResponse>("/health"),
 };

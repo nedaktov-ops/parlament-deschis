@@ -135,6 +135,12 @@ def coverage(db: Session = Depends(get_db)):
     return queries.get_coverage(db)
 
 
+@router.get("/coverage/detailed")
+def coverage_detailed(db: Session = Depends(get_db)):
+    """Detailed coverage matrix with per-scope data quality stats."""
+    return queries.get_coverage_detailed(db)
+
+
 @router.get("/committees")
 def committees(as_of: str | None = None, db: Session = Depends(get_db)):
     """Committee list with its controlling party, when committee data exists.

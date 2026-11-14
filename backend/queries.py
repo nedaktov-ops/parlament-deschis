@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from fastapi import HTTPException
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from pipeline.coverage import coverage_snapshot
@@ -466,6 +466,113 @@ def get_coverage(session: Session) -> list[dict]:
             out.append(item)
         return out
     return derived
+
+
+def get_coverage_detailed(session: Session) -> list[dict]:
+    """Detailed coverage matrix with per-scope data quality stats.
+
+    For each chamber/legislature scope: total memberships, % dated
+    (start_date present), % with source URL, % of switch events with
+    source URL, and last refresh timestamp.
+    """
+    from sqlalchemy import func
+
+    derived = coverage_snapshot(session)
+    by_key = {(r["chamber"], r["legislature"]): r for r in derived}
+    rows = list(session.scalars(select(Coverage)))
+    if not rows:
+        return derived
+
+    out = []
+    for c in rows:
+        key = (c.chamber, c.legislature)
+        snap = by_key.get(key)
+
+        # Membership stats for this scope.
+        total_memberships = (
+            session.scalar(
+                select(func.count(Membership.id)).where(
+                    Membership.chamber == c.chamber,
+                    Membership.legislature == c.legislature,
+                )
+            )
+            or 0
+        )
+        dated_memberships = (
+            session.scalar(
+                select(func.count(Membership.id)).where(
+                    Membership.chamber == c.chamber,
+                    Membership.legislature == c.legislature,
+                    Membership.start_date.is_not(None),
+                )
+            )
+            or 0
+        )
+        sourced_memberships = (
+            session.scalar(
+                select(func.count(Membership.id)).where(
+                    Membership.chamber == c.chamber,
+                    Membership.legislature == c.legislature,
+                    Membership.source_url.is_not(None),
+                )
+            )
+            or 0
+        )
+
+        # Switch event stats for this scope.
+        total_switches = (
+            session.scalar(
+                select(func.count(Event.id)).where(
+                    Event.chamber == c.chamber,
+                    Event.legislature == c.legislature,
+                    Event.type.in_(["switch_group", "switch_party"]),
+                )
+            )
+            or 0
+        )
+        sourced_switches = (
+            session.scalar(
+                select(func.count(Event.id)).where(
+                    Event.chamber == c.chamber,
+                    Event.legislature == c.legislature,
+                    Event.type.in_(["switch_group", "switch_party"]),
+                    Event.source_url.is_not(None),
+                )
+            )
+            or 0
+        )
+
+        # Last refresh: newest detected_at among events in this scope.
+        last_refresh = session.scalar(
+            select(func.max(Event.detected_at)).where(
+                Event.chamber == c.chamber,
+                Event.legislature == c.legislature,
+            )
+        )
+
+        item = {
+            "chamber": c.chamber,
+            "legislature": c.legislature,
+            "period_start": c.period_start.isoformat() if c.period_start else None,
+            "period_end": c.period_end.isoformat() if c.period_end else None,
+            "completeness": c.completeness,
+            "note": c.note,
+            "persons": snap["persons"] if snap else 0,
+            "total_memberships": total_memberships,
+            "dated_pct": round(100 * dated_memberships / total_memberships, 1)
+            if total_memberships
+            else 0,
+            "sourced_pct": round(100 * sourced_memberships / total_memberships, 1)
+            if total_memberships
+            else 0,
+            "total_switches": total_switches,
+            "sourced_switches_pct": round(100 * sourced_switches / total_switches, 1)
+            if total_switches
+            else 0,
+            "last_refresh": last_refresh.isoformat() if last_refresh else None,
+        }
+        out.append(item)
+    return out
 
 
 def get_meta(session: Session) -> dict:

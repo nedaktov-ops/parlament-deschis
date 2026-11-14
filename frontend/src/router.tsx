@@ -15,6 +15,7 @@ const ElectoralDynamics = lazy(() => import("./pages/ElectoralDynamics").then(m 
 const InstitutionalView = lazy(() => import("./pages/InstitutionalView").then(m => ({ default: m.InstitutionalView })));
 const LegislatureDetail = lazy(() => import("./pages/LegislatureDetail").then(m => ({ default: m.LegislatureDetail })));
 const Traseism = lazy(() => import("./pages/Traseism").then(m => ({ default: m.Traseism })));
+const CoverageView = lazy(() => import("./pages/CoverageView").then(m => ({ default: m.default })));
 
 // Loading fallback
 function Loading() {
@@ -183,6 +184,12 @@ function RootLayout() {
           <NavLink to="/institutional" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("institutional")}
           </NavLink>
+          <NavLink to="/coverage" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("coverage")}
+          </NavLink>
+          <NavLink to="/traseism" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("traseismShort")}
+          </NavLink>
         </nav>
       </header>
       <main className="max-w-7xl mx-auto px-4 py-5">
@@ -266,6 +273,15 @@ const traseismRoute = createRoute({
   }),
 });
 
+const coverageRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/coverage",
+  component: () => <Suspense fallback={<Loading />}><CoverageView /></Suspense>,
+  validateSearch: (search) => ({
+    date: search.date ?? new Date().toISOString().slice(0, 10),
+  }),
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   electoralRoute,
@@ -274,6 +290,7 @@ const routeTree = rootRoute.addChildren([
   personRoute,
   legislatureRoute,
   traseismRoute,
+  coverageRoute,
 ]);
 
 export const router = createRouter({ routeTree });
