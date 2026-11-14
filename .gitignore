@@ -34,4 +34,5 @@ frontend/.vite/
 .env.local
 .DS_Store
 .idea/
-.vscode/
+.vscode/data/parlament-real.db-shm
+data/parlament-real.db-wal
