@@ -47,9 +47,18 @@ def person_group_at(session: Session, person_id: str, on_date: date) -> Membersh
     return session.scalars(_active(stmt, on_date)).first()
 
 
-def chamber_composition(session: Session, chamber: str, on_date: date) -> dict:
-    """Return {group_short: {count, members:[{person_id,name}]}} active on date."""
+def chamber_composition(
+    session: Session, chamber: str, on_date: date, legislature: str | None = None
+) -> dict:
+    """Return {group_short: {count, members:[{person_id,name}]}} active on date.
+
+    When ``legislature`` is given, only memberships in that legislature are
+    counted. This prevents historical memberships with open-ended end dates
+    from inflating the count for a date in a different legislature.
+    """
     ms = memberships_at(session, org_class="group", chamber=chamber, on_date=on_date)
+    if legislature is not None:
+        ms = [m for m in ms if m.legislature == legislature]
     out: dict[str, dict] = {}
     for m in ms:
         org = session.get(Organization, m.org_id)

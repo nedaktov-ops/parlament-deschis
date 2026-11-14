@@ -112,7 +112,8 @@ def serialize_event(session: Session, e: Event) -> dict:
 
 
 def get_chamber(session: Session, chamber: str, as_of: date) -> dict:
-    comp = chamber_composition(session, chamber, as_of)
+    leg_label = _legislature_for(session, as_of)
+    comp = chamber_composition(session, chamber, as_of, legislature=leg_label)
     groups = []
     for short, bucket in comp.items():
         org = session.get(Organization, bucket["org_id"])
@@ -129,9 +130,24 @@ def get_chamber(session: Session, chamber: str, as_of: date) -> dict:
     return {
         "chamber": chamber,
         "as_of": as_of.isoformat(),
+        "legislature": leg_label,
         "total": sum(g["count"] for g in groups),
         "groups": groups,
     }
+
+
+def _legislature_for(session: Session, on_date: date) -> str | None:
+    """Return the legislature label active on ``on_date``, or None."""
+    from pipeline.db import KeyEvent
+
+    row = session.scalars(
+        select(KeyEvent).where(
+            KeyEvent.type == "legislature",
+            KeyEvent.start_date <= on_date,
+            (KeyEvent.end_date.is_(None)) | (KeyEvent.end_date > on_date),
+        )
+    ).first()
+    return row.label if row else None
 
 
 def _daterange(start: date, end: date, step_days: int):

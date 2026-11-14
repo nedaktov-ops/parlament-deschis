@@ -102,48 +102,52 @@ def traseism_summary(
     switchers = len({e.person_id for e in events})
     start, end = _period(session, chamber, legislature)
 
+    # Collect org_ids only from the current scope (legislature + chamber).
+    # Events are already filtered by legislature/chamber in _switch_query.
     org_ids = {e.from_org_id for e in events if e.from_org_id}
     org_ids |= {e.to_org_id for e in events if e.to_org_id}
+    # Add groups that have members in this scope even if no switches.
     org_ids |= set(
         session.scalars(
             select(Membership.org_id)
             .join(Organization, Organization.id == Membership.org_id)
-            .where(Organization.classification == "group")
-            .where(Membership.chamber == chamber)
-            if chamber
-            else select(Membership.org_id)
-            .join(Organization, Organization.id == Membership.org_id)
-            .where(Organization.classification == "group")
+            .where(
+                Organization.classification == "group",
+                Membership.chamber == chamber,
+                Membership.legislature == legislature,
+            )
         )
     )
-    if legislature:
-        org_ids = (
-            set(
-                session.scalars(
-                    select(Membership.org_id)
-                    .join(Organization, Organization.id == Membership.org_id)
-                    .where(Organization.classification == "group")
-                    .where(Membership.legislature == legislature)
-                )
-            )
-            | org_ids
-        )
     labels = _org_map(session, org_ids)
 
-    by_party = []
-    for org_id in sorted(org_ids, key=lambda i: labels.get(i, i)):
+    # Build per-party movement table. Multiple groups can share a party
+    # label (e.g. several groups all called "AUR"), so merge entries by
+    # party label instead of emitting one row per group org_id.
+    by_party_map: dict[str, dict] = {}
+    for org_id in org_ids:
+        label = labels.get(org_id, org_id) or "?"
+        entry = by_party_map.get(label)
+        if entry is None:
+            entry = {
+                "party": label,
+                "gains": 0,
+                "losses": 0,
+                "net": 0,
+                "seats_start": 0,
+                "seats_end": 0,
+            }
+            by_party_map[label] = entry
         gains = sum(1 for e in events if e.to_org_id == org_id)
         losses = sum(1 for e in events if e.from_org_id == org_id)
-        by_party.append(
-            {
-                "party": labels.get(org_id, org_id),
-                "gains": gains,
-                "losses": losses,
-                "net": gains - losses,
-                "seats_start": _seats_at(session, org_id, start, chamber, legislature),
-                "seats_end": _seats_at(session, org_id, end, chamber, legislature),
-            }
-        )
+        entry["gains"] += gains
+        entry["losses"] += losses
+        entry["net"] = entry["gains"] - entry["losses"]
+        entry["seats_start"] += _seats_at(session, org_id, start, chamber, legislature) or 0
+        entry["seats_end"] += _seats_at(session, org_id, end, chamber, legislature) or 0
+
+    by_party = sorted(
+        by_party_map.values(), key=lambda e: (-(e["gains"] + e["losses"]), e["party"])
+    )
 
     matrix: dict[tuple[str, str], int] = {}
     for e in events:
@@ -277,10 +281,11 @@ def traseism_overview(session: Session) -> list[dict]:
                 "switchers": summary["switchers"],
                 "switch_rate": summary["switch_rate"],
                 "switches_per_100_members": summary["switches_per_100_members"],
-                "party_switches": summary["party"]["switches"],
-                "party_switchers": summary["party"]["switchers"],
-                "party_switch_rate": summary["party"]["switch_rate"],
+                "party": summary["party"],
+                "by_party": summary["by_party"],
+                "matrix": summary["matrix"],
                 "repeat_switchers": summary["repeat_switchers"],
+                "timing": summary["timing"],
                 "coverage": summary["coverage"],
             }
         )

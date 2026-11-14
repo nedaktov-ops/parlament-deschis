@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import os
 import secrets
 from datetime import UTC, date, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from backend import queries
@@ -16,6 +17,7 @@ from backend.deps import get_db
 from pipeline.analytics import derive_all_switch_waves, derive_switch_waves
 from pipeline.db import Evidence
 from pipeline.export import CODE_LICENSE, DATA_LICENSE, PROJECT_URL
+from pipeline.export import CSV_DATASETS, build_popolo, csv_for
 from pipeline.poller import run_poll_cycle, source_health
 
 router = APIRouter(prefix="/api")
@@ -575,4 +577,37 @@ def traseism_switches(
         person=person,
         limit=limit,
         offset=offset,
+    )
+
+
+@router.get("/export/popolo")
+def export_popolo(
+    chamber: str | None = Query(None, pattern="^(deputies|senate)$"),
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    db: Session = Depends(get_db),
+):
+    """Export the scoped dataset as Popolo 1.0 JSON."""
+    doc = build_popolo(db, chamber=chamber, legislature=legislature)
+    return Response(
+        content=json.dumps(doc, ensure_ascii=False, indent=2),
+        media_type="application/json; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="popolo.json"'},
+    )
+
+
+@router.get("/export/{dataset}.csv")
+def export_csv(
+    dataset: str,
+    chamber: str | None = Query(None, pattern="^(deputies|senate)$"),
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    db: Session = Depends(get_db),
+):
+    """Export one dataset (persons, organizations, posts, memberships, events) as CSV."""
+    if dataset not in CSV_DATASETS:
+        raise HTTPException(status_code=404, detail=f"unknown dataset: {dataset}")
+    text = csv_for(db, dataset, chamber=chamber, legislature=legislature)
+    return Response(
+        content=text,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{dataset}.csv"'},
     )

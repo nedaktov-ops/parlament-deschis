@@ -273,4 +273,10 @@ def test_overview_contains_scope_and_party_counts(session):
     assert rows[0]["legislature"] == "2024"
     assert rows[0]["members"] == 3
     assert rows[0]["switches"] == 5
-    assert rows[0]["party_switches"] == 4
+    assert rows[0]["party"]["switches"] == 4
+    assert rows[0]["party"]["switchers"] == 3
+    assert isinstance(rows[0]["by_party"], list)
+    assert isinstance(rows[0]["matrix"], list)
+    assert isinstance(rows[0]["timing"], dict)
+    assert "median_months" in rows[0]["timing"]
+    assert "by_month" in rows[0]["timing"]
