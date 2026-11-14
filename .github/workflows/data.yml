@@ -122,7 +122,7 @@ jobs:
           DATASET_RELEASE_TAG: ${{ steps.release.outputs.tag }}
           RENDER_API_URL: https://parlament-deschis.onrender.com
         run: |
-          deadline=$((SECONDS + 900))
+          deadline=$((SECONDS + 1800))
           while (( SECONDS < deadline )); do
             timeout=$((deadline - SECONDS))
             if (( timeout > 60 )); then timeout=60; fi
@@ -147,7 +147,7 @@ jobs:
               sleep "$((remaining < 30 ? remaining : 30))"
             fi
           done
-          echo "Render did not confirm dataset $DATASET_RELEASE_TAG within 15 minutes" >&2
+          echo "Render did not confirm dataset $DATASET_RELEASE_TAG within 30 minutes" >&2
           exit 1
 
       - name: Report refresh or deployment failure
