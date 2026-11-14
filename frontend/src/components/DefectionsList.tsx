@@ -13,6 +13,7 @@ interface SwitcherSummary {
     to: string | null;
     type: string;
     chamber: string | null;
+    source_url: string | null;
   }>;
 }
 
@@ -37,6 +38,7 @@ function aggregateSwitchers(events: EventItem[]): SwitcherSummary[] {
         to: toLabel,
         type: e.type,
         chamber: e.chamber,
+        source_url: e.source_url ?? null,
       });
     } else {
       byPerson.set(pid, {
@@ -50,6 +52,7 @@ function aggregateSwitchers(events: EventItem[]): SwitcherSummary[] {
           to: toLabel,
           type: e.type,
           chamber: e.chamber,
+          source_url: e.source_url ?? null,
         }],
       });
     }
@@ -188,6 +191,17 @@ export default function DefectionsList({
                       <span className="text-[10px] text-slate-500 px-1.5 py-0.5 bg-slate-800 rounded">
                         {sw.chamber}
                       </span>
+                    )}
+                    {sw.source_url && (
+                      <a
+                        href={sw.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-sky-400 hover:underline px-1.5 py-0.5 bg-sky-900/20 rounded border border-sky-900/30"
+                        title={t("sourceProvenance")}
+                      >
+                        {t("source")} ↗
+                      </a>
                     )}
                   </div>
                 ))}

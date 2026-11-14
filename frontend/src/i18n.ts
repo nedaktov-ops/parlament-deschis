@@ -126,6 +126,8 @@ const resources = {
       coverageLoadError: "Nu s-au putut încărca datele de calitate.",
       lastRefresh: "Ultima actualizare",
       traseismShort: "Traseism",
+      source: "Sursă",
+      sourceProvenance: "Deschide sursa oficială",
       traseismTitle: "Traseism: schimbările de grup, numărate",
       traseismHeadline:
         "Traseismul înseamnă schimbarea grupului parlamentar în interiorul aceleiași camere, în aceeași legislatură.",
@@ -323,6 +325,8 @@ const resources = {
       coverageLoadError: "Could not load coverage data.",
       lastRefresh: "Last refresh",
       traseismShort: "Traseism",
+      source: "Source",
+      sourceProvenance: "Open official source",
       traseismTitle: "Party switching: group changes, counted",
       traseismHeadline:
         "Party switching means changing parliamentary group within the same chamber and the same legislature.",

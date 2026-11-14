@@ -58,6 +58,7 @@ export interface EventItem {
   summary_ro: string | null;
   summary_en: string | null;
   detected_at: string | null;
+  source_url: string | null;
 }
 
 export interface EvidenceItem {
