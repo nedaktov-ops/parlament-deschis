@@ -493,11 +493,94 @@ _PARTIAL_INDEXES: tuple[str, ...] = (
 )
 
 
+def _merge_legacy_cross_chamber_groups(conn) -> None:
+    duplicates = conn.exec_driver_sql(
+        "SELECT classification, normalized_name FROM organization "
+        "WHERE classification = 'group' AND founding_date IS NULL "
+        "GROUP BY classification, normalized_name HAVING COUNT(*) > 1"
+    ).all()
+    merged = 0
+    comparable_fields = (
+        "name",
+        "short_name",
+        "alt_labels",
+        "color",
+        "parent_id",
+        "wikidata_qid",
+        "founding_date",
+        "dissolution_date",
+        "localised_labels",
+        "previous_party_id",
+        "successor_party_id",
+    )
+
+    for classification, normalized_name in duplicates:
+        rows = conn.exec_driver_sql(
+            "SELECT * FROM organization WHERE classification = ? "
+            "AND normalized_name = ? AND founding_date IS NULL ORDER BY id",
+            (classification, normalized_name),
+        ).mappings().all()
+        if (
+            len(rows) != 2
+            or {row["chamber"] for row in rows} != {"deputies", "senate"}
+            or any(
+                tuple(row[field] for field in comparable_fields)
+                != tuple(rows[0][field] for field in comparable_fields)
+                for row in rows[1:]
+            )
+        ):
+            continue
+
+        org_ids = [row["id"] for row in rows]
+        placeholders = ", ".join("?" for _ in org_ids)
+        open_conflict = conn.exec_driver_sql(
+            "SELECT 1 FROM membership WHERE org_id IN (" + placeholders + ") "
+            "AND end_date IS NULL GROUP BY person_id, COALESCE(post_id, ''), "
+            "chamber, COALESCE(legislature, '') HAVING COUNT(*) > 1 LIMIT 1",
+            tuple(org_ids),
+        ).first()
+        closed_conflict = conn.exec_driver_sql(
+            "SELECT 1 FROM membership WHERE org_id IN (" + placeholders + ") "
+            "AND end_date IS NOT NULL AND post_id IS NOT NULL "
+            "GROUP BY person_id, post_id, end_date HAVING COUNT(*) > 1 LIMIT 1",
+            tuple(org_ids),
+        ).first()
+        if open_conflict or closed_conflict:
+            continue
+
+        canonical_id = next(row["id"] for row in rows if row["chamber"] == "deputies")
+        for duplicate_id in org_ids:
+            if duplicate_id == canonical_id:
+                continue
+            for table, column in (
+                ("organization", "parent_id"),
+                ("organization", "previous_party_id"),
+                ("organization", "successor_party_id"),
+                ("post", "org_id"),
+                ("membership", "org_id"),
+                ("membership", "on_behalf_of_id"),
+                ("event", "from_org_id"),
+                ("event", "to_org_id"),
+            ):
+                conn.exec_driver_sql(
+                    f"UPDATE {table} SET {column} = ? WHERE {column} = ?",
+                    (canonical_id, duplicate_id),
+                )
+            conn.exec_driver_sql("DELETE FROM organization WHERE id = ?", (duplicate_id,))
+        conn.exec_driver_sql(
+            "UPDATE organization SET chamber = NULL WHERE id = ?", (canonical_id,)
+        )
+        merged += 1
+
+    if merged:
+        log.info("merged %d legacy cross-chamber parliamentary group records", merged)
+
+
 def ensure_schema(engine) -> None:
     """Bring an existing SQLite file up to the current schema.
 
     Safe to call repeatedly: columns are added only when missing, and an
-    index that cannot be created (because a legacy database already contains
+    index that cannot be created (because a legacy database still contains
     duplicates) is reported instead of aborting startup.
     """
     with engine.begin() as conn:
@@ -516,6 +599,7 @@ def ensure_schema(engine) -> None:
             for name, ddl in columns.items():
                 if name not in existing:
                     conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
+        _merge_legacy_cross_chamber_groups(conn)
         for ddl in _PARTIAL_INDEXES:
             try:
                 conn.exec_driver_sql(ddl)

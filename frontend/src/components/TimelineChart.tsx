@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import * as echarts from "echarts";
@@ -30,13 +30,19 @@ export default function TimelineChart({
   groups?: OrgBrief[];
 }) {
   const { t, i18n } = useTranslation();
+  const chartId = useId();
   const [chamber, setChamber] = useState<"deputies" | "senate">("deputies");
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ECharts | null>(null);
+  const spanDays = Math.max(
+    0,
+    (new Date(to).getTime() - new Date(from).getTime()) / 86_400_000,
+  );
+  const stepDays = Math.max(30, Math.ceil(spanDays / 180));
 
   const timeline = useQuery({
-    queryKey: ["timeline", chamber, from, to],
-    queryFn: () => api.timeline(chamber, from, to, 30),
+    queryKey: ["timeline", chamber, from, to, stepDays],
+    queryFn: () => api.timeline(chamber, from, to, stepDays),
     enabled: from <= to,
   });
 
@@ -79,6 +85,8 @@ export default function TimelineChart({
   }, [data]);
 
   const empty = !data || data.dates.length === 0 || groupNames.length === 0;
+  const firstDate = data?.dates[0];
+  const lastDate = data?.dates[data.dates.length - 1];
 
   const option = useMemo<EChartsOption>(() => {
     if (!data) return {};
@@ -137,14 +145,14 @@ export default function TimelineChart({
         axisTick: { show: false },
         axisLabel: {
           color: AXIS_COLOR,
-          fontSize: 10,
+          fontSize: 11,
           hideOverlap: true,
           formatter: (value: string) => value.slice(0, 4),
         },
       },
       yAxis: {
         type: "value",
-        axisLabel: { color: AXIS_COLOR, fontSize: 10 },
+        axisLabel: { color: AXIS_COLOR, fontSize: 11 },
         splitLine: { lineStyle: { color: SPLIT_COLOR, type: "dashed" } },
       },
       series,
@@ -164,7 +172,7 @@ export default function TimelineChart({
   return (
     <div className="card p-4 flex flex-col">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <h2 className="font-semibold">{t("groupTimeline")}</h2>
+        <h2 id={`timeline-title-${chartId}`} className="font-semibold">{t("groupTimeline")}</h2>
         <div className="flex items-center gap-1" role="group" aria-label={t("chamber")}>
           {(["deputies", "senate"] as const).map((c) => (
             <button
@@ -184,23 +192,75 @@ export default function TimelineChart({
       </div>
 
       <div className="relative h-[320px]">
+        <p id={`timeline-description-${chartId}`} className="sr-only">
+          {data
+            ? t("timelineSummary", {
+                from: firstDate ?? from,
+                to: lastDate ?? to,
+                groups: groupNames.length,
+                total: data.totals[data.totals.length - 1] ?? 0,
+              })
+            : timeline.isLoading
+              ? t("loading")
+              : t("noData")}
+        </p>
         <div
           ref={containerRef}
           className="absolute inset-0"
           role="img"
-          aria-label={t("groupTimeline")}
+          aria-labelledby={`timeline-title-${chartId}`}
+          aria-describedby={`timeline-description-${chartId}`}
         />
         {timeline.isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-sm pointer-events-none">
+          <div role="status" className="absolute inset-0 flex items-center justify-center text-slate-300 text-sm pointer-events-none">
             {t("loading")}
           </div>
         )}
+        {timeline.isError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-ink/90 text-center px-4">
+            <p role="alert" className="text-rose-200 text-sm">{t("timelineLoadError")}</p>
+            <button type="button" className="btn bg-slate-700 hover:bg-slate-600" onClick={() => timeline.refetch()}>
+              {t("traseismRetry")}
+            </button>
+          </div>
+        )}
         {!timeline.isLoading && empty && (
-          <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-sm pointer-events-none">
+          !timeline.isError && <div className="absolute inset-0 flex items-center justify-center text-slate-300 text-sm pointer-events-none">
             {t("noData")}
           </div>
         )}
       </div>
+      {data && !empty && firstDate && lastDate ? (
+        <details className="mt-3 text-sm">
+          <summary className="cursor-pointer text-sky-300 hover:text-sky-200">
+            {t("timelineTableCaption")}
+          </summary>
+          <div className="overflow-x-auto mt-2">
+            <table className="w-full text-xs border-collapse">
+              <caption className="sr-only">{t("timelineTableCaption")}</caption>
+              <thead>
+                <tr className="text-left text-slate-300">
+                  <th scope="col" className="py-1 pr-3">{t("group")}</th>
+                  <th scope="col" className="py-1 pr-3 text-right">{t("timelineFirstDate")} ({firstDate})</th>
+                  <th scope="col" className="py-1 text-right">{t("timelineLastDate")} ({lastDate})</th>
+                </tr>
+              </thead>
+              <tbody>
+                {groupNames.map((name) => {
+                  const values = data.groups[name] ?? [];
+                  return (
+                    <tr key={name} className="border-t border-slate-700/60">
+                      <th scope="row" className="py-1 pr-3 text-left font-medium text-slate-200">{name}</th>
+                      <td className="py-1 pr-3 text-right font-mono text-slate-200">{values[0] ?? 0}</td>
+                      <td className="py-1 text-right font-mono text-slate-200">{values[values.length - 1] ?? 0}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      ) : null}
     </div>
   );
 }

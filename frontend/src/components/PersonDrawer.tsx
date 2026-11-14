@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, type EventItem } from "../api/client";
@@ -31,6 +32,7 @@ export default function PersonDrawer({
   onClose: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const drawerRef = useRef<HTMLElement>(null);
   const person = useQuery({
     queryKey: ["person", personId],
     queryFn: () => api.person(personId!),
@@ -42,6 +44,39 @@ export default function PersonDrawer({
     enabled: !!personId,
     retry: false,
   });
+
+  useEffect(() => {
+    if (!personId) return;
+    const previousFocus = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    drawerRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = drawerRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!items?.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      previousFocus?.focus();
+    };
+  }, [personId, onClose]);
 
   if (!personId) return null;
 
@@ -56,12 +91,19 @@ export default function PersonDrawer({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
-      <aside className="fixed right-0 top-0 h-full w-full sm:w-[480px] bg-panel border-l border-slate-700 z-50 overflow-y-auto shadow-2xl">
+      <div aria-hidden="true" className="fixed inset-0 bg-black/70 z-40" onClick={onClose} />
+      <aside
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="person-drawer-title"
+        tabIndex={-1}
+        className="fixed right-0 top-0 h-full w-full sm:w-[480px] bg-panel border-l border-slate-700 z-50 overflow-y-auto shadow-2xl"
+      >
         <div className="sticky top-0 bg-panel/95 backdrop-blur border-b border-slate-700 px-5 py-4 flex items-start justify-between">
           <div>
             <div className="text-xs uppercase tracking-wide text-slate-500">{t("person")}</div>
-            <h2 className="text-lg font-semibold">{p?.name ?? t("loading")}</h2>
+            <h2 id="person-drawer-title" className="text-lg font-semibold">{p?.name ?? t("loading")}</h2>
             {p?.birth_date && (
               <div className="text-xs text-slate-400">
                 {t("born")} {p.birth_date}
@@ -74,7 +116,14 @@ export default function PersonDrawer({
         </div>
 
         {person.isLoading && <div className="p-5 text-slate-500 text-sm">{t("loading")}</div>}
-        {person.isError && <div className="p-5 text-rose-400 text-sm">API error</div>}
+        {person.isError && (
+          <div className="p-5 text-rose-200 text-sm" role="alert">
+            {t("personLoadError")}
+            <button type="button" className="ml-3 underline" onClick={() => person.refetch()}>
+              {t("traseismRetry")}
+            </button>
+          </div>
+        )}
 
         {p && (
           <div className="p-5 space-y-6">

@@ -1,47 +1,67 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import { useSearch } from "@tanstack/react-router";
-import TimelineChart from "../components/TimelineChart";
-import DefectionSankey from "../components/DefectionSankey";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { localISODate } from "../utils/date";
 
 export function InstitutionalView() {
   const { t } = useTranslation();
+  const navigate = useNavigate({ from: "/institutional" });
   const search = useSearch({ from: "/institutional", select: s => s.date });
-  const asOf: string = (search as string) ?? new Date().toISOString().slice(0, 10);
+  const asOf = search;
+  const today = localISODate();
 
   const committees = useQuery({
     queryKey: ["committees", asOf],
     queryFn: () => api.committees(asOf),
   });
-
-  if (committees.isLoading) {
-    return (
-      <div className="card p-4">
-        <div className="text-slate-500 text-sm py-8">{t("loading")}</div>
-      </div>
-    );
-  }
+  const crossChamber = useQuery({
+    queryKey: ["cross-chamber", asOf],
+    queryFn: () => api.crossChamber(asOf),
+  });
 
   return (
     <div className="space-y-4">
       <div className="card p-4">
-        <h2 className="font-semibold mb-3">{t("institutionalView")}</h2>
+        <h1 className="text-2xl font-bold mb-3">{t("institutionalView")}</h1>
         <p className="text-sm text-slate-400 mb-4">{t("institutionalViewDesc")}</p>
+        <div className="mb-4">
+          <label htmlFor="institutional-as-of" className="block text-xs text-slate-300 mb-1">
+            {t("asOf")}
+          </label>
+          <input
+            id="institutional-as-of"
+            type="date"
+            value={asOf}
+            max={today}
+            onChange={(event) => {
+              if (event.target.value) {
+                navigate({ search: { date: event.target.value }, replace: true });
+              }
+            }}
+            className="bg-slate-800 border border-slate-600 rounded-md px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+          />
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="card p-4">
             <h3 className="font-semibold mb-3">{t("committeeControl")}</h3>
-            {committees.isLoading ? (
+            {committees.isError ? (
+              <div role="alert" className="text-rose-200 text-sm">
+                {t("institutionalLoadError")}
+                <button type="button" className="ml-3 underline" onClick={() => committees.refetch()}>
+                  {t("traseismRetry")}
+                </button>
+              </div>
+            ) : committees.isLoading ? (
               <div className="text-slate-500 text-sm">{t("loading")}</div>
             ) : committees.data?.length === 0 ? (
-              <div className="text-slate-500 text-sm">{t("noData")}</div>
+              <div className="text-slate-500 text-sm">{t("committeeDataUnavailable")}</div>
             ) : (
               <div className="space-y-2">
-                {committees.data?.map((c: { id: string; name: string; party: { short_name: string | null } | null }) => (
-                  <div key={c.id} className="flex items-center justify-between bg-slate-800/50 rounded p-2">
-                    <span className="font-medium truncate">{c.name}</span>
-                    <span className="text-slate-400 text-sm">{c.party?.short_name || "—"}</span>
+                {committees.data?.map(c => (
+                  <div key={c.id} className="bg-slate-800/50 rounded p-2">
+                    <span className="font-medium">{c.name}</span>
                   </div>
                 ))}
               </div>
@@ -50,20 +70,55 @@ export function InstitutionalView() {
 
           <div className="card p-4">
             <h3 className="font-semibold mb-3">{t("bureauComposition")}</h3>
-            <div className="text-slate-500 text-sm">{t("notImplementedYet")}</div>
+            <div className="text-slate-500 text-sm">{t("bureauDataUnavailable")}</div>
           </div>
         </div>
 
         <div className="card p-4">
           <h3 className="font-semibold mb-3">{t("crossChamberMPs")}</h3>
-          <div className="text-slate-500 text-sm">{t("notImplementedYet")}</div>
+          {crossChamber.isError ? (
+            <div role="alert" className="text-rose-200 text-sm">
+              {t("institutionalLoadError")}
+              <button type="button" className="ml-3 underline" onClick={() => crossChamber.refetch()}>
+                {t("traseismRetry")}
+              </button>
+            </div>
+          ) : crossChamber.isLoading ? (
+            <div className="text-slate-500 text-sm">{t("loading")}</div>
+          ) : crossChamber.data?.data.length === 0 ? (
+            <div className="text-slate-500 text-sm">{t("crossChamberNoData")}</div>
+          ) : (
+            <>
+              <p className="text-sm text-slate-400 mb-3" aria-live="polite">
+                {t("crossChamberCount", { count: crossChamber.data?.count ?? 0 })}
+              </p>
+              <p className="text-xs text-slate-500 mb-3">{t("crossChamberDateLimit")}</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <caption className="sr-only">{t("crossChamberTableCaption")}</caption>
+                  <thead>
+                    <tr className="border-b border-slate-700 text-slate-300">
+                      <th scope="col" className="px-3 py-2">{t("person")}</th>
+                      <th scope="col" className="px-3 py-2">{t("deputies")}</th>
+                      <th scope="col" className="px-3 py-2">{t("senate")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {crossChamber.data?.data.map(person => (
+                      <tr key={person.person_id} className="border-b border-slate-800">
+                        <th scope="row" className="px-3 py-2 font-medium">{person.name}</th>
+                        <td className="px-3 py-2">{person.deputies.join(", ") || "—"}</td>
+                        <td className="px-3 py-2">{person.senate.join(", ") || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <TimelineChart from={asOf} to={asOf} />
-        <DefectionSankey />
-      </div>
     </div>
   );
 }

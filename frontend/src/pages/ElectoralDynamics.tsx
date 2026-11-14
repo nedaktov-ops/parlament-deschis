@@ -1,33 +1,45 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import { useSearch } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMemo } from "react";
 import TimelineChart from "../components/TimelineChart";
-import DefectionSankey from "../components/DefectionSankey";
+import { localISODate } from "../utils/date";
 
 export function ElectoralDynamics() {
   const { t } = useTranslation();
+  const navigate = useNavigate({ from: "/electoral" });
   const search = useSearch({ from: "/electoral", select: s => s.date });
-  const asOf = search ?? new Date().toISOString().slice(0, 10);
+  const today = localISODate();
+  const asOf = search ?? today;
 
   const meta = useQuery({ queryKey: ["meta"], queryFn: api.meta });
-  const movements = useQuery({
-    queryKey: ["electoral-movements", asOf],
-    queryFn: () => api.movements(),
-  });
-
   const min = useMemo(() => {
     const legs = Object.values(meta.data?.legislatures ?? {})
       .filter((l) => l.start !== null)
       .sort((a, b) => (a.start ?? "").localeCompare(b.start ?? ""));
     return legs[0]?.start ?? "1990-06-18";
   }, [meta.data]);
+  const selectedDate = asOf < min ? min : asOf > today ? today : asOf;
+  const movements = useQuery({
+    queryKey: ["electoral-movements", min, selectedDate],
+    queryFn: () => api.movements({ from: min, to: selectedDate, limit: 1000 }),
+  });
 
   if (movements.isLoading) {
     return (
       <div className="card p-4">
         <div className="text-slate-500 text-sm py-8">{t("loading")}</div>
+      </div>
+    );
+  }
+  if (movements.isError) {
+    return (
+      <div className="card p-4" role="alert">
+        <p className="text-rose-200 text-sm">{t("electoralLoadError")}</p>
+        <button type="button" className="btn mt-3 bg-slate-700 hover:bg-slate-600" onClick={() => movements.refetch()}>
+          {t("traseismRetry")}
+        </button>
       </div>
     );
   }
@@ -48,12 +60,36 @@ export function ElectoralDynamics() {
   }
 
   const allParties = new Set([...Object.keys(fromPartyCounts), ...Object.keys(toPartyCounts)]);
+  const isLimited = movements.data?.length === 1000;
 
   return (
     <div className="space-y-4">
       <div className="card p-4">
         <h2 className="font-semibold mb-3">{t("electoralDynamics")}</h2>
         <p className="text-sm text-slate-400 mb-4">{t("electoralDynamicsDesc")}</p>
+        <div className="mb-4">
+          <label htmlFor="electoral-as-of" className="block text-xs text-slate-300 mb-1">
+            {t("asOf")}
+          </label>
+          <input
+            id="electoral-as-of"
+            type="date"
+            value={selectedDate}
+            min={min}
+            max={today}
+            onChange={(event) => {
+              if (event.target.value) {
+                navigate({ search: { date: event.target.value }, replace: true });
+              }
+            }}
+            className="bg-slate-800 border border-slate-600 rounded-md px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+          />
+        </div>
+        {isLimited && (
+          <p className="text-amber-200 text-sm mb-4" role="status">
+            {t("displayedMaxMovements")}
+          </p>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="card p-4">
@@ -113,9 +149,8 @@ export function ElectoralDynamics() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <TimelineChart from={min} to={new Date().toISOString().slice(0, 10)} />
-        <DefectionSankey />
+      <div className="grid grid-cols-1 gap-4">
+        <TimelineChart from={min} to={selectedDate} />
       </div>
     </div>
   );

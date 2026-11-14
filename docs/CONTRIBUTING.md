@@ -39,7 +39,7 @@ python3 -m venv .venv
 If `uv` is available, the equivalent is:
 
 ```bash
-uv sync --extra dev
+uv sync --extra dev --locked
 ```
 
 Do not commit `.venv/`, `__pycache__/`, `.pytest_cache/`, or `.ruff_cache/` — they are
@@ -61,11 +61,14 @@ Use a separate database for experiments:
 
 ### Run the backend and frontend
 
+The API uses `data/parlament-real.db` by default. Build that corpus first (see the README)
+or set `PARLAMENT_DB` to another database explicitly.
+
 ```bash
 # terminal 1
-.venv/bin/parlament serve --host 127.0.0.1 --port 8000
+PARLAMENT_DB=data/parlament-real.db .venv/bin/parlament serve --host 127.0.0.1 --port 8000
 # (if `serve` is not wired in your checkout)
-.venv/bin/uvicorn backend.main:app --reload --port 8000
+PARLAMENT_DB=data/parlament-real.db .venv/bin/uvicorn backend.main:app --reload --port 8000
 
 # terminal 2
 cd frontend
@@ -74,7 +77,12 @@ npm run dev
 ```
 
 The Vite dev server runs at <http://localhost:5173> and proxies `/api` and `/snapshots` to
-port 8000.
+port 8000 by default. To use a backend on another port, set
+`PARLAMENT_API_PROXY_TARGET`, for example:
+
+```bash
+PARLAMENT_API_PROXY_TARGET=http://127.0.0.1:8001 npm run dev
+```
 
 ---
 

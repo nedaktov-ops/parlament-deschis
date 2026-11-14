@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { GroupComposition, MemberBrief } from "../api/client";
 
 interface Seat {
@@ -47,6 +48,7 @@ export default function Hemicycle({
   groups: GroupComposition[];
   onSelect: (personId: string) => void;
 }) {
+  const { t } = useTranslation();
   const [hover, setHover] = useState<Seat | null>(null);
   const total = groups.reduce((a, g) => a + g.count, 0);
   const rows = Math.max(3, Math.ceil(Math.sqrt(total / 3)));
@@ -77,7 +79,7 @@ export default function Hemicycle({
 
   return (
     <div className="relative">
-      <svg viewBox="0 0 100 56" className="w-full">
+      <svg viewBox="0 0 100 56" className="w-full" aria-hidden="true" focusable="false">
         {seats.map((s, i) => (
           <circle
             key={i}
@@ -99,6 +101,34 @@ export default function Hemicycle({
           {hover.member?.role && <span className="text-slate-400"> · {hover.member.role}</span>}
         </div>
       )}
+      <details className="mt-2 text-sm">
+        <summary className="cursor-pointer text-sky-300 hover:text-sky-200">
+          {t("hemicycleMemberList", { count: total })}
+        </summary>
+        <div className="mt-2 max-h-64 overflow-y-auto space-y-3">
+          {groups.map((group) => (
+            <section key={group.short_name}>
+              <h3 className="font-semibold text-slate-200">
+                {group.short_name} <span className="font-normal text-slate-300">({group.count})</span>
+              </h3>
+              <ul className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-1">
+                {group.members.map((member) => (
+                  <li key={member.person_id}>
+                    <button
+                      type="button"
+                      onClick={() => onSelect(member.person_id)}
+                      className="w-full text-left px-2 py-1 rounded text-slate-200 hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+                    >
+                      {member.name}
+                      {member.role ? <span className="text-slate-300"> · {member.role}</span> : null}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      </details>
     </div>
   );
 }

@@ -19,6 +19,42 @@ body {
   @apply px-3 py-1.5 rounded-md text-sm font-medium transition-colors;
 }
 
+.text-slate-500,
+.text-slate-600 {
+  color: #a8b5c7;
+}
+
+[class~="text-[10px]"] {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+}
+
+[class~="text-[11px]"] {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+[class~="placeholder:text-slate-500"]::placeholder {
+  color: #a8b5c7;
+  opacity: 1;
+}
+
+:focus-visible {
+  outline: 2px solid #7dd3fc;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

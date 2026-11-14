@@ -2,18 +2,21 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import { useParams, useSearch } from "@tanstack/react-router";
-import { useState } from "react";
-import TimelineChart from "../components/TimelineChart";
-import DefectionSankey from "../components/DefectionSankey";
+import { useCallback, useState } from "react";
 import PersonDrawer from "../components/PersonDrawer";
+
+function formatCount(value: number | null): string {
+  return value === null ? "—" : value.toLocaleString();
+}
 
 export function PartyProfile() {
   const { t } = useTranslation();
   const params = useParams({ from: "/party/$shortName" });
   const search = useSearch({ from: "/party/$shortName", select: s => s.date });
-  const shortName: string = params.shortName as string;
-  const asOf: string = (search as string) ?? new Date().toISOString().slice(0, 10);
+  const shortName = params.shortName;
+  const asOf = search;
   const [personId, setPersonId] = useState<string | null>(null);
+  const closePerson = useCallback(() => setPersonId(null), []);
 
   const party = useQuery({
     queryKey: ["party", shortName, asOf],
@@ -37,8 +40,11 @@ export function PartyProfile() {
 
   if (party.isError || !party.data) {
     return (
-      <div className="card p-4">
-        <div className="text-rose-400 text-sm py-8">{t("noData")}</div>
+      <div className="card p-4" role="alert">
+        <p className="text-rose-200 text-sm py-4">{t("partyLoadError")}</p>
+        <button type="button" className="btn bg-slate-700 hover:bg-slate-600" onClick={() => party.refetch()}>
+          {t("traseismRetry")}
+        </button>
       </div>
     );
   }
@@ -64,39 +70,38 @@ export function PartyProfile() {
         <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
           <div className="bg-slate-800/50 rounded p-3">
             <div className="text-slate-500">{t("currentMembers")}</div>
-            <div className="text-2xl font-bold text-emerald-300">{p.current_members ?? 0}</div>
+            <div className="text-2xl font-bold text-emerald-300">{formatCount(p.current_members)}</div>
           </div>
           <div className="bg-slate-800/50 rounded p-3">
             <div className="text-slate-500">{t("switchesIn")}</div>
-            <div className="text-2xl font-bold text-emerald-300">{p.switches_in ?? 0}</div>
+            <div className="text-2xl font-bold text-emerald-300">{formatCount(p.switches_in)}</div>
           </div>
           <div className="bg-slate-800/50 rounded p-3">
             <div className="text-slate-500">{t("switchesOut")}</div>
-            <div className="text-2xl font-bold text-rose-300">{p.switches_out ?? 0}</div>
+            <div className="text-2xl font-bold text-rose-300">{formatCount(p.switches_out)}</div>
           </div>
           <div className="bg-slate-800/50 rounded p-3">
             <div className="text-slate-500">{t("netChange")}</div>
-            <div className={`text-2xl font-bold ${(p.net_change ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
-              {(p.net_change ?? 0) >= 0 ? "+" : ""}{p.net_change ?? 0}
+            <div className={`text-2xl font-bold ${p.net_change === null ? "text-slate-300" : p.net_change >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
+              {p.net_change === null ? "—" : `${p.net_change >= 0 ? "+" : ""}${p.net_change}`}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <TimelineChart
-          from="2024-12-21"
-          to={new Date().toISOString().slice(0, 10)}
-        />
-        <DefectionSankey />
-      </div>
-
       <div className="card p-4">
         <h2 className="font-semibold mb-3">{t("recentMovements")}</h2>
         {movements.isLoading ? (
-          <div className="text-slate-500 text-sm py-4">{t("loading")}</div>
+          <div role="status" className="text-slate-300 text-sm py-4">{t("loading")}</div>
+        ) : movements.isError ? (
+          <div role="alert" className="text-rose-200 text-sm py-4">
+            {t("electoralLoadError")}
+            <button type="button" className="ml-3 underline" onClick={() => movements.refetch()}>
+              {t("traseismRetry")}
+            </button>
+          </div>
         ) : movements.data?.length === 0 ? (
-          <div className="text-slate-500 text-sm py-4">{t("noData")}</div>
+          <div className="text-slate-300 text-sm py-4">{t("noData")}</div>
         ) : (
           <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
             {movements.data?.map((m) => (
@@ -126,7 +131,7 @@ export function PartyProfile() {
         )}
       </div>
 
-      <PersonDrawer personId={personId} onClose={() => setPersonId(null)} />
+      <PersonDrawer personId={personId} onClose={closePerson} />
     </div>
   );
 }

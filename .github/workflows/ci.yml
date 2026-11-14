@@ -22,7 +22,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --extra dev --locked
 
       - name: Lint
         run: uv run ruff check pipeline backend tests
@@ -48,7 +48,7 @@ jobs:
         with:
           enable-cache: true
 
-      - run: uv sync --dev
+      - run: uv sync --locked
 
       - name: Rebuild the database from the published archive
         run: |

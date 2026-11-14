@@ -1,9 +1,10 @@
-import { createRouter, createRootRoute, createRoute, Outlet, Link, useLocation, useRouter, RouterProvider } from "@tanstack/react-router";
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { createRouter, createRootRoute, createRoute, Outlet, Link, redirect, useLocation, useRouter, RouterProvider } from "@tanstack/react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { lazy, Suspense, useEffect, useState, useRef } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api } from "./api/client";
+import Search from "./components/Search";
+import { isISODate, localISODate } from "./utils/date";
 import "./i18n";
 import "./index.css";
 
@@ -11,11 +12,18 @@ import "./index.css";
 const LiveDashboard = lazy(() => import("./pages/LiveDashboard").then(m => ({ default: m.LiveDashboard })));
 const PartyProfile = lazy(() => import("./pages/PartyProfile").then(m => ({ default: m.PartyProfile })));
 const PersonDeepDive = lazy(() => import("./pages/PersonDeepDive").then(m => ({ default: m.PersonDeepDive })));
-const ElectoralDynamics = lazy(() => import("./pages/ElectoralDynamics").then(m => ({ default: m.ElectoralDynamics })));
 const InstitutionalView = lazy(() => import("./pages/InstitutionalView").then(m => ({ default: m.InstitutionalView })));
 const LegislatureDetail = lazy(() => import("./pages/LegislatureDetail").then(m => ({ default: m.LegislatureDetail })));
 const Traseism = lazy(() => import("./pages/Traseism").then(m => ({ default: m.Traseism })));
 const CoverageView = lazy(() => import("./pages/CoverageView").then(m => ({ default: m.default })));
+
+function validateDateSearch(search: Record<string, unknown>) {
+  const candidate = search.date;
+  const date = isISODate(candidate) ? candidate : localISODate();
+  return {
+    date,
+  };
+}
 
 // Loading fallback
 function Loading() {
@@ -37,96 +45,73 @@ interface NavLinkProps {
 
 function NavLink({ to, activeClass, inactiveClass, children }: NavLinkProps) {
   const location = useLocation();
-  const isActive = location.href === to || (to !== "/" && location.href.startsWith(to));
+  const query = location.href.split("?")[1] ?? "";
+  const date = validateDateSearch({
+    date: new URLSearchParams(query).get("date"),
+  }).date;
+  const isActive =
+    location.pathname === to ||
+    (to !== "/" && location.pathname.startsWith(`${to}/`));
   return (
     <Link
       to={to}
-      className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${isActive ? activeClass : inactiveClass}`}
-      role="tab"
-      aria-selected={isActive}
+      search={(previous) => ({ ...previous, date })}
+      className={`px-2 sm:px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${isActive ? activeClass : inactiveClass}`}
+      aria-current={isActive ? "page" : undefined}
     >
       {children}
     </Link>
   );
 }
 
-// Search component for header
-function SearchHeader({ onSelect }: { onSelect: (id: string) => void }) {
-  const { t } = useTranslation();
-  const [q, setQ] = useState("");
-  const [debounced, setDebounced] = useState("");
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(q.trim()), 250);
-    return () => clearTimeout(id);
-  }, [q]);
-
-  useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
-
-  const results = useQuery({
-    queryKey: ["search", debounced],
-    queryFn: () => api.persons(debounced),
-    enabled: debounced.length >= 2,
-  });
-
-  const showList = open && debounced.length >= 2;
-
-  return (
-    <div className="relative w-full sm:w-72" ref={ref}>
-      <input
-        value={q}
-        onChange={(e) => { setQ(e.target.value); setOpen(true); }}
-        onFocus={() => setOpen(true)}
-        placeholder={t("search")}
-        className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-1.5 text-sm placeholder:text-slate-500 focus:outline-none focus:border-sky-500"
-      />
-      {showList && (
-        <div className="absolute z-50 mt-1 w-full card max-h-72 overflow-y-auto shadow-xl">
-          {results.isLoading && <div className="px-3 py-2 text-sm text-slate-500">{t("loading")}</div>}
-          {results.data?.length === 0 && <div className="px-3 py-2 text-sm text-slate-500">{t("noResults")}</div>}
-          {results.data?.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => { onSelect(p.id); setOpen(false); setQ(""); }}
-              className="w-full text-left px-3 py-2 hover:bg-slate-800 transition-colors"
-            >
-              <div className="text-sm">{p.name}</div>
-              <div className="text-[10px] text-slate-500">{p.chambers.join(" · ")}</div>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // About modal
 function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
+  const panelRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => { if (e.target === e.currentTarget) onClose(); };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("mousedown", onDoc);
-    document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("mousedown", onDoc); document.removeEventListener("keydown", onKey); };
+    const previousFocus = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    panelRef.current?.focus();
+    return () => previousFocus?.focus();
   }, [open, onClose]);
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-panel border border-slate-700 rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="about-title"
+        tabIndex={-1}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") onClose();
+          if (e.key !== "Tab") return;
+          const items = panelRef.current?.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          );
+          if (!items?.length) return;
+          const first = items[0];
+          const last = items[items.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }}
+        className="bg-panel border border-slate-700 rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+      >
         <div className="sticky top-0 bg-panel/95 backdrop-blur border-b border-slate-700 px-5 py-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{t("about")}</h2>
+          <h2 id="about-title" className="text-lg font-semibold">{t("about")}</h2>
           <button className="btn bg-slate-700 hover:bg-slate-600" onClick={onClose}>{t("close")}</button>
         </div>
         <div className="p-5 space-y-4 text-sm">
@@ -148,6 +133,11 @@ function RootLayout() {
   const { t, i18n } = useTranslation();
   const [aboutOpen, setAboutOpen] = useState(false);
   const router = useRouter();
+  const location = useLocation();
+  const closeAbout = useCallback(() => setAboutOpen(false), []);
+  const currentDate = validateDateSearch({
+    date: new URLSearchParams(location.href.split("?")[1] ?? "").get("date"),
+  }).date;
 
   return (
     <div className="min-h-screen">
@@ -157,8 +147,12 @@ function RootLayout() {
             <h1 className="text-xl font-bold tracking-tight">{t("title")}</h1>
             <p className="text-xs text-slate-400">{t("subtitle")}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <SearchHeader onSelect={(id: string) => router.navigate({ to: "/person/$id", params: { id }, search: { date: new Date().toISOString().slice(0, 10) } })} />
+          <div className="flex w-full sm:w-auto flex-wrap items-center gap-2">
+            <Search onSelect={(id) => router.navigate({
+              to: "/person/$id",
+              params: { id },
+              search: { date: currentDate },
+            })} />
             <button
               className="btn bg-slate-700 hover:bg-slate-600"
               onClick={() => setAboutOpen(true)}
@@ -168,18 +162,18 @@ function RootLayout() {
             <button
               className="btn bg-slate-700 hover:bg-slate-600 uppercase"
               onClick={() => i18n.changeLanguage(i18n.language === "ro" ? "en" : "ro")}
-              title="RO / EN"
+              aria-label={t("changeLanguage")}
             >
               {i18n.language === "ro" ? "EN" : "RO"}
             </button>
           </div>
         </div>
-        <nav className="flex gap-1 border-b border-slate-700 px-4" role="tablist">
+        <nav className="flex gap-1 border-b border-slate-700 px-4 overflow-x-auto" aria-label={t("mainNavigation")}>
           <NavLink to="/" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("overview")}
           </NavLink>
-          <NavLink to="/electoral" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
-            {t("defections")}
+          <NavLink to="/traseism" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("traseismShort")}
           </NavLink>
           <NavLink to="/institutional" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("institutional")}
@@ -187,15 +181,12 @@ function RootLayout() {
           <NavLink to="/coverage" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("coverage")}
           </NavLink>
-          <NavLink to="/traseism" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
-            {t("traseismShort")}
-          </NavLink>
         </nav>
       </header>
       <main className="max-w-7xl mx-auto px-4 py-5">
         <Outlet />
       </main>
-      <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
+      <AboutModal open={aboutOpen} onClose={closeAbout} />
     </div>
   );
 }
@@ -209,54 +200,51 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: () => <Suspense fallback={<Loading />}><LiveDashboard /></Suspense>,
-  validateSearch: (search) => ({
-    date: search.date ?? new Date().toISOString().slice(0, 10),
-  }),
+  validateSearch: validateDateSearch,
 });
 
 const electoralRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/electoral",
-  component: () => <Suspense fallback={<Loading />}><ElectoralDynamics /></Suspense>,
-  validateSearch: (search) => ({
-    date: search.date ?? new Date().toISOString().slice(0, 10),
-  }),
+  beforeLoad: ({ search }) => {
+    throw redirect({
+      to: "/traseism",
+      search: {
+        date: search.date,
+        chamber: "deputies",
+        legislature: "2024",
+      },
+    });
+  },
+  validateSearch: validateDateSearch,
 });
 
 const institutionalRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/institutional",
   component: () => <Suspense fallback={<Loading />}><InstitutionalView /></Suspense>,
-  validateSearch: (search) => ({
-    date: search.date ?? new Date().toISOString().slice(0, 10),
-  }),
+  validateSearch: validateDateSearch,
 });
 
 const partyRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/party/$shortName",
   component: () => <Suspense fallback={<Loading />}><PartyProfile /></Suspense>,
-  validateSearch: (search) => ({
-    date: search.date ?? new Date().toISOString().slice(0, 10),
-  }),
+  validateSearch: validateDateSearch,
 });
 
 const personRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/person/$id",
   component: () => <Suspense fallback={<Loading />}><PersonDeepDive /></Suspense>,
-  validateSearch: (search) => ({
-    date: search.date ?? new Date().toISOString().slice(0, 10),
-  }),
+  validateSearch: validateDateSearch,
 });
 
 const legislatureRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/legislature/$year",
   component: () => <Suspense fallback={<Loading />}><LegislatureDetail /></Suspense>,
-  validateSearch: (search) => ({
-    date: search.date ?? new Date().toISOString().slice(0, 10),
-  }),
+  validateSearch: validateDateSearch,
 });
 
 const traseismRoute = createRoute({
@@ -264,12 +252,12 @@ const traseismRoute = createRoute({
   path: "/traseism",
   component: () => <Suspense fallback={<Loading />}><Traseism /></Suspense>,
   validateSearch: (search) => ({
-    date: search.date ?? new Date().toISOString().slice(0, 10),
+    ...validateDateSearch(search),
     chamber: search.chamber === "senate" ? "senate" : "deputies",
     legislature:
       typeof search.legislature === "string" && search.legislature
         ? search.legislature
-        : "2024",
+        : undefined,
   }),
 });
 
@@ -277,9 +265,7 @@ const coverageRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/coverage",
   component: () => <Suspense fallback={<Loading />}><CoverageView /></Suspense>,
-  validateSearch: (search) => ({
-    date: search.date ?? new Date().toISOString().slice(0, 10),
-  }),
+  validateSearch: validateDateSearch,
 });
 
 const routeTree = rootRoute.addChildren([
@@ -301,14 +287,14 @@ declare module "@tanstack/react-router" {
   }
 }
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false },
+  },
+});
+
 // Root component with providers
 export function AppRoot() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false },
-    },
-  });
-
   return (
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />

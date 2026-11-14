@@ -15,6 +15,7 @@ from pipeline.db import (
     Evidence,
     Fragment,
     KeyEvent,
+    Mandate,
     Membership,
     Organization,
     Person,
@@ -164,15 +165,60 @@ def get_timeline(
     dates = list(_daterange(start, end, step_days))
     if dates and dates[-1] != end:
         dates.append(end)
-    series: dict[str, list[int]] = {}
-    totals = []
-    for d in dates:
-        comp = chamber_composition(session, chamber, d)
-        totals.append(sum(b["count"] for b in comp.values()))
-        for short, bucket in comp.items():
-            series.setdefault(short, [0] * len(dates))
-        for short in series:
-            series[short][len(totals) - 1] = comp.get(short, {"count": 0})["count"]
+
+    memberships = session.execute(
+        select(Membership, Organization.short_name, Organization.name)
+        .join(Organization, Organization.id == Membership.org_id)
+        .where(
+            Membership.chamber == chamber,
+            Organization.classification == "group",
+            Membership.start_date <= end,
+            or_(Membership.end_date.is_(None), Membership.end_date > start),
+        )
+    ).all()
+    legislatures = list(
+        session.scalars(
+            select(KeyEvent)
+            .where(
+                KeyEvent.type == "legislature",
+                KeyEvent.start_date <= end,
+                or_(KeyEvent.end_date.is_(None), KeyEvent.end_date > start),
+            )
+            .order_by(KeyEvent.start_date)
+        )
+    )
+
+    counts_by_date: list[dict[str, int]] = []
+    for day in dates:
+        active_legislature = next(
+            (
+                item.label
+                for item in reversed(legislatures)
+                if item.start_date <= day
+                and (item.end_date is None or item.end_date > day)
+            ),
+            None,
+        )
+        counts: dict[str, int] = {}
+        for membership, short_name, name in memberships:
+            if (
+                membership.start_date <= day
+                and (membership.end_date is None or membership.end_date > day)
+                and (
+                    active_legislature is None
+                    or membership.legislature == active_legislature
+                )
+            ):
+                group = short_name or name
+                counts[group] = counts.get(group, 0) + 1
+        counts_by_date.append(counts)
+
+    group_names = sorted({name for counts in counts_by_date for name in counts})
+    series = {
+        name: [counts.get(name, 0) for counts in counts_by_date]
+        for name in group_names
+    }
+    totals = [sum(counts.values()) for counts in counts_by_date]
     # Switch events in range.
     evs = session.scalars(
         select(Event)
@@ -438,6 +484,53 @@ def get_recent_events(session: Session, limit: int = 50) -> list[dict]:
     return [serialize_event(session, e) for e in evs]
 
 
+def get_cross_chamber_careers(session: Session, as_of: date) -> list[dict]:
+    """Return people with a recorded mandate in both chambers by the given date."""
+    rows = session.execute(
+        select(
+            Person.id,
+            Person.canonical_name,
+            Mandate.chamber,
+            Mandate.legislature,
+        )
+        .join(Mandate, Mandate.person_id == Person.id)
+        .where(
+            Mandate.chamber.in_(("deputies", "senate")),
+            Mandate.start_date.is_not(None),
+            Mandate.start_date <= as_of,
+        )
+        .order_by(Person.canonical_name, Mandate.chamber, Mandate.legislature)
+    ).all()
+
+    careers: dict[str, dict] = {}
+    for person_id, name, chamber, legislature in rows:
+        career = careers.setdefault(
+            person_id,
+            {
+                "person_id": person_id,
+                "name": name,
+                "chambers": set(),
+                "deputies": set(),
+                "senate": set(),
+            },
+        )
+        career["chambers"].add(chamber)
+        if legislature:
+            career[chamber].add(legislature)
+
+    return [
+        {
+            "person_id": career["person_id"],
+            "name": career["name"],
+            "chambers": sorted(career["chambers"]),
+            "deputies": sorted(career["deputies"]),
+            "senate": sorted(career["senate"]),
+        }
+        for career in careers.values()
+        if len(career["chambers"]) == 2
+    ]
+
+
 def get_coverage(session: Session) -> list[dict]:
     """Coverage matrix, preferring persisted rows but keeping person counts live.
 
@@ -475,25 +568,38 @@ def get_coverage_detailed(session: Session) -> list[dict]:
     (start_date present), % with source URL, % of switch events with
     source URL, and last refresh timestamp.
     """
-    from sqlalchemy import func
-
     derived = coverage_snapshot(session)
     by_key = {(r["chamber"], r["legislature"]): r for r in derived}
-    rows = list(session.scalars(select(Coverage)))
-    if not rows:
-        return derived
+    persisted_rows = list(session.scalars(select(Coverage)))
+    scopes = (
+        [
+            {
+                "chamber": c.chamber,
+                "legislature": c.legislature,
+                "period_start": c.period_start,
+                "period_end": c.period_end,
+                "completeness": c.completeness,
+                "note": c.note,
+            }
+            for c in persisted_rows
+        ]
+        if persisted_rows
+        else derived
+    )
 
     out = []
-    for c in rows:
-        key = (c.chamber, c.legislature)
+    for c in scopes:
+        chamber = c["chamber"]
+        legislature = c["legislature"]
+        key = (chamber, legislature)
         snap = by_key.get(key)
 
         # Membership stats for this scope.
         total_memberships = (
             session.scalar(
                 select(func.count(Membership.id)).where(
-                    Membership.chamber == c.chamber,
-                    Membership.legislature == c.legislature,
+                    Membership.chamber == chamber,
+                    Membership.legislature == legislature,
                 )
             )
             or 0
@@ -501,8 +607,8 @@ def get_coverage_detailed(session: Session) -> list[dict]:
         dated_memberships = (
             session.scalar(
                 select(func.count(Membership.id)).where(
-                    Membership.chamber == c.chamber,
-                    Membership.legislature == c.legislature,
+                    Membership.chamber == chamber,
+                    Membership.legislature == legislature,
                     Membership.start_date.is_not(None),
                 )
             )
@@ -511,8 +617,8 @@ def get_coverage_detailed(session: Session) -> list[dict]:
         sourced_memberships = (
             session.scalar(
                 select(func.count(Membership.id)).where(
-                    Membership.chamber == c.chamber,
-                    Membership.legislature == c.legislature,
+                    Membership.chamber == chamber,
+                    Membership.legislature == legislature,
                     Membership.source_url.is_not(None),
                 )
             )
@@ -523,8 +629,8 @@ def get_coverage_detailed(session: Session) -> list[dict]:
         total_switches = (
             session.scalar(
                 select(func.count(Event.id)).where(
-                    Event.chamber == c.chamber,
-                    Event.legislature == c.legislature,
+                    Event.chamber == chamber,
+                    Event.legislature == legislature,
                     Event.type.in_(["switch_group", "switch_party"]),
                 )
             )
@@ -533,8 +639,8 @@ def get_coverage_detailed(session: Session) -> list[dict]:
         sourced_switches = (
             session.scalar(
                 select(func.count(Event.id)).where(
-                    Event.chamber == c.chamber,
-                    Event.legislature == c.legislature,
+                    Event.chamber == chamber,
+                    Event.legislature == legislature,
                     Event.type.in_(["switch_group", "switch_party"]),
                     Event.source_url.is_not(None),
                 )
@@ -545,30 +651,34 @@ def get_coverage_detailed(session: Session) -> list[dict]:
         # Last refresh: newest detected_at among events in this scope.
         last_refresh = session.scalar(
             select(func.max(Event.detected_at)).where(
-                Event.chamber == c.chamber,
-                Event.legislature == c.legislature,
+                Event.chamber == chamber,
+                Event.legislature == legislature,
             )
         )
 
         item = {
-            "chamber": c.chamber,
-            "legislature": c.legislature,
-            "period_start": c.period_start.isoformat() if c.period_start else None,
-            "period_end": c.period_end.isoformat() if c.period_end else None,
-            "completeness": c.completeness,
-            "note": c.note,
-            "persons": snap["persons"] if snap else 0,
+            "chamber": chamber,
+            "legislature": legislature,
+            "period_start": c["period_start"].isoformat()
+            if isinstance(c["period_start"], date)
+            else c["period_start"],
+            "period_end": c["period_end"].isoformat()
+            if isinstance(c["period_end"], date)
+            else c["period_end"],
+            "completeness": c["completeness"],
+            "note": c["note"],
+            "persons": snap["persons"] if snap else c.get("persons", 0),
             "total_memberships": total_memberships,
             "dated_pct": round(100 * dated_memberships / total_memberships, 1)
             if total_memberships
-            else 0,
+            else None,
             "sourced_pct": round(100 * sourced_memberships / total_memberships, 1)
             if total_memberships
-            else 0,
+            else None,
             "total_switches": total_switches,
             "sourced_switches_pct": round(100 * sourced_switches / total_switches, 1)
             if total_switches
-            else 0,
+            else None,
             "last_refresh": last_refresh.isoformat() if last_refresh else None,
         }
         out.append(item)
@@ -603,46 +713,72 @@ def get_party_profile(session: Session, short_name: str, as_of: date) -> dict:
     if not org:
         raise HTTPException(status_code=404, detail="party not found")
 
-    # Current members at as_of
-    group_memberships = session.scalars(
-        select(Membership)
-        .join(Organization, Organization.id == Membership.org_id)
-        .where(
-            Organization.classification == "group",
-            Membership.on_behalf_of_id == org.id,
-            Membership.chamber.in_(["deputies", "senate"]),
-        )
-    ).all()
-
-    current_members = 0
-    for m in group_memberships:
-        if m.start_date and m.start_date <= as_of and (m.end_date is None or m.end_date > as_of):
-            current_members += 1
-
-    # Switch stats for this party (all time)
-    from sqlalchemy import func
-
-    switches_in = (
+    # Current members belong to the legislature active on as_of. Historical
+    # ledger rows may have no end date, so date-only filtering counts them too.
+    legislature = _legislature_for(session, as_of)
+    current_members = (
         session.scalar(
-            select(func.count()).select_from(
-                select(Event)
-                .where(Event.type == "switch_party", Event.to_org_id == org.id)
-                .subquery()
+            select(func.count(func.distinct(Membership.person_id)))
+            .select_from(Membership)
+            .join(Organization, Organization.id == Membership.org_id)
+            .where(
+                Organization.classification == "group",
+                Membership.on_behalf_of_id == org.id,
+                Membership.chamber.in_(["deputies", "senate"]),
+                Membership.legislature == legislature,
+                Membership.start_date <= as_of,
+                (Membership.end_date.is_(None)) | (Membership.end_date > as_of),
+            )
+        )
+        if legislature
+        else 0
+    ) or 0
+
+    # Distinguish an observed zero from a corpus with no dated party-switch data.
+    has_dated_party_switches = (
+        session.scalar(
+            select(func.count(Event.id)).where(
+                Event.type == "switch_party",
+                Event.event_date.is_not(None),
             )
         )
         or 0
-    )
-
-    switches_out = (
-        session.scalar(
-            select(func.count()).select_from(
-                select(Event)
-                .where(Event.type == "switch_party", Event.from_org_id == org.id)
-                .subquery()
+    ) > 0
+    if has_dated_party_switches:
+        switches_in = (
+            session.scalar(
+                select(func.count()).select_from(
+                    select(Event)
+                    .where(
+                        Event.type == "switch_party",
+                        Event.to_org_id == org.id,
+                        Event.event_date.is_not(None),
+                        Event.event_date <= as_of,
+                    )
+                    .subquery()
+                )
             )
+            or 0
         )
-        or 0
-    )
+
+        switches_out = (
+            session.scalar(
+                select(func.count()).select_from(
+                    select(Event)
+                    .where(
+                        Event.type == "switch_party",
+                        Event.from_org_id == org.id,
+                        Event.event_date.is_not(None),
+                        Event.event_date <= as_of,
+                    )
+                    .subquery()
+                )
+            )
+            or 0
+        )
+        net_change = switches_in - switches_out
+    else:
+        switches_in = switches_out = net_change = None
 
     return {
         "id": org.id,
@@ -653,7 +789,7 @@ def get_party_profile(session: Session, short_name: str, as_of: date) -> dict:
         "current_members": current_members,
         "switches_in": switches_in,
         "switches_out": switches_out,
-        "net_change": switches_in - switches_out,
+        "net_change": net_change,
     }
 
 
@@ -674,6 +810,7 @@ def get_party_movements(
         .where(
             Event.type.in_(["switch_party", "join", "leave"]),
             Event.event_date.is_not(None),
+            Event.event_date <= as_of,
             (Event.from_org_id == org.id) | (Event.to_org_id == org.id),
         )
         .order_by(Event.event_date.desc())

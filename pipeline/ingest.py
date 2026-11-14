@@ -244,7 +244,7 @@ def ingest_cdep_group_ledger(
             start_precision=prec,
             end_precision=end_prec,
             start_reason="GENERAL_ELECTION",
-            end_reason="CHANGED_PARTY",
+            end_reason="UNKNOWN",
             confidence="official_ledger",
             source_url=meta.source_url,
             group_acronym=short,

@@ -5,6 +5,29 @@ plus configuration, CI and deployment. Each finding is backed by a reproduction 
 sources or from the repository itself. Severity is judged by one question only: **does this defect make
 the published statistics about traseism wrong?**
 
+## Status update — 2026-11-14
+
+This document records the initial audit baseline; its historical “open” labels below are not a current
+issue tracker. Subsequent implementation changed the state materially:
+
+- The real corpus is now the API default, the corpus build/audit commands and CI workflows exist, and
+  `pipeline/traseism.py` supplies the group-switch statistics and coverage used by the public UI.
+- Group-event derivation is chamber/legislature scoped, uses logical-event upserts, and does not invent
+  group-rename dates. The active corpus ingester classifies departures; the older ledger ingester now
+  uses `UNKNOWN` rather than asserting every departure was a party change.
+- Database uniqueness/integrity fixes and regression tests were added. Analytics-wave writes now use
+  token-protected `POST` routes with explicit commits; GET attempts return 405.
+- The Institutional page now reads cross-chamber careers from dated `Mandate` records and applies the
+  selected date. Committee and bureau panels explicitly report that those source data are absent.
+- Party switching and generational summaries now use the group-to-party `on_behalf_of` relationship,
+  dated memberships, and historical ages. The party-switch endpoint reports unavailable data rather
+  than presenting an empty result as zero switching.
+
+Remaining data/product limits: committee and bureau composition cannot be calculated until the project
+ingests official membership/chair records. The legacy `derive_committee_control` helper returns
+`None` for that unsupported analysis. Party-switching rates are not a statistical “cohesion index” and
+should be interpreted only when dated, attributable party-switch events exist.
+
 ---
 
 ## 0. Verdict against the product goal

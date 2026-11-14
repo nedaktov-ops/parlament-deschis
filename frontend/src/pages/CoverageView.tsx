@@ -27,6 +27,27 @@ export default function CoverageView() {
     queryFn: () => api.coverage_detailed(),
   });
 
+  const rows = coverage.data ?? [];
+  const totals = useMemo(() => {
+    const totalMemberships = rows.reduce((sum, r) => sum + r.total_memberships, 0);
+    const datedMemberships = rows.reduce(
+      (sum, r) => sum + Math.round(((r.dated_pct ?? 0) / 100) * r.total_memberships),
+      0,
+    );
+    const totalSwitches = rows.reduce((sum, r) => sum + r.total_switches, 0);
+    const sourcedSwitches = rows.reduce(
+      (sum, r) =>
+        sum + Math.round(((r.sourced_switches_pct ?? 0) / 100) * r.total_switches),
+      0,
+    );
+    return {
+      totalMemberships,
+      datedMemberships,
+      totalSwitches,
+      sourcedSwitches,
+    };
+  }, [rows]);
+
   if (coverage.isLoading) {
     return (
       <div className="card p-4">
@@ -38,31 +59,15 @@ export default function CoverageView() {
   if (coverage.isError) {
     return (
       <div className="card p-4">
-        <div className="text-rose-400 text-sm py-8">{t("coverageLoadError")}</div>
+        <div role="alert" className="text-rose-200 text-sm py-8">
+          {t("coverageLoadError")}
+          <button type="button" className="ml-3 underline" onClick={() => coverage.refetch()}>
+            {t("traseismRetry")}
+          </button>
+        </div>
       </div>
     );
   }
-
-  const rows = coverage.data ?? [];
-
-  const totals = useMemo(() => {
-    const totalMemberships = rows.reduce((sum, r) => sum + r.total_memberships, 0);
-    const datedMemberships = rows.reduce(
-      (sum, r) => sum + Math.round((r.dated_pct / 100) * r.total_memberships),
-      0,
-    );
-    const totalSwitches = rows.reduce((sum, r) => sum + r.total_switches, 0);
-    const sourcedSwitches = rows.reduce(
-      (sum, r) => sum + Math.round((r.sourced_switches_pct / 100) * r.total_switches),
-      0,
-    );
-    return {
-      totalMemberships,
-      datedMemberships,
-      totalSwitches,
-      sourcedSwitches,
-    };
-  }, [rows]);
 
   return (
     <div className="space-y-4">
@@ -85,7 +90,11 @@ export default function CoverageView() {
           <div className="bg-slate-800/50 rounded p-3">
             <div className="text-slate-500 text-xs">{t("datedMemberships")}</div>
             <div className="text-2xl font-bold text-emerald-300">
-              {fmtPct(totals.totalMemberships > 0 ? (totals.datedMemberships / totals.totalMemberships) * 100 : 0)}
+              {fmtPct(
+                totals.totalMemberships > 0
+                  ? (totals.datedMemberships / totals.totalMemberships) * 100
+                  : null,
+              )}
             </div>
           </div>
           <div className="bg-slate-800/50 rounded p-3">
@@ -97,7 +106,11 @@ export default function CoverageView() {
           <div className="bg-slate-800/50 rounded p-3">
             <div className="text-slate-500 text-xs">{t("sourcedSwitches")}</div>
             <div className="text-2xl font-bold text-emerald-300">
-              {fmtPct(totals.totalSwitches > 0 ? (totals.sourcedSwitches / totals.totalSwitches) * 100 : 0)}
+              {fmtPct(
+                totals.totalSwitches > 0
+                  ? (totals.sourcedSwitches / totals.totalSwitches) * 100
+                  : null,
+              )}
             </div>
           </div>
         </div>

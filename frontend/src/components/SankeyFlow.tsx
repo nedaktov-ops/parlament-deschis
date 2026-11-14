@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import * as d3 from "d3";
 import { sankey } from "d3-sankey";
-import { api } from "../api/client";
+import { traseismSummary } from "../api/client";
 
 interface FlowLink {
   source: string;
@@ -11,7 +11,7 @@ interface FlowLink {
   value: number;
 }
 
-interface SankeyNode {
+interface SankeyNode extends Record<string, unknown> {
   name: string;
   x0?: number;
   y0?: number;
@@ -20,27 +20,53 @@ interface SankeyNode {
   value?: number;
 }
 
-interface SankeyLink {
+interface SankeyLink extends Record<string, unknown> {
   source: SankeyNode | string;
   target: SankeyNode | string;
   value: number;
 }
 
-// Link shape after sankeyGenerator adds layout properties.
 interface SankeyLinkWithPath extends SankeyLink {
   source: SankeyNode;
   target: SankeyNode;
-  path: string;
   width: number;
-  x0: number;
   y0: number;
-  x1: number;
   y1: number;
 }
 
 interface SankeyFlowProps {
   chamber: string;
   legislature: string;
+}
+
+function acyclicLinks(links: FlowLink[]): { links: FlowLink[]; omitted: number } {
+  const adjacency = new Map<string, Set<string>>();
+  const reaches = (from: string, to: string): boolean => {
+    const pending = [from];
+    const visited = new Set<string>();
+    while (pending.length > 0) {
+      const current = pending.pop()!;
+      if (current === to) return true;
+      if (visited.has(current)) continue;
+      visited.add(current);
+      pending.push(...(adjacency.get(current) ?? []));
+    }
+    return false;
+  };
+
+  const kept: FlowLink[] = [];
+  let omitted = 0;
+  for (const link of [...links].sort((a, b) => b.value - a.value)) {
+    if (reaches(link.target, link.source)) {
+      omitted += 1;
+      continue;
+    }
+    kept.push(link);
+    const targets = adjacency.get(link.source) ?? new Set<string>();
+    targets.add(link.target);
+    adjacency.set(link.source, targets);
+  }
+  return { links: kept, omitted };
 }
 
 export default function SankeyFlow({
@@ -52,138 +78,76 @@ export default function SankeyFlow({
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [width, setWidth] = useState(0);
 
-  const movements = useQuery({
-    queryKey: ["sankey-flows", chamber, legislature],
-    queryFn: () => api.movements(chamber),
+  const summary = useQuery({
+    queryKey: ["traseism-summary", legislature, chamber],
+    queryFn: () => traseismSummary(legislature, chamber),
   });
 
-  // Build nodes and links from movements data.
-  // Links represent switches between groups; value = number of switchers.
-  // Both directions (A→B and B→A) are kept as separate links so cyclic
-  // flows are visible, not silently dropped.
-  const { nodes, links, total } = useMemo(() => {
-    const events = movements.data ?? [];
-    const switches = events.filter(
-      (e) =>
-        (e.type === "switch_group" || e.type === "switch_party") &&
-        e.legislature === legislature,
-    );
-
-    const counts = new Map<string, number>();
-    for (const e of switches) {
-      const from = e.from_org?.short_name || e.from_org?.name;
-      const to = e.to_org?.short_name || e.to_org?.name;
-      if (!from || !to || from === to) continue;
-      const key = `${from}\0${to}`;
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    }
-
-    const aggregated: FlowLink[] = [...counts.entries()].map(
-      ([key, value]) => {
-        const [source, target] = key.split("\0");
-        return { source, target, value };
-      },
-    );
+  const { nodes, links, omitted, total } = useMemo(() => {
+    const matrix = summary.data?.matrix ?? [];
+    const aggregated = matrix
+      .filter((cell) => cell.count > 0 && cell.from !== cell.to)
+      .map((cell) => ({ source: cell.from, target: cell.to, value: cell.count }));
+    const acyclic = acyclicLinks(aggregated);
 
     const nodeNames = new Set<string>();
-    for (const link of aggregated) {
+    for (const link of acyclic.links) {
       nodeNames.add(link.source);
       nodeNames.add(link.target);
     }
     const sankeyNodes: SankeyNode[] = [...nodeNames].sort().map((name) => ({
       name,
     }));
-    const sankeyLinks: SankeyLink[] = aggregated.map((l) => ({ ...l }));
+    const sankeyLinks: SankeyLink[] = acyclic.links.map((link) => ({ ...link }));
 
     return {
       nodes: sankeyNodes,
       links: sankeyLinks,
-      total: switches.length,
+      omitted: acyclic.omitted,
+      total: summary.data?.switches ?? 0,
     };
-  }, [movements.data]);
+  }, [summary.data]);
 
-  // Run the d3-sankey layout. d3-sankey assumes a DAG; when the graph
-  // contains cycles (A→B and B→A), the layout may not converge.
-  // Strategy: try with all links; if any node is left unpositioned,
-  // break cycles by removing the smallest link in each cycle and retry.
-  const layoutHeight = width > 0 ? 320 : 0;
+  const layoutHeight = 320;
 
   const layout = useMemo(() => {
-    if (nodes.length === 0 || links.length === 0) return null;
-
-    const height = layoutHeight;
-
-    let workingLinks = [...links];
-    let workingNodes = nodes.map((n) => ({ ...n }));
-    let attempts = 0;
-    const maxAttempts = 5;
-
-    while (attempts < maxAttempts) {
-      attempts++;
-      const sankeyGenerator = sankey<SankeyNode, SankeyLink>()
-        .nodeId((d) => d.name)
-        .nodeWidth(14)
-        .nodePadding(12)
-        .iterations(64)
-        .extent([[1, 1], [width - 1, height - 6]]);
-
-      const result = sankeyGenerator({
-        nodes: workingNodes as unknown as any,
-        links: workingLinks as unknown as any,
-      }) as unknown as {
-        nodes: SankeyNode[];
-        links: SankeyLinkWithPath[];
-      };
-
-      // Check if all nodes were positioned.
-      const unpositioned = result.nodes.some(
-        (n) => n.x0 === undefined || n.x1 === undefined,
-      );
-      if (!unpositioned) {
-        return result;
-      }
-
-      // Break cycles: find mutual pairs (A→B & B→A) and remove the smaller one.
-      const linkMap = new Map<string, SankeyLink>();
-      for (const l of workingLinks) {
-        linkMap.set(`${l.source}\0${l.target}`, l);
-      }
-
-      let linkToRemove: SankeyLink | null = null;
-      for (const l of workingLinks) {
-        const reverse = linkMap.get(`${l.target}\0${l.source}`);
-        if (reverse) {
-          linkToRemove = l.value <= reverse.value ? l : reverse;
-          break;
-        }
-      }
-
-      if (!linkToRemove) {
-        // No mutual pair found; remove the smallest link overall.
-        linkToRemove = [...workingLinks].sort((a, b) => a.value - b.value)[0];
-      }
-
-      workingLinks = workingLinks.filter((l) => l !== linkToRemove);
-    }
-
-    // Last resort: return whatever we have, even if unpositioned.
+    if (nodes.length === 0 || links.length === 0 || width <= 2) return null;
     const sankeyGenerator = sankey<SankeyNode, SankeyLink>()
       .nodeId((d) => d.name)
       .nodeWidth(14)
       .nodePadding(12)
-      .iterations(128)
-      .extent([[1, 1], [width - 1, height - 6]]);
+      .iterations(64)
+      .extent([[1, 1], [width - 1, layoutHeight - 6]]);
 
-    return sankeyGenerator({
-      nodes: workingNodes as unknown as any,
-      links: workingLinks as unknown as any,
-    }) as unknown as {
-      nodes: SankeyNode[];
-      links: SankeyLinkWithPath[];
-    };
+    const result = sankeyGenerator({
+      nodes: nodes.map((node) => ({ ...node })),
+      links: links.map((link) => ({ ...link })),
+    });
+    const laidOutLinks = result.links.map((link): SankeyLinkWithPath => {
+      if (
+        typeof link.source !== "object" ||
+        link.source === null ||
+        typeof link.target !== "object" ||
+        link.target === null ||
+        link.width === undefined ||
+        link.y0 === undefined ||
+        link.y1 === undefined
+      ) {
+        throw new Error("Sankey layout returned an incomplete link");
+      }
+      return {
+        source: link.source,
+        target: link.target,
+        value: link.value,
+        width: link.width,
+        y0: link.y0,
+        y1: link.y1,
+      };
+    });
+    return { nodes: result.nodes, links: laidOutLinks };
   }, [nodes, links, width, layoutHeight]);
 
-  const empty = !movements.isLoading && links.length === 0;
+  const empty = !summary.isLoading && links.length === 0;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -192,7 +156,32 @@ export default function SankeyFlow({
     const observer = new ResizeObserver(() => setWidth(el.clientWidth));
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [summary.isLoading, summary.isError, empty]);
+
+  if (summary.isLoading) {
+    return (
+      <div className="card p-4 flex flex-col" role="status">
+        <h2 className="font-semibold">{t("defections")}</h2>
+        <div className="h-[320px] flex items-center justify-center text-slate-300 text-sm">
+          {t("loading")}
+        </div>
+      </div>
+    );
+  }
+
+  if (summary.isError) {
+    return (
+      <div className="card p-4 flex flex-col" role="alert">
+        <h2 className="font-semibold">{t("defections")}</h2>
+        <div className="h-[320px] flex flex-col items-center justify-center gap-2 text-center">
+          <p className="text-rose-200 text-sm">{t("traseismLoadError")}</p>
+          <button type="button" className="btn bg-slate-700 hover:bg-slate-600" onClick={() => summary.refetch()}>
+            {t("traseismRetry")}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (empty) {
     return (
@@ -206,36 +195,15 @@ export default function SankeyFlow({
         </div>
         <div className="relative h-[320px]">
           <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-sm">
-            {t("noSwitches")}
+            {total > 0 ? t("traseismNoFlowPairs") : t("noSwitches")}
           </div>
         </div>
       </div>
     );
   }
 
-  if (!layout) {
-    return (
-      <div className="card p-4 flex flex-col">
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <h2 className="font-semibold">{t("defections")}</h2>
-          <span className="text-xs text-slate-400">
-            {t("totalSwitches")}:{" "}
-            <span className="text-slate-200 font-mono">{total}</span>
-          </span>
-        </div>
-        <div className="relative h-[320px]">
-          <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-sm">
-            {t("layoutUnavailable")}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const { nodes: sankeyNodes, links: sankeyLinks } = layout as {
-    nodes: SankeyNode[];
-    links: SankeyLinkWithPath[];
-  };
+  const sankeyNodes = layout?.nodes ?? [];
+  const sankeyLinks = layout?.links ?? [];
 
   // Color scale for nodes.
   const color = d3.scaleOrdinal<string, string>(d3.schemeCategory10);
@@ -252,20 +220,24 @@ export default function SankeyFlow({
         </div>
       </div>
 
-      <div className="relative w-full" style={{ height: layoutHeight }}>
-        <svg
-          ref={svgRef}
-          className="w-full"
-          height={layoutHeight}
-          role="img"
-          aria-label={t("defections")}
-        >
+      <div ref={containerRef} className="relative w-full" style={{ height: layoutHeight }}>
+        {layout ? (
+          <svg
+            ref={svgRef}
+            className="w-full"
+            height={layoutHeight}
+            role="img"
+            aria-label={t("traseismFlowDesc")}
+          >
           {/* Links */}
           {sankeyLinks.map((link) => {
+            const startX = link.source.x1 ?? 0;
+            const endX = link.target.x0 ?? 0;
+            const middleX = (startX + endX) / 2;
             return (
               <path
                 key={`${link.source.name}\0${link.target.name}`}
-                d={link.path ?? `M${link.source.x1},${link.source.y0} L${link.target.x0},${link.target.y1}`}
+                d={`M${startX},${link.y0} C${middleX},${link.y0} ${middleX},${link.y1} ${endX},${link.y1}`}
                 stroke={color(link.source.name)}
                 strokeWidth={Math.max(1, link.width)}
                 fill="none"
@@ -322,9 +294,14 @@ export default function SankeyFlow({
               </title>
             </g>
           ))}
-        </svg>
+          </svg>
+        ) : (
+          <div role="status" className="absolute inset-0 flex items-center justify-center text-slate-300 text-sm">
+            {width <= 2 ? t("loading") : t("layoutUnavailable")}
+          </div>
+        )}
 
-        {sankeyLinks.length > 0 && (
+        {layout && sankeyLinks.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-400">
             {sankeyNodes.map((node) => (
               <span
@@ -341,6 +318,11 @@ export default function SankeyFlow({
           </div>
         )}
       </div>
+      {omitted > 0 && (
+        <p className="text-xs text-amber-200 mt-2" role="note">
+          {t("traseismSankeyOmitted", { count: omitted })}
+        </p>
+      )}
     </div>
   );
 }

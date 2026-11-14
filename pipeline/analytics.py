@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import func, or_, select
+from sqlalchemy.orm import Session, aliased
 
 from .db import (
     Event,
     KeyEvent,
+    Mandate,
     Membership,
     Organization,
     Person,
@@ -219,7 +220,7 @@ def derive_all_switch_waves(session: Session) -> int:
     total = 0
     # For each legislature
     for ke in session.scalars(select(KeyEvent).where(KeyEvent.type == "legislature")):
-        if ke.start_date and ke.end_date:
+        if ke.start_date:
             leg_label = ke.label
             # For each chamber
             for ch in ("deputies", "senate"):
@@ -229,203 +230,265 @@ def derive_all_switch_waves(session: Session) -> int:
     return total
 
 
-def derive_party_cohesion(
+def _legislature_period(session: Session, legislature: str) -> tuple[date, date]:
+    keys = session.scalars(
+        select(KeyEvent).where(
+            KeyEvent.type == "legislature",
+            KeyEvent.label == legislature,
+        )
+    ).all()
+    starts = [key.start_date for key in keys if key.start_date]
+    if not starts:
+        raise ValueError(f"legislature not found: {legislature}")
+    return min(starts), max(key.end_date or date.today() for key in keys)
+
+
+def party_switching_rates(
     session: Session,
     legislature: str | None = None,
-) -> int:
-    """
-    Calculate party cohesion index per party per legislature.
-
-    Cohesion = 1 - (std_dev(switch_rate_per_mp) / mean(switch_rate_per_mp))
-    where switch_rate_per_mp = number of party switches / tenure_duration_years
-
-    Returns:
-        Number of newly created cohesion records
-    """
-
-    # Get all party switches - these are already derived from party memberships
-    # so the to_org_id should be a party
-    stmt = select(Event).where(Event.type == "switch_party")
-    if legislature:
-        leg_key = session.scalars(
-            select(KeyEvent).where(KeyEvent.type == "legislature", KeyEvent.label == legislature)
-        ).first()
-        if leg_key and leg_key.start_date and leg_key.end_date:
-            stmt = stmt.where(
-                Event.event_date >= leg_key.start_date, Event.event_date <= leg_key.end_date
-            )
-    stmt = stmt.where(Event.event_date.is_not(None))
-
-    switches = list(session.scalars(stmt))
-
-    # Group by party (to_org) and count switches per person
-    # The to_org_id should be a party since these are switch_party events
+) -> list[dict]:
+    """Calculate dated party-switch rates over observed group-membership years."""
     from collections import defaultdict
 
+    period_start, period_end = (
+        _legislature_period(session, legislature)
+        if legislature
+        else (date.min, date.today())
+    )
+    event_stmt = select(Event).where(
+        Event.type == "switch_party",
+        Event.event_date.is_not(None),
+        Event.event_date >= period_start,
+        Event.event_date <= period_end,
+    )
+    switches = session.scalars(event_stmt).all()
     party_switches: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
 
-    for sw in switches:
-        if sw.to_org_id:
-            # Verify this is a party
-            org = session.get(Organization, sw.to_org_id)
-            if org and org.classification == "party":
-                party_switches[sw.to_org_id][sw.person_id] += 1
-            elif org and org.classification == "group":
-                # `on_behalf_of_id` lives on Membership, not Organization. Resolve
-                # the party through the member's group tenure (latest first).
-                m = session.scalars(
-                    select(Membership)
-                    .where(
-                        Membership.person_id == sw.person_id,
-                        Membership.org_id == org.id,
-                        Membership.on_behalf_of_id.is_not(None),
-                    )
-                    .order_by(Membership.start_date.desc())
-                ).first()
-                if m and m.on_behalf_of_id:
-                    party_switches[m.on_behalf_of_id][sw.person_id] += 1
+    for switch in switches:
+        if not switch.event_date:
+            continue
 
-    # Get party memberships to calculate tenure
-    created = 0
+        affected_parties: set[str] = set()
+        for org_id in (switch.from_org_id, switch.to_org_id):
+            if not org_id:
+                continue
+            org = session.get(Organization, org_id)
+            if not org:
+                continue
+            party_id = org.id if org.classification == "party" else None
+            if org.classification == "group":
+                membership_stmt = select(Membership.on_behalf_of_id).where(
+                    Membership.person_id == switch.person_id,
+                    Membership.org_id == org.id,
+                    Membership.on_behalf_of_id.is_not(None),
+                    Membership.start_date <= switch.event_date,
+                    or_(Membership.end_date.is_(None), Membership.end_date >= switch.event_date),
+                )
+                if legislature:
+                    membership_stmt = membership_stmt.where(
+                        Membership.legislature == legislature
+                    )
+                party_id = session.scalar(
+                    membership_stmt.order_by(Membership.start_date.desc()).limit(1)
+                )
+            if party_id:
+                affected_parties.add(party_id)
+
+        for party_id in affected_parties:
+            party_switches[party_id][switch.person_id] += 1
+
+    group = aliased(Organization)
+    party_org = aliased(Organization)
+    results = []
     for party_id, person_switches in party_switches.items():
         party = session.get(Organization, party_id)
         if not party or party.classification != "party":
             continue
-
-        # Get all party memberships for this party
-        party_memberships = session.scalars(
-            select(Membership)
-            .join(Organization, Organization.id == Membership.org_id)
-            .where(Organization.id == party_id)
+        membership_filters = [
+            Membership.on_behalf_of_id == party_id,
+            group.classification == "group",
+            party_org.classification == "party",
+            Membership.start_date <= period_end,
+            or_(Membership.end_date.is_(None), Membership.end_date >= period_start),
+        ]
+        if legislature:
+            membership_filters.append(Membership.legislature == legislature)
+        memberships = session.execute(
+            select(Membership.person_id, Membership.start_date, Membership.end_date)
+            .join(group, group.id == Membership.org_id)
+            .join(party_org, party_org.id == Membership.on_behalf_of_id)
+            .where(*membership_filters)
         ).all()
 
-        # Calculate average tenure and switch rate
+        member_ids: set[str] = set()
+        tenure_days: dict[str, int] = defaultdict(int)
+        for person_id, start, end in memberships:
+            member_ids.add(person_id)
+            if not start:
+                continue
+            clipped_start = max(start, period_start)
+            clipped_end = min(end or period_end, period_end)
+            if clipped_end >= clipped_start:
+                tenure_days[person_id] += (clipped_end - clipped_start).days
+
+        total_person_years = sum(tenure_days.values()) / 365.25
+        if not member_ids or total_person_years <= 0:
+            continue
         total_switches = sum(person_switches.values())
-        num_switchers = len(person_switches)
-        num_members = len(set(m.person_id for m in party_memberships))
+        results.append(
+            {
+                "party_id": party.id,
+                "party_name": party.short_name or party.name,
+                "members": len(member_ids),
+                "switches": total_switches,
+                "switchers": len(person_switches),
+                "avg_tenure_years": round(
+                    sum(tenure_days.values()) / len(tenure_days) / 365.25, 1
+                ),
+                "switch_rate_per_mp_per_year": round(
+                    total_switches / total_person_years, 4
+                ),
+            }
+        )
+    return sorted(results, key=lambda result: result["party_name"])
 
-        if num_members == 0:
-            continue
 
-        # Calculate tenure durations in years
-        total_tenure_years = 0
-        for m in party_memberships:
-            if m.start_date and m.end_date:
-                total_tenure_years += (m.end_date - m.start_date).days / 365.25
-            elif m.start_date:
-                total_tenure_years += (date.today() - m.start_date).days / 365.25
+def generational_shift(
+    session: Session,
+    legislature: str | None = None,
+    as_of: date | None = None,
+) -> tuple[date, list[dict]]:
+    """Calculate age summaries by party from dated group memberships."""
+    from statistics import median
 
-        avg_tenure = total_tenure_years / num_members if num_members > 0 else 0
+    evaluation_date = as_of or date.today()
+    if legislature and not as_of:
+        _, evaluation_date = _legislature_period(session, legislature)
 
-        if avg_tenure == 0:
-            continue
-
-        # Switch rate per MP = total switches / (num_members * avg_tenure)
-        switch_rate = (
-            total_switches / (num_members * avg_tenure) if num_members * avg_tenure > 0 else 0
+    group = aliased(Organization)
+    party = aliased(Organization)
+    stmt = (
+        select(
+            Person.id,
+            Person.birth_date,
+            party.id,
+            party.short_name,
+            party.name,
+        )
+        .join(Membership, Membership.person_id == Person.id)
+        .join(group, group.id == Membership.org_id)
+        .join(party, party.id == Membership.on_behalf_of_id)
+        .where(
+            Person.birth_date.is_not(None),
+            group.classification == "group",
+            party.classification == "party",
+            Membership.start_date <= evaluation_date,
+        )
+    )
+    if legislature:
+        stmt = stmt.where(Membership.legislature == legislature)
+    else:
+        stmt = stmt.where(
+            or_(Membership.end_date.is_(None), Membership.end_date >= evaluation_date)
         )
 
-        # Calculate cohesion for this party
-        # For now, just log it - in a full implementation we'd store in a table
-        party_label = party.short_name or party.name or "Unknown"
+    ages_by_party: dict[str, dict[str, int]] = {}
+    party_names: dict[str, str] = {}
+    for person_id, birth_date, party_id, short_name, party_name in session.execute(stmt):
+        age = evaluation_date.year - birth_date.year
+        if (evaluation_date.month, evaluation_date.day) < (birth_date.month, birth_date.day):
+            age -= 1
+        if age < 0:
+            continue
+        ages_by_party.setdefault(party_id, {})[person_id] = age
+        party_names[party_id] = short_name or party_name
+
+    results = [
+        {
+            "party": party_names[party_id],
+            "mps_with_birth_dates": len(ages),
+            "avg_age": round(sum(ages.values()) / len(ages), 1),
+            "median_age": median(ages.values()),
+        }
+        for party_id, ages in ages_by_party.items()
+        if ages
+    ]
+    results.sort(key=lambda result: result["party"])
+    return evaluation_date, results
+
+
+def derive_party_cohesion(
+    session: Session,
+    legislature: str | None = None,
+) -> int:
+    """Report party switching rates and return the number of parties measured."""
+    results = party_switching_rates(session, legislature)
+    for result in results:
         print(
-            f"Party {party_label}: {num_members} members, {total_switches} switches, "
-            f"avg_tenure={avg_tenure:.1f}y, switch_rate={switch_rate:.3f}/MP/year"
+            f"Party {result['party_name']}: {result['members']} members, "
+            f"{result['switches']} switches, avg_tenure={result['avg_tenure_years']:.1f}y, "
+            f"switch_rate={result['switch_rate_per_mp_per_year']:.4f}/MP/year"
         )
-
-    return 0  # Placeholder
+    if not results:
+        print("No dated, attributable party-switch data is available.")
+    return len(results)
 
 
 def derive_committee_control(
     session: Session,
     legislature: str | None = None,
-) -> int:
+) -> None:
+    """Return no result until source-backed committee chair data is available."""
+    if legislature and not session.scalar(
+        select(KeyEvent.id)
+        .where(
+            KeyEvent.type == "legislature",
+            KeyEvent.label == legislature,
+        )
+        .limit(1)
+    ):
+        raise ValueError(f"legislature not found: {legislature}")
+    # Committee chair data is not present in the current corpus.
+    return None
+
+
+def derive_cross_chamber_careers(session: Session, as_of: date | None = None) -> int:
     """
-    Calculate committee control index per party per legislature.
-
-    Index = party_chairs / total_committees per legislature per party
+    Identify persons with mandates in both chambers by the requested date.
     """
-    # TODO: Implement when committee chair data is available
-    return 0
-
-
-def derive_cross_chamber_careers(session: Session) -> int:
-    """
-    Identify persons with memberships in both chambers.
-    """
-    # Find persons who have memberships in both deputies and senate
-    stmt = select(Person.id, Person.canonical_name).distinct()
-    persons = list(session.execute(stmt).all())
-
-    cross_chamber = 0
-    for pid, name in persons:
-        chs = session.scalars(
-            select(Membership.chamber).where(Membership.person_id == pid).distinct()
-        ).all()
-        if len(chs) > 1:
-            cross_chamber += 1
-            print(f"Cross-chamber MP: {name} (chambers: {', '.join(chs)})")
-
-    return cross_chamber
+    as_of = as_of or date.today()
+    persons = session.execute(
+        select(Person.canonical_name)
+        .join(Mandate, Mandate.person_id == Person.id)
+        .where(
+            Mandate.chamber.in_(("deputies", "senate")),
+            Mandate.start_date.is_not(None),
+            Mandate.start_date <= as_of,
+        )
+        .group_by(Person.id, Person.canonical_name)
+        .having(func.count(func.distinct(Mandate.chamber)) == 2)
+        .order_by(Person.canonical_name)
+    ).all()
+    for (name,) in persons:
+        print(f"Cross-chamber MP: {name}")
+    return len(persons)
 
 
 def derive_generational_shift(
     session: Session,
     legislature: str | None = None,
 ) -> int:
-    """
-    Calculate avg/median age per party per legislature from Wikidata birth dates.
-    """
-    # Get all persons with birth dates
-    stmt = select(Person.id, Person.canonical_name, Person.birth_date)
-    if legislature:
-        # Filter by legislature memberships
-        leg_key = session.scalars(
-            select(KeyEvent).where(KeyEvent.type == "legislature", KeyEvent.label == legislature)
-        ).first()
-        if leg_key and leg_key.start_date and leg_key.end_date:
-            stmt = stmt.where(
-                Person.id.in_(
-                    select(Membership.person_id)
-                    .where(Membership.start_date <= leg_key.end_date)
-                    .where(
-                        (Membership.end_date.is_(None))
-                        | (Membership.end_date >= leg_key.start_date)
-                    )
-                )
-            )
-
-    persons = list(session.execute(stmt).all())
-    ages_by_party: dict[str, list[int]] = {}
-
-    for pid, name, bdate in persons:
-        if not bdate:
-            continue
-        age = (date.today() - bdate).days / 365.25
-
-        # Get party memberships for this person
-        party_mems = session.scalars(
-            select(Membership)
-            .join(Organization, Organization.id == Membership.org_id)
-            .where(Membership.person_id == pid)
-            .where(Organization.classification == "party")
-        ).all()
-
-        for pm in party_mems:
-            if pm.org and pm.org.short_name:
-                party_key = pm.org.short_name
-                ages_by_party.setdefault(party_key, []).append(int(age))
-
-    for party, ages in ages_by_party.items():
-        if ages:
-            avg_age = sum(ages) / len(ages)
-            sorted_ages = sorted(ages)
-            median_age = sorted_ages[len(sorted_ages) // 2]
-            print(
-                f"Party {party}: {len(ages)} MPs with birth dates, avg={avg_age:.1f}, median={median_age}"
-            )
-
-    return 0
+    """Report party age summaries and return the number of parties measured."""
+    evaluation_date, results = generational_shift(session, legislature)
+    for result in results:
+        print(
+            f"Party {result['party']}: {result['mps_with_birth_dates']} MPs with birth dates, "
+            f"avg={result['avg_age']:.1f}, median={result['median_age']} "
+            f"(as of {evaluation_date.isoformat()})"
+        )
+    if not results:
+        print("No party memberships with birth-date data are available.")
+    return len(results)
 
 
 def main(argv: list[str] | None = None) -> int:

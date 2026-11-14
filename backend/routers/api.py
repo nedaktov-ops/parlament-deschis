@@ -16,8 +16,14 @@ from backend.config import APP_VERSION
 from backend.deps import get_db
 from pipeline.analytics import derive_all_switch_waves, derive_switch_waves
 from pipeline.db import Evidence
-from pipeline.export import CODE_LICENSE, DATA_LICENSE, PROJECT_URL
-from pipeline.export import CSV_DATASETS, build_popolo, csv_for
+from pipeline.export import (
+    CODE_LICENSE,
+    CSV_DATASETS,
+    DATA_LICENSE,
+    PROJECT_URL,
+    build_popolo,
+    csv_for,
+)
 from pipeline.poller import run_poll_cycle, source_health
 
 router = APIRouter(prefix="/api")
@@ -50,8 +56,19 @@ def _parse_date(s: str | None, default: date) -> date:
         return default
     try:
         return date.fromisoformat(s)
-    except ValueError:
-        raise HTTPException(status_code=422, detail=f"invalid date: {s}")
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=f"invalid date: {s}") from exc
+
+
+def _require_admin_token(token: str | None, operation: str = "admin operations") -> None:
+    expected = os.environ.get("PARLAMENT_ADMIN_TOKEN", "")
+    if not expected:
+        raise HTTPException(
+            status_code=503,
+            detail=f"{operation} disabled (set PARLAMENT_ADMIN_TOKEN)",
+        )
+    if not token or not secrets.compare_digest(token, expected):
+        raise HTTPException(status_code=401, detail="invalid admin token")
 
 
 @router.get("/meta")
@@ -143,24 +160,35 @@ def coverage_detailed(db: Session = Depends(get_db)):
 
 @router.get("/committees")
 def committees(as_of: str | None = None, db: Session = Depends(get_db)):
-    """Committee list with its controlling party, when committee data exists.
+    """Committee list with active dated memberships, when committee data exists.
 
-    Committee tenures are not ingested yet, so this returns an empty list (the
-    UI renders its honest "no data" state) instead of the 404 the frontend used
-    to receive. The endpoint exists so the contract is stable once committee
-    memberships are loaded.
+    Committee tenures are not ingested yet, so the current corpus returns an
+    empty list instead of a fabricated composition or a missing-route error.
     """
-    from sqlalchemy import select
+    from sqlalchemy import or_, select
 
-    from pipeline.db import Organization
+    from pipeline.db import Membership, Organization
 
-    _parse_date(as_of, date.today())  # validate as_of when supplied
+    reference_date = _parse_date(as_of, date.today())
+    active_membership = (
+        select(Membership.id)
+        .where(
+            Membership.org_id == Organization.id,
+            Membership.start_date.is_not(None),
+            Membership.start_date <= reference_date,
+            or_(Membership.end_date.is_(None), Membership.end_date >= reference_date),
+        )
+        .exists()
+    )
     rows = db.scalars(
         select(Organization)
-        .where(Organization.classification == "committee")
+        .where(
+            Organization.classification == "committee",
+            active_membership,
+        )
         .order_by(Organization.name)
     ).all()
-    return [{"id": o.id, "name": o.name, "party": None} for o in rows]
+    return [{"id": o.id, "name": o.name, "chamber": o.chamber, "party": None} for o in rows]
 
 
 @router.get("/evidence/{evidence_id}")
@@ -260,14 +288,7 @@ def admin_poll(
     x_admin_token: Annotated[str | None, Header()] = None,
 ):
     """Run one poll cycle synchronously. Token-guarded; disabled by default."""
-    expected = os.environ.get("PARLAMENT_ADMIN_TOKEN", "")
-    if not expected:
-        raise HTTPException(
-            status_code=503,
-            detail="admin polling disabled (set PARLAMENT_ADMIN_TOKEN)",
-        )
-    if not x_admin_token or not secrets.compare_digest(x_admin_token, expected):
-        raise HTTPException(status_code=401, detail="invalid admin token")
+    _require_admin_token(x_admin_token, "admin polling")
     try:
         results = run_poll_cycle(db, legislature)
     except Exception as exc:  # noqa: BLE001 - report upstream failure as 502
@@ -277,18 +298,32 @@ def admin_poll(
 
 @router.get("/health")
 def health(db: Session = Depends(get_db)):
-    return {"status": "ok", "sources": source_health(db)}
+    from sqlalchemy import func, select
+
+    from pipeline.db import Membership, Person
+
+    return {
+        "status": "ok",
+        "database": {
+            "status": "ok",
+            "persons": db.scalar(select(func.count()).select_from(Person)),
+            "memberships": db.scalar(select(func.count()).select_from(Membership)),
+        },
+        "sources": source_health(db),
+    }
 
 
-@router.get("/analytics/waves")
+@router.post("/analytics/waves")
 def analytics_waves(
     chamber: str | None = Query(None, pattern="^(deputies|senate)$"),
     legislature: str | None = Query(None, pattern=r"^\d{4}$"),
     window_days: int = Query(30, ge=1, le=180),
     min_switches: int = Query(3, ge=1, le=100),
+    x_admin_token: Annotated[str | None, Header()] = None,
     db: Session = Depends(get_db),
 ):
-    """Detect party switch waves in the given chamber/legislature."""
+    """Detect and persist party switch waves in the given scope."""
+    _require_admin_token(x_admin_token)
     count = derive_switch_waves(
         db,
         chamber=chamber,
@@ -296,17 +331,35 @@ def analytics_waves(
         window_days=window_days,
         min_switches=min_switches,
     )
+    db.commit()
     return {"status": "ok", "created": count}
 
 
-@router.get("/analytics/waves/recompute")
+@router.get("/analytics/waves", include_in_schema=False)
+def analytics_waves_get_not_allowed():
+    raise HTTPException(status_code=405, detail="use POST to derive switch waves")
+
+
+@router.post("/analytics/waves/recompute")
 def analytics_waves_recompute(
+    x_admin_token: Annotated[str | None, Header()] = None,
     db: Session = Depends(get_db),
 ):
-    """Recompute all switch waves from scratch."""
+    """Delete and rebuild switch waves from the current event ledger."""
+    _require_admin_token(x_admin_token)
+    from sqlalchemy import delete
 
+    from pipeline.db import SwitchWave
+
+    db.execute(delete(SwitchWave))
     count = derive_all_switch_waves(db)
+    db.commit()
     return {"status": "ok", "created": count}
+
+
+@router.get("/analytics/waves/recompute", include_in_schema=False)
+def analytics_waves_recompute_get_not_allowed():
+    raise HTTPException(status_code=405, detail="use POST to recompute switch waves")
 
 
 @router.get("/analytics/switch-waves")
@@ -349,192 +402,56 @@ def get_party_cohesion(
     legislature: str | None = Query(None, pattern=r"^\d{4}$"),
     db: Session = Depends(get_db),
 ):
-    """Get party cohesion index per party per legislature."""
+    """Estimate party switching rates from dated party and group memberships."""
+    from pipeline.analytics import party_switching_rates
 
-    # Run the analysis and return results
-    from collections import defaultdict
-
-    from sqlalchemy import select
-
-    from pipeline.db import Event, KeyEvent, Membership, Organization
-
-    stmt = select(Event).where(Event.type == "switch_party")
-    if legislature:
-        leg_key = db.scalars(
-            select(KeyEvent).where(KeyEvent.type == "legislature", KeyEvent.label == legislature)
-        ).first()
-        if leg_key and leg_key.start_date and leg_key.end_date:
-            stmt = stmt.where(
-                Event.event_date >= leg_key.start_date, Event.event_date <= leg_key.end_date
-            )
-    stmt = stmt.where(Event.event_date.is_not(None))
-
-    switches = list(db.scalars(stmt))
-
-    party_switches: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-
-    for sw in switches:
-        if sw.to_org_id:
-            org = db.get(Organization, sw.to_org_id)
-            if org and org.classification == "party":
-                party_switches[sw.to_org_id][sw.person_id] += 1
-            elif org and org.classification == "group":
-                # on_behalf_of_id is a Membership column, not an Organization one.
-                m = db.scalars(
-                    select(Membership)
-                    .where(
-                        Membership.person_id == sw.person_id,
-                        Membership.org_id == org.id,
-                        Membership.on_behalf_of_id.is_not(None),
-                    )
-                    .order_by(Membership.start_date.desc())
-                ).first()
-                if m and m.on_behalf_of_id:
-                    party_switches[m.on_behalf_of_id][sw.person_id] += 1
-
-    results = []
-    for party_id, person_switches in party_switches.items():
-        party = db.get(Organization, party_id)
-        if not party or party.classification != "party":
-            continue
-
-        party_memberships = db.scalars(
-            select(Membership)
-            .join(Organization, Organization.id == Membership.org_id)
-            .where(Organization.id == party_id)
-        ).all()
-
-        total_switches = sum(person_switches.values())
-        num_switchers = len(person_switches)
-        num_members = len(set(m.person_id for m in party_memberships))
-
-        if num_members == 0:
-            continue
-
-        total_tenure_years = 0
-        for m in party_memberships:
-            if m.start_date and m.end_date:
-                total_tenure_years += (m.end_date - m.start_date).days / 365.25
-            elif m.start_date:
-                total_tenure_years += (date.today() - m.start_date).days / 365.25
-
-        avg_tenure = total_tenure_years / num_members if num_members > 0 else 0
-
-        if avg_tenure == 0:
-            continue
-
-        switch_rate = (
-            total_switches / (num_members * avg_tenure) if num_members * avg_tenure > 0 else 0
-        )
-
-        party_label = party.short_name or party.name or "Unknown"
-        results.append(
-            {
-                "party_id": party.id,
-                "party_name": party_label,
-                "members": num_members,
-                "switches": total_switches,
-                "switchers": num_switchers,
-                "avg_tenure_years": round(avg_tenure, 1),
-                "switch_rate_per_mp_per_year": round(switch_rate, 4),
-            }
-        )
-
+    try:
+        results = party_switching_rates(db, legislature)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if not results:
+        return {
+            "status": "unavailable",
+            "data": [],
+            "reason": "No dated party-switch events can be attributed to party memberships.",
+        }
     return {"status": "ok", "data": results}
 
 
 @router.get("/analytics/cross-chamber")
 def get_cross_chamber(
+    as_of: str | None = None,
     db: Session = Depends(get_db),
 ):
-    """Get MPs with memberships in both chambers."""
-    from sqlalchemy import select
-
-    from pipeline.db import Membership, Person
-
-    stmt = select(Person.id, Person.canonical_name).distinct()
-    persons = list(db.execute(stmt).all())
-
-    results = []
-    for pid, name in persons:
-        chs = db.scalars(
-            select(Membership.chamber).where(Membership.person_id == pid).distinct()
-        ).all()
-        if len(chs) > 1:
-            results.append(
-                {
-                    "person_id": pid,
-                    "name": name,
-                    "chambers": chs,
-                }
-            )
-
-    return {"status": "ok", "count": len(results), "data": results}
+    """Get people with mandates in both chambers by the requested date."""
+    reference_date = _parse_date(as_of, date.today())
+    results = queries.get_cross_chamber_careers(db, reference_date)
+    return {
+        "status": "ok",
+        "as_of": reference_date.isoformat(),
+        "count": len(results),
+        "data": results,
+    }
 
 
 @router.get("/analytics/generational-shift")
 def get_generational_shift(
     legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    as_of: str | None = None,
     db: Session = Depends(get_db),
 ):
-    """Get generational shift data per party."""
-    from sqlalchemy import select
+    """Get party age summaries from group memberships and their party affiliation."""
+    from pipeline.analytics import generational_shift
 
-    from pipeline.db import KeyEvent, Membership, Organization, Person
-
-    stmt = select(Person.id, Person.canonical_name, Person.birth_date)
-    if legislature:
-        leg_key = db.scalars(
-            select(KeyEvent).where(KeyEvent.type == "legislature", KeyEvent.label == legislature)
-        ).first()
-        if leg_key and leg_key.start_date and leg_key.end_date:
-            stmt = stmt.where(
-                Person.id.in_(
-                    select(Membership.person_id)
-                    .where(Membership.start_date <= leg_key.end_date)
-                    .where(
-                        (Membership.end_date.is_(None))
-                        | (Membership.end_date >= leg_key.start_date)
-                    )
-                )
-            )
-
-    persons = list(db.execute(stmt).all())
-    ages_by_party: dict[str, list[int]] = {}
-
-    for pid, name, bdate in persons:
-        if not bdate:
-            continue
-        age = (date.today() - bdate).days / 365.25
-
-        party_mems = db.scalars(
-            select(Membership)
-            .join(Organization, Organization.id == Membership.org_id)
-            .where(Membership.person_id == pid)
-            .where(Organization.classification == "party")
-        ).all()
-
-        for pm in party_mems:
-            if pm.org and pm.org.short_name:
-                party_key = pm.org.short_name
-                ages_by_party.setdefault(party_key, []).append(int(age))
-
-    results = []
-    for party, ages in ages_by_party.items():
-        if ages:
-            avg_age = sum(ages) / len(ages)
-            sorted_ages = sorted(ages)
-            median_age = sorted_ages[len(sorted_ages) // 2]
-            results.append(
-                {
-                    "party": party,
-                    "mps_with_birth_dates": len(ages),
-                    "avg_age": round(avg_age, 1),
-                    "median_age": median_age,
-                }
-            )
-
-    return {"status": "ok", "data": results}
+    try:
+        evaluation_date, results = generational_shift(
+            db,
+            legislature=legislature,
+            as_of=_parse_date(as_of, date.today()) if as_of else None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"status": "ok", "as_of": evaluation_date.isoformat(), "data": results}
 
 
 # --- Traseism statistics ---------------------------------------------------

@@ -25,6 +25,10 @@ export default function TimeSlider({
   const maxMs = new Date(max).getTime();
   const valMs = new Date(value).getTime();
   const spanMs = Math.max(1, maxMs - minMs);
+  const tickStride = Math.max(1, Math.ceil(ticks.length / 5));
+  const visibleTicks = ticks.filter(
+    (_, index) => index % tickStride === 0 || index === ticks.length - 1,
+  );
 
   useEffect(() => {
     if (!playing) return;
@@ -37,7 +41,7 @@ export default function TimeSlider({
       } else {
         onChange(toISO(new Date(next)));
       }
-    }, 120);
+    }, 300);
     return () => {
       if (timer.current) window.clearInterval(timer.current);
     };
@@ -45,32 +49,36 @@ export default function TimeSlider({
 
   return (
     <div className="card p-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <button
-          className="btn bg-slate-700 hover:bg-slate-600"
+          className="btn bg-slate-700 hover:bg-slate-600 min-h-11 sm:min-h-0"
           onClick={() => setPlaying((p) => !p)}
+          aria-pressed={playing}
         >
           {playing ? t("pause") : t("play")}
         </button>
         <div className="flex-1">
+          <label htmlFor="as-of-date" className="sr-only">{t("selectDate")}</label>
           <input
+            id="as-of-date"
             type="range"
             min={minMs}
             max={maxMs}
             step={86400_000}
             value={valMs}
             onChange={(e) => onChange(toISO(new Date(Number(e.target.value))))}
+            aria-valuetext={value}
             className="w-full accent-sky-500"
           />
           <div className="relative h-4 mt-1">
-            {ticks.map((tk) => {
+            {visibleTicks.map((tk) => {
               const ms = new Date(tk.start).getTime();
               if (!Number.isFinite(ms) || ms < minMs || ms > maxMs) return null;
               const pct = ((ms - minMs) / spanMs) * 100;
               return (
                 <span
                   key={tk.label}
-                  className="absolute text-[10px] text-slate-500 -translate-x-1/2"
+                  className="absolute text-[11px] text-slate-300 -translate-x-1/2 whitespace-nowrap"
                   style={{ left: `${pct}%` }}
                 >
                   {tk.label}
@@ -79,9 +87,9 @@ export default function TimeSlider({
             })}
           </div>
         </div>
-        <div className="text-right min-w-[110px]">
-          <div className="text-xs text-slate-400">{t("asOf")}</div>
-          <div className="font-mono font-semibold">{value}</div>
+        <div className="sm:text-right sm:min-w-[110px]">
+          <div className="text-xs text-slate-300">{t("asOf")}</div>
+          <output htmlFor="as-of-date" className="font-mono font-semibold">{value}</output>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { Membership } from "../api/client";
+import { localISODate } from "../utils/date";
 
 const DAY = 86400_000;
 
@@ -10,7 +11,7 @@ function ms(iso: string | null): number | null {
 
 export default function MembershipGantt({ memberships }: { memberships: Membership[] }) {
   const { t } = useTranslation();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISODate();
 
   const { rows, domainStart, domainEnd } = useMemo(() => {
     const sorted = [...memberships].sort(

@@ -23,13 +23,23 @@ export default function ChamberView({
     <div className="card p-4 flex flex-col">
       <div className="flex items-center justify-between mb-2">
         <h2 className="font-semibold">{t(chamber)}</h2>
-        <span className="text-xs text-slate-400">
-          {data.data?.total ?? 0} {t("totalSeats")}
-        </span>
+        {data.data && (
+          <span className="text-xs text-slate-300">
+            {data.data.total} {t("totalSeats")}
+          </span>
+        )}
       </div>
-      {data.isLoading && <div className="text-slate-500 text-sm py-8">{t("loading")}</div>}
+      {data.isLoading && <div role="status" className="text-slate-300 text-sm py-8">{t("loading")}</div>}
+      {data.isError && (
+        <div role="alert" className="text-rose-200 text-sm py-4">
+          {t("chamberLoadError")}
+          <button type="button" className="ml-3 underline" onClick={() => data.refetch()}>
+            {t("traseismRetry")}
+          </button>
+        </div>
+      )}
       {data.data && data.data.total === 0 && (
-        <div className="text-slate-500 text-sm py-8">{t("noData")}</div>
+        <div className="text-slate-300 text-sm py-8">{t("noData")}</div>
       )}
       {data.data && data.data.total > 0 && (
         <>

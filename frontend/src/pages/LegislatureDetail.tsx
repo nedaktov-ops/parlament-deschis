@@ -1,55 +1,87 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import { useParams, useSearch } from "@tanstack/react-router";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import TimelineChart from "../components/TimelineChart";
-import DefectionSankey from "../components/DefectionSankey";
+import { localISODate } from "../utils/date";
 
 export function LegislatureDetail() {
   const { t } = useTranslation();
+  const navigate = useNavigate({ from: "/legislature/$year" });
   const params = useParams({ from: "/legislature/$year" });
   const search = useSearch({ from: "/legislature/$year", select: s => s.date });
-  const year: string = params.year as string;
-  const asOf: string = (search as string) ?? new Date().toISOString().slice(0, 10);
+  const year = params.year;
+  const asOf = search;
 
   const meta = useQuery({ queryKey: ["meta"], queryFn: api.meta });
+  const leg = meta.data?.legislatures?.[year];
+  const today = localISODate();
+  const start = leg?.start ?? "2024-12-21";
+  const end = leg?.end ?? today;
+  const selectedDate = asOf < start ? start : asOf > end ? end : asOf;
   const chamber = useQuery({
-    queryKey: ["chamber", "deputies", asOf],
-    queryFn: () => api.chamber("deputies", asOf),
+    queryKey: ["chamber", "deputies", selectedDate],
+    queryFn: () => api.chamber("deputies", selectedDate),
+    enabled: meta.isSuccess,
   });
   const movements = useQuery({
-    queryKey: ["leg-movements", year, asOf],
-    queryFn: () => api.movements(),
+    queryKey: ["leg-movements", year, start, selectedDate],
+    queryFn: () => api.movements({ from: start, to: selectedDate, limit: 1000 }),
+    enabled: meta.isSuccess,
   });
 
-  if (chamber.isLoading) {
+  if (meta.isLoading || chamber.isLoading) {
     return (
       <div className="card p-4">
-        <div className="text-slate-500 text-sm py-8">{t("loading")}</div>
+        <div role="status" className="text-slate-300 text-sm py-8">{t("loading")}</div>
       </div>
     );
   }
 
-  const leg = meta.data?.legislatures?.[year];
-  const start = leg?.start ?? "2024-12-21";
-  const end = leg?.end ?? new Date().toISOString().slice(0, 10);
+  if (meta.isError || chamber.isError) {
+    return (
+      <div className="card p-4" role="alert">
+        <p className="text-rose-200 text-sm">{t("chamberLoadError")}</p>
+        <button type="button" className="btn mt-3 bg-slate-700 hover:bg-slate-600" onClick={() => {
+          void meta.refetch();
+          void chamber.refetch();
+        }}>
+          {t("traseismRetry")}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
       <div className="card p-4">
         <h1 className="text-2xl font-bold">{t("legislature")} {year}</h1>
         <p className="text-sm text-slate-400 mt-1">
-          {t("period")}: {start} → {end}
+          {t("period")}: {start} → {leg?.end ?? t("present")}
         </p>
+        <label htmlFor="legislature-as-of" className="block text-xs text-slate-300 mt-3 mb-1">
+          {t("asOf")}
+        </label>
+        <input
+          id="legislature-as-of"
+          type="date"
+          min={start}
+          max={end}
+          value={selectedDate}
+          onChange={(event) => {
+            if (event.target.value) {
+              navigate({ search: { date: event.target.value }, replace: true });
+            }
+          }}
+          className="bg-slate-800 border border-slate-600 rounded-md px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="card p-4">
           <h3 className="font-semibold mb-3">{t("deputies")}</h3>
-          {chamber.isLoading ? (
-            <div className="text-slate-500 text-sm">{t("loading")}</div>
-          ) : chamber.data?.total === 0 ? (
-            <div className="text-slate-500 text-sm">{t("noData")}</div>
+          {chamber.data?.total === 0 ? (
+            <div className="text-slate-300 text-sm">{t("noData")}</div>
           ) : (
             <>
               <div className="space-y-2">
@@ -70,15 +102,34 @@ export function LegislatureDetail() {
         <div className="card p-4">
           <h3 className="font-semibold mb-3">{t("recentMovements")}</h3>
           {movements.isLoading ? (
-            <div className="text-slate-500 text-sm">{t("loading")}</div>
+            <div role="status" className="text-slate-300 text-sm">{t("loading")}</div>
+          ) : movements.isError ? (
+            <div role="alert" className="text-rose-200 text-sm">
+              {t("electoralLoadError")}
+              <button type="button" className="ml-3 underline" onClick={() => movements.refetch()}>
+                {t("traseismRetry")}
+              </button>
+            </div>
           ) : (
-            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-              {movements.data
-                ?.filter((m) => m.event_date && m.event_date >= start && m.event_date <= end)
-                .slice(0, 20)
-                .map((m) => (
+            <>
+              {movements.data?.length === 1000 && (
+                <p className="text-amber-200 text-sm mb-2">{t("displayedMaxMovements")}</p>
+              )}
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                {movements.data?.slice(0, 20).map((m) => (
                   <button
                     key={m.id}
+                    type="button"
+                    disabled={!m.person}
+                    onClick={() => {
+                      if (m.person) {
+                        navigate({
+                          to: "/person/$id",
+                          params: { id: m.person.id },
+                          search: { date: selectedDate },
+                        });
+                      }
+                    }}
                     className="w-full text-left bg-slate-800/40 hover:bg-slate-800 rounded-md p-2 transition-colors"
                   >
                     <div className="flex items-center gap-2 text-xs">
@@ -93,17 +144,17 @@ export function LegislatureDetail() {
                     </div>
                   </button>
                 ))}
-              {movements.data?.filter((m) => m.event_date && m.event_date >= start && m.event_date <= end).length === 0 && (
-                <div className="text-slate-500 text-sm py-8 text-center">{t("noData")}</div>
-              )}
-            </div>
+                {movements.data?.length === 0 && (
+                  <div className="text-slate-300 text-sm py-8 text-center">{t("noData")}</div>
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <TimelineChart from={start} to={end} />
-        <DefectionSankey />
+      <div className="grid grid-cols-1 gap-4">
+        <TimelineChart from={start} to={selectedDate} />
       </div>
     </div>
   );

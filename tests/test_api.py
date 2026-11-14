@@ -20,10 +20,12 @@ from pipeline.db import (
     Coverage,
     Event,
     KeyEvent,
+    Mandate,
     Membership,
     Organization,
     Person,
     PipelineRun,
+    SwitchWave,
     get_session,
     make_engine,
     make_session_factory,
@@ -246,6 +248,24 @@ def test_chamber_composition(api):
     assert counts == {"PSD": 1, "PNL": 1}
 
 
+def test_timeline_preserves_temporal_membership_scope(api):
+    response = api.client.get(
+        "/api/timeline",
+        params={
+            "chamber": "deputies",
+            "from": "2024-12-21",
+            "to": "2025-01-10",
+            "step_days": 20,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["dates"] == ["2024-12-21", "2025-01-10"]
+    assert body["totals"] == [2, 2]
+    assert body["groups"] == {"PNL": [1, 1], "PSD": [1, 1]}
+    assert body["switches"] == []
+
+
 def test_persons_search(api):
     response = api.client.get("/api/persons", params={"q": "popescu"})
     assert response.status_code == 200
@@ -335,6 +355,40 @@ def test_coverage_derived(api):
     assert rows["senate"]["completeness"] == "none"
 
 
+def test_coverage_detailed_derives_metrics_without_persisted_rows(api):
+    session = api.factory()
+    session.add(
+        Event(
+            type="switch_group",
+            person_id=api.ids.p1,
+            chamber="deputies",
+            legislature="2024",
+            event_date=date(2025, 1, 1),
+            dedup_key="coverage-detail:switch",
+        )
+    )
+    session.commit()
+    session.close()
+
+    response = api.client.get("/api/coverage/detailed")
+    assert response.status_code == 200
+    rows = {row["chamber"]: row for row in response.json()}
+
+    deputies = rows["deputies"]
+    assert deputies["total_memberships"] == 4
+    assert deputies["dated_pct"] == 100
+    assert deputies["sourced_pct"] == 100
+    assert deputies["total_switches"] == 1
+    assert deputies["sourced_switches_pct"] == 0
+
+    senate = rows["senate"]
+    assert senate["total_memberships"] == 0
+    assert senate["dated_pct"] is None
+    assert senate["sourced_pct"] is None
+    assert senate["total_switches"] == 0
+    assert senate["sourced_switches_pct"] is None
+
+
 def test_coverage_persisted_rows_enriched(api):
     session = api.factory()
     session.add(
@@ -353,6 +407,13 @@ def test_coverage_persisted_rows_enriched(api):
     assert rows[0]["completeness"] == "partial"
     assert rows[0]["persons"] == 2
 
+    detailed = api.client.get("/api/coverage/detailed")
+    assert detailed.status_code == 200
+    detailed_rows = detailed.json()
+    assert len(detailed_rows) == 1
+    assert detailed_rows[0]["total_memberships"] == 4
+    assert detailed_rows[0]["dated_pct"] == 100
+
 
 def test_health(api):
     response = api.client.get("/api/health")
@@ -364,6 +425,11 @@ def test_health(api):
     assert body["sources"]["senat"]["status"] == "FAILURE"
     assert body["sources"]["senat"]["error"] == "boom"
     assert "checked_at" in body["sources"]
+    assert body["database"] == {
+        "status": "ok",
+        "persons": 2,
+        "memberships": 4,
+    }
 
 
 def test_about(api):
@@ -426,6 +492,56 @@ def test_committees_endpoint_returns_empty_list(api):
     assert response.json() == []
 
 
+def test_cross_chamber_uses_date_scoped_mandates(api):
+    session = api.factory()
+    session.add_all(
+        [
+            Mandate(
+                person_id=api.ids.p1,
+                chamber="deputies",
+                legislature="2000",
+                start_date=date(2000, 1, 1),
+            ),
+            Mandate(
+                person_id=api.ids.p1,
+                chamber="senate",
+                legislature="2004",
+                start_date=date(2004, 1, 1),
+            ),
+            Mandate(
+                person_id=api.ids.p2,
+                chamber="deputies",
+                legislature="2024",
+                start_date=date(2024, 12, 21),
+            ),
+            Mandate(
+                person_id=api.ids.p2,
+                chamber="senate",
+                legislature="2028",
+                start_date=date(2025, 2, 1),
+            ),
+        ]
+    )
+    session.commit()
+    session.close()
+
+    response = api.client.get(
+        "/api/analytics/cross-chamber",
+        params={"as_of": "2025-01-14"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["as_of"] == "2025-01-14"
+    assert body["count"] == 1
+    assert body["data"][0] == {
+        "person_id": api.ids.p1,
+        "name": "Ion Ștefan Popescu",
+        "chambers": ["deputies", "senate"],
+        "deputies": ["2000"],
+        "senate": ["2004"],
+    }
+
+
 def test_party_cohesion_handles_group_target(api):
     """Regression: the code read `Organization.on_behalf_of_id`, a column that
     lives on Membership. A switch_party event whose target is a group crashed
@@ -447,7 +563,113 @@ def test_party_cohesion_handles_group_target(api):
 
     response = api.client.get("/api/analytics/party-cohesion")
     assert response.status_code == 200
-    assert isinstance(response.json().get("data"), list)
+    body = response.json()
+    assert body["status"] == "ok"
+    result = next(row for row in body["data"] if row["party_name"] == "PSD")
+    assert result["members"] == 2
+    assert result["switches"] == 2
+    assert result["switchers"] == 1
+
+
+def test_party_cohesion_reports_missing_switch_data(api):
+    session = api.factory()
+    for event in session.query(Event).filter(Event.type == "switch_party").all():
+        session.delete(event)
+    session.commit()
+    session.close()
+
+    response = api.client.get("/api/analytics/party-cohesion")
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "unavailable",
+        "data": [],
+        "reason": "No dated party-switch events can be attributed to party memberships.",
+    }
+
+
+def test_generational_shift_uses_group_party_and_historical_age(api):
+    response = api.client.get(
+        "/api/analytics/generational-shift",
+        params={"legislature": "2024", "as_of": "2025-01-14"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["as_of"] == "2025-01-14"
+    assert body["data"] == [
+        {
+            "party": "PNL",
+            "mps_with_birth_dates": 1,
+            "avg_age": 45.0,
+            "median_age": 45,
+        },
+        {
+            "party": "PSD",
+            "mps_with_birth_dates": 1,
+            "avg_age": 45.0,
+            "median_age": 45,
+        },
+    ]
+
+
+def test_analytics_wave_mutations_are_post_and_admin_protected(api, monkeypatch):
+    monkeypatch.delenv("PARLAMENT_ADMIN_TOKEN", raising=False)
+    path = "/api/analytics/waves?chamber=deputies&legislature=2024"
+    assert api.client.get(path).status_code == 405
+    assert api.client.get("/api/analytics/waves/recompute").status_code == 405
+    assert api.client.post(path).status_code == 503
+
+    monkeypatch.setenv("PARLAMENT_ADMIN_TOKEN", "test-token")
+    session = api.factory()
+    session.add_all(
+        [
+            Event(
+                type="switch_party",
+                person_id=api.ids.p1,
+                chamber="deputies",
+                event_date=date(2025, 1, 11),
+                dedup_key="evt:wave:test:1",
+            ),
+            Event(
+                type="switch_party",
+                person_id=api.ids.p2,
+                chamber="deputies",
+                event_date=date(2025, 1, 12),
+                dedup_key="evt:wave:test:2",
+            ),
+        ]
+    )
+    session.commit()
+    session.close()
+
+    response = api.client.post(path, headers={"X-Admin-Token": "test-token"})
+    assert response.status_code == 200
+    assert response.json()["created"] == 1
+    assert len(api.client.get("/api/analytics/switch-waves").json()) == 1
+
+
+def test_analytics_wave_recompute_removes_stale_rows(api, monkeypatch):
+    monkeypatch.setenv("PARLAMENT_ADMIN_TOKEN", "test-token")
+    session = api.factory()
+    session.add(
+        SwitchWave(
+            label="stale",
+            start_date=date(1990, 1, 1),
+            end_date=date(1990, 1, 30),
+            switch_count=9,
+            chamber="deputies",
+            legislature="1990",
+        )
+    )
+    session.commit()
+    session.close()
+
+    response = api.client.post(
+        "/api/analytics/waves/recompute",
+        headers={"X-Admin-Token": "test-token"},
+    )
+    assert response.status_code == 200
+    assert response.json()["created"] == 0
+    assert api.client.get("/api/analytics/switch-waves").json() == []
 
 
 def test_movements_excludes_undated_events(api):
@@ -471,3 +693,77 @@ def test_movements_excludes_undated_events(api):
     response = api.client.get("/api/party/PSD/movements")
     assert response.status_code == 200
     assert all(row["event_date"] is not None for row in response.json())
+
+
+def test_party_movements_respects_as_of_date(api):
+    before_switch = api.client.get(
+        "/api/party/PNL/movements",
+        params={"as_of": "2025-01-09"},
+    )
+    on_switch_date = api.client.get(
+        "/api/party/PNL/movements",
+        params={"as_of": "2025-01-10"},
+    )
+    assert before_switch.status_code == 200
+    assert before_switch.json() == []
+    assert on_switch_date.status_code == 200
+    assert any(event["event_date"] == "2025-01-10" for event in on_switch_date.json())
+
+
+def test_party_profile_counts_only_active_legislature_and_dated_switches(api):
+    session = api.factory()
+    session.add_all(
+        [
+            Membership(
+                person_id=api.ids.p1,
+                org_id=api.ids.psd,
+                on_behalf_of_id=api.ids.psd_party,
+                chamber="deputies",
+                legislature="2020",
+                start_date=date(2020, 1, 1),
+                confidence="official_ledger",
+            ),
+        ]
+    )
+    session.commit()
+    session.close()
+
+    before_switch = api.client.get(
+        "/api/party/PSD",
+        params={"as_of": "2025-01-09"},
+    ).json()
+    on_switch_date = api.client.get(
+        "/api/party/PSD",
+        params={"as_of": "2025-01-10"},
+    ).json()
+    pnl_before_switch = api.client.get(
+        "/api/party/PNL",
+        params={"as_of": "2025-01-09"},
+    ).json()
+    pnl_on_switch_date = api.client.get(
+        "/api/party/PNL",
+        params={"as_of": "2025-01-10"},
+    ).json()
+
+    assert before_switch["current_members"] == 1
+    assert before_switch["switches_out"] == 0
+    assert on_switch_date["current_members"] == 1
+    assert on_switch_date["switches_out"] == 1
+    assert pnl_before_switch["switches_in"] == 0
+    assert pnl_on_switch_date["switches_in"] == 1
+
+
+def test_party_profile_reports_missing_switch_data_as_unavailable(api):
+    session = api.factory()
+    session.query(Event).filter(Event.type == "switch_party").delete()
+    session.commit()
+    session.close()
+
+    response = api.client.get(
+        "/api/party/PSD",
+        params={"as_of": "2025-01-09"},
+    )
+    assert response.status_code == 200
+    assert response.json()["switches_in"] is None
+    assert response.json()["switches_out"] is None
+    assert response.json()["net_change"] is None

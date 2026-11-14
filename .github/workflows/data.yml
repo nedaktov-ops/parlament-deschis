@@ -38,7 +38,7 @@ jobs:
         with:
           enable-cache: true
 
-      - run: uv sync --dev
+      - run: uv sync --locked
 
       - name: Cache the page archive
         uses: actions/cache@v4

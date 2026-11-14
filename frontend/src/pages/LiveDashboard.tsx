@@ -1,24 +1,21 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import { useRouter, useSearch } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import ChamberView from "../components/ChamberView";
 import LiveFeed from "../components/LiveFeed";
 import TimelineChart from "../components/TimelineChart";
-import DefectionSankey from "../components/DefectionSankey";
-import Search from "../components/Search";
 import TimeSlider from "../components/TimeSlider";
-import PersonDrawer from "../components/PersonDrawer";
+import { localISODate } from "../utils/date";
 
-const TODAY = new Date().toISOString().slice(0, 10);
+const TODAY = localISODate();
 
 export function LiveDashboard() {
-  const { t, i18n } = useTranslation();
-  const router = useRouter();
+  const { t } = useTranslation();
+  const navigate = useNavigate({ from: "/" });
   const search = useSearch({ from: "/", select: s => s.date });
-  const [asOf, setAsOf] = useState<string>((search as string) ?? TODAY);
-  const [personId, setPersonId] = useState<string | null>(null);
+  const asOf = search ?? TODAY;
 
   const meta = useQuery({ queryKey: ["meta"], queryFn: api.meta });
   const coverage = useQuery({ queryKey: ["coverage"], queryFn: api.coverage });
@@ -42,7 +39,7 @@ export function LiveDashboard() {
       (c) =>
         c.period_start !== null &&
         c.period_start <= clamped &&
-        clamped < (c.period_end ?? TODAY),
+        (c.period_end === null || clamped < c.period_end),
     );
     if (matched.length === 0) return undefined;
     const rank = (value: string) =>
@@ -58,24 +55,23 @@ export function LiveDashboard() {
       .sort((a, b) => (a.start ?? "").localeCompare(b.start ?? ""));
     return (
       legs.find(
-        (l) => (l.start ?? "") <= clamped && clamped < (l.end ?? TODAY),
+        (l) =>
+          (l.start ?? "") <= clamped &&
+          (l.end === null || clamped < l.end),
       )?.label ?? null
     );
   }, [meta.data, clamped]);
 
   const changeDate = (iso: string) => {
-    setAsOf(iso);
-    router.navigate({ search: { date: iso } as any, replace: true });
+    navigate({ search: { date: iso }, replace: true });
   };
 
   const openPerson = (id: string) => {
-    setPersonId(id);
-    router.navigate({ to: "/person/$id", params: { id }, search: { date: clamped } as any, replace: false });
-  };
-
-  const closePerson = () => {
-    setPersonId(null);
-    router.navigate({ to: "/", search: { date: clamped } as any, replace: false });
+    navigate({
+      to: "/person/$id",
+      params: { id },
+      search: { date: clamped },
+    });
   };
 
   function completenessClass(value: string): string {
@@ -85,46 +81,42 @@ export function LiveDashboard() {
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-slate-700/60 bg-panel/50 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex-1">
-            <h1 className="text-xl font-bold tracking-tight">{t("title")}</h1>
-            <p className="text-xs text-slate-400">{t("subtitle")}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Search onSelect={openPerson} />
-            <button
-              className="btn bg-slate-700 hover:bg-slate-600"
-              disabled
-            >
-              {t("about")}
-            </button>
-            <button
-              className="btn bg-slate-700 hover:bg-slate-600 uppercase"
-              onClick={() => i18n.changeLanguage(i18n.language === "ro" ? "en" : "ro")}
-              title="RO / EN"
-            >
-              {i18n.language === "ro" ? "EN" : "RO"}
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-2xl font-bold">{t("overview")}</h2>
+        <p className="text-sm text-slate-400 mt-1">{t("dashboardIntro")}</p>
+      </div>
+      <div className="space-y-4">
+        {meta.isError && (
+          <div className="text-rose-200 text-sm" role="alert">
+            {t("metaLoadError")}
+            <button type="button" className="ml-3 underline" onClick={() => meta.refetch()}>
+              {t("traseismRetry")}
             </button>
           </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-5 space-y-4">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-slate-500">{t("coverageNote")}:</span>
-          <span className="bg-slate-800 rounded px-2 py-0.5 text-slate-300">
-            {currentCoverage?.legislature ?? selectedLegislature ?? t("currentTerm")}
-          </span>
-          <span
-            className={`rounded px-2 py-0.5 ${completenessClass(
-              currentCoverage?.completeness ?? "none",
-            )}`}
-          >
-            {t(currentCoverage?.completeness ?? "none")}
-          </span>
-        </div>
+        )}
+        {coverage.isError ? (
+          <div className="text-rose-200 text-sm" role="alert">
+            {t("coverageLoadError")}
+            <button type="button" className="ml-3 underline" onClick={() => coverage.refetch()}>
+              {t("traseismRetry")}
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-slate-300">{t("coverageNote")}:</span>
+            <span className="bg-slate-800 rounded px-2 py-0.5 text-slate-200">
+              {currentCoverage?.legislature ?? selectedLegislature ?? t("currentTerm")}
+            </span>
+            <span
+              className={`rounded px-2 py-0.5 ${completenessClass(
+                currentCoverage?.completeness ?? "none",
+              )}`}
+            >
+              {t(currentCoverage?.completeness ?? "none")}
+            </span>
+          </div>
+        )}
 
         <TimeSlider value={clamped} min={min} max={TODAY} onChange={changeDate} ticks={ticks} />
 
@@ -133,14 +125,11 @@ export function LiveDashboard() {
           <ChamberView chamber="senate" asOf={clamped} onSelect={openPerson} />
           <LiveFeed onSelect={openPerson} />
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <TimelineChart from={min} to={TODAY} groups={meta.data?.groups} />
-          <DefectionSankey />
-        </div>
-      </main>
-
-      <PersonDrawer personId={personId} onClose={closePerson} />
+      <div className="grid grid-cols-1 gap-4">
+        <TimelineChart from={min} to={clamped} groups={meta.data?.groups} />
+      </div>
     </div>
   );
 }

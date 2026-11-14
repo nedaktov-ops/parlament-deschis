@@ -50,8 +50,11 @@ export function PersonDeepDive() {
 
   if (person.isError || !p) {
     return (
-      <div className="card p-4">
-        <div className="text-rose-400 text-sm py-8">{t("noData")}</div>
+      <div className="card p-4" role="alert">
+        <p className="text-rose-200 text-sm py-4">{t("personLoadError")}</p>
+        <button type="button" className="btn bg-slate-700 hover:bg-slate-600" onClick={() => person.refetch()}>
+          {t("traseismRetry")}
+        </button>
       </div>
     );
   }

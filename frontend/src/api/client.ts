@@ -113,10 +113,10 @@ export interface CoverageItem {
 export interface CoverageRow extends CoverageItem {
   persons: number;
   total_memberships: number;
-  dated_pct: number;
-  sourced_pct: number;
+  dated_pct: number | null;
+  sourced_pct: number | null;
   total_switches: number;
-  sourced_switches_pct: number;
+  sourced_switches_pct: number | null;
   last_refresh: string | null;
 }
 
@@ -127,7 +127,27 @@ export interface MetaResponse {
 
 export interface HealthResponse {
   status: string;
-  sources: Record<string, unknown>;
+  database: {
+    status: string;
+    persons: number;
+    memberships: number;
+  };
+  sources: Record<
+    string,
+    string | {
+      status?: string;
+      finished_at?: string | null;
+      rows?: number;
+      error?: string | null;
+    }
+  >;
+}
+
+export interface MovementFilters {
+  chamber?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
 }
 
 export interface PersonHistoryEntry {
@@ -201,8 +221,23 @@ export interface PartyTimelineResponse {
 export interface CommitteeResponse {
   id: string;
   name: string;
-  chamber: string;
+  chamber: string | null;
   party: OrgBrief | null;
+}
+
+export interface CrossChamberPerson {
+  person_id: string;
+  name: string;
+  chambers: Array<"deputies" | "senate">;
+  deputies: string[];
+  senate: string[];
+}
+
+export interface CrossChamberResponse {
+  status: string;
+  as_of: string;
+  count: number;
+  data: CrossChamberPerson[];
 }
 
 const BASE = "/api";
@@ -210,7 +245,20 @@ const BASE = "/api";
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
   if (!res.ok) {
-    throw new Error(`API ${res.status}: ${path}`);
+    let message = `API ${res.status}: ${path}`;
+    if (res.headers.get("content-type")?.includes("json")) {
+      const body: unknown = await res.json();
+      if (typeof body === "object" && body !== null && !Array.isArray(body)) {
+        const detail =
+          "detail" in body && typeof body.detail === "string"
+            ? body.detail
+            : "title" in body && typeof body.title === "string"
+              ? body.title
+              : null;
+        if (detail) message = `API ${res.status}: ${detail}`;
+      }
+    }
+    throw new Error(message);
   }
   return res.json() as Promise<T>;
 }
@@ -227,7 +275,7 @@ export const api = {
     get<PersonSummary[]>(
       `/persons?q=${encodeURIComponent(q)}${chamber ? `&chamber=${chamber}` : ""}`,
     ),
-  person: (id: string) => get<PersonDetail>(`/persons/${id}`),
+  person: (id: string) => get<PersonDetail>(`/persons/${encodeURIComponent(id)}`),
   personHistory: (id: string) =>
     get<PersonHistoryResponse>(`/persons/${encodeURIComponent(id)}/history`),
   partyProfile: (shortName: string, asOf: string) =>
@@ -237,8 +285,18 @@ export const api = {
   partyTimeline: (shortName: string, from: string, to: string) =>
     get<PartyTimelineResponse>(`/party/${encodeURIComponent(shortName)}/timeline?from=${from}&to=${to}`),
   committees: (asOf: string) => get<CommitteeResponse[]>(`/committees?as_of=${asOf}`),
-  movements: (chamber?: string) =>
-    get<EventItem[]>(`/movements${chamber ? `?chamber=${chamber}` : ""}`),
+  crossChamber: (asOf: string) =>
+    get<CrossChamberResponse>(`/analytics/cross-chamber?as_of=${asOf}`),
+  movements: (filters: MovementFilters | string = {}) => {
+    const options = typeof filters === "string" ? { chamber: filters } : filters;
+    const params = new URLSearchParams();
+    if (options.chamber) params.set("chamber", options.chamber);
+    if (options.from) params.set("from", options.from);
+    if (options.to) params.set("to", options.to);
+    if (options.limit !== undefined) params.set("limit", String(options.limit));
+    const query = params.toString();
+    return get<EventItem[]>(`/movements${query ? `?${query}` : ""}`);
+  },
   recentEvents: (limit = 50) => get<EventItem[]>(`/events/recent?limit=${limit}`),
   coverage: () => get<CoverageItem[]>("/coverage"),
   coverage_detailed: () => get<CoverageRow[]>("/coverage/detailed"),
