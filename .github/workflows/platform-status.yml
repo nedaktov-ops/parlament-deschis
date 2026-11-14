@@ -1,0 +1,113 @@
+name: Platform status
+
+# Read-only proof that the Vercel and Render credentials work.
+# Dispatched manually from main only; it never changes platform state.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-status
+  cancel-in-progress: false
+
+jobs:
+  status:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check configuration
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+        run: |
+          set -euo pipefail
+          : "${VERCEL_TOKEN:?VERCEL_TOKEN secret is not set}"
+          : "${VERCEL_PROJECT_ID:?VERCEL_PROJECT_ID variable is not set}"
+          : "${RENDER_API_KEY:?RENDER_API_KEY secret is not set}"
+          : "${RENDER_SERVICE_ID:?RENDER_SERVICE_ID variable is not set}"
+          echo "All required secrets and variables are present."
+
+      - name: Vercel production deployments
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          VERCEL_TEAM_ID: ${{ vars.VERCEL_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          query="projectId=${VERCEL_PROJECT_ID}&target=production&limit=5"
+          if [ -n "${VERCEL_TEAM_ID:-}" ]; then
+            query="${query}&teamId=${VERCEL_TEAM_ID}"
+          fi
+
+          code=$(curl -sS -o /tmp/vercel-deployments.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            "https://api.vercel.com/v7/deployments?${query}")
+          echo "Vercel API HTTP ${code}"
+          if [ "${code}" != "200" ]; then
+            jq -r '.error.message // .' /tmp/vercel-deployments.json || true
+            exit 1
+          fi
+          jq -e '.deployments | length > 0' /tmp/vercel-deployments.json >/dev/null
+
+          {
+            echo "### Vercel production"
+            echo
+            echo "| Deployment | State | Created | Commit |"
+            echo "|---|---|---|---|"
+            jq -r '.deployments[] | "| \(.url // .uid) | \(.state) | \((.createdAt // 0) / 1000 | todate) | \(.meta.githubCommitSha // "-" | .[0:12]) |"' \
+              /tmp/vercel-deployments.json
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Render service and deploys
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+        run: |
+          set -euo pipefail
+
+          code=$(curl -sS -o /tmp/render-service.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            "https://api.render.com/v1/services/${RENDER_SERVICE_ID}")
+          echo "Render service API HTTP ${code}"
+          if [ "${code}" != "200" ]; then
+            jq -r '.message // .' /tmp/render-service.json || true
+            exit 1
+          fi
+
+          code=$(curl -sS -o /tmp/render-deploys.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys?limit=5")
+          echo "Render deploys API HTTP ${code}"
+          if [ "${code}" != "200" ]; then
+            jq -r '.message // .' /tmp/render-deploys.json || true
+            exit 1
+          fi
+          jq -e 'length > 0' /tmp/render-deploys.json >/dev/null
+
+          {
+            echo "### Render service"
+            echo
+            jq -r '"`\(.name)` · `\(.type)` · autoDeploy=\(.autoDeploy) · trigger=\(.autoDeployTrigger // "-") · branch=\(.branch // "-") · suspended=\(.suspended)"' \
+              /tmp/render-service.json
+            echo
+            echo "| Deploy | Status | Commit | Created | Finished |"
+            echo "|---|---|---|---|---|"
+            jq -r '.[] | .deploy | "| \(.id) | \(.status) | \(.commit.id // "-" | .[0:12]) | \(.createdAt // "-") | \(.finishedAt // "-") |"' \
+              /tmp/render-deploys.json
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Public endpoints
+        run: |
+          set -euo pipefail
+          vercel=$(curl -sS -o /dev/null -w '%{http_code}' https://parlament-deschis.vercel.app)
+          render=$(curl -sS -o /tmp/render-health.json -w '%{http_code}' https://parlament-deschis.onrender.com/api/health)
+          echo "Vercel frontend HTTP ${vercel}"
+          echo "Render health HTTP ${render}"
+          jq -r '"release=\(.release // .dataset_release // "-") status=\(.status // "-")"' /tmp/render-health.json || cat /tmp/render-health.json
+          test "${vercel}" = "200"
+          test "${render}" = "200"
