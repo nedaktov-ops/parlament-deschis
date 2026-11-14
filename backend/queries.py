@@ -99,6 +99,7 @@ def serialize_event(session: Session, e: Event) -> dict:
         "type": e.type,
         "person": {"id": person.id, "name": person.canonical_name} if person else None,
         "chamber": e.chamber,
+        "legislature": e.legislature,
         "from_org": _org_brief(session, e.from_org_id),
         "to_org": _org_brief(session, e.to_org_id),
         "event_date": e.event_date.isoformat() if e.event_date else None,

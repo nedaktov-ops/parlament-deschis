@@ -48,6 +48,7 @@ export interface EventItem {
   type: string;
   person: { id: string; name: string } | null;
   chamber: string | null;
+  legislature: string | null;
   from_org: OrgBrief | null;
   to_org: OrgBrief | null;
   event_date: string | null;

@@ -129,6 +129,8 @@ const resources = {
       traseismRepeatSwitchers: "Parlamentari cu mai multe schimbări",
       traseismMaxSwitches: "Maxim de schimbări (un singur parlamentar)",
       traseismMedianMonths: "Mediană de luni între două schimbări",
+      traseismFlowDesc:
+        "Fluxul de schimbări între grupuri parlamentare. Lățimea fiecărei legături este proporțională cu numărul de parlamentari care au trecut de la un grup la altul. Ambele direcții sunt afișate, inclusiv fluxurile inversate.",
       traseismMatrixTitle: "Matricea de la → la",
       traseismMatrixDesc:
         "Numărul de schimbări pentru fiecare pereche de grupuri. Zerourile sunt afișate explicit.",
@@ -310,6 +312,8 @@ const resources = {
       traseismRepeatSwitchers: "Members with more than one switch",
       traseismMaxSwitches: "Most switches by a single member",
       traseismMedianMonths: "Median months between two switches",
+      traseismFlowDesc:
+        "Flow of switches between parliamentary groups. The width of each link is proportional to the number of members who moved from one group to another. Both directions are shown, including reversed flows.",
       traseismMatrixTitle: "From → to matrix",
       traseismMatrixDesc:
         "The number of switches for every pair of groups. Zeroes are shown explicitly.",
