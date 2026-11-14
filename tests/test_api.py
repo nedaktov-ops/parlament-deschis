@@ -31,72 +31,174 @@ from pipeline.db import (
 
 
 def _seed(session) -> SimpleNamespace:
-    psd = Organization(classification="group", name="Grupul PSD", short_name="PSD",
-                       normalized_name="grupul psd", chamber="deputies", color="#E63946")
-    pnl = Organization(classification="group", name="Grupul PNL", short_name="PNL",
-                       normalized_name="grupul pnl", chamber="deputies", color="#F4C430")
-    psd_party = Organization(classification="party", name="Partidul Social Democrat",
-                             short_name="PSD", normalized_name="partidul social democrat",
-                             chamber="deputies")
-    pnl_party = Organization(classification="party", name="Partidul Național Liberal",
-                             short_name="PNL", normalized_name="partidul national liberal",
-                             chamber="deputies")
+    psd = Organization(
+        classification="group",
+        name="Grupul PSD",
+        short_name="PSD",
+        normalized_name="grupul psd",
+        chamber="deputies",
+        color="#E63946",
+    )
+    pnl = Organization(
+        classification="group",
+        name="Grupul PNL",
+        short_name="PNL",
+        normalized_name="grupul pnl",
+        chamber="deputies",
+        color="#F4C430",
+    )
+    psd_party = Organization(
+        classification="party",
+        name="Partidul Social Democrat",
+        short_name="PSD",
+        normalized_name="partidul social democrat",
+        chamber="deputies",
+    )
+    pnl_party = Organization(
+        classification="party",
+        name="Partidul Național Liberal",
+        short_name="PNL",
+        normalized_name="partidul national liberal",
+        chamber="deputies",
+    )
     session.add_all([psd, pnl, psd_party, pnl_party])
     session.flush()
 
-    p1 = Person(canonical_name="Ion Ștefan Popescu", normalized_name="ion stefan popescu",
-                sort_key="popescu ion", birth_date=date(1980, 1, 2), wikidata_qid="Q100",
-                match_status="auto")
-    p2 = Person(canonical_name="Maria Ionescu", normalized_name="maria ionescu",
-                sort_key="ionescu maria", match_status="unmatched")
+    p1 = Person(
+        canonical_name="Ion Ștefan Popescu",
+        normalized_name="ion stefan popescu",
+        sort_key="popescu ion",
+        birth_date=date(1980, 1, 2),
+        wikidata_qid="Q100",
+        match_status="auto",
+    )
+    p2 = Person(
+        canonical_name="Maria Ionescu",
+        normalized_name="maria ionescu",
+        sort_key="ionescu maria",
+        match_status="unmatched",
+    )
     session.add_all([p1, p2])
     session.flush()
 
-    session.add_all([
-        Membership(person_id=p1.id, org_id=psd.id, on_behalf_of_id=psd_party.id,
-                   chamber="deputies", legislature="2024", role="member",
-                   start_date=date(2024, 1, 1), end_date=date(2024, 6, 1),
-                   confidence="official_ledger", source_url="https://www.cdep.ro/m1"),
-        Membership(person_id=p1.id, org_id=psd.id, on_behalf_of_id=psd_party.id,
-                   chamber="deputies", legislature="2024", role="leader",
-                   start_date=date(2024, 6, 1), end_date=date(2024, 12, 1),
-                   confidence="official_ledger", source_url="https://www.cdep.ro/m2"),
-        Membership(person_id=p1.id, org_id=pnl.id, on_behalf_of_id=pnl_party.id,
-                   chamber="deputies", legislature="2024", role="member",
-                   start_date=date(2024, 12, 1), confidence="official_ledger",
-                   source_url="https://www.cdep.ro/m3"),
-        Membership(person_id=p2.id, org_id=psd.id, on_behalf_of_id=psd_party.id,
-                   chamber="deputies", legislature="2024", role="member",
-                   start_date=date(2024, 12, 21), confidence="official_profile",
-                   source_url="https://www.cdep.ro/m4"),
-    ])
-    session.add_all([
-        Event(type="switch_group", person_id=p1.id, chamber="deputies",
-              from_org_id=psd.id, to_org_id=pnl.id, event_date=date(2024, 12, 1),
-              reason="CHANGED_PARTY", dedup_key="evt:switch:group:p1"),
-        Event(type="switch_party", person_id=p2.id, chamber="deputies",
-              from_org_id=psd_party.id, to_org_id=pnl_party.id,
-              event_date=date(2025, 1, 10), dedup_key="evt:switch:party:p2"),
-    ])
-    session.add_all([
-        KeyEvent(type="legislature", chamber="deputies", label="2024",
-                 start_date=date(2024, 12, 21), end_date=None),
-        KeyEvent(type="legislature", chamber="senate", label="2024",
-                 start_date=date(2024, 12, 20), end_date=None),
-    ])
-    session.add_all([
-        PipelineRun(source="cdep", status="SUCCESS",
-                    started_at=datetime(2026, 11, 12, 8, 0),
-                    finished_at=datetime(2026, 11, 12, 8, 1), rows=42),
-        PipelineRun(source="senat", status="FAILURE",
-                    started_at=datetime(2026, 11, 12, 8, 0),
-                    finished_at=datetime(2026, 11, 12, 8, 0, 30),
-                    rows=0, error="boom"),
-    ])
+    session.add_all(
+        [
+            Membership(
+                person_id=p1.id,
+                org_id=psd.id,
+                on_behalf_of_id=psd_party.id,
+                chamber="deputies",
+                legislature="2024",
+                role="member",
+                start_date=date(2024, 1, 1),
+                end_date=date(2024, 6, 1),
+                confidence="official_ledger",
+                source_url="https://www.cdep.ro/m1",
+            ),
+            Membership(
+                person_id=p1.id,
+                org_id=psd.id,
+                on_behalf_of_id=psd_party.id,
+                chamber="deputies",
+                legislature="2024",
+                role="leader",
+                start_date=date(2024, 6, 1),
+                end_date=date(2024, 12, 1),
+                confidence="official_ledger",
+                source_url="https://www.cdep.ro/m2",
+            ),
+            Membership(
+                person_id=p1.id,
+                org_id=pnl.id,
+                on_behalf_of_id=pnl_party.id,
+                chamber="deputies",
+                legislature="2024",
+                role="member",
+                start_date=date(2024, 12, 1),
+                confidence="official_ledger",
+                source_url="https://www.cdep.ro/m3",
+            ),
+            Membership(
+                person_id=p2.id,
+                org_id=psd.id,
+                on_behalf_of_id=psd_party.id,
+                chamber="deputies",
+                legislature="2024",
+                role="member",
+                start_date=date(2024, 12, 21),
+                confidence="official_profile",
+                source_url="https://www.cdep.ro/m4",
+            ),
+        ]
+    )
+    session.add_all(
+        [
+            Event(
+                type="switch_group",
+                person_id=p1.id,
+                chamber="deputies",
+                from_org_id=psd.id,
+                to_org_id=pnl.id,
+                event_date=date(2024, 12, 1),
+                reason="CHANGED_PARTY",
+                dedup_key="evt:switch:group:p1",
+            ),
+            Event(
+                type="switch_party",
+                person_id=p2.id,
+                chamber="deputies",
+                from_org_id=psd_party.id,
+                to_org_id=pnl_party.id,
+                event_date=date(2025, 1, 10),
+                dedup_key="evt:switch:party:p2",
+            ),
+        ]
+    )
+    session.add_all(
+        [
+            KeyEvent(
+                type="legislature",
+                chamber="deputies",
+                label="2024",
+                start_date=date(2024, 12, 21),
+                end_date=None,
+            ),
+            KeyEvent(
+                type="legislature",
+                chamber="senate",
+                label="2024",
+                start_date=date(2024, 12, 20),
+                end_date=None,
+            ),
+        ]
+    )
+    session.add_all(
+        [
+            PipelineRun(
+                source="cdep",
+                status="SUCCESS",
+                started_at=datetime(2026, 11, 12, 8, 0),
+                finished_at=datetime(2026, 11, 12, 8, 1),
+                rows=42,
+            ),
+            PipelineRun(
+                source="senat",
+                status="FAILURE",
+                started_at=datetime(2026, 11, 12, 8, 0),
+                finished_at=datetime(2026, 11, 12, 8, 0, 30),
+                rows=0,
+                error="boom",
+            ),
+        ]
+    )
     session.commit()
     return SimpleNamespace(
-        p1=p1.id, p2=p2.id, psd=psd.id, pnl=pnl.id,
-        psd_party=psd_party.id, pnl_party=pnl_party.id,
+        p1=p1.id,
+        p2=p2.id,
+        psd=psd.id,
+        pnl=pnl.id,
+        psd_party=psd_party.id,
+        pnl_party=pnl_party.id,
     )
 
 
@@ -135,9 +237,7 @@ def test_meta(api):
 
 
 def test_chamber_composition(api):
-    response = api.client.get(
-        "/api/chamber", params={"chamber": "deputies", "as_of": "2025-01-01"}
-    )
+    response = api.client.get("/api/chamber", params={"chamber": "deputies", "as_of": "2025-01-01"})
     assert response.status_code == 200
     body = response.json()
     assert body["chamber"] == "deputies"
@@ -177,9 +277,7 @@ def test_person_history_derived_and_deduped(api):
     assert ("role", "2024-06-01", "role_change") in rows
     # Newest first.
     assert history[0]["date"] == "2024-12-01"
-    assert [h["date"] for h in history] == sorted(
-        (h["date"] for h in history), reverse=True
-    )
+    assert [h["date"] for h in history] == sorted((h["date"] for h in history), reverse=True)
     # The explicit Event is covered by the derived row -> not duplicated.
     group_rows = [h for h in history if h["field"] == "group"]
     assert len(group_rows) == 1
@@ -239,8 +337,11 @@ def test_coverage_derived(api):
 
 def test_coverage_persisted_rows_enriched(api):
     session = api.factory()
-    session.add(Coverage(chamber="deputies", legislature="2024",
-                         completeness="partial", note="Persisted row"))
+    session.add(
+        Coverage(
+            chamber="deputies", legislature="2024", completeness="partial", note="Persisted row"
+        )
+    )
     session.commit()
     session.close()
 
@@ -290,18 +391,83 @@ def test_about(api):
 def test_admin_poll_disabled_when_token_unset(api):
     response = api.client.post("/api/admin/poll")
     assert response.status_code == 503
-    assert response.json()["detail"] == (
-        "admin polling disabled (set PARLAMENT_ADMIN_TOKEN)"
-    )
+    assert response.json()["detail"] == ("admin polling disabled (set PARLAMENT_ADMIN_TOKEN)")
 
 
 def test_admin_poll_rejects_wrong_token(api, monkeypatch):
     monkeypatch.setenv("PARLAMENT_ADMIN_TOKEN", "s3cret")
-    response = api.client.post(
-        "/api/admin/poll", headers={"X-Admin-Token": "wrong-token"}
-    )
+    response = api.client.post("/api/admin/poll", headers={"X-Admin-Token": "wrong-token"})
     assert response.status_code == 401
     assert response.json()["detail"] == "invalid admin token"
 
     missing = api.client.post("/api/admin/poll")
     assert missing.status_code == 401
+
+
+# --- Regressions -----------------------------------------------------------
+
+
+def test_party_not_found_returns_404(api):
+    """Regression: HTTPException was referenced without being imported, so the
+    missing-party path returned 500 instead of 404."""
+    paths = [
+        "/api/party/NOPE",
+        "/api/party/NOPE/movements",
+        "/api/party/NOPE/timeline?from=2024-01-01&to=2025-01-01",
+    ]
+    for path in paths:
+        response = api.client.get(path)
+        assert response.status_code == 404, (path, response.status_code, response.text)
+
+
+def test_committees_endpoint_returns_empty_list(api):
+    response = api.client.get("/api/committees", params={"as_of": "2025-01-01"})
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_party_cohesion_handles_group_target(api):
+    """Regression: the code read `Organization.on_behalf_of_id`, a column that
+    lives on Membership. A switch_party event whose target is a group crashed
+    the endpoint with AttributeError."""
+    session = api.factory()
+    session.add(
+        Event(
+            type="switch_party",
+            person_id=api.ids.p2,
+            chamber="deputies",
+            from_org_id=api.ids.pnl_party,
+            to_org_id=api.ids.psd,  # a group, not a party
+            event_date=date(2025, 2, 1),
+            dedup_key="evt:switch:party:group-target",
+        )
+    )
+    session.commit()
+    session.close()
+
+    response = api.client.get("/api/analytics/party-cohesion")
+    assert response.status_code == 200
+    assert isinstance(response.json().get("data"), list)
+
+
+def test_movements_excludes_undated_events(api):
+    """Regression: `Event.event_date is not None` was a Python identity test
+    (always True), so the SQL date filter was silently dropped."""
+    session = api.factory()
+    session.add(
+        Event(
+            type="switch_party",
+            person_id=api.ids.p1,
+            chamber="deputies",
+            from_org_id=api.ids.psd_party,
+            to_org_id=api.ids.pnl_party,
+            event_date=None,
+            dedup_key="evt:switch:party:undated",
+        )
+    )
+    session.commit()
+    session.close()
+
+    response = api.client.get("/api/party/PSD/movements")
+    assert response.status_code == 200
+    assert all(row["event_date"] is not None for row in response.json())

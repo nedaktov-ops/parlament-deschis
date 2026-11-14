@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
+from fastapi import HTTPException
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
@@ -29,8 +30,9 @@ def _label(org: Organization | None) -> str | None:
     return org.short_name or org.name
 
 
-def _snapshot_url(session: Session, snapshot_hash: str | None,
-                  source_url: str | None = None) -> str | None:
+def _snapshot_url(
+    session: Session, snapshot_hash: str | None, source_url: str | None = None
+) -> str | None:
     """Resolve an archived-copy URL for an evidence row.
 
     Prefer the explicit snapshot checksum; fall back to matching a fragment by
@@ -45,8 +47,10 @@ def _snapshot_url(session: Session, snapshot_hash: str | None,
         ).first()
     if frag is None and source_url:
         frag = session.scalars(
-            select(Fragment).where(Fragment.source_url == source_url)
-            .order_by(Fragment.timestamp.desc()).limit(1)
+            select(Fragment)
+            .where(Fragment.source_url == source_url)
+            .order_by(Fragment.timestamp.desc())
+            .limit(1)
         ).first()
     if frag and frag.snapshot_path:
         # data/snapshots/<source>/<hash>.html -> /snapshots/<source>/<hash>.html
@@ -62,8 +66,11 @@ def _org_brief(session: Session, org_id: str | None) -> dict | None:
     if not o:
         return None
     return {
-        "id": o.id, "name": o.name, "short_name": o.short_name,
-        "classification": o.classification, "color": o.color,
+        "id": o.id,
+        "name": o.name,
+        "short_name": o.short_name,
+        "classification": o.classification,
+        "color": o.color,
         "localised_labels": o.localised_labels,
     }
 
@@ -88,15 +95,18 @@ def serialize_membership(session: Session, m: Membership) -> dict:
 def serialize_event(session: Session, e: Event) -> dict:
     person = session.get(Person, e.person_id) if e.person_id else None
     return {
-        "id": e.id, "type": e.type,
+        "id": e.id,
+        "type": e.type,
         "person": {"id": person.id, "name": person.canonical_name} if person else None,
         "chamber": e.chamber,
         "from_org": _org_brief(session, e.from_org_id),
         "to_org": _org_brief(session, e.to_org_id),
         "event_date": e.event_date.isoformat() if e.event_date else None,
         "precision": e.precision,
-        "reason": e.reason, "confidence": e.confidence,
-        "summary_ro": e.summary_ro, "summary_en": e.summary_en,
+        "reason": e.reason,
+        "confidence": e.confidence,
+        "summary_ro": e.summary_ro,
+        "summary_en": e.summary_en,
         "detected_at": e.detected_at.isoformat() if e.detected_at else None,
     }
 
@@ -106,16 +116,22 @@ def get_chamber(session: Session, chamber: str, as_of: date) -> dict:
     groups = []
     for short, bucket in comp.items():
         org = session.get(Organization, bucket["org_id"])
-        groups.append({
-            "short_name": short,
-            "org": _org_brief(session, bucket["org_id"]),
-            "count": bucket["count"],
-            "members": bucket["members"],
-            "color": org.color if org else None,
-        })
+        groups.append(
+            {
+                "short_name": short,
+                "org": _org_brief(session, bucket["org_id"]),
+                "count": bucket["count"],
+                "members": bucket["members"],
+                "color": org.color if org else None,
+            }
+        )
     groups.sort(key=lambda g: -g["count"])
-    return {"chamber": chamber, "as_of": as_of.isoformat(),
-            "total": sum(g["count"] for g in groups), "groups": groups}
+    return {
+        "chamber": chamber,
+        "as_of": as_of.isoformat(),
+        "total": sum(g["count"] for g in groups),
+        "groups": groups,
+    }
 
 
 def _daterange(start: date, end: date, step_days: int):
@@ -125,8 +141,9 @@ def _daterange(start: date, end: date, step_days: int):
         d += timedelta(days=step_days)
 
 
-def get_timeline(session: Session, chamber: str, start: date, end: date,
-                 step_days: int = 30) -> dict:
+def get_timeline(
+    session: Session, chamber: str, start: date, end: date, step_days: int = 30
+) -> dict:
     dates = list(_daterange(start, end, step_days))
     if dates and dates[-1] != end:
         dates.append(end)
@@ -141,10 +158,14 @@ def get_timeline(session: Session, chamber: str, start: date, end: date,
             series[short][len(totals) - 1] = comp.get(short, {"count": 0})["count"]
     # Switch events in range.
     evs = session.scalars(
-        select(Event).where(
-            Event.chamber == chamber, Event.type == "switch_group",
-            Event.event_date >= start, Event.event_date <= end,
-        ).order_by(Event.event_date)
+        select(Event)
+        .where(
+            Event.chamber == chamber,
+            Event.type == "switch_group",
+            Event.event_date >= start,
+            Event.event_date <= end,
+        )
+        .order_by(Event.event_date)
     ).all()
     return {
         "chamber": chamber,
@@ -155,30 +176,35 @@ def get_timeline(session: Session, chamber: str, start: date, end: date,
     }
 
 
-def search_persons(session: Session, q: str | None, chamber: str | None,
-                   limit: int = 50) -> list[dict]:
+def search_persons(
+    session: Session, q: str | None, chamber: str | None, limit: int = 50
+) -> list[dict]:
     stmt = select(Person)
     if q:
         like = f"%{q.lower()}%"
-        stmt = stmt.where(or_(
-            Person.normalized_name.like(like),
-            Person.canonical_name.like(like),
-        ))
+        stmt = stmt.where(
+            or_(
+                Person.normalized_name.like(like),
+                Person.canonical_name.like(like),
+            )
+        )
     people = list(session.scalars(stmt.limit(limit)))
     out = []
     for p in people:
-        ms = list(session.scalars(
-            select(Membership).where(Membership.person_id == p.id)
-        ))
+        ms = list(session.scalars(select(Membership).where(Membership.person_id == p.id)))
         chambers = sorted({m.chamber for m in ms})
         if chamber and chamber not in chambers:
             continue
-        out.append({
-            "id": p.id, "name": p.canonical_name, "birth_date":
-            p.birth_date.isoformat() if p.birth_date else None,
-            "wikidata_qid": p.wikidata_qid, "chambers": chambers,
-            "match_status": p.match_status,
-        })
+        out.append(
+            {
+                "id": p.id,
+                "name": p.canonical_name,
+                "birth_date": p.birth_date.isoformat() if p.birth_date else None,
+                "wikidata_qid": p.wikidata_qid,
+                "chambers": chambers,
+                "match_status": p.match_status,
+            }
+        )
     return out
 
 
@@ -186,32 +212,46 @@ def get_person(session: Session, person_id: str) -> dict | None:
     p = session.get(Person, person_id)
     if not p:
         return None
-    ms = list(session.scalars(
-        select(Membership).where(Membership.person_id == person_id)
-        .order_by(Membership.start_date)
-    ))
-    events = list(session.scalars(
-        select(Event).where(Event.person_id == person_id).order_by(Event.event_date)
-    ))
-    idents = list(session.scalars(
-        select(PersonIdentifier).where(PersonIdentifier.person_id == person_id)
-    ))
+    ms = list(
+        session.scalars(
+            select(Membership)
+            .where(Membership.person_id == person_id)
+            .order_by(Membership.start_date)
+        )
+    )
+    events = list(
+        session.scalars(
+            select(Event).where(Event.person_id == person_id).order_by(Event.event_date)
+        )
+    )
+    idents = list(
+        session.scalars(select(PersonIdentifier).where(PersonIdentifier.person_id == person_id))
+    )
     evidence = []
     for m in ms:
         for ev in session.scalars(select(Evidence).where(Evidence.membership_id == m.id)):
-            evidence.append({
-                "id": ev.id, "membership_id": m.id, "type": ev.type,
-                "source_url": ev.source_url, "snapshot_hash": ev.snapshot_hash,
-                "snapshot_url": _snapshot_url(session, ev.snapshot_hash, ev.source_url),
-                "note": ev.note,
-                "observed_at": ev.observed_at.isoformat() if ev.observed_at else None,
-            })
+            evidence.append(
+                {
+                    "id": ev.id,
+                    "membership_id": m.id,
+                    "type": ev.type,
+                    "source_url": ev.source_url,
+                    "snapshot_hash": ev.snapshot_hash,
+                    "snapshot_url": _snapshot_url(session, ev.snapshot_hash, ev.source_url),
+                    "note": ev.note,
+                    "observed_at": ev.observed_at.isoformat() if ev.observed_at else None,
+                }
+            )
     return {
-        "id": p.id, "name": p.canonical_name,
+        "id": p.id,
+        "name": p.canonical_name,
         "birth_date": p.birth_date.isoformat() if p.birth_date else None,
-        "wikidata_qid": p.wikidata_qid, "match_status": p.match_status,
-        "identifiers": [{"scheme": i.scheme, "identifier": i.identifier,
-                         "legislature": i.legislature} for i in idents],
+        "wikidata_qid": p.wikidata_qid,
+        "match_status": p.match_status,
+        "identifiers": [
+            {"scheme": i.scheme, "identifier": i.identifier, "legislature": i.legislature}
+            for i in idents
+        ],
         "memberships": [serialize_membership(session, m) for m in ms],
         "events": [serialize_event(session, e) for e in events],
         "evidence": evidence,
@@ -245,23 +285,24 @@ def get_person_history(session: Session, person_id: str) -> dict | None:
         )
     ).all()
 
-    events = list(session.scalars(
-        select(Event)
-        .where(
-            Event.person_id == person_id,
-            Event.type.in_(["switch_group", "switch_party"]),
+    events = list(
+        session.scalars(
+            select(Event)
+            .where(
+                Event.person_id == person_id,
+                Event.type.in_(["switch_group", "switch_party"]),
+            )
+            .order_by(Event.event_date.is_(None), Event.event_date, Event.id)
         )
-        .order_by(Event.event_date.is_(None), Event.event_date, Event.id)
-    ))
+    )
 
     org_ids = {m.on_behalf_of_id for m, _ in rows if m.on_behalf_of_id}
     org_ids.update(e.from_org_id for e in events if e.from_org_id)
     org_ids.update(e.to_org_id for e in events if e.to_org_id)
     orgs = (
-        {o.id: o for o in session.scalars(
-            select(Organization).where(Organization.id.in_(org_ids))
-        )}
-        if org_ids else {}
+        {o.id: o for o in session.scalars(select(Organization).where(Organization.id.in_(org_ids)))}
+        if org_ids
+        else {}
     )
 
     history: list[dict] = []
@@ -280,41 +321,47 @@ def get_person_history(session: Session, person_id: str) -> dict | None:
 
         if org.classification == "group":
             if prev_group is not None and prev_group.id != org.id:
-                _emit({
-                    "field": "group",
-                    "from": _label(prev_group),
-                    "to": _label(org),
-                    "date": start,
-                    "org": _label(org),
-                    "event_type": "switch_group",
-                    "source_url": m.source_url,
-                })
+                _emit(
+                    {
+                        "field": "group",
+                        "from": _label(prev_group),
+                        "to": _label(org),
+                        "date": start,
+                        "org": _label(org),
+                        "event_type": "switch_group",
+                        "source_url": m.source_url,
+                    }
+                )
             prev_group = org
 
             party_id = m.on_behalf_of_id
             if party_id and prev_party_id and party_id != prev_party_id:
-                _emit({
-                    "field": "party",
-                    "from": _label(orgs.get(prev_party_id)),
-                    "to": _label(orgs.get(party_id)),
-                    "date": start,
-                    "org": _label(org),
-                    "event_type": "switch_party",
-                    "source_url": m.source_url,
-                })
+                _emit(
+                    {
+                        "field": "party",
+                        "from": _label(orgs.get(prev_party_id)),
+                        "to": _label(orgs.get(party_id)),
+                        "date": start,
+                        "org": _label(org),
+                        "event_type": "switch_party",
+                        "source_url": m.source_url,
+                    }
+                )
             if party_id:
                 prev_party_id = party_id
 
         if org.id in role_by_org and role_by_org[org.id] != m.role:
-            _emit({
-                "field": "role",
-                "from": role_by_org[org.id],
-                "to": m.role,
-                "date": start,
-                "org": _label(org),
-                "event_type": "role_change",
-                "source_url": m.source_url,
-            })
+            _emit(
+                {
+                    "field": "role",
+                    "from": role_by_org[org.id],
+                    "to": m.role,
+                    "date": start,
+                    "org": _label(org),
+                    "event_type": "role_change",
+                    "source_url": m.source_url,
+                }
+            )
         role_by_org[org.id] = m.role
 
     for e in events:
@@ -329,14 +376,16 @@ def get_person_history(session: Session, person_id: str) -> dict | None:
         if key in seen:
             continue
         seen.add(key)
-        history.append({
-            "field": field,
-            "from": key[2],
-            "to": key[3],
-            "date": date,
-            "event_type": e.type,
-            "source_url": None,
-        })
+        history.append(
+            {
+                "field": field,
+                "from": key[2],
+                "to": key[3],
+                "date": date,
+                "event_type": e.type,
+                "source_url": None,
+            }
+        )
 
     # Newest first; null dates last; stable for equal dates.
     history.sort(key=lambda r: r["date"] or "", reverse=True)
@@ -344,8 +393,14 @@ def get_person_history(session: Session, person_id: str) -> dict | None:
     return {"person_id": person_id, "history": history}
 
 
-def get_movements(session: Session, person_id: str | None, chamber: str | None,
-                  start: date | None, end: date | None, limit: int = 200) -> list[dict]:
+def get_movements(
+    session: Session,
+    person_id: str | None,
+    chamber: str | None,
+    start: date | None,
+    end: date | None,
+    limit: int = 200,
+) -> list[dict]:
     stmt = select(Event).where(Event.type.in_(["switch_group", "switch_party"]))
     if person_id:
         stmt = stmt.where(Event.person_id == person_id)
@@ -381,10 +436,12 @@ def get_coverage(session: Session) -> list[dict]:
         out = []
         for c in rows:
             item = {
-                "chamber": c.chamber, "legislature": c.legislature,
+                "chamber": c.chamber,
+                "legislature": c.legislature,
                 "period_start": c.period_start.isoformat() if c.period_start else None,
                 "period_end": c.period_end.isoformat() if c.period_end else None,
-                "completeness": c.completeness, "note": c.note,
+                "completeness": c.completeness,
+                "note": c.note,
             }
             snap = by_key.get((c.chamber, c.legislature))
             if snap is not None:
@@ -397,22 +454,26 @@ def get_coverage(session: Session) -> list[dict]:
 def get_meta(session: Session) -> dict:
     legs = {}
     for ke in session.scalars(select(KeyEvent).where(KeyEvent.type == "legislature")):
-        legs.setdefault(ke.label, {
-            "label": ke.label,
-            "start": ke.start_date.isoformat() if ke.start_date else None,
-            "end": ke.end_date.isoformat() if ke.end_date else None,
-        })
-    groups = [_org_brief(session, o.id) for o in session.scalars(
-        select(Organization).where(Organization.classification == "group")
-    )]
+        legs.setdefault(
+            ke.label,
+            {
+                "label": ke.label,
+                "start": ke.start_date.isoformat() if ke.start_date else None,
+                "end": ke.end_date.isoformat() if ke.end_date else None,
+            },
+        )
+    groups = [
+        _org_brief(session, o.id)
+        for o in session.scalars(select(Organization).where(Organization.classification == "group"))
+    ]
     return {"legislatures": legs, "groups": groups}
+
 
 def get_party_profile(session: Session, short_name: str, as_of: date) -> dict:
     """Get party profile with membership counts and switch stats for a given date."""
     org = session.scalars(
         select(Organization).where(
-            Organization.short_name == short_name,
-            Organization.classification == "party"
+            Organization.short_name == short_name, Organization.classification == "party"
         )
     ).first()
     if not org:
@@ -436,23 +497,28 @@ def get_party_profile(session: Session, short_name: str, as_of: date) -> dict:
 
     # Switch stats for this party (all time)
     from sqlalchemy import func
-    switches_in = session.scalar(
-        select(func.count()).select_from(
-            select(Event).where(
-                Event.type == "switch_party",
-                Event.to_org_id == org.id
-            ).subquery()
-        )
-    ) or 0
 
-    switches_out = session.scalar(
-        select(func.count()).select_from(
-            select(Event).where(
-                Event.type == "switch_party",
-                Event.from_org_id == org.id
-            ).subquery()
+    switches_in = (
+        session.scalar(
+            select(func.count()).select_from(
+                select(Event)
+                .where(Event.type == "switch_party", Event.to_org_id == org.id)
+                .subquery()
+            )
         )
-    ) or 0
+        or 0
+    )
+
+    switches_out = (
+        session.scalar(
+            select(func.count()).select_from(
+                select(Event)
+                .where(Event.type == "switch_party", Event.from_org_id == org.id)
+                .subquery()
+            )
+        )
+        or 0
+    )
 
     return {
         "id": org.id,
@@ -467,22 +533,28 @@ def get_party_profile(session: Session, short_name: str, as_of: date) -> dict:
     }
 
 
-def get_party_movements(session: Session, short_name: str, as_of: date, limit: int = 50) -> list[dict]:
+def get_party_movements(
+    session: Session, short_name: str, as_of: date, limit: int = 50
+) -> list[dict]:
     """Get movements (join/switch_party/leave) for a specific party."""
     org = session.scalars(
         select(Organization).where(
-            Organization.short_name == short_name,
-            Organization.classification == "party"
+            Organization.short_name == short_name, Organization.classification == "party"
         )
     ).first()
     if not org:
         raise HTTPException(status_code=404, detail="party not found")
 
-    stmt = select(Event).where(
-        Event.type.in_(["switch_party", "join", "leave"]),
-        Event.event_date is not None,
-        (Event.from_org_id == org.id) | (Event.to_org_id == org.id)
-    ).order_by(Event.event_date.desc()).limit(limit)
+    stmt = (
+        select(Event)
+        .where(
+            Event.type.in_(["switch_party", "join", "leave"]),
+            Event.event_date.is_not(None),
+            (Event.from_org_id == org.id) | (Event.to_org_id == org.id),
+        )
+        .order_by(Event.event_date.desc())
+        .limit(limit)
+    )
 
     evs = session.scalars(stmt).all()
     return [serialize_event(session, e) for e in evs]
@@ -492,15 +564,15 @@ def get_party_timeline(session: Session, short_name: str, from_date: date, to_da
     """Get group size timeline for a specific party over a date range."""
     org = session.scalars(
         select(Organization).where(
-            Organization.short_name == short_name,
-            Organization.classification == "party"
+            Organization.short_name == short_name, Organization.classification == "party"
         )
     ).first()
     if not org:
         raise HTTPException(status_code=404, detail="party not found")
 
-    from pipeline.queries import chamber_composition
     from datetime import timedelta
+
+    from pipeline.queries import chamber_composition
 
     dates = []
     d = from_date
@@ -508,6 +580,10 @@ def get_party_timeline(session: Session, short_name: str, from_date: date, to_da
     while d <= to_date:
         dates.append(d)
         d += timedelta(days=step)
+    if not dates:
+        # from_date > to_date: no valid range, return an empty series instead of
+        # raising IndexError (the HTTP route already rejects this with 422).
+        return {"dates": [], "total": [], "groups": {}}
     if dates[-1] != to_date:
         dates.append(to_date)
 

@@ -22,8 +22,9 @@ def _active(stmt, on_date: date):
     )
 
 
-def memberships_at(session: Session, *, org_class: str, chamber: str | None,
-                   on_date: date) -> list[Membership]:
+def memberships_at(
+    session: Session, *, org_class: str, chamber: str | None, on_date: date
+) -> list[Membership]:
     stmt = (
         select(Membership)
         .join(Organization, Organization.id == Membership.org_id)
@@ -56,9 +57,11 @@ def chamber_composition(session: Session, chamber: str, on_date: date) -> dict:
         key = (org.short_name or org.name) if org else "?"
         bucket = out.setdefault(key, {"org_id": m.org_id, "count": 0, "members": []})
         bucket["count"] += 1
-        bucket["members"].append({
-            "person_id": m.person_id,
-            "name": person.canonical_name if person else "?",
-            "role": m.role,
-        })
+        bucket["members"].append(
+            {
+                "person_id": m.person_id,
+                "name": person.canonical_name if person else "?",
+                "role": m.role,
+            }
+        )
     return out

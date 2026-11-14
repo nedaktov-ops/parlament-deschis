@@ -20,12 +20,18 @@ FX = Path(__file__).parent / "fixtures"
 def session():
     s = get_session(":memory:")
     seed_key_events(s)
-    upr = parse_group_ledger((FX / "cdep_group_upr.html").read_text(encoding="utf-8"),
-                             chamber="deputies", legislature="2024",
-                             source_url="https://www.cdep.ro/ords/pls/parlam/structura2015.gp?cam=2&leg=2024&idg=9")
-    psd = parse_group_ledger((FX / "cdep_group_psd.html").read_text(encoding="utf-8"),
-                             chamber="deputies", legislature="2024",
-                             source_url="https://www.cdep.ro/ords/pls/parlam/structura2015.gp?cam=2&leg=2024&idg=1")
+    upr = parse_group_ledger(
+        (FX / "cdep_group_upr.html").read_text(encoding="utf-8"),
+        chamber="deputies",
+        legislature="2024",
+        source_url="https://www.cdep.ro/ords/pls/parlam/structura2015.gp?cam=2&leg=2024&idg=9",
+    )
+    psd = parse_group_ledger(
+        (FX / "cdep_group_psd.html").read_text(encoding="utf-8"),
+        chamber="deputies",
+        legislature="2024",
+        source_url="https://www.cdep.ro/ords/pls/parlam/structura2015.gp?cam=2&leg=2024&idg=1",
+    )
     ingest_cdep_group_ledger(s, upr, legislature="2024")
     ingest_cdep_group_ledger(s, psd, legislature="2024")
     yield s
@@ -34,14 +40,18 @@ def session():
 
 def test_upr_org_founding_and_rename(session):
     upr = session.scalars(
-        select(Organization).where(Organization.short_name == "UPR",
-                                   Organization.classification == "group")
+        select(Organization).where(
+            Organization.short_name == "UPR", Organization.classification == "group"
+        )
     ).one()
     assert upr.founding_date == date(2026, 5, 11)
     assert upr.alt_labels and any("POT" in a for a in upr.alt_labels)
     types = {e.type for e in session.scalars(select(Event))}
     assert "group_founded" in types
-    assert "group_renamed" in types
+    # No rename event: the page publishes the former name but no rename date,
+    # so dating a rename (to the founding date, as before) would be an
+    # invention. The former name is preserved on the organization instead.
+    assert "group_renamed" not in types
 
 
 def test_ponta_single_person_two_tenures(session):
@@ -66,7 +76,11 @@ def test_ponta_switch_event(session):
     ).one()
     assert ev.event_date == date(2026, 6, 15)
     assert "UPR" in ev.summary_ro
-    assert ev.reason == "CHANGED_PARTY"
+    # A group movement is not a party change: Ponta stayed on the PSD list.
+    assert ev.reason == "CHANGED_GROUP"
+    # The event must be citable.
+    assert ev.source_url
+    assert ev.legislature == "2024"
 
 
 def test_group_at_time_slider(session):
@@ -95,8 +109,11 @@ def test_composition_counts(session):
 
 
 def test_idempotent_reingest(session):
-    upr = parse_group_ledger((FX / "cdep_group_upr.html").read_text(encoding="utf-8"),
-                             chamber="deputies", legislature="2024")
+    upr = parse_group_ledger(
+        (FX / "cdep_group_upr.html").read_text(encoding="utf-8"),
+        chamber="deputies",
+        legislature="2024",
+    )
     n_before = len(list(session.scalars(select(Membership))))
     ingest_cdep_group_ledger(session, upr, legislature="2024")
     n_after = len(list(session.scalars(select(Membership))))

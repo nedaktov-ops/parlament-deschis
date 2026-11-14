@@ -119,8 +119,9 @@ def _parse_party_group(soup: BeautifulSoup) -> tuple[str | None, str | None, str
     return party, group, group_role
 
 
-def parse_senator_profile(html: str, *, guid: str | None = None,
-                          profile_url: str | None = None) -> SenatorProfile:
+def parse_senator_profile(
+    html: str, *, guid: str | None = None, profile_url: str | None = None
+) -> SenatorProfile:
     soup = BeautifulSoup(html, "lxml")
     if guid is None and profile_url:
         m = _GUID.search(profile_url)
@@ -132,9 +133,12 @@ def parse_senator_profile(html: str, *, guid: str | None = None,
     prof = SenatorProfile(name=name, guid=guid, profile_url=profile_url)
 
     text = soup.get_text("\n", strip=True)
-    lm = _LEGIS.search(text)
-    if lm:
-        prof.legislature = lm.group(1)
+    legs = _LEGIS.findall(text)
+    if legs:
+        # senat.ro lists mandates oldest-first ("2016 - 2020, 2020 - 2024,
+        # 2024 - 2028, …"), so `search` would stamp a sitting senator with
+        # their first mandate. The current one is the highest start year.
+        prof.legislature = max(start for start, _end in legs)
 
     # Constituency + election/validation from the "Senator ales" h5.
     ales = soup.find(string=re.compile(r"Senator ales"))
@@ -172,8 +176,14 @@ def parse_senator_profile(html: str, *, guid: str | None = None,
             role, start, end = _parse_role_cell(cells[1].get_text(" ", strip=True))
             if not org_name:
                 continue
-            prof.memberships.append(SenateMembership(
-                org_name=org_name, org_class=org_class, role=role,
-                start=start, end=end, is_current=is_current,
-            ))
+            prof.memberships.append(
+                SenateMembership(
+                    org_name=org_name,
+                    org_class=org_class,
+                    role=role,
+                    start=start,
+                    end=end,
+                    is_current=is_current,
+                )
+            )
     return prof

@@ -94,8 +94,13 @@ def test_authoritative_idempotent_closed(session):
     p = _person(session)
     o = _org(session, "PSD")
     w = MembershipWriter(session)
-    kw = dict(person_id=p.id, org_id=o.id, chamber="deputies",
-              start=date(2024, 12, 21), end=date(2025, 6, 1))
+    kw = dict(
+        person_id=p.id,
+        org_id=o.id,
+        chamber="deputies",
+        start=date(2024, 12, 21),
+        end=date(2025, 6, 1),
+    )
     m1 = w.record_authoritative(**kw)
     session.flush()
     m2 = w.record_authoritative(**kw)
@@ -106,12 +111,18 @@ def test_authoritative_returning_member_new_id(session):
     p = _person(session)
     o = _org(session, "PSD")
     w = MembershipWriter(session)
-    m1 = w.record_authoritative(person_id=p.id, org_id=o.id, chamber="deputies",
-                                start=date(2024, 1, 1), end=date(2024, 6, 1))
+    m1 = w.record_authoritative(
+        person_id=p.id,
+        org_id=o.id,
+        chamber="deputies",
+        start=date(2024, 1, 1),
+        end=date(2024, 6, 1),
+    )
     session.flush()
     # Returns later → a NEW tenure, never reopen the closed one.
-    m2 = w.record_authoritative(person_id=p.id, org_id=o.id, chamber="deputies",
-                                start=date(2025, 1, 1), end=None)
+    m2 = w.record_authoritative(
+        person_id=p.id, org_id=o.id, chamber="deputies", start=date(2025, 1, 1), end=None
+    )
     session.flush()
     assert m2.id != m1.id
     assert m1.end_date == date(2024, 6, 1)  # immutable
@@ -121,11 +132,17 @@ def test_authoritative_closes_open_tenure(session):
     p = _person(session)
     o = _org(session, "PSD")
     w = MembershipWriter(session)
-    m1 = w.record_authoritative(person_id=p.id, org_id=o.id, chamber="deputies",
-                                start=date(2024, 1, 1), end=None)
+    m1 = w.record_authoritative(
+        person_id=p.id, org_id=o.id, chamber="deputies", start=date(2024, 1, 1), end=None
+    )
     session.flush()
-    m2 = w.record_authoritative(person_id=p.id, org_id=o.id, chamber="deputies",
-                                start=date(2024, 1, 1), end=date(2024, 6, 1))
+    m2 = w.record_authoritative(
+        person_id=p.id,
+        org_id=o.id,
+        chamber="deputies",
+        start=date(2024, 1, 1),
+        end=date(2024, 6, 1),
+    )
     assert m1.id == m2.id
     assert m2.end_date == date(2024, 6, 1)
 
@@ -134,8 +151,13 @@ def test_authoritative_clamps_inverted(session):
     p = _person(session)
     o = _org(session, "PSD")
     w = MembershipWriter(session)
-    m = w.record_authoritative(person_id=p.id, org_id=o.id, chamber="deputies",
-                               start=date(2024, 6, 1), end=date(2024, 1, 1))
+    m = w.record_authoritative(
+        person_id=p.id,
+        org_id=o.id,
+        chamber="deputies",
+        start=date(2024, 6, 1),
+        end=date(2024, 1, 1),
+    )
     assert m.end_date >= m.start_date
 
 
@@ -145,15 +167,26 @@ def test_observation_closes_previous_group(session):
     a = _org(session, "PSD")
     b = _org(session, "UPR")
     w = MembershipWriter(session)
-    w.record_observation(person_id=p.id, org_id=a.id, chamber="deputies",
-                         observed_on=date(2024, 12, 21), org_class="group")
+    w.record_observation(
+        person_id=p.id,
+        org_id=a.id,
+        chamber="deputies",
+        observed_on=date(2024, 12, 21),
+        org_class="group",
+    )
     session.flush()
-    w.record_observation(person_id=p.id, org_id=b.id, chamber="deputies",
-                         observed_on=date(2026, 6, 15), org_class="group")
+    w.record_observation(
+        person_id=p.id,
+        org_id=b.id,
+        chamber="deputies",
+        observed_on=date(2026, 6, 15),
+        org_class="group",
+    )
     session.flush()
     from sqlalchemy import select
 
     from pipeline.db import Membership
+
     ms = list(session.scalars(select(Membership).where(Membership.person_id == p.id)))
     assert len(ms) == 2
     psd = next(m for m in ms if m.org_id == a.id)
@@ -167,9 +200,19 @@ def test_observation_same_group_idempotent(session):
     p = _person(session)
     a = _org(session, "PSD")
     w = MembershipWriter(session)
-    m1 = w.record_observation(person_id=p.id, org_id=a.id, chamber="deputies",
-                              observed_on=date(2024, 12, 21), org_class="group")
+    m1 = w.record_observation(
+        person_id=p.id,
+        org_id=a.id,
+        chamber="deputies",
+        observed_on=date(2024, 12, 21),
+        org_class="group",
+    )
     session.flush()
-    m2 = w.record_observation(person_id=p.id, org_id=a.id, chamber="deputies",
-                              observed_on=date(2025, 1, 1), org_class="group")
+    m2 = w.record_observation(
+        person_id=p.id,
+        org_id=a.id,
+        chamber="deputies",
+        observed_on=date(2025, 1, 1),
+        org_class="group",
+    )
     assert m1.id == m2.id

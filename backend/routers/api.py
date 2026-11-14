@@ -13,8 +13,8 @@ from sqlalchemy.orm import Session
 from backend import queries
 from backend.config import APP_VERSION
 from backend.deps import get_db
-from pipeline.db import Evidence
 from pipeline.analytics import derive_all_switch_waves, derive_switch_waves
+from pipeline.db import Evidence
 from pipeline.export import CODE_LICENSE, DATA_LICENSE, PROJECT_URL
 from pipeline.poller import run_poll_cycle, source_health
 
@@ -133,16 +133,42 @@ def coverage(db: Session = Depends(get_db)):
     return queries.get_coverage(db)
 
 
+@router.get("/committees")
+def committees(as_of: str | None = None, db: Session = Depends(get_db)):
+    """Committee list with its controlling party, when committee data exists.
+
+    Committee tenures are not ingested yet, so this returns an empty list (the
+    UI renders its honest "no data" state) instead of the 404 the frontend used
+    to receive. The endpoint exists so the contract is stable once committee
+    memberships are loaded.
+    """
+    from sqlalchemy import select
+
+    from pipeline.db import Organization
+
+    _parse_date(as_of, date.today())  # validate as_of when supplied
+    rows = db.scalars(
+        select(Organization)
+        .where(Organization.classification == "committee")
+        .order_by(Organization.name)
+    ).all()
+    return [{"id": o.id, "name": o.name, "party": None} for o in rows]
+
+
 @router.get("/evidence/{evidence_id}")
 def evidence(evidence_id: str, db: Session = Depends(get_db)):
     ev = db.get(Evidence, evidence_id)
     if ev is None:
         raise HTTPException(status_code=404, detail="evidence not found")
     return {
-        "id": ev.id, "membership_id": ev.membership_id, "type": ev.type,
-        "source_url": ev.source_url, "snapshot_hash": ev.snapshot_hash,
+        "id": ev.id,
+        "membership_id": ev.membership_id,
+        "type": ev.type,
+        "source_url": ev.source_url,
+        "snapshot_hash": ev.snapshot_hash,
         "snapshot_url": queries._snapshot_url(db, ev.snapshot_hash, ev.source_url),
-        "note": ev.note, "observed_at": ev.observed_at.isoformat() if ev.observed_at else None,
+        "note": ev.note,
+        "observed_at": ev.observed_at.isoformat() if ev.observed_at else None,
     }
 
 
@@ -152,7 +178,7 @@ def about(db: Annotated[Session, Depends(get_db)]):
         "name": "Parlament Deschis",
         "version": APP_VERSION,
         "description": "Romanian Parliament transparency tracker — party/group/committee "
-                       "memberships 1990→present, dated and source-cited.",
+        "memberships 1990→present, dated and source-cited.",
         "project_url": PROJECT_URL,
         "methodology": {"ro": METHODOLOGY_RO, "en": METHODOLOGY_EN},
         "sources": [
@@ -270,7 +296,7 @@ def analytics_waves_recompute(
     db: Session = Depends(get_db),
 ):
     """Recompute all switch waves from scratch."""
-    from pipeline.analytics import derive_all_switch_waves
+
     count = derive_all_switch_waves(db)
     return {"status": "ok", "created": count}
 
@@ -282,15 +308,16 @@ def get_switch_waves(
     db: Session = Depends(get_db),
 ):
     """Get stored switch waves."""
-    from pipeline.db import SwitchWave
     from sqlalchemy import select
-    
+
+    from pipeline.db import SwitchWave
+
     stmt = select(SwitchWave).order_by(SwitchWave.start_date.desc())
     if chamber:
         stmt = stmt.where(SwitchWave.chamber == chamber)
     if legislature:
         stmt = stmt.where(SwitchWave.legislature == legislature)
-    
+
     waves = db.scalars(stmt).all()
     return [
         {
@@ -315,14 +342,14 @@ def get_party_cohesion(
     db: Session = Depends(get_db),
 ):
     """Get party cohesion index per party per legislature."""
-    from pipeline.analytics import derive_party_cohesion
-    
+
     # Run the analysis and return results
-    from pipeline.analytics import derive_party_cohesion as run_cohesion
-    from pipeline.db import Organization, Event, KeyEvent, Membership
-    from sqlalchemy import select
     from collections import defaultdict
-    
+
+    from sqlalchemy import select
+
+    from pipeline.db import Event, KeyEvent, Membership, Organization
+
     stmt = select(Event).where(Event.type == "switch_party")
     if legislature:
         leg_key = db.scalars(
@@ -330,68 +357,81 @@ def get_party_cohesion(
         ).first()
         if leg_key and leg_key.start_date and leg_key.end_date:
             stmt = stmt.where(
-                Event.event_date >= leg_key.start_date,
-                Event.event_date <= leg_key.end_date
+                Event.event_date >= leg_key.start_date, Event.event_date <= leg_key.end_date
             )
     stmt = stmt.where(Event.event_date.is_not(None))
-    
+
     switches = list(db.scalars(stmt))
-    
-    from collections import defaultdict
+
     party_switches: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-    
+
     for sw in switches:
         if sw.to_org_id:
             org = db.get(Organization, sw.to_org_id)
             if org and org.classification == "party":
                 party_switches[sw.to_org_id][sw.person_id] += 1
-            elif org and org.classification == "group" and org.on_behalf_of_id:
-                party_switches[org.on_behalf_of_id][sw.person_id] += 1
-    
+            elif org and org.classification == "group":
+                # on_behalf_of_id is a Membership column, not an Organization one.
+                m = db.scalars(
+                    select(Membership)
+                    .where(
+                        Membership.person_id == sw.person_id,
+                        Membership.org_id == org.id,
+                        Membership.on_behalf_of_id.is_not(None),
+                    )
+                    .order_by(Membership.start_date.desc())
+                ).first()
+                if m and m.on_behalf_of_id:
+                    party_switches[m.on_behalf_of_id][sw.person_id] += 1
+
     results = []
     for party_id, person_switches in party_switches.items():
         party = db.get(Organization, party_id)
         if not party or party.classification != "party":
             continue
-        
+
         party_memberships = db.scalars(
             select(Membership)
             .join(Organization, Organization.id == Membership.org_id)
             .where(Organization.id == party_id)
         ).all()
-        
+
         total_switches = sum(person_switches.values())
         num_switchers = len(person_switches)
         num_members = len(set(m.person_id for m in party_memberships))
-        
+
         if num_members == 0:
             continue
-        
+
         total_tenure_years = 0
         for m in party_memberships:
             if m.start_date and m.end_date:
                 total_tenure_years += (m.end_date - m.start_date).days / 365.25
             elif m.start_date:
                 total_tenure_years += (date.today() - m.start_date).days / 365.25
-        
+
         avg_tenure = total_tenure_years / num_members if num_members > 0 else 0
-        
+
         if avg_tenure == 0:
             continue
-        
-        switch_rate = total_switches / (num_members * avg_tenure) if num_members * avg_tenure > 0 else 0
-        
+
+        switch_rate = (
+            total_switches / (num_members * avg_tenure) if num_members * avg_tenure > 0 else 0
+        )
+
         party_label = party.short_name or party.name or "Unknown"
-        results.append({
-            "party_id": party.id,
-            "party_name": party_label,
-            "members": num_members,
-            "switches": total_switches,
-            "switchers": num_switchers,
-            "avg_tenure_years": round(avg_tenure, 1),
-            "switch_rate_per_mp_per_year": round(switch_rate, 4),
-        })
-    
+        results.append(
+            {
+                "party_id": party.id,
+                "party_name": party_label,
+                "members": num_members,
+                "switches": total_switches,
+                "switchers": num_switchers,
+                "avg_tenure_years": round(avg_tenure, 1),
+                "switch_rate_per_mp_per_year": round(switch_rate, 4),
+            }
+        )
+
     return {"status": "ok", "data": results}
 
 
@@ -400,27 +440,27 @@ def get_cross_chamber(
     db: Session = Depends(get_db),
 ):
     """Get MPs with memberships in both chambers."""
-    from pipeline.analytics import derive_cross_chamber_careers
-    from pipeline.db import Person, Membership
     from sqlalchemy import select
-    
+
+    from pipeline.db import Membership, Person
+
     stmt = select(Person.id, Person.canonical_name).distinct()
     persons = list(db.execute(stmt).all())
-    
+
     results = []
     for pid, name in persons:
         chs = db.scalars(
-            select(Membership.chamber)
-            .where(Membership.person_id == pid)
-            .distinct()
+            select(Membership.chamber).where(Membership.person_id == pid).distinct()
         ).all()
         if len(chs) > 1:
-            results.append({
-                "person_id": pid,
-                "name": name,
-                "chambers": chs,
-            })
-    
+            results.append(
+                {
+                    "person_id": pid,
+                    "name": name,
+                    "chambers": chs,
+                }
+            )
+
     return {"status": "ok", "count": len(results), "data": results}
 
 
@@ -430,9 +470,10 @@ def get_generational_shift(
     db: Session = Depends(get_db),
 ):
     """Get generational shift data per party."""
-    from pipeline.db import Person, Membership, Organization, KeyEvent
     from sqlalchemy import select
-    
+
+    from pipeline.db import KeyEvent, Membership, Organization, Person
+
     stmt = select(Person.id, Person.canonical_name, Person.birth_date)
     if legislature:
         leg_key = db.scalars(
@@ -443,41 +484,95 @@ def get_generational_shift(
                 Person.id.in_(
                     select(Membership.person_id)
                     .where(Membership.start_date <= leg_key.end_date)
-                    .where((Membership.end_date.is_(None)) | (Membership.end_date >= leg_key.start_date))
+                    .where(
+                        (Membership.end_date.is_(None))
+                        | (Membership.end_date >= leg_key.start_date)
+                    )
                 )
             )
-    
+
     persons = list(db.execute(stmt).all())
     ages_by_party: dict[str, list[int]] = {}
-    
+
     for pid, name, bdate in persons:
         if not bdate:
             continue
         age = (date.today() - bdate).days / 365.25
-        
+
         party_mems = db.scalars(
             select(Membership)
             .join(Organization, Organization.id == Membership.org_id)
             .where(Membership.person_id == pid)
             .where(Organization.classification == "party")
         ).all()
-        
+
         for pm in party_mems:
             if pm.org and pm.org.short_name:
                 party_key = pm.org.short_name
                 ages_by_party.setdefault(party_key, []).append(int(age))
-    
+
     results = []
     for party, ages in ages_by_party.items():
         if ages:
             avg_age = sum(ages) / len(ages)
             sorted_ages = sorted(ages)
             median_age = sorted_ages[len(sorted_ages) // 2]
-            results.append({
-                "party": party,
-                "mps_with_birth_dates": len(ages),
-                "avg_age": round(avg_age, 1),
-                "median_age": median_age,
-            })
-    
+            results.append(
+                {
+                    "party": party,
+                    "mps_with_birth_dates": len(ages),
+                    "avg_age": round(avg_age, 1),
+                    "median_age": median_age,
+                }
+            )
+
     return {"status": "ok", "data": results}
+
+
+# --- Traseism statistics ---------------------------------------------------
+# The public view of party/group switching. Every number here is a count of
+# OBSERVED movement taken from the chambers' own dated group ledgers.
+
+
+@router.get("/traseism/overview")
+def traseism_overview(db: Session = Depends(get_db)):
+    """One row per chamber and legislature: members, switches, switchers, rate."""
+    from pipeline.traseism import traseism_overview as _overview
+
+    return _overview(db)
+
+
+@router.get("/traseism/summary")
+def traseism_summary(
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    chamber: str | None = Query(None, pattern=r"^(deputies|senate)$"),
+    db: Session = Depends(get_db),
+):
+    """The full statistical summary for one scope (both scopes optional)."""
+    from pipeline.traseism import traseism_summary as _summary
+
+    return _summary(db, chamber=chamber, legislature=legislature)
+
+
+@router.get("/traseism/switches")
+def traseism_switches(
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    chamber: str | None = Query(None, pattern=r"^(deputies|senate)$"),
+    group: str | None = Query(None, description="filter by group acronym (from or to)"),
+    person: str | None = Query(None, description="filter by person name substring"),
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    """The switch ledger. Every row carries the official source URL."""
+    from pipeline.traseism import traseism_switches as _switches
+
+    return _switches(
+        db,
+        chamber=chamber,
+        legislature=legislature,
+        group=group,
+        person=person,
+        limit=limit,
+        offset=offset,
+    )

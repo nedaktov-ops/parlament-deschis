@@ -36,9 +36,7 @@ def export_popolo(
     scope: Annotated[dict, Depends(_scope)],
     db: Annotated[Session, Depends(get_db)],
 ):
-    doc = build_popolo(
-        db, chamber=scope["chamber"], legislature=scope["legislature"]
-    )
+    doc = build_popolo(db, chamber=scope["chamber"], legislature=scope["legislature"])
     return JSONResponse(
         content=doc,
         media_type="application/json; charset=utf-8",
@@ -54,9 +52,7 @@ def export_csv(
 ):
     if dataset not in CSV_DATASETS:
         raise HTTPException(status_code=404, detail=f"unknown dataset: {dataset}")
-    text = csv_for(
-        db, dataset, chamber=scope["chamber"], legislature=scope["legislature"]
-    )
+    text = csv_for(db, dataset, chamber=scope["chamber"], legislature=scope["legislature"])
     return PlainTextResponse(
         text,
         media_type="text/csv; charset=utf-8",

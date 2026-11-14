@@ -26,11 +26,13 @@ def test_name_order_insensitive_key():
 
 def test_resolve_creates_then_finds_by_identifier(session):
     r = PersonResolver(session)
-    p1, created = r.resolve(scheme="cdep_idm", identifier="55", name="Chiriţă Răzvan-Mirel",
-                            legislature="2024")
+    p1, created = r.resolve(
+        scheme="cdep_idm", identifier="55", name="Chiriţă Răzvan-Mirel", legislature="2024"
+    )
     assert created
-    p2, created2 = r.resolve(scheme="cdep_idm", identifier="55", name="Chiriţă Răzvan-Mirel",
-                             legislature="2024")
+    p2, created2 = r.resolve(
+        scheme="cdep_idm", identifier="55", name="Chiriţă Răzvan-Mirel", legislature="2024"
+    )
     assert not created2
     assert p1.id == p2.id
 
@@ -50,8 +52,9 @@ def test_resolve_unique_name_fallback(session):
     r = PersonResolver(session)
     p1, _ = r.resolve(scheme="cdep_idm", identifier="1", name="Unique Person", legislature="2024")
     # A different source id but a unique matching name → same person.
-    p2, created = r.resolve(scheme="senat_guid", identifier="GUID-X", name="Unique Person",
-                            legislature="2024")
+    p2, created = r.resolve(
+        scheme="senat_guid", identifier="GUID-X", name="Unique Person", legislature="2024"
+    )
     assert not created
     assert p1.id == p2.id
 
@@ -61,8 +64,9 @@ def test_resolve_ambiguous_name_creates_new(session):
     r.resolve(scheme="cdep_idm", identifier="1", name="Ion Popescu", legislature="2024")
     r.resolve(scheme="cdep_idm", identifier="2", name="Ion Popescu", legislature="2024")
     # Ambiguous name → never guess; a new id is created.
-    p3, created = r.resolve(scheme="senat_guid", identifier="G", name="Ion Popescu",
-                            legislature="2024")
+    p3, created = r.resolve(
+        scheme="senat_guid", identifier="G", name="Ion Popescu", legislature="2024"
+    )
     assert created
 
 

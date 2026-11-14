@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Lint
+        run: uv run ruff check pipeline backend tests
+
+      - name: Test
+        run: uv run pytest -q
+
+      - name: Frontend type-check and build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+  audit:
+    # The audit proves the corpus is complete: every parsed row reconciled
+    # against the count the source publishes, no membership without a source,
+    # no person in two groups at once.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: uv sync --dev
+
+      - name: Rebuild the database from the published archive
+        run: |
+          uv run python -m pipeline.cli --db data/parlament-real.db build-corpus \
+            --chamber both --cache data/cache/cdep --offline
+
+      - name: Audit the corpus
+        run: uv run python -m pipeline.cli --db data/parlament-real.db audit-corpus
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download the database artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: parlament-db
+          path: data
+
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: parlament-deschis:ci
+          build-args: SOURCE_DB=data/parlament-real.db
+
+      - name: Prove the image serves the tool
+        run: |
+          docker run -d --name pd -p 8000:8000 parlament-deschis:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/api/health >/dev/null; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8000/api/health
+          curl -fsS http://127.0.0.1:8000/api/traseism/overview | head -c 400
+          docker logs pd

@@ -14,6 +14,7 @@ const PersonDeepDive = lazy(() => import("./pages/PersonDeepDive").then(m => ({ 
 const ElectoralDynamics = lazy(() => import("./pages/ElectoralDynamics").then(m => ({ default: m.ElectoralDynamics })));
 const InstitutionalView = lazy(() => import("./pages/InstitutionalView").then(m => ({ default: m.InstitutionalView })));
 const LegislatureDetail = lazy(() => import("./pages/LegislatureDetail").then(m => ({ default: m.LegislatureDetail })));
+const Traseism = lazy(() => import("./pages/Traseism").then(m => ({ default: m.Traseism })));
 
 // Loading fallback
 function Loading() {
@@ -251,6 +252,20 @@ const legislatureRoute = createRoute({
   }),
 });
 
+const traseismRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/traseism",
+  component: () => <Suspense fallback={<Loading />}><Traseism /></Suspense>,
+  validateSearch: (search) => ({
+    date: search.date ?? new Date().toISOString().slice(0, 10),
+    chamber: search.chamber === "senate" ? "senate" : "deputies",
+    legislature:
+      typeof search.legislature === "string" && search.legislature
+        ? search.legislature
+        : "2024",
+  }),
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   electoralRoute,
@@ -258,6 +273,7 @@ const routeTree = rootRoute.addChildren([
   partyRoute,
   personRoute,
   legislatureRoute,
+  traseismRoute,
 ]);
 
 export const router = createRouter({ routeTree });

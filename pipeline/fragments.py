@@ -66,9 +66,14 @@ def record_fragment(
         return None, False
     _, path = archive_snapshot(source_name, content, ext)
     frag = Fragment(
-        model=model, source_name=source_name, source_id=source_id,
-        source_url=source_url, group_key=group_key, checksum=h,
-        data=data or {}, snapshot_path=str(path),
+        model=model,
+        source_name=source_name,
+        source_id=source_id,
+        source_url=source_url,
+        group_key=group_key,
+        checksum=h,
+        data=data or {},
+        snapshot_path=str(path),
     )
     session.add(frag)
     session.flush()

@@ -112,6 +112,75 @@ const resources = {
       evidenceCount: "surse",
       currentTerm: "Legislatura curentă",
       coverageNote: "Acoperire date",
+      traseismTitle: "Traseism: schimbările de grup, numărate",
+      traseismHeadline:
+        "Traseismul înseamnă schimbarea grupului parlamentar în interiorul aceleiași camere, în aceeași legislatură.",
+      traseismIntro:
+        "Cifrele de mai jos numără schimbările de grup observate în evidențele oficiale datate ale camerelor (registrele de grupuri parlamentare).",
+      traseismNotMotive:
+        "Măsurăm deplasarea observată, nu motivele: nu atribuim intenții, acorduri sau presiuni politice.",
+      traseismScopeTitle: "Domeniu de analiză",
+      traseismMembersDenominator: "Membri în perimetrul de analiză (numitor)",
+      traseismSwitchesCount: "Schimbări de grup",
+      traseismSwitchersCount: "Parlamentari care au schimbat grupul",
+      traseismSwitchRate: "Rata de traseism",
+      traseismPer100: "Schimbări la 100 de membri",
+      traseismRawValue: "valoare brută din API: {{value}}",
+      traseismRepeatSwitchers: "Parlamentari cu mai multe schimbări",
+      traseismMaxSwitches: "Maxim de schimbări (un singur parlamentar)",
+      traseismMedianMonths: "Mediană de luni între două schimbări",
+      traseismMatrixTitle: "Matricea de la → la",
+      traseismMatrixDesc:
+        "Numărul de schimbări pentru fiecare pereche de grupuri. Zerourile sunt afișate explicit.",
+      traseismMatrixCaption:
+        "Numărul de schimbări de grup pentru fiecare pereche de la → la",
+      traseismFromGroup: "De la",
+      traseismToGroup: "La",
+      traseismPartyNetTitle: "Mișcarea netă pe partide",
+      traseismPartyNetDesc:
+        "Intrări, ieșiri și sold net per partid, cu numărul de locuri la începutul și la sfârșitul legislaturii.",
+      traseismPartyNetCaption: "Intrări, ieșiri și schimbare netă per partid",
+      traseismGains: "Intrări",
+      traseismLosses: "Ieșiri",
+      traseismNetGain: "creștere",
+      traseismNetLoss: "scădere",
+      traseismNetFlat: "neschimbat",
+      traseismSeatsStart: "Locuri la început",
+      traseismSeatsEnd: "Locuri la sfârșit",
+      traseismLedgerTitle: "Registrul schimbărilor",
+      traseismLedgerDesc:
+        "Fiecare schimbare citată, cu data și linkul către documentul oficial din care a fost citită.",
+      traseismLedgerCaption: "Registrul individual al schimbărilor de grup",
+      traseismOfficialSource: "sursa oficială",
+      traseismNoSource: "fără sursă",
+      traseismDate: "Data",
+      traseismPrecisionLabel: "Precizie: {{value}}",
+      traseismNoRows:
+        "Nu există schimbări de grup înregistrate pentru acest domeniu.",
+      traseismShowing: "Afișate {{from}}–{{to}} din {{total}}",
+      traseismPreviousPage: "Pagina anterioară",
+      traseismNextPage: "Pagina următoare",
+      traseismPage: "Pagina {{page}} din {{pages}}",
+      traseismLoadError:
+        "Datele nu au putut fi încărcate. Nu afișăm cifre pe care nu le putem verifica.",
+      traseismRetry: "Reîncearcă",
+      traseismCoverageFull:
+        "Acoperire completă: toate evidențele oficiale ale perioadei au fost citite.",
+      traseismCoveragePartial:
+        "Acoperire parțială: cifrele de mai jos sunt incomplete și pot subestima numărul schimbărilor.",
+      traseismCoverageNone:
+        "Nu există evidențe pentru acest domeniu. Nu afișăm cifre, pentru a nu inventa statistici.",
+      traseismAllScopes: "Toate domeniile",
+      traseismAllScopesDesc:
+        "Același indicator, pentru fiecare cameră și legislatură.",
+      traseismAllScopesCaption:
+        "Indicatorii de traseism pentru fiecare cameră și legislatură",
+      traseismMethodology: "Metodologie",
+      traseismMethodologyBody:
+        "O schimbare de grup este numărată o singură dată, în camera și legislatura în care apare, pe baza registrului oficial de grupuri datat: intrarea într-un grup nou se numără în ziua în care registrul o consemnează, iar plecarea se numără în ziua în care registrul o înregistrează. Numitorul este numărul de parlamentari din perimetrul analizat (membrii care au mandat în acea cameră, în acea legislatură). Nu completăm lipsurile prin presupunere: dacă o sursă nu a fost publicată sau nu a putut fi citită, domeniul este marcat ca parțial sau indisponibil și cifrele sunt afișate împreună cu observația de acoperire.",
+      traseismMethodologyLink:
+        "Citește metodologia completă (docs/METHODOLOGY.md)",
+      traseismAboutButton: "Despre proiect și metodă",
     },
   },
   en: {
@@ -224,6 +293,74 @@ const resources = {
       evidenceCount: "sources",
       currentTerm: "Current legislature",
       coverageNote: "Data coverage",
+      traseismTitle: "Party switching: group changes, counted",
+      traseismHeadline:
+        "Party switching means changing parliamentary group within the same chamber and the same legislature.",
+      traseismIntro:
+        "The figures below count the group switches observed in the chambers' own dated official ledgers (the parliamentary group registers).",
+      traseismNotMotive:
+        "We measure observed movement, not motives: we do not attribute intentions, agreements or political pressure.",
+      traseismScopeTitle: "Scope of analysis",
+      traseismMembersDenominator: "Members in scope (denominator)",
+      traseismSwitchesCount: "Group switches",
+      traseismSwitchersCount: "Members who switched group",
+      traseismSwitchRate: "Switch rate",
+      traseismPer100: "Switches per 100 members",
+      traseismRawValue: "raw API value: {{value}}",
+      traseismRepeatSwitchers: "Members with more than one switch",
+      traseismMaxSwitches: "Most switches by a single member",
+      traseismMedianMonths: "Median months between two switches",
+      traseismMatrixTitle: "From → to matrix",
+      traseismMatrixDesc:
+        "The number of switches for every pair of groups. Zeroes are shown explicitly.",
+      traseismMatrixCaption:
+        "Number of group switches for every from → to pair",
+      traseismFromGroup: "From",
+      traseismToGroup: "To",
+      traseismPartyNetTitle: "Net movement by party",
+      traseismPartyNetDesc:
+        "Inflows, outflows and net balance per party, with the number of seats at the start and at the end of the legislature.",
+      traseismPartyNetCaption: "Inflows, outflows and net change per party",
+      traseismGains: "Inflows",
+      traseismLosses: "Outflows",
+      traseismNetGain: "gain",
+      traseismNetLoss: "loss",
+      traseismNetFlat: "unchanged",
+      traseismSeatsStart: "Seats at start",
+      traseismSeatsEnd: "Seats at end",
+      traseismLedgerTitle: "Switch ledger",
+      traseismLedgerDesc:
+        "Every cited switch, with its date and a link to the official document it was read from.",
+      traseismLedgerCaption: "Individual ledger of group switches",
+      traseismOfficialSource: "official source",
+      traseismNoSource: "no source",
+      traseismDate: "Date",
+      traseismPrecisionLabel: "Precision: {{value}}",
+      traseismNoRows: "No group switches are recorded for this scope.",
+      traseismShowing: "Showing {{from}}–{{to}} of {{total}}",
+      traseismPreviousPage: "Previous page",
+      traseismNextPage: "Next page",
+      traseismPage: "Page {{page}} of {{pages}}",
+      traseismLoadError:
+        "The data could not be loaded. We do not show figures we cannot verify.",
+      traseismRetry: "Try again",
+      traseismCoverageFull:
+        "Full coverage: every official record of the period was read.",
+      traseismCoveragePartial:
+        "Partial coverage: the figures below are incomplete and may understate the number of switches.",
+      traseismCoverageNone:
+        "There are no records for this scope. We show no figures, so that no statistic is invented.",
+      traseismAllScopes: "All scopes",
+      traseismAllScopesDesc:
+        "The same indicator, for every chamber and legislature.",
+      traseismAllScopesCaption:
+        "Party-switching indicators for every chamber and legislature",
+      traseismMethodology: "Methodology",
+      traseismMethodologyBody:
+        "A group switch is counted once, in the chamber and legislature where it occurs, from the dated official group register: joining a new group is counted on the day the register records it, and leaving is counted on the day the register records the departure. The denominator is the number of members in the analysed scope (members holding a mandate in that chamber, in that legislature). We never fill gaps by assumption: if a source was not published or could not be read, the scope is marked as partial or unavailable and the figures are shown together with the coverage note.",
+      traseismMethodologyLink:
+        "Read the full methodology (docs/METHODOLOGY.md)",
+      traseismAboutButton: "About the project and the method",
     },
   },
 };

@@ -1,0 +1,89 @@
+name: Data
+
+# Rebuild the corpus from the official sources and publish it.
+#
+# The schedule is the release mechanism: the web service is read-only and the
+# database is baked into its image, so a new dataset only reaches the public
+# after this workflow has published it. GitHub's scheduled workflows can be
+# delayed by up to an hour on a busy repository, and the run is skipped
+# entirely when the repository has had no activity for 60 days, so the
+# workflow_dispatch trigger is the manual fallback.
+
+on:
+  schedule:
+    # 03:17 UTC every day - an off-minute schedule avoids the crowd.
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Re-fetch every page instead of using the cache"
+        type: boolean
+        default: false
+
+concurrency:
+  group: data-refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: uv sync --dev
+
+      - name: Cache the page archive
+        uses: actions/cache@v4
+        with:
+          path: data/cache/cdep
+          key: cdep-pages-${{ github.run_id }}
+          restore-keys: |
+            cdep-pages-
+
+      - name: Collect and ingest
+        env:
+          FORCE: ${{ inputs.force && '1' || '' }}
+        run: |
+          if [ -n "$FORCE" ]; then
+            uv run python -m pipeline.cli --db data/parlament-real.db build-corpus \
+              --chamber both --cache data/cache/cdep --force
+          else
+            uv run python -m pipeline.cli --db data/parlament-real.db build-corpus \
+              --chamber both --cache data/cache/cdep
+          fi
+
+      - name: Audit the corpus
+        run: uv run python -m pipeline.cli --db data/parlament-real.db audit-corpus
+
+      - name: Prepare the shippable database
+        run: uv run python scripts/prepare_db.py data/parlament-real.db data/parlament.db
+
+      - name: Publish the dataset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: data-${{ github.run_number }}
+          name: Dataset ${{ github.run_number }}
+          body: |
+            Snapshot of the corpus built from the official sources on
+            ${{ github.event.repository.updated_at }}.
+
+            * `parlament.db` - the SQLite database served by the API.
+            * `manifest.jsonl` - every page fetched, with its URL and SHA-256.
+          files: |
+            data/parlament.db
+            data/cache/cdep/manifest.jsonl
+
+      - name: Upload the database for the image build
+        uses: actions/upload-artifact@v4
+        with:
+          name: parlament-db
+          path: data/parlament-real.db
+          retention-days: 30

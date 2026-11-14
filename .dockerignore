@@ -1,0 +1,19 @@
+# The image is built from the repository plus the database produced by the
+# data workflow. Everything else is noise for the build.
+.git
+.github
+.venv
+node_modules
+frontend/node_modules
+frontend/dist
+data/cache
+data/snapshots
+data/parlament.db
+docs
+tests
+*.md
+!README.md
+__pycache__
+**/__pycache__
+*.pyc
+.DS_Store

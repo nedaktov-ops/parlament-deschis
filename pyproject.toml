@@ -46,6 +46,11 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 ignore = ["E501"]
+# FastAPI's dependency injection idiom is `param: T = Depends(...)`; B008
+# flags that standard pattern, so ignore it for the API modules only.
+[tool.ruff.lint.per-file-ignores]
+"backend/routers/*.py" = ["B008"]
+"backend/deps.py" = ["B008"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,36 +1,39 @@
 """GraphQL API schema and resolvers."""
 
-import strawberry
-from typing import Optional, List
 from datetime import date
 
-from pipeline.db import (
-    make_engine, make_session_factory,
-    Person, Organization, Membership, Event, SwitchWave, KeyEvent
-)
+import strawberry
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+
+from pipeline.db import (
+    Event,
+    Membership,
+    Organization,
+    Person,
+    make_engine,
+    make_session_factory,
+)
 
 
 @strawberry.type
 class PartyType:
     id: str
-    name: Optional[str]
-    short_name: Optional[str]
+    name: str | None
+    short_name: str | None
     classification: str
-    color: Optional[str]
-    wikidata_qid: Optional[str]
-    founding_date: Optional[date]
-    dissolution_date: Optional[date]
-    chamber: Optional[str]
+    color: str | None
+    wikidata_qid: str | None
+    founding_date: date | None
+    dissolution_date: date | None
+    chamber: str | None
 
 
 @strawberry.type
 class PersonType:
     id: str
     canonical_name: str
-    birth_date: Optional[date]
-    wikidata_qid: Optional[str]
+    birth_date: date | None
+    wikidata_qid: str | None
     match_status: str
 
 
@@ -40,10 +43,10 @@ class MembershipType:
     person_id: str
     org_id: str
     chamber: str
-    legislature: Optional[str]
-    role: Optional[str]
-    start_date: Optional[date]
-    end_date: Optional[date]
+    legislature: str | None
+    role: str | None
+    start_date: date | None
+    end_date: date | None
     confidence: str
 
 
@@ -51,29 +54,29 @@ class MembershipType:
 class EventType:
     id: str
     type: str
-    person_id: Optional[str]
-    chamber: Optional[str]
-    from_org_id: Optional[str]
-    to_org_id: Optional[str]
-    event_date: Optional[date]
-    precision: Optional[str]
-    reason: Optional[str]
+    person_id: str | None
+    chamber: str | None
+    from_org_id: str | None
+    to_org_id: str | None
+    event_date: date | None
+    precision: str | None
+    reason: str | None
     confidence: str
-    summary_ro: Optional[str]
-    summary_en: Optional[str]
+    summary_ro: str | None
+    summary_en: str | None
 
 
 @strawberry.type
 class SwitchWaveType:
     id: str
-    label: Optional[str]
+    label: str | None
     start_date: date
     end_date: date
     switch_count: int
-    trigger_type: Optional[str]
-    trigger_event: Optional[str]
-    legislature: Optional[str]
-    chamber: Optional[str]
+    trigger_type: str | None
+    trigger_event: str | None
+    legislature: str | None
+    chamber: str | None
 
 
 @strawberry.type
@@ -91,7 +94,7 @@ class AnalyticsPartyCohesionType:
 class AnalyticsCrossChamberType:
     person_id: str
     name: str
-    chambers: List[str]
+    chambers: list[str]
 
 
 @strawberry.type
@@ -105,8 +108,8 @@ class AnalyticsGenerationalShiftType:
 @strawberry.type
 class Query:
     @strawberry.field
-    def person(self, id: str) -> Optional[PersonType]:
-        engine = make_engine("data/parlament.db")
+    def person(self, id: str) -> PersonType | None:
+        engine = make_engine()
         session = make_session_factory(engine)()
         try:
             p = session.get(Person, id)
@@ -124,12 +127,9 @@ class Query:
 
     @strawberry.field
     def persons(
-        self,
-        q: Optional[str] = None,
-        chamber: Optional[str] = None,
-        limit: int = 50
-    ) -> List[PersonType]:
-        engine = make_engine("data/parlament.db")
+        self, q: str | None = None, chamber: str | None = None, limit: int = 50
+    ) -> list[PersonType]:
+        engine = make_engine()
         session = make_session_factory(engine)()
         try:
             stmt = select(Person).limit(limit)
@@ -137,10 +137,7 @@ class Query:
                 stmt = stmt.where(Person.canonical_name.ilike(f"%{q}%"))
             if chamber:
                 stmt = stmt.where(
-                    Person.id.in_(
-                        select(Membership.person_id)
-                        .where(Membership.chamber == chamber)
-                    )
+                    Person.id.in_(select(Membership.person_id).where(Membership.chamber == chamber))
                 )
             persons = session.scalars(stmt).all()
             return [
@@ -157,8 +154,8 @@ class Query:
             session.close()
 
     @strawberry.field
-    def party(self, short_name: str) -> Optional[PartyType]:
-        engine = make_engine("data/parlament.db")
+    def party(self, short_name: str) -> PartyType | None:
+        engine = make_engine()
         session = make_session_factory(engine)()
         try:
             party = session.scalars(
@@ -183,12 +180,8 @@ class Query:
             session.close()
 
     @strawberry.field
-    def parties(
-        self,
-        classification: Optional[str] = None,
-        limit: int = 100
-    ) -> List[PartyType]:
-        engine = make_engine("data/parlament.db")
+    def parties(self, classification: str | None = None, limit: int = 100) -> list[PartyType]:
+        engine = make_engine()
         session = make_session_factory(engine)()
         try:
             stmt = select(Organization).limit(limit)
@@ -215,12 +208,12 @@ class Query:
     @strawberry.field
     def memberships(
         self,
-        person_id: Optional[str] = None,
-        org_id: Optional[str] = None,
-        chamber: Optional[str] = None,
-        limit: int = 100
-    ) -> List[MembershipType]:
-        engine = make_engine("data/parlament.db")
+        person_id: str | None = None,
+        org_id: str | None = None,
+        chamber: str | None = None,
+        limit: int = 100,
+    ) -> list[MembershipType]:
+        engine = make_engine()
         session = make_session_factory(engine)()
         try:
             stmt = select(Membership).limit(limit)
@@ -251,14 +244,14 @@ class Query:
     @strawberry.field
     def events(
         self,
-        person_id: Optional[str] = None,
-        event_type: Optional[str] = None,
-        chamber: Optional[str] = None,
-        start: Optional[date] = None,
-        end: Optional[date] = None,
-        limit: int = 200
-    ) -> List[EventType]:
-        engine = make_engine("data/parlament.db")
+        person_id: str | None = None,
+        event_type: str | None = None,
+        chamber: str | None = None,
+        start: date | None = None,
+        end: date | None = None,
+        limit: int = 200,
+    ) -> list[EventType]:
+        engine = make_engine()
         session = make_session_factory(engine)()
         try:
             stmt = select(Event).limit(limit)
@@ -296,16 +289,15 @@ class Query:
 
     @strawberry.field
     def switch_waves(
-        self,
-        chamber: Optional[str] = None,
-        legislature: Optional[str] = None,
-        limit: int = 100
-    ) -> List[SwitchWaveType]:
-        engine = make_engine("data/parlament.db")
+        self, chamber: str | None = None, legislature: str | None = None, limit: int = 100
+    ) -> list[SwitchWaveType]:
+        engine = make_engine()
         session = make_session_factory(engine)()
         try:
-            from pipeline.db import SwitchWave
             from sqlalchemy import select
+
+            from pipeline.db import SwitchWave
+
             stmt = select(SwitchWave).order_by(SwitchWave.start_date.desc()).limit(limit)
             if chamber:
                 stmt = stmt.where(SwitchWave.chamber == chamber)
@@ -331,179 +323,202 @@ class Query:
 
     @strawberry.field
     def party_cohesion(
-        self,
-        legislature: Optional[str] = None,
-        limit: int = 100
-    ) -> List[AnalyticsPartyCohesionType]:
-        engine = make_engine("data/parlament.db")
+        self, legislature: str | None = None, limit: int = 100
+    ) -> list[AnalyticsPartyCohesionType]:
+        engine = make_engine()
         session = make_session_factory(engine)()
         try:
-            from pipeline.analytics import derive_party_cohesion
-            from pipeline.db import Organization, Event, KeyEvent
-            from sqlalchemy import select
             from collections import defaultdict
-            
+
+            from sqlalchemy import select
+
+            from pipeline.db import Event, KeyEvent, Organization
+
             stmt = select(Event).where(Event.type == "switch_party")
             if legislature:
                 leg_key = session.scalars(
-                    select(KeyEvent).where(KeyEvent.type == "legislature", KeyEvent.label == legislature)
+                    select(KeyEvent).where(
+                        KeyEvent.type == "legislature", KeyEvent.label == legislature
+                    )
                 ).first()
                 if leg_key and leg_key.start_date and leg_key.end_date:
                     stmt = stmt.where(
-                        Event.event_date >= leg_key.start_date,
-                        Event.event_date <= leg_key.end_date
+                        Event.event_date >= leg_key.start_date, Event.event_date <= leg_key.end_date
                     )
             stmt = stmt.where(Event.event_date.is_not(None))
-            
+
             switches = list(session.scalars(stmt))
-            
-            from collections import defaultdict
+
             party_switches: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-            
+
             for sw in switches:
                 if sw.to_org_id:
                     org = session.get(Organization, sw.to_org_id)
                     if org and org.classification == "party":
                         party_switches[sw.to_org_id][sw.person_id] += 1
-                    elif org and org.classification == "group" and org.on_behalf_of_id:
-                        party_switches[org.on_behalf_of_id][sw.person_id] += 1
-            
+                    elif org and org.classification == "group":
+                        # on_behalf_of_id is a Membership column, not an Organization one.
+                        m = session.scalars(
+                            select(Membership)
+                            .where(
+                                Membership.person_id == sw.person_id,
+                                Membership.org_id == org.id,
+                                Membership.on_behalf_of_id.is_not(None),
+                            )
+                            .order_by(Membership.start_date.desc())
+                        ).first()
+                        if m and m.on_behalf_of_id:
+                            party_switches[m.on_behalf_of_id][sw.person_id] += 1
+
             results = []
             for party_id, person_switches in party_switches.items():
                 party = session.get(Organization, party_id)
                 if not party or party.classification != "party":
                     continue
-                
+
                 party_memberships = session.scalars(
                     select(Membership)
                     .join(Organization, Organization.id == Membership.org_id)
                     .where(Organization.id == party_id)
                 ).all()
-                
+
                 total_switches = sum(person_switches.values())
                 num_switchers = len(person_switches)
                 num_members = len(set(m.person_id for m in party_memberships))
-                
+
                 if num_members == 0:
                     continue
-                
+
                 total_tenure_years = 0
                 for m in party_memberships:
                     if m.start_date and m.end_date:
                         total_tenure_years += (m.end_date - m.start_date).days / 365.25
                     elif m.start_date:
                         total_tenure_years += (date.today() - m.start_date).days / 365.25
-                
+
                 avg_tenure = total_tenure_years / num_members if num_members > 0 else 0
-                
+
                 if avg_tenure == 0:
                     continue
-                
-                switch_rate = total_switches / (num_members * avg_tenure) if num_members * avg_tenure > 0 else 0
-                
+
+                switch_rate = (
+                    total_switches / (num_members * avg_tenure)
+                    if num_members * avg_tenure > 0
+                    else 0
+                )
+
                 party_label = party.short_name or party.name or "Unknown"
-                results.append(AnalyticsPartyCohesionType(
-                    party_id=party.id,
-                    party_name=party_label,
-                    members=num_members,
-                    switches=total_switches,
-                    switchers=num_switchers,
-                    avg_tenure_years=round(avg_tenure, 1),
-                    switch_rate_per_mp_per_year=round(switch_rate, 4),
-                ))
-            
+                results.append(
+                    AnalyticsPartyCohesionType(
+                        party_id=party.id,
+                        party_name=party_label,
+                        members=num_members,
+                        switches=total_switches,
+                        switchers=num_switchers,
+                        avg_tenure_years=round(avg_tenure, 1),
+                        switch_rate_per_mp_per_year=round(switch_rate, 4),
+                    )
+                )
+
             return results
         finally:
             session.close()
 
     @strawberry.field
-    def cross_chamber(self) -> List[AnalyticsCrossChamberType]:
-        engine = make_engine("data/parlament.db")
+    def cross_chamber(self) -> list[AnalyticsCrossChamberType]:
+        engine = make_engine()
         session = make_session_factory(engine)()
         try:
-            from pipeline.db import Person, Membership
             from sqlalchemy import select
-            
+
+            from pipeline.db import Membership, Person
+
             stmt = select(Person.id, Person.canonical_name).distinct()
             persons = list(session.execute(stmt).all())
-            
+
             results = []
             for pid, name in persons:
                 chs = session.scalars(
-                    select(Membership.chamber)
-                    .where(Membership.person_id == pid)
-                    .distinct()
+                    select(Membership.chamber).where(Membership.person_id == pid).distinct()
                 ).all()
                 if len(chs) > 1:
-                    results.append(AnalyticsCrossChamberType(
-                        person_id=pid,
-                        name=name,
-                        chambers=chs,
-                    ))
-            
+                    results.append(
+                        AnalyticsCrossChamberType(
+                            person_id=pid,
+                            name=name,
+                            chambers=chs,
+                        )
+                    )
+
             return results
         finally:
             session.close()
 
     @strawberry.field
     def generational_shift(
-        self,
-        legislature: Optional[str] = None,
-        limit: int = 100
-    ) -> List[AnalyticsGenerationalShiftType]:
-        engine = make_engine("data/parlament.db")
+        self, legislature: str | None = None, limit: int = 100
+    ) -> list[AnalyticsGenerationalShiftType]:
+        engine = make_engine()
         session = make_session_factory(engine)()
         try:
-            from pipeline.db import Person, Membership, Organization, KeyEvent
             from sqlalchemy import select
-            
+
+            from pipeline.db import KeyEvent, Membership, Organization, Person
+
             stmt = select(Person.id, Person.canonical_name, Person.birth_date)
             if legislature:
                 leg_key = session.scalars(
-                    select(KeyEvent).where(KeyEvent.type == "legislature", KeyEvent.label == legislature)
+                    select(KeyEvent).where(
+                        KeyEvent.type == "legislature", KeyEvent.label == legislature
+                    )
                 ).first()
                 if leg_key and leg_key.start_date and leg_key.end_date:
                     stmt = stmt.where(
                         Person.id.in_(
                             select(Membership.person_id)
                             .where(Membership.start_date <= leg_key.end_date)
-                            .where((Membership.end_date.is_(None)) | (Membership.end_date >= leg_key.start_date))
+                            .where(
+                                (Membership.end_date.is_(None))
+                                | (Membership.end_date >= leg_key.start_date)
+                            )
                         )
                     )
-            
+
             persons = list(session.execute(stmt).all())
             ages_by_party: dict[str, list[int]] = {}
-            
+
             for pid, name, bdate in persons:
                 if not bdate:
                     continue
                 age = (date.today() - bdate).days / 365.25
-                
+
                 party_mems = session.scalars(
                     select(Membership)
                     .join(Organization, Organization.id == Membership.org_id)
                     .where(Membership.person_id == pid)
                     .where(Organization.classification == "party")
                 ).all()
-                
+
                 for pm in party_mems:
                     if pm.org and pm.org.short_name:
                         party_key = pm.org.short_name
                         ages_by_party.setdefault(party_key, []).append(int(age))
-            
+
             results = []
             for party, ages in ages_by_party.items():
                 if ages:
                     avg_age = sum(ages) / len(ages)
                     sorted_ages = sorted(ages)
                     median_age = sorted_ages[len(sorted_ages) // 2]
-                    results.append(AnalyticsGenerationalShiftType(
-                        party=party,
-                        mps_with_birth_dates=len(ages),
-                        avg_age=round(avg_age, 1),
-                        median_age=median_age,
-                    ))
-            
+                    results.append(
+                        AnalyticsGenerationalShiftType(
+                            party=party,
+                            mps_with_birth_dates=len(ages),
+                            avg_age=round(avg_age, 1),
+                            median_age=median_age,
+                        )
+                    )
+
             return results
         finally:
             session.close()

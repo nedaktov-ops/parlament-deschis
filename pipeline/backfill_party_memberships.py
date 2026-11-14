@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from pipeline.db import get_session, Membership, Organization
-from sqlalchemy import select, and_
 import uuid
+
+from sqlalchemy import and_, select
+
+from pipeline.db import Membership, Organization, get_session
 
 
 def backfill_party_memberships():
@@ -18,7 +20,7 @@ def backfill_party_memberships():
                 Membership.org_id.in_(
                     select(Organization.id).where(Organization.classification == "group")
                 ),
-                Membership.on_behalf_of_id.isnot(None)
+                Membership.on_behalf_of_id.isnot(None),
             )
         ).all()
 
@@ -28,11 +30,13 @@ def backfill_party_memberships():
         for gm in group_memberships:
             # Check if party membership already exists
             existing = session.scalars(
-                select(Membership).join(Organization, Organization.id == Membership.org_id).where(
+                select(Membership)
+                .join(Organization, Organization.id == Membership.org_id)
+                .where(
                     and_(
                         Membership.person_id == gm.person_id,
                         Membership.org_id == gm.on_behalf_of_id,
-                        Organization.classification == "party"
+                        Organization.classification == "party",
                     )
                 )
             ).first()
@@ -68,11 +72,13 @@ def backfill_party_memberships():
 
         # Verify
         from sqlalchemy import func
+
         party_count = session.scalar(
             select(func.count()).select_from(
-                select(Membership).join(Organization, Organization.id == Membership.org_id).where(
-                    Organization.classification == "party"
-                ).subquery()
+                select(Membership)
+                .join(Organization, Organization.id == Membership.org_id)
+                .where(Organization.classification == "party")
+                .subquery()
             )
         )
         print(f"Total party memberships after backfill: {party_count}")

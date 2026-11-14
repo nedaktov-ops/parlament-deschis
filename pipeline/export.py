@@ -74,11 +74,13 @@ def _identifiers(session: Session, person_ids: set[str]) -> dict[str, list[dict]
         select(PersonIdentifier).where(PersonIdentifier.person_id.in_(person_ids))
     )
     for ident in rows:
-        out.setdefault(ident.person_id, []).append({
-            "scheme": ident.scheme,
-            "identifier": ident.identifier,
-            "legislature": ident.legislature,
-        })
+        out.setdefault(ident.person_id, []).append(
+            {
+                "scheme": ident.scheme,
+                "identifier": ident.identifier,
+                "legislature": ident.legislature,
+            }
+        )
     return out
 
 
@@ -87,9 +89,7 @@ def _aliases(session: Session, person_ids: set[str]) -> dict[str, list[str]]:
     if not person_ids:
         return out
     rows = session.scalars(
-        select(PersonName).where(
-            PersonName.person_id.in_(person_ids), PersonName.type == "alias"
-        )
+        select(PersonName).where(PersonName.person_id.in_(person_ids), PersonName.type == "alias")
     )
     for name in rows:
         out.setdefault(name.person_id, []).append(name.name)
@@ -115,7 +115,11 @@ def build_popolo(
             post_ids.add(m.post_id)
 
     # Include parent organizations referenced by the scoped orgs.
-    orgs = list(session.scalars(select(Organization).where(Organization.id.in_(org_ids)))) if org_ids else []
+    orgs = (
+        list(session.scalars(select(Organization).where(Organization.id.in_(org_ids))))
+        if org_ids
+        else []
+    )
     for org in list(orgs):
         if org.parent_id and org.parent_id not in org_ids:
             parent = session.get(Organization, org.parent_id)
@@ -130,62 +134,75 @@ def build_popolo(
     persons = []
     if person_ids:
         for person in session.scalars(select(Person).where(Person.id.in_(person_ids))):
-            persons.append({
-                "id": person.id,
-                "name": person.canonical_name,
-                "sort_name": person.sort_key,
-                "birth_date": _iso(person.birth_date),
-                "wikidata_qid": person.wikidata_qid,
-                "match_status": person.match_status,
-                "identifiers": ids.get(person.id, []),
-                "other_names": [{"name": a, "note": "alias"} for a in aliases.get(person.id, [])],
-            })
+            persons.append(
+                {
+                    "id": person.id,
+                    "name": person.canonical_name,
+                    "sort_name": person.sort_key,
+                    "birth_date": _iso(person.birth_date),
+                    "wikidata_qid": person.wikidata_qid,
+                    "match_status": person.match_status,
+                    "identifiers": ids.get(person.id, []),
+                    "other_names": [
+                        {"name": a, "note": "alias"} for a in aliases.get(person.id, [])
+                    ],
+                }
+            )
 
-    org_payload = [{
-        "id": o.id,
-        "name": o.name,
-        "short_name": o.short_name,
-        "classification": o.classification,
-        "parent_id": o.parent_id,
-        "chamber": o.chamber,
-        "color": o.color,
-        "founding_date": _iso(o.founding_date),
-        "dissolution_date": _iso(o.dissolution_date),
-        "wikidata_qid": o.wikidata_qid,
-        "alt_labels": o.alt_labels or [],
-        "localised_labels": o.localised_labels,
-    } for o in orgs]
+    org_payload = [
+        {
+            "id": o.id,
+            "name": o.name,
+            "short_name": o.short_name,
+            "classification": o.classification,
+            "parent_id": o.parent_id,
+            "chamber": o.chamber,
+            "color": o.color,
+            "founding_date": _iso(o.founding_date),
+            "dissolution_date": _iso(o.dissolution_date),
+            "wikidata_qid": o.wikidata_qid,
+            "alt_labels": o.alt_labels or [],
+            "localised_labels": o.localised_labels,
+        }
+        for o in orgs
+    ]
 
-    post_payload = [{
-        "id": p.id,
-        "organization_id": p.org_id,
-        "label": p.label,
-        "role": p.role_type,
-        "importance": p.importance,
-        "maximum_memberships": p.maximum_memberships,
-    } for p in posts]
+    post_payload = [
+        {
+            "id": p.id,
+            "organization_id": p.org_id,
+            "label": p.label,
+            "role": p.role_type,
+            "importance": p.importance,
+            "maximum_memberships": p.maximum_memberships,
+        }
+        for p in posts
+    ]
 
-    membership_payload = [{
-        "id": m.id,
-        "person_id": m.person_id,
-        "organization_id": m.org_id,
-        "post_id": m.post_id,
-        "on_behalf_of_id": m.on_behalf_of_id,
-        "role": m.role,
-        "legislative_period_id": m.legislature,
-        "chamber": m.chamber,
-        "start_date": _iso(m.start_date),
-        "end_date": _iso(m.end_date),
-        "start_precision": m.start_precision,
-        "end_precision": m.end_precision,
-        "start_reason": m.start_reason,
-        "end_reason": m.end_reason,
-        "confidence": m.confidence,
-        "source_url": m.source_url,
-        "group_acronym_at_event": m.group_acronym_at_event,
-        "first_seen_at": _iso(m.first_seen_at),
-        "last_seen_at": _iso(m.last_seen_at),
-    } for m in memberships]
+    membership_payload = [
+        {
+            "id": m.id,
+            "person_id": m.person_id,
+            "organization_id": m.org_id,
+            "post_id": m.post_id,
+            "on_behalf_of_id": m.on_behalf_of_id,
+            "role": m.role,
+            "legislative_period_id": m.legislature,
+            "chamber": m.chamber,
+            "start_date": _iso(m.start_date),
+            "end_date": _iso(m.end_date),
+            "start_precision": m.start_precision,
+            "end_precision": m.end_precision,
+            "start_reason": m.start_reason,
+            "end_reason": m.end_reason,
+            "confidence": m.confidence,
+            "source_url": m.source_url,
+            "group_acronym_at_event": m.group_acronym_at_event,
+            "first_seen_at": _iso(m.first_seen_at),
+            "last_seen_at": _iso(m.last_seen_at),
+        }
+        for m in memberships
+    ]
 
     ev_stmt = select(Event)
     if chamber:
@@ -193,22 +210,25 @@ def build_popolo(
     if person_ids:
         ev_stmt = ev_stmt.where(Event.person_id.in_(person_ids) | Event.person_id.is_(None))
     events = list(session.scalars(ev_stmt.order_by(Event.event_date, Event.detected_at)))
-    event_payload = [{
-        "id": e.id,
-        "type": e.type,
-        "person_id": e.person_id,
-        "chamber": e.chamber,
-        "from_organization_id": e.from_org_id,
-        "to_organization_id": e.to_org_id,
-        "post_id": e.post_id,
-        "role": e.role,
-        "date": _iso(e.event_date),
-        "precision": e.precision,
-        "reason": e.reason,
-        "confidence": e.confidence,
-        "summary_ro": e.summary_ro,
-        "summary_en": e.summary_en,
-    } for e in events]
+    event_payload = [
+        {
+            "id": e.id,
+            "type": e.type,
+            "person_id": e.person_id,
+            "chamber": e.chamber,
+            "from_organization_id": e.from_org_id,
+            "to_organization_id": e.to_org_id,
+            "post_id": e.post_id,
+            "role": e.role,
+            "date": _iso(e.event_date),
+            "precision": e.precision,
+            "reason": e.reason,
+            "confidence": e.confidence,
+            "summary_ro": e.summary_ro,
+            "summary_en": e.summary_en,
+        }
+        for e in events
+    ]
 
     return {
         "meta": {
@@ -237,8 +257,7 @@ def build_popolo(
 
 def _csv_text(rows: list[dict], fieldnames: list[str]) -> str:
     buf = io.StringIO()
-    writer = csv.DictWriter(buf, fieldnames=fieldnames, extrasaction="ignore",
-                            lineterminator="\n")
+    writer = csv.DictWriter(buf, fieldnames=fieldnames, extrasaction="ignore", lineterminator="\n")
     writer.writeheader()
     for row in rows:
         clean = {}
@@ -252,24 +271,70 @@ def _csv_text(rows: list[dict], fieldnames: list[str]) -> str:
 
 
 PERSON_FIELDS = [
-    "id", "name", "sort_name", "birth_date", "wikidata_qid", "match_status", "identifiers",
+    "id",
+    "name",
+    "sort_name",
+    "birth_date",
+    "wikidata_qid",
+    "match_status",
+    "identifiers",
 ]
 ORG_FIELDS = [
-    "id", "name", "short_name", "classification", "chamber", "parent_id", "color",
-    "founding_date", "dissolution_date", "wikidata_qid", "alt_labels",
+    "id",
+    "name",
+    "short_name",
+    "classification",
+    "chamber",
+    "parent_id",
+    "color",
+    "founding_date",
+    "dissolution_date",
+    "wikidata_qid",
+    "alt_labels",
 ]
 POST_FIELDS = [
-    "id", "organization_id", "label", "role", "importance", "maximum_memberships",
+    "id",
+    "organization_id",
+    "label",
+    "role",
+    "importance",
+    "maximum_memberships",
 ]
 MEMBERSHIP_FIELDS = [
-    "id", "person_id", "organization_id", "post_id", "on_behalf_of_id", "role",
-    "legislative_period_id", "chamber", "start_date", "end_date", "start_precision",
-    "end_precision", "start_reason", "end_reason", "confidence", "source_url",
-    "group_acronym_at_event", "first_seen_at", "last_seen_at",
+    "id",
+    "person_id",
+    "organization_id",
+    "post_id",
+    "on_behalf_of_id",
+    "role",
+    "legislative_period_id",
+    "chamber",
+    "start_date",
+    "end_date",
+    "start_precision",
+    "end_precision",
+    "start_reason",
+    "end_reason",
+    "confidence",
+    "source_url",
+    "group_acronym_at_event",
+    "first_seen_at",
+    "last_seen_at",
 ]
 EVENT_FIELDS = [
-    "id", "type", "person_id", "chamber", "from_organization_id", "to_organization_id",
-    "post_id", "role", "date", "precision", "reason", "confidence", "summary_ro",
+    "id",
+    "type",
+    "person_id",
+    "chamber",
+    "from_organization_id",
+    "to_organization_id",
+    "post_id",
+    "role",
+    "date",
+    "precision",
+    "reason",
+    "confidence",
+    "summary_ro",
     "summary_en",
 ]
 
@@ -288,14 +353,16 @@ def csv_for(
     if dataset == "persons":
         rows = []
         for p in doc["persons"]:
-            rows.append({
-                **p,
-                "identifiers": "; ".join(
-                    f"{i['scheme']}:{i['identifier']}"
-                    + (f" ({i['legislature']})" if i.get("legislature") else "")
-                    for i in p.get("identifiers", [])
-                ),
-            })
+            rows.append(
+                {
+                    **p,
+                    "identifiers": "; ".join(
+                        f"{i['scheme']}:{i['identifier']}"
+                        + (f" ({i['legislature']})" if i.get("legislature") else "")
+                        for i in p.get("identifiers", [])
+                    ),
+                }
+            )
         return _csv_text(rows, PERSON_FIELDS)
     if dataset == "organizations":
         return _csv_text(doc["organizations"], ORG_FIELDS)

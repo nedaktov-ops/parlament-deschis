@@ -24,12 +24,15 @@ FULL_RATIO = 0.9
 
 
 def _distinct_persons(session: Session, chamber: str, legislature: str) -> int:
-    return int(session.scalar(
-        select(func.count(func.distinct(Membership.person_id))).where(
-            Membership.chamber == chamber,
-            Membership.legislature == legislature,
+    return int(
+        session.scalar(
+            select(func.count(func.distinct(Membership.person_id))).where(
+                Membership.chamber == chamber,
+                Membership.legislature == legislature,
+            )
         )
-    ) or 0)
+        or 0
+    )
 
 
 def coverage_snapshot(session: Session) -> list[dict]:
@@ -53,28 +56,28 @@ def coverage_snapshot(session: Session) -> list[dict]:
         elif seats and count >= seats * FULL_RATIO:
             completeness, note = "full", None
         else:
-            completeness, note = "partial", (
-                f"{count} of ~{seats} seats ingested." if seats else f"{count} memberships."
+            completeness, note = (
+                "partial",
+                (f"{count} of ~{seats} seats ingested." if seats else f"{count} memberships."),
             )
-        rows.append({
-            "chamber": ke.chamber,
-            "legislature": ke.label,
-            "period_start": ke.start_date.isoformat() if ke.start_date else None,
-            "period_end": ke.end_date.isoformat() if ke.end_date else None,
-            "completeness": completeness,
-            "note": note,
-            "persons": count,
-        })
+        rows.append(
+            {
+                "chamber": ke.chamber,
+                "legislature": ke.label,
+                "period_start": ke.start_date.isoformat() if ke.start_date else None,
+                "period_end": ke.end_date.isoformat() if ke.end_date else None,
+                "completeness": completeness,
+                "note": note,
+                "persons": count,
+            }
+        )
     return rows
 
 
 def refresh_coverage(session: Session) -> int:
     """Upsert the derived coverage matrix. Returns the number of rows written."""
     snapshot = coverage_snapshot(session)
-    existing = {
-        (c.chamber, c.legislature): c
-        for c in session.scalars(select(Coverage))
-    }
+    existing = {(c.chamber, c.legislature): c for c in session.scalars(select(Coverage))}
     written = 0
     for row in snapshot:
         key = (row["chamber"], row["legislature"])
@@ -95,4 +98,5 @@ def _parse(iso: str | None):
     if not iso:
         return None
     from datetime import date
+
     return date.fromisoformat(iso)

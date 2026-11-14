@@ -51,8 +51,13 @@ class _HostState:
 
 
 class PoliteClient:
-    def __init__(self, sleep: float = DEFAULT_SLEEP, timeout: float = DEFAULT_TIMEOUT,
-                 user_agent: str = USER_AGENT, respect_robots: bool = True):
+    def __init__(
+        self,
+        sleep: float = DEFAULT_SLEEP,
+        timeout: float = DEFAULT_TIMEOUT,
+        user_agent: str = USER_AGENT,
+        respect_robots: bool = True,
+    ):
         self.sleep = sleep
         self.timeout = timeout
         self.user_agent = user_agent
@@ -95,8 +100,16 @@ class PoliteClient:
     @staticmethod
     def _looks_like_challenge(text: str) -> bool:
         low = text[:4000].lower()
-        return any(k in low for k in ["captcha", "cf-challenge", "are you a robot",
-                                      "access denied", "verify you are human"])
+        return any(
+            k in low
+            for k in [
+                "captcha",
+                "cf-challenge",
+                "are you a robot",
+                "access denied",
+                "verify you are human",
+            ]
+        )
 
     def get(self, url: str, *, conditional: bool = True) -> FetchResult:
         host = self._host(url)
@@ -127,8 +140,14 @@ class PoliteClient:
 
             if resp.status_code == 304:
                 cached = self._conditional.get(url, {})
-                return FetchResult(url, 304, cached.get("text", ""), from_cache=True,
-                                   etag=cached.get("etag"), last_modified=cached.get("last_modified"))
+                return FetchResult(
+                    url,
+                    304,
+                    cached.get("text", ""),
+                    from_cache=True,
+                    etag=cached.get("etag"),
+                    last_modified=cached.get("last_modified"),
+                )
             if resp.status_code == 429:
                 wait = int(resp.headers.get("Retry-After", "60"))
                 log.warning("429 from %s, waiting %ss", url, wait)

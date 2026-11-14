@@ -78,6 +78,15 @@ def test_udmr_party_and_group(udhr):
     assert udhr.group_role == "Lider"
 
 
+def test_multi_mandate_legislature_is_current(udhr):
+    """Regression: senat.ro lists mandates oldest-first (2016, 2020, 2024).
+
+    Taking the first match stamped every returning senator with legislature
+    2016, so they vanished from the current term.
+    """
+    assert udhr.legislature == "2024"
+
+
 def test_group_roster():
     roster = parse_group_roster((FX / "senat_grup.html").read_text(encoding="utf-8"))
     assert roster.group_name is not None and "Uniunii Democrate Maghiare" in roster.group_name

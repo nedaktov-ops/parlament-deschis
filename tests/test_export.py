@@ -11,24 +11,59 @@ from pipeline.export import CSV_DATASETS, build_popolo, csv_for, write_export
 @pytest.fixture
 def session(tmp_path):
     s = get_session(tmp_path / "test.db")
-    person = Person(canonical_name="Ion Popescu", normalized_name="ion popescu",
-                    sort_key="ion popescu", birth_date=date(1980, 1, 2))
+    person = Person(
+        canonical_name="Ion Popescu",
+        normalized_name="ion popescu",
+        sort_key="ion popescu",
+        birth_date=date(1980, 1, 2),
+    )
     s.add(person)
     s.flush()
-    s.add(PersonIdentifier(person_id=person.id, scheme="cdep_idm", identifier="42",
-                           legislature="2024"))
-    group = Organization(classification="group", name="Grupul PSD", short_name="PSD",
-                         normalized_name="grupul psd", chamber="deputies", color="#E63946")
-    party = Organization(classification="party", name="PSD", short_name="PSD",
-                         normalized_name="psd", chamber="deputies")
+    s.add(
+        PersonIdentifier(
+            person_id=person.id, scheme="cdep_idm", identifier="42", legislature="2024"
+        )
+    )
+    group = Organization(
+        classification="group",
+        name="Grupul PSD",
+        short_name="PSD",
+        normalized_name="grupul psd",
+        chamber="deputies",
+        color="#E63946",
+    )
+    party = Organization(
+        classification="party",
+        name="PSD",
+        short_name="PSD",
+        normalized_name="psd",
+        chamber="deputies",
+    )
     s.add_all([group, party])
     s.flush()
-    s.add(Membership(person_id=person.id, org_id=group.id, on_behalf_of_id=party.id,
-                     chamber="deputies", legislature="2024", start_date=date(2024, 12, 21),
-                     confidence="official_ledger", source_url="https://example.test/g"))
-    s.add(Event(type="switch_group", person_id=person.id, chamber="deputies",
-                from_org_id=party.id, to_org_id=group.id, event_date=date(2025, 1, 1),
-                dedup_key="switch:test"))
+    s.add(
+        Membership(
+            person_id=person.id,
+            org_id=group.id,
+            on_behalf_of_id=party.id,
+            chamber="deputies",
+            legislature="2024",
+            start_date=date(2024, 12, 21),
+            confidence="official_ledger",
+            source_url="https://example.test/g",
+        )
+    )
+    s.add(
+        Event(
+            type="switch_group",
+            person_id=person.id,
+            chamber="deputies",
+            from_org_id=party.id,
+            to_org_id=group.id,
+            event_date=date(2025, 1, 1),
+            dedup_key="switch:test",
+        )
+    )
     s.commit()
     yield s
     s.close()
@@ -38,7 +73,11 @@ def test_popolo_shape_and_scope(session):
     doc = build_popolo(session, chamber="deputies", legislature="2024")
     assert doc["meta"]["data_license"] == "CC-BY-4.0"
     assert doc["meta"]["counts"] == {
-        "persons": 1, "organizations": 2, "posts": 0, "memberships": 1, "events": 1,
+        "persons": 1,
+        "organizations": 2,
+        "posts": 0,
+        "memberships": 1,
+        "events": 1,
     }
     assert doc["persons"][0]["identifiers"][0]["scheme"] == "cdep_idm"
     assert doc["memberships"][0]["on_behalf_of_id"] is not None

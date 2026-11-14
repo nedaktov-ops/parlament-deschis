@@ -7,7 +7,7 @@ archives each as a fragment, and ingests into the temporal store.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -39,10 +39,17 @@ class CdepSource:
         res = self.client.get(self.group_list_url(legislature))
         return parse_group_list(res.text)
 
-    def ingest_groups(self, session: Session, legislature: str, *,
-                      force: bool = False, idg_filter: list[str] | None = None) -> dict:
-        run = PipelineRun(source=self.name, status="SUCCESS",
-                          idempotency_key=f"groups:{legislature}")
+    def ingest_groups(
+        self,
+        session: Session,
+        legislature: str,
+        *,
+        force: bool = False,
+        idg_filter: list[str] | None = None,
+    ) -> dict:
+        run = PipelineRun(
+            source=self.name, status="SUCCESS", idempotency_key=f"groups:{legislature}"
+        )
         session.add(run)
         session.flush()
         totals = {"groups": 0, "current": 0, "former": 0, "events": 0, "unchanged": 0}
@@ -53,19 +60,27 @@ class CdepSource:
                     continue
                 url = self.group_ledger_url(legislature, item.idg)
                 res = self.client.get(url)
-                ledger = parse_group_ledger(res.text, chamber=CHAMBER,
-                                            legislature=legislature, source_url=url)
+                ledger = parse_group_ledger(
+                    res.text, chamber=CHAMBER, legislature=legislature, source_url=url
+                )
                 frag, changed = record_fragment(
-                    session, model="group_ledger", source_name=self.name,
-                    group_key=f"{legislature}:{item.idg}", content=res.text,
-                    source_id=item.idg, source_url=url,
-                    data={"short_name": ledger.meta.short_name}, force=force,
+                    session,
+                    model="group_ledger",
+                    source_name=self.name,
+                    group_key=f"{legislature}:{item.idg}",
+                    content=res.text,
+                    source_id=item.idg,
+                    source_url=url,
+                    data={"short_name": ledger.meta.short_name},
+                    force=force,
                 )
                 if not changed and not force:
                     totals["unchanged"] += 1
                     continue
                 stats = ingest_cdep_group_ledger(
-                    session, ledger, legislature=legislature,
+                    session,
+                    ledger,
+                    legislature=legislature,
                     snapshot_hash=frag.checksum if frag else None,
                 )
                 totals["groups"] += 1
@@ -80,7 +95,7 @@ class CdepSource:
             run.status = "FAILURE"
             run.error = str(exc)
         finally:
-            run.finished_at = datetime.now(timezone.utc)
+            run.finished_at = datetime.now(UTC)
             run.rows = totals["current"] + totals["former"]
             session.commit()
         return totals

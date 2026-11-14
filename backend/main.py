@@ -58,7 +58,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Parlament Deschis API",
         description="Romanian Parliament transparency tracker — as-of memberships, "
-                    "movements, and source-cited evidence.",
+        "movements, and source-cited evidence.",
         version=APP_VERSION,
         lifespan=lifespan,
     )
@@ -71,7 +71,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(api_router)
     app.include_router(exports_router)
-    
+
     # GraphQL endpoint
     graphql_app = GraphQLRouter(schema)
     app.include_router(graphql_app, prefix="/graphql")

@@ -7,21 +7,18 @@ Conservative: never fabricates data; only writes high-confidence matches.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import logging
 import sqlite3
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import date, datetime
 from pathlib import Path
-from typing import Optional
 
 import requests
 from rapidfuzz import fuzz
 
-from .db import get_session
-from .db import Person, PersonIdentifier
+from .db import Person, get_session
 
 log = logging.getLogger("parlament.enrich")
 
@@ -37,26 +34,26 @@ REVIEW_THRESHOLD = 80.0
 class WikidataCandidate:
     qid: str
     label: str
-    birth_date: Optional[date]
-    party_label: Optional[str]
-    chamber_label: Optional[str]
+    birth_date: date | None
+    party_label: str | None
+    chamber_label: str | None
     score: float = 0.0
     raw: dict = None
 
     def to_dict(self):
         d = asdict(self)
-        d['birth_date'] = self.birth_date.isoformat() if self.birth_date else None
-        d['raw'] = self.raw
+        d["birth_date"] = self.birth_date.isoformat() if self.birth_date else None
+        d["raw"] = self.raw
         return d
 
     @classmethod
     def from_dict(cls, d):
         d = dict(d)  # Make a copy
         birth_date = None
-        if d.get('birth_date'):
-            birth_date = date.fromisoformat(d['birth_date'])
-        raw = d.pop('raw', None)
-        d.pop('birth_date', None)  # Remove to avoid duplicate
+        if d.get("birth_date"):
+            birth_date = date.fromisoformat(d["birth_date"])
+        raw = d.pop("raw", None)
+        d.pop("birth_date", None)  # Remove to avoid duplicate
         return cls(**d, birth_date=birth_date, raw=raw)
 
 
@@ -64,7 +61,7 @@ class WikidataCandidate:
 class EnrichmentResult:
     person_id: str
     action: str  # "auto_accept", "review", "reject", "cached", "error"
-    candidate: Optional[WikidataCandidate] = None
+    candidate: WikidataCandidate | None = None
     reason: str = ""
 
 
@@ -90,12 +87,12 @@ def init_cache_db() -> sqlite3.Connection:
     return conn
 
 
-def _person_key(name: str, birth_year: Optional[int], legislature: str, chamber: str) -> str:
+def _person_key(name: str, birth_year: int | None, legislature: str, chamber: str) -> str:
     """Generate cache key for person."""
     return f"{name}|{birth_year or 'unknown'}|{legislature}|{chamber}"
 
 
-def _legislature_dates(legislature: str) -> tuple[Optional[date], Optional[date]]:
+def _legislature_dates(legislature: str) -> tuple[date | None, date | None]:
     """Get legislature start/end dates from reference data."""
     ref_path = Path("data/reference/legislatures.json")
     if ref_path.exists():
@@ -108,11 +105,10 @@ def _legislature_dates(legislature: str) -> tuple[Optional[date], Optional[date]
     return None, None
 
 
-def _fetch_entity(conn: sqlite3.Connection, qid: str) -> Optional[dict]:
+def _fetch_entity(conn: sqlite3.Connection, qid: str) -> dict | None:
     """Fetch full Wikidata entity with local caching."""
     cached = conn.execute(
-        "SELECT entity_json, fetched_at FROM entity_cache WHERE qid = ?",
-        (qid,)
+        "SELECT entity_json, fetched_at FROM entity_cache WHERE qid = ?", (qid,)
     ).fetchone()
 
     if cached:
@@ -130,7 +126,7 @@ def _fetch_entity(conn: sqlite3.Connection, qid: str) -> Optional[dict]:
         try:
             resp = requests.get(url, headers=headers, timeout=30)
             if resp.status_code == 429:
-                wait = min(60 * (2 ** attempt), 300)
+                wait = min(60 * (2**attempt), 300)
                 log.warning("Entity fetch 429, waiting %ds", wait)
                 time.sleep(wait)
                 continue
@@ -139,7 +135,7 @@ def _fetch_entity(conn: sqlite3.Connection, qid: str) -> Optional[dict]:
             entity = data.get("entities", {}).get(qid, {})
             conn.execute(
                 "INSERT OR REPLACE INTO entity_cache VALUES (?, ?, ?)",
-                (qid, json.dumps(entity), time.time())
+                (qid, json.dumps(entity), time.time()),
             )
             conn.commit()
             return entity
@@ -147,24 +143,19 @@ def _fetch_entity(conn: sqlite3.Connection, qid: str) -> Optional[dict]:
             log.warning("Entity fetch attempt %d failed for %s: %s", attempt + 1, qid, e)
             if attempt == 2:
                 return None
-            time.sleep(2 ** attempt)
+            time.sleep(2**attempt)
 
     return None
 
 
 def _reconcile_person(
-    conn: sqlite3.Connection,
-    name: str,
-    birth_year: Optional[int],
-    legislature: str,
-    chamber: str
+    conn: sqlite3.Connection, name: str, birth_year: int | None, legislature: str, chamber: str
 ) -> list[WikidataCandidate]:
     """Reconcile a person via Wikidata Reconciliation API."""
     key = _person_key(name, birth_year, legislature, chamber)
 
     cached = conn.execute(
-        "SELECT candidates_json FROM reconcile_cache WHERE person_key = ?",
-        (key,)
+        "SELECT candidates_json FROM reconcile_cache WHERE person_key = ?", (key,)
     ).fetchone()
 
     if cached:
@@ -176,7 +167,7 @@ def _reconcile_person(
     query = {
         "query": name,
         "limit": 10,
-        "type": "Q5"  # human
+        "type": "Q5",  # human
     }
 
     url = RECONCILE_ENDPOINT
@@ -253,27 +244,31 @@ def _reconcile_person(
                     elif pos_qid == "Q18635845":
                         chamber_label = "Senate"
 
-        candidates.append(WikidataCandidate(
-            qid=qid,
-            label=label,
-            birth_date=birth_date,
-            party_label=party_label,
-            chamber_label=chamber_label,
-            score=float(score),
-            raw={"entity": entity, "reconcile_result": r}
-        ))
+        candidates.append(
+            WikidataCandidate(
+                qid=qid,
+                label=label,
+                birth_date=birth_date,
+                party_label=party_label,
+                chamber_label=chamber_label,
+                score=float(score),
+                raw={"entity": entity, "reconcile_result": r},
+            )
+        )
 
     # Cache results
     conn.execute(
         "INSERT OR REPLACE INTO reconcile_cache VALUES (?, ?, ?)",
-        (key, json.dumps([c.to_dict() for c in candidates]), time.time())
+        (key, json.dumps([c.to_dict() for c in candidates]), time.time()),
     )
     conn.commit()
 
     return candidates
 
 
-def _score_candidate(person: Person, candidate: WikidataCandidate, legislature: str, chamber: str) -> float:
+def _score_candidate(
+    person: Person, candidate: WikidataCandidate, legislature: str, chamber: str
+) -> float:
     """Score a Wikidata candidate against a local person."""
     # Name similarity (primary)
     name_score = fuzz.token_sort_ratio(person.canonical_name, candidate.label)
@@ -291,8 +286,9 @@ def _score_candidate(person: Person, candidate: WikidataCandidate, legislature: 
     # Chamber match
     chamber_bonus = 0
     if candidate.chamber_label:
-        if (chamber == "deputies" and "deput" in candidate.chamber_label.lower()) or \
-           (chamber == "senate" and "senat" in candidate.chamber_label.lower()):
+        if (chamber == "deputies" and "deput" in candidate.chamber_label.lower()) or (
+            chamber == "senate" and "senat" in candidate.chamber_label.lower()
+        ):
             chamber_bonus = 10
         else:
             chamber_bonus = -20
@@ -306,11 +302,13 @@ def enrich_person(
     legislature: str,
     chamber: str,
     cache_conn: sqlite3.Connection,
-    dry_run: bool = False
+    dry_run: bool = False,
 ) -> EnrichmentResult:
     """Enrich a single person with Wikidata data."""
     birth_year = person.birth_date.year if person.birth_date else None
-    candidates = _reconcile_person(cache_conn, person.canonical_name, birth_year, legislature, chamber)
+    candidates = _reconcile_person(
+        cache_conn, person.canonical_name, birth_year, legislature, chamber
+    )
 
     if not candidates:
         return EnrichmentResult(person.id, "reject", reason="no candidates from reconciliation")
@@ -342,30 +340,46 @@ def enrich_person(
                 )
             """)
             import uuid
-            cache_conn.execute("""
+
+            cache_conn.execute(
+                """
                 INSERT INTO wikidata_review (id, person_id, candidate_qid, candidate_label, score, reason, status, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
-            """, (str(uuid.uuid4()), person.id, best.qid, best.label, best.score,
-                  f"Wikidata candidate: {best.label} ({best.qid})", time.time()))
+            """,
+                (
+                    str(uuid.uuid4()),
+                    person.id,
+                    best.qid,
+                    best.label,
+                    best.score,
+                    f"Wikidata candidate: {best.label} ({best.qid})",
+                    time.time(),
+                ),
+            )
             cache_conn.commit()
         return EnrichmentResult(person.id, "review", best, f"score={best.score:.1f}")
 
     else:
-        return EnrichmentResult(person.id, "reject", best, f"best score={best.score:.1f} below threshold")
+        return EnrichmentResult(
+            person.id, "reject", best, f"best score={best.score:.1f} below threshold"
+        )
 
 
-def run_enrichment(limit: Optional[int] = None, dry_run: bool = True, legislature: str = "2024") -> dict:
+def run_enrichment(
+    limit: int | None = None, dry_run: bool = True, legislature: str = "2024"
+) -> dict:
     """Run enrichment for all persons in a legislature."""
     session = get_session()
     cache_conn = init_cache_db()
 
     try:
         from sqlalchemy import select
+
         from .db import Membership
 
-        stmt = select(Person).join(Membership).where(
-            Membership.legislature == legislature
-        ).distinct()
+        stmt = (
+            select(Person).join(Membership).where(Membership.legislature == legislature).distinct()
+        )
 
         if limit:
             stmt = stmt.limit(limit)
@@ -381,23 +395,27 @@ def run_enrichment(limit: Optional[int] = None, dry_run: bool = True, legislatur
             try:
                 result = enrich_person(session, person, legislature, chamber, cache_conn, dry_run)
                 results[result.action] += 1
-                results["details"].append({
-                    "person_id": person.id,
-                    "name": person.canonical_name,
-                    "action": result.action,
-                    "reason": result.reason,
-                    "candidate_qid": result.candidate.qid if result.candidate else None,
-                    "candidate_score": result.candidate.score if result.candidate else None,
-                })
+                results["details"].append(
+                    {
+                        "person_id": person.id,
+                        "name": person.canonical_name,
+                        "action": result.action,
+                        "reason": result.reason,
+                        "candidate_qid": result.candidate.qid if result.candidate else None,
+                        "candidate_score": result.candidate.score if result.candidate else None,
+                    }
+                )
             except Exception as e:
                 log.exception("Enrichment failed for %s", person.canonical_name)
                 results["error"] += 1
-                results["details"].append({
-                    "person_id": person.id,
-                    "name": person.canonical_name,
-                    "action": "error",
-                    "reason": str(e),
-                })
+                results["details"].append(
+                    {
+                        "person_id": person.id,
+                        "name": person.canonical_name,
+                        "action": "error",
+                        "reason": str(e),
+                    }
+                )
 
             if not dry_run:
                 session.commit()
@@ -415,15 +433,19 @@ def main(argv=None) -> int:
     parser.add_argument("--dry-run", action="store_true", default=True, help="Don't write changes")
     parser.add_argument("--apply", action="store_false", dest="dry_run", help="Write changes to DB")
     parser.add_argument("--legislature", default="2024", help="Legislature to enrich")
-    parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
+    parser.add_argument(
+        "--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"]
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=args.log_level, format="%(levelname)s %(name)s: %(message)s")
 
-    print(f"Starting enrichment: legislature={args.legislature}, dry_run={args.dry_run}, limit={args.limit}")
+    print(
+        f"Starting enrichment: legislature={args.legislature}, dry_run={args.dry_run}, limit={args.limit}"
+    )
     results = run_enrichment(limit=args.limit, dry_run=args.dry_run, legislature=args.legislature)
 
-    print(f"\nResults:")
+    print("\nResults:")
     print(f"  Auto-accept: {results['auto_accept']}")
     print(f"  Review queue: {results['review']}")
     print(f"  Rejected: {results['reject']}")
@@ -434,7 +456,9 @@ def main(argv=None) -> int:
     else:
         print("\nChanges committed to database.")
 
-    report_path = Path(f"data/enrichment_report_{args.legislature}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+    report_path = Path(
+        f"data/enrichment_report_{args.legislature}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    )
     report_path.write_text(json.dumps(results, indent=2, default=str), encoding="utf-8")
     print(f"Report saved to {report_path}")
 
@@ -443,4 +467,5 @@ def main(argv=None) -> int:
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(main())

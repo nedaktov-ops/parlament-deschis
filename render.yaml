@@ -1,0 +1,28 @@
+# Render blueprint for Parlament Deschis.
+#
+# Render's free web services need no credit card, but they have no persistent
+# disk and lose local files on redeploy, restart or spin-down. The database is
+# therefore baked into the Docker image and the service is read-only.
+#
+# Deploy with: render blueprint launch   (or connect the repository in the
+# Render dashboard and let it read this file).
+
+services:
+  - type: web
+    name: parlament-deschis
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/health
+    # The build needs the database. It is produced by the data workflow
+    # (data/parlament-real.db) and fetched from the latest release asset;
+    # see .github/workflows/data.yml.
+    dockerBuildArgs:
+      - SOURCE_DB=data/parlament-real.db
+    envVars:
+      - key: PARLAMENT_DB
+        value: /app/data/parlament.db
+      # The runtime is read-only: no background polling.
+      - key: PARLAMENT_POLL_INTERVAL_MIN
+        value: ""

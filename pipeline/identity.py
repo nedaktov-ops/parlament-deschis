@@ -45,8 +45,10 @@ def _find_by_identifier(session, scheme, identifier, legislature) -> Person | No
 def _has_conflicting_identifier(session, person, scheme, identifier, legislature) -> bool:
     """True if person already holds a different id of the same scheme+term."""
     for ident in person.identifiers:
-        if ident.scheme == scheme and ident.identifier != identifier and (
-            ident.legislature == legislature
+        if (
+            ident.scheme == scheme
+            and ident.identifier != identifier
+            and (ident.legislature == legislature)
         ):
             return True
     return False
@@ -103,7 +105,8 @@ class PersonResolver:
                 p for p in candidates if p.birth_date is None or p.birth_date == birth_date
             ]
         candidates = [
-            p for p in candidates
+            p
+            for p in candidates
             if not _has_conflicting_identifier(self.session, p, scheme, identifier, legislature)
         ]
         if len(candidates) == 1:
@@ -123,8 +126,11 @@ class PersonResolver:
         self.session.flush()
         self.session.add(
             PersonName(
-                person_id=person.id, type="name", name=name.strip(),
-                normalized_name=normalize_name(name), sort_key=name_sort_key(name),
+                person_id=person.id,
+                type="name",
+                name=name.strip(),
+                normalized_name=normalize_name(name),
+                sort_key=name_sort_key(name),
             )
         )
         self._add_identifier(person, scheme, identifier, legislature)
@@ -133,16 +139,16 @@ class PersonResolver:
     def _add_identifier(self, person, scheme, identifier, legislature):
         self.session.add(
             PersonIdentifier(
-                person_id=person.id, scheme=scheme, identifier=identifier,
+                person_id=person.id,
+                scheme=scheme,
+                identifier=identifier,
                 legislature=legislature,
             )
         )
 
     def flag_review(self, person_a: Person, person_b: Person, score: float, reason: str):
         self.session.add(
-            MatchReview(
-                person_a=person_a.id, person_b=person_b.id, score=score, reason=reason
-            )
+            MatchReview(person_a=person_a.id, person_b=person_b.id, score=score, reason=reason)
         )
 
 
@@ -176,19 +182,31 @@ def merge_persons(session: Session, winner_id: str, loser_id: str) -> MergeAudit
 
     ops: list[dict] = []
     # Repoint identifiers.
-    for ident in list(session.scalars(
-        select(PersonIdentifier).where(PersonIdentifier.person_id == loser_id)
-    )):
-        ops.append({"op": "repoint", "table": "person_identifier", "id": ident.id,
-                    "from": loser_id, "to": winner_id})
+    for ident in list(
+        session.scalars(select(PersonIdentifier).where(PersonIdentifier.person_id == loser_id))
+    ):
+        ops.append(
+            {
+                "op": "repoint",
+                "table": "person_identifier",
+                "id": ident.id,
+                "from": loser_id,
+                "to": winner_id,
+            }
+        )
         ident.person_id = winner_id
     # Repoint names; the loser's canonical name becomes an alias of the winner.
     loser_name_converted = False
-    for pn in list(session.scalars(
-        select(PersonName).where(PersonName.person_id == loser_id)
-    )):
-        ops.append({"op": "repoint", "table": "person_name", "id": pn.id,
-                    "from": loser_id, "to": winner_id})
+    for pn in list(session.scalars(select(PersonName).where(PersonName.person_id == loser_id))):
+        ops.append(
+            {
+                "op": "repoint",
+                "table": "person_name",
+                "id": pn.id,
+                "from": loser_id,
+                "to": winner_id,
+            }
+        )
         pn.person_id = winner_id
         if pn.name == loser.canonical_name and pn.type == "name":
             pn.type = "alias"
@@ -201,7 +219,9 @@ def merge_persons(session: Session, winner_id: str, loser_id: str) -> MergeAudit
         ).first()
         if already is None:
             alias = PersonName(
-                person_id=winner_id, type="alias", name=loser.canonical_name,
+                person_id=winner_id,
+                type="alias",
+                name=loser.canonical_name,
                 normalized_name=loser.normalized_name,
                 sort_key=name_sort_key(loser.canonical_name),
             )
@@ -209,12 +229,14 @@ def merge_persons(session: Session, winner_id: str, loser_id: str) -> MergeAudit
             ops.append({"op": "append", "table": "person_name", "name": loser.canonical_name})
     # Repoint memberships and events.
     for m in session.scalars(select(Membership).where(Membership.person_id == loser_id)):
-        ops.append({"op": "repoint", "table": "membership", "id": m.id,
-                    "from": loser_id, "to": winner_id})
+        ops.append(
+            {"op": "repoint", "table": "membership", "id": m.id, "from": loser_id, "to": winner_id}
+        )
         m.person_id = winner_id
     for e in session.scalars(select(Event).where(Event.person_id == loser_id)):
-        ops.append({"op": "repoint", "table": "event", "id": e.id,
-                    "from": loser_id, "to": winner_id})
+        ops.append(
+            {"op": "repoint", "table": "event", "id": e.id, "from": loser_id, "to": winner_id}
+        )
         e.person_id = winner_id
     # Absorb birth date / qid if winner lacks them.
     if winner.birth_date is None and loser.birth_date:

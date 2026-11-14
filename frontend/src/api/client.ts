@@ -254,3 +254,133 @@ export function exportCsvUrl(
 ): string {
   return withScope(`/api/export/${encodeURIComponent(dataset)}.csv`, chamber, legislature);
 }
+
+// ---------------------------------------------------------------------------
+// Traseism (party / parliamentary group switching) statistics
+// ---------------------------------------------------------------------------
+
+export interface TraseismPeriod {
+  start: string | null;
+  end: string | null;
+}
+
+export interface TraseismPartyMovement {
+  party: string;
+  gains: number;
+  losses: number;
+  net: number;
+  seats_start: number;
+  seats_end: number;
+}
+
+export interface TraseismMatrixCell {
+  from: string;
+  to: string;
+  count: number;
+}
+
+export interface TraseismRepeatSwitchers {
+  people: number;
+  max_switches: number;
+}
+
+export interface TraseismTiming {
+  median_months: number | null;
+  by_month: Array<{ month: number; count: number }>;
+}
+
+export interface TraseismCoverage {
+  completeness: string;
+  note: string | null;
+}
+
+/**
+ * The party-level view: a change of the party behind the group. The
+ * unaffiliated bucket is not a party, so a member who leaves a party, sits
+ * unaffiliated and then joins another party counts as ONE party switch.
+ */
+export interface TraseismPartyView {
+  switches: number;
+  switchers: number;
+  switch_rate: number;
+  switches_per_100_members: number;
+  entries: number;
+  exits: number;
+  matrix: TraseismMatrixCell[];
+}
+
+/** The full statistical block for one (chamber, legislature) scope. */
+export interface TraseismScope {
+  legislature: string;
+  chamber: string;
+  period: TraseismPeriod;
+  members: number;
+  switches: number;
+  switchers: number;
+  switch_rate: number;
+  switches_per_100_members: number;
+  party: TraseismPartyView;
+  by_party: TraseismPartyMovement[];
+  matrix: TraseismMatrixCell[];
+  repeat_switchers: TraseismRepeatSwitchers;
+  timing: TraseismTiming;
+  coverage: TraseismCoverage;
+}
+
+export interface TraseismSwitchRow {
+  person_id: string;
+  name: string;
+  from_group: string | null;
+  to_group: string | null;
+  date: string | null;
+  legislature: string | null;
+  chamber: string | null;
+  source_url: string | null;
+  precision: string | null;
+}
+
+export interface TraseismSwitchesResponse {
+  rows: TraseismSwitchRow[];
+  total: number;
+}
+
+export interface TraseismSwitchesQuery {
+  legislature?: string;
+  chamber?: string;
+  group?: string;
+  person?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/** One row per (chamber, legislature) scope, with the full statistical block. */
+export function traseismOverview(): Promise<TraseismScope[]> {
+  return get<TraseismScope[]>("/traseism/overview");
+}
+
+/** The same statistical block for a single chamber + legislature scope. */
+export function traseismSummary(
+  legislature: string,
+  chamber: string,
+): Promise<TraseismScope> {
+  return get<TraseismScope>(
+    `/traseism/summary?legislature=${encodeURIComponent(legislature)}&chamber=${encodeURIComponent(chamber)}`,
+  );
+}
+
+/** The individual switch ledger, paginated. */
+export function traseismSwitches(
+  query: TraseismSwitchesQuery = {},
+): Promise<TraseismSwitchesResponse> {
+  const params = new URLSearchParams();
+  if (query.legislature) params.set("legislature", query.legislature);
+  if (query.chamber) params.set("chamber", query.chamber);
+  if (query.group) params.set("group", query.group);
+  if (query.person) params.set("person", query.person);
+  if (query.limit !== undefined) params.set("limit", String(query.limit));
+  if (query.offset !== undefined) params.set("offset", String(query.offset));
+  const qs = params.toString();
+  return get<TraseismSwitchesResponse>(
+    `/traseism/switches${qs ? `?${qs}` : ""}`,
+  );
+}

@@ -7,6 +7,7 @@ provenance, confidence and date precision; closed tenures are immutable.
 
 from __future__ import annotations
 
+import logging
 import os
 import uuid
 from datetime import UTC, date, datetime
@@ -36,23 +37,46 @@ from sqlalchemy.orm import (
     sessionmaker,
 )
 
+log = logging.getLogger("parlament.db")
+
 # --- Enumerations (stored as strings for SQLite portability) ---------------
 CHAMBERS = ("deputies", "senate")
 ORG_CLASS = (
-    "chamber", "group", "party", "committee", "bureau",
-    "delegation", "friendship", "other",
+    "chamber",
+    "group",
+    "party",
+    "committee",
+    "bureau",
+    "delegation",
+    "friendship",
+    "other",
 )
 CONFIDENCE = ("official_ledger", "official_profile", "derived", "community")
 CONFIDENCE_RANK = {c: i for i, c in enumerate(CONFIDENCE)}  # lower = stronger
 REASONS = (
-    "CHANGED_PARTY", "WHIP_REMOVED", "WHIP_RESTORED", "DIED", "RESIGNED",
-    "BY_ELECTION", "GENERAL_ELECTION", "UNKNOWN",
+    "CHANGED_PARTY",
+    "WHIP_REMOVED",
+    "WHIP_RESTORED",
+    "DIED",
+    "RESIGNED",
+    "BY_ELECTION",
+    "GENERAL_ELECTION",
+    "UNKNOWN",
 )
 EVIDENCE_TYPES = ("official_ledger", "profile", "jo", "intervention", "scrutin", "other")
 EVENT_TYPES = (
-    "join", "leave", "switch_group", "switch_party", "group_founded",
-    "group_renamed", "committee_join", "committee_leave", "role_change",
-    "mandate_start", "mandate_end",
+    "join",
+    "join_party",
+    "leave",
+    "switch_group",
+    "switch_party",
+    "group_founded",
+    "group_renamed",
+    "committee_join",
+    "committee_leave",
+    "role_change",
+    "mandate_start",
+    "mandate_end",
 )
 WAVE_TRIGGERS = ("election", "government_formation", "party_congress", "coalition_breakup", "other")
 RUN_STATUS = ("SUCCESS", "FAILURE", "DATA_UNAVAILABLE", "DATA_UNCHANGED")
@@ -140,8 +164,12 @@ class Organization(Base):
     localised_labels: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     chamber: Mapped[str | None] = mapped_column(String(16), nullable=True)
     # Party genealogy
-    previous_party_id: Mapped[str | None] = mapped_column(ForeignKey("organization.id"), nullable=True)
-    successor_party_id: Mapped[str | None] = mapped_column(ForeignKey("organization.id"), nullable=True)
+    previous_party_id: Mapped[str | None] = mapped_column(
+        ForeignKey("organization.id"), nullable=True
+    )
+    successor_party_id: Mapped[str | None] = mapped_column(
+        ForeignKey("organization.id"), nullable=True
+    )
 
     __table_args__ = (
         UniqueConstraint("classification", "normalized_name", "founding_date", name="uq_org"),
@@ -156,6 +184,39 @@ class Post(Base):
     role_type: Mapped[str] = mapped_column(String(16), default="seat")  # seat / leadership
     importance: Mapped[int] = mapped_column(Integer, default=0)
     maximum_memberships: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class Mandate(Base):
+    """One parliamentary mandate: a person in one chamber in one legislature.
+
+    This is the backbone of the verification layer. A mandate is published by
+    the chamber (the profile page carries the validation date), while the
+    group tenures that make it up come from the group ledgers. Comparing the
+    two proves whether the ledgers are complete: every day of a mandate must
+    be covered by exactly one group tenure.
+    """
+
+    __tablename__ = "mandate"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    person_id: Mapped[str] = mapped_column(ForeignKey("person.id"), index=True)
+    chamber: Mapped[str] = mapped_column(String(16), index=True)
+    legislature: Mapped[str | None] = mapped_column(String(16), index=True)
+    start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    start_precision: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    end_precision: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    constituency: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    role: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    snapshot_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    confidence: Mapped[str] = mapped_column(String(32), default="official_profile")
+
+    person: Mapped[Person] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint("person_id", "chamber", "legislature", name="uq_mandate"),
+        Index("ix_mandate_scope", "chamber", "legislature"),
+    )
 
 
 class Membership(Base):
@@ -180,6 +241,12 @@ class Membership(Base):
     confidence: Mapped[str] = mapped_column(String(32), default="derived")
     source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     group_acronym_at_event: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    member_party_label: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # The name exactly as the source published it. Kept beside the person
+    # reference so the ledger stays readable even when the identity
+    # resolution is uncertain (OpenStates keeps the same denormalised name
+    # on its memberships).
+    member_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
@@ -248,8 +315,11 @@ class Event(Base):
     __tablename__ = "event"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     type: Mapped[str] = mapped_column(String(32), index=True)
-    person_id: Mapped[str | None] = mapped_column(ForeignKey("person.id"), nullable=True, index=True)
+    person_id: Mapped[str | None] = mapped_column(
+        ForeignKey("person.id"), nullable=True, index=True
+    )
     chamber: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    legislature: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
     from_org_id: Mapped[str | None] = mapped_column(ForeignKey("organization.id"), nullable=True)
     to_org_id: Mapped[str | None] = mapped_column(ForeignKey("organization.id"), nullable=True)
     post_id: Mapped[str | None] = mapped_column(ForeignKey("post.id"), nullable=True)
@@ -260,6 +330,9 @@ class Event(Base):
     reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
     confidence: Mapped[str] = mapped_column(String(32), default="derived")
     group_acronym_at_event: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Provenance: every event must be traceable to the publication it came from.
+    source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    snapshot_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     summary_ro: Mapped[str | None] = mapped_column(Text, nullable=True)
     summary_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     dedup_key: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
@@ -267,21 +340,24 @@ class Event(Base):
 
 class SwitchWave(Base):
     """Cluster of party switches detected within a time window, optionally labeled with a trigger event."""
+
     __tablename__ = "switch_wave"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    label: Mapped[str | None] = mapped_column(String(255), nullable=True)  # e.g., "Post-2020 election wave"
+    label: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )  # e.g., "Post-2020 election wave"
     start_date: Mapped[date] = mapped_column(Date, index=True)
     end_date: Mapped[date] = mapped_column(Date, index=True)
     switch_count: Mapped[int] = mapped_column(Integer, default=0)
     trigger_type: Mapped[str | None] = mapped_column(String(32), nullable=True)  # WAVE_TRIGGERS
-    trigger_event: Mapped[str | None] = mapped_column(Text, nullable=True)  # human-readable description
+    trigger_event: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )  # human-readable description
     legislature: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
     chamber: Mapped[str | None] = mapped_column(String(16), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
-    __table_args__ = (
-        Index("ix_switch_wave_leg_chamber", "legislature", "chamber"),
-    )
+    __table_args__ = (Index("ix_switch_wave_leg_chamber", "legislature", "chamber"),)
 
 
 class KeyEvent(Base):
@@ -339,7 +415,16 @@ class MergeAudit(Base):
 
 
 # --- Engine / session ------------------------------------------------------
-DEFAULT_DB_PATH = Path(os.environ.get("PARLAMENT_DB", "data/parlament.db"))
+# Resolve the default DB against the repository root (not the process CWD) so
+# the CLI, the API and GraphQL all read the same file regardless of where they
+# are launched. Explicit paths passed by callers stay CWD-relative.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_env_db = os.environ.get("PARLAMENT_DB")
+if _env_db:
+    _p = Path(_env_db).expanduser()
+    DEFAULT_DB_PATH = _p if _p.is_absolute() else (_PROJECT_ROOT / _p)
+else:
+    DEFAULT_DB_PATH = _PROJECT_ROOT / "data" / "parlament.db"
 
 
 def make_engine(db_path: str | Path | None = None, echo: bool = False):
@@ -361,6 +446,81 @@ def make_engine(db_path: str | Path | None = None, echo: bool = False):
 
 def init_db(engine) -> None:
     Base.metadata.create_all(engine)
+    ensure_schema(engine)
+
+
+# Columns added after a database file was first created. SQLite has no
+# "ALTER TABLE ... IF NOT EXISTS COLUMN", so they are applied conditionally.
+_ADDED_COLUMNS: dict[str, dict[str, str]] = {
+    "event": {
+        "source_url": "VARCHAR(1024)",
+        "legislature": "VARCHAR(16)",
+        "snapshot_hash": "VARCHAR(64)",
+    },
+    "membership": {
+        # The "Partid" cell published in some group ledgers. It is the member's
+        # own party, not the party's group, it is absent from several group
+        # tables and it is not dated - so it is stored verbatim as evidence
+        # and never used as the affiliation behind a group.
+        "member_party_label": "VARCHAR(128)",
+        # The name exactly as the source published it.
+        "member_name": "VARCHAR(255)",
+    },
+}
+
+# SQLite treats NULL as distinct from every other value, so a UNIQUE
+# constraint that contains a nullable column does not constrain the NULL
+# case. These partial indexes close the three holes that matter:
+#   * duplicate OPEN tenures (end_date IS NULL)
+#   * duplicate GLOBAL person identifiers (legislature IS NULL)
+#   * duplicate organisations whose founding date is unknown
+_PARTIAL_INDEXES: tuple[str, ...] = (
+    # A parliamentary group is one institution across time: the same title
+    # ("Grupul parlamentar al Partidului Social Democrat") is the same
+    # organisation in every legislature and in both chambers. A member's
+    # tenure in it is therefore scoped by chamber and legislature, and the
+    # uniqueness has to be scoped the same way - otherwise a deputy who was
+    # in PSD in 1992 and again in 1996 would collide, because both tenures
+    # are open.
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_membership_open_stint_scope "
+    "ON membership(org_id, person_id, COALESCE(post_id, ''), "
+    "COALESCE(chamber, ''), COALESCE(legislature, '')) WHERE end_date IS NULL",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_identifier_global "
+    "ON person_identifier(scheme, identifier) WHERE legislature IS NULL",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_org_name "
+    "ON organization(classification, normalized_name) WHERE founding_date IS NULL",
+    "CREATE INDEX IF NOT EXISTS ix_membership_leg_chamber ON membership(legislature, chamber)",
+)
+
+
+def ensure_schema(engine) -> None:
+    """Bring an existing SQLite file up to the current schema.
+
+    Safe to call repeatedly: columns are added only when missing, and an
+    index that cannot be created (because a legacy database already contains
+    duplicates) is reported instead of aborting startup.
+    """
+    with engine.begin() as conn:
+        # The first version of the open-stint index was not scoped by
+        # chamber and legislature, so it rejected a member who held an open
+        # tenure in the same group in two different legislatures. The scoped
+        # index replaces it; the old one has to go first, because SQLite
+        # would otherwise keep enforcing it.
+        legacy = conn.exec_driver_sql(
+            "SELECT name FROM sqlite_master WHERE type='index' AND name='ux_membership_open_stint'"
+        ).first()
+        if legacy:
+            conn.exec_driver_sql("DROP INDEX ux_membership_open_stint")
+        for table, columns in _ADDED_COLUMNS.items():
+            existing = {row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")}
+            for name, ddl in columns.items():
+                if name not in existing:
+                    conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
+        for ddl in _PARTIAL_INDEXES:
+            try:
+                conn.exec_driver_sql(ddl)
+            except Exception as exc:  # noqa: BLE001 - legacy duplicate data
+                log.warning("could not create index %s: %s", ddl.split()[5], exc)
 
 
 def make_session_factory(engine):

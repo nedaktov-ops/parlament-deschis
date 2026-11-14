@@ -6,7 +6,7 @@ source; exposes health for the UI live indicator.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import select
@@ -23,8 +23,9 @@ log = logging.getLogger("parlament.poller")
 DEFAULT_LEGISLATURE = "2024"
 
 
-def run_poll_cycle(session: Session, legislature: str = DEFAULT_LEGISLATURE,
-                   client: PoliteClient | None = None) -> dict:
+def run_poll_cycle(
+    session: Session, legislature: str = DEFAULT_LEGISLATURE, client: PoliteClient | None = None
+) -> dict:
     client = client or PoliteClient()
     results = {}
     cdep = CdepSource(client)
@@ -50,8 +51,10 @@ def source_health(session: Session) -> dict:
     out = {}
     for source in ("cdep", "senat"):
         run = session.scalars(
-            select(PipelineRun).where(PipelineRun.source == source)
-            .order_by(PipelineRun.started_at.desc()).limit(1)
+            select(PipelineRun)
+            .where(PipelineRun.source == source)
+            .order_by(PipelineRun.started_at.desc())
+            .limit(1)
         ).first()
         if run is None:
             out[source] = {"status": "never_run"}
@@ -63,12 +66,13 @@ def source_health(session: Session) -> dict:
                 "rows": run.rows,
                 "error": run.error,
             }
-    out["checked_at"] = datetime.now(timezone.utc).isoformat()
+    out["checked_at"] = datetime.now(UTC).isoformat()
     return out
 
 
-def start_poller(interval_minutes: int = 30, legislature: str = DEFAULT_LEGISLATURE,
-                 db_path=None) -> BackgroundScheduler:
+def start_poller(
+    interval_minutes: int = 30, legislature: str = DEFAULT_LEGISLATURE, db_path=None
+) -> BackgroundScheduler:
     scheduler = BackgroundScheduler()
 
     def _job():
@@ -78,8 +82,7 @@ def start_poller(interval_minutes: int = 30, legislature: str = DEFAULT_LEGISLAT
         finally:
             session.close()
 
-    scheduler.add_job(_job, "interval", minutes=interval_minutes,
-                      next_run_time=datetime.now(timezone.utc))
+    scheduler.add_job(_job, "interval", minutes=interval_minutes, next_run_time=datetime.now(UTC))
     scheduler.start()
     log.info("poller started (every %s min)", interval_minutes)
     return scheduler
