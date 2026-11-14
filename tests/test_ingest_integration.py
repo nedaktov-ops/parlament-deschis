@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import select
 
-from pipeline.db import Event, Membership, Organization, Person, get_session
+from pipeline.db import Event, Evidence, Membership, Organization, Person, get_session
 from pipeline.ingest import ingest_cdep_group_ledger, seed_key_events
 from pipeline.parse.cdep_group import parse_group_ledger
 from pipeline.queries import chamber_composition, person_group_at
@@ -118,3 +118,39 @@ def test_idempotent_reingest(session):
     ingest_cdep_group_ledger(session, upr, legislature="2024")
     n_after = len(list(session.scalars(select(Membership))))
     assert n_before == n_after  # no duplicate tenures
+
+
+def test_upr_former_bureau_ingested(session):
+    """Former bureau members from the UPR ledger are ingested as dated
+    bureau memberships with role dates from the source."""
+    bureau = session.scalars(
+        select(Organization).where(
+            Organization.classification == "bureau",
+            Organization.short_name == "B.UPR",
+        )
+    ).one()
+    assert bureau.parent_id is not None
+    assert session.get(Organization, bureau.parent_id).short_name == "UPR"
+
+    groza = session.scalars(select(Person).where(Person.canonical_name.like("%Groza%"))).one()
+    ms = list(
+        session.scalars(
+            select(Membership).where(
+                Membership.person_id == groza.id,
+                Membership.org_id == bureau.id,
+            )
+        )
+    )
+    assert len(ms) == 1
+    m = ms[0]
+    assert m.role == "secretary"
+    assert m.start_date == date(2026, 5, 11)
+    assert m.end_date == date(2026, 10, 5)
+    assert m.chamber == "deputies"
+    assert m.legislature == "2024"
+    assert m.confidence == "official_ledger"
+    assert m.source_url is not None
+    # Evidence row attached.
+    evs = list(session.scalars(select(Evidence).where(Evidence.membership_id == m.id)))
+    assert len(evs) == 1
+    assert evs[0].type == "official_ledger"

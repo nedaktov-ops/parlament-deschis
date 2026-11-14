@@ -169,7 +169,7 @@ def ingest_cdep_group_ledger(
     resolver = PersonResolver(session)
     writer = MembershipWriter(session)
     leg_start = legislature_start(legislature)
-    stats = {"current": 0, "former": 0, "persons": 0}
+    stats = {"current": 0, "former": 0, "bureau": 0, "persons": 0}
 
     def party_org(party_label: str | None):
         if not party_label or party_label.strip() in ("-", ""):
@@ -259,6 +259,58 @@ def ingest_cdep_group_ledger(
                 note="start inferred (founding/continuing member)" if inferred else None,
             )
         stats["former"] += 1
+
+    # --- Former bureau members ------------------------------------------------
+    # The group ledger's former-bureau table lists people who held a dated role
+    # in the group's bureau (president, vice-president, secretary, chestor).
+    # Each row carries role_start / role_end dates from the source.
+    bureau_org = get_or_create_org(
+        session,
+        classification="bureau",
+        name=f"Birou {short}",
+        short_name=f"B.{short}",
+        chamber=meta.chamber,
+        parent_id=group.id,
+    )
+    for row in ledger.former_bureau:
+        if not row.idm:
+            continue
+        person, created = resolver.resolve(
+            scheme="cdep_idm",
+            identifier=row.idm,
+            name=row.name,
+            legislature=legislature,
+        )
+        stats["persons"] += created
+        start = row.role_start.earliest if row.role_start else None
+        start_prec = row.role_start.precision if row.role_start else None
+        end = row.role_end.earliest if row.role_end else None
+        end_prec = row.role_end.precision if row.role_end else None
+        m = writer.record_authoritative(
+            person_id=person.id,
+            org_id=bureau_org.id,
+            chamber=meta.chamber,
+            start=start,
+            end=end,
+            legislature=legislature,
+            role=row.role,
+            start_precision=start_prec,
+            end_precision=end_prec,
+            start_reason="GENERAL_ELECTION",
+            end_reason="UNKNOWN",
+            confidence="official_ledger",
+            source_url=meta.source_url,
+            group_acronym=short,
+        )
+        if m:
+            _add_evidence(
+                session,
+                m,
+                type="official_ledger",
+                source_url=meta.source_url,
+                snapshot_hash=snapshot_hash,
+            )
+        stats["bureau"] += 1
 
     session.flush()
     stats["events"] = derive_group_events(session, chamber=meta.chamber)
