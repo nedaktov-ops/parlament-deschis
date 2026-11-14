@@ -9,7 +9,13 @@ import pytest
 from sqlalchemy import select
 
 from pipeline.db import Event, Evidence, Membership, Organization, Person, get_session
-from pipeline.ingest import ingest_cdep_group_ledger, seed_key_events
+from pipeline.ingest import (
+    ingest_cdep_committee_ledger,
+    ingest_cdep_group_ledger,
+    seed_key_events,
+)
+from pipeline.normalize import normalize_org_label
+from pipeline.parse.cdep_committee import parse_committee_ledger
 from pipeline.parse.cdep_group import parse_group_ledger
 from pipeline.queries import chamber_composition, person_group_at
 
@@ -154,3 +160,79 @@ def test_upr_former_bureau_ingested(session):
     evs = list(session.scalars(select(Evidence).where(Evidence.membership_id == m.id)))
     assert len(evs) == 1
     assert evs[0].type == "official_ledger"
+
+
+def test_committee_ingested(session):
+    """Committee org and dated memberships are ingested from a chamber
+    group ledger's former-bureau table."""
+    # First ingest a group ledger (needed because committee poller
+    # is separate; here we test committee ingest standalone).
+
+    ledger = parse_committee_ledger(
+        (FX / "cdep_committee_2024_idc1.html").read_text(encoding="utf-8"),
+        chamber="deputies",
+        legislature="2024",
+        source_url="https://www.cdep.ro/ords/pls/parlam/structura.co?idc=1&leg=2024",
+    )
+    stats = ingest_cdep_committee_ledger(session, ledger, legislature="2024")
+
+    assert stats["current"] == 25
+    assert stats["former"] == 2
+    assert stats["persons"] > 0
+
+    committee = session.scalars(
+        select(Organization).where(
+            Organization.classification == "committee",
+            Organization.normalized_name
+            == normalize_org_label("Comisia pentru politică economică, reformă şi privatizare"),
+        )
+    ).one()
+    assert committee.chamber == "deputies"
+
+    # A current member with a role start date.
+    dunava = session.scalars(select(Person).where(Person.canonical_name.like("%Dunava%"))).one()
+    ms = list(
+        session.scalars(
+            select(Membership).where(
+                Membership.person_id == dunava.id,
+                Membership.org_id == committee.id,
+            )
+        )
+    )
+    assert len(ms) == 1
+    m = ms[0]
+    assert m.role == "presedinte"
+    assert m.start_date == date(2025, 3, 19)
+    assert m.end_date is None
+    assert m.chamber == "deputies"
+    assert m.legislature == "2024"
+
+    # A former member with an end date.
+    cadar = session.scalars(select(Person).where(Person.canonical_name.like("%Cadar%"))).one()
+    ms2 = list(
+        session.scalars(
+            select(Membership).where(
+                Membership.person_id == cadar.id,
+                Membership.org_id == committee.id,
+            )
+        )
+    )
+    assert len(ms2) == 1
+    m2 = ms2[0]
+    assert m2.start_date is None  # former members: no join date on committee page
+    assert m2.end_date == date(2026, 10, 14)
+
+
+def test_committee_idempotent_reingest(session):
+    """Re-ingesting the same committee ledger does not duplicate tenures."""
+
+    ledger = parse_committee_ledger(
+        (FX / "cdep_committee_2024_idc1.html").read_text(encoding="utf-8"),
+        chamber="deputies",
+        legislature="2024",
+    )
+    ingest_cdep_committee_ledger(session, ledger, legislature="2024")
+    n_before = len(list(session.scalars(select(Membership))))
+    ingest_cdep_committee_ledger(session, ledger, legislature="2024")
+    n_after = len(list(session.scalars(select(Membership))))
+    assert n_before == n_after  # no duplicate tenures

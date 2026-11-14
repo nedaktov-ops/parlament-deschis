@@ -21,6 +21,7 @@ from .db import Evidence, KeyEvent, Membership, Organization
 from .events import derive_group_events, derive_org_events
 from .identity import PersonResolver
 from .normalize import canonical_group_short, normalize_org_label
+from .parse.cdep_committee import CommitteeLedger
 from .parse.cdep_group import GroupLedger
 from .parse.senat_profile import SenatorProfile
 from .reconcile import MembershipWriter
@@ -314,6 +315,136 @@ def ingest_cdep_group_ledger(
 
     session.flush()
     stats["events"] = derive_group_events(session, chamber=meta.chamber)
+    return stats
+
+
+def ingest_cdep_committee_ledger(
+    session: Session, ledger: CommitteeLedger, *, legislature: str, snapshot_hash: str | None = None
+) -> dict:
+    """Ingest a committee member ledger: create committee org, write dated
+    memberships for current and former members with evidence rows.
+
+    Current members may carry a role start date (footnote span on newer
+    templates). Former members carry an end date ("până în data") but no
+    join date — start is left None.
+    """
+    meta = ledger.meta
+    committee = get_or_create_org(
+        session,
+        classification="committee",
+        name=meta.name,
+        short_name=meta.short_name,
+        chamber=meta.chamber,
+    )
+    resolver = PersonResolver(session)
+    writer = MembershipWriter(session)
+    stats = {"current": 0, "former": 0, "persons": 0}
+
+    def group_org(group_name: str | None):
+        if not group_name or group_name.strip() in ("-", ""):
+            return None
+        return get_or_create_org(
+            session,
+            classification="group",
+            name=group_name,
+            short_name=canonical_group_short(group_name),
+            chamber=meta.chamber,
+        )
+
+    for row in ledger.current:
+        if not row.idm:
+            continue
+        person, created = resolver.resolve(
+            scheme="cdep_idm",
+            identifier=row.idm,
+            name=row.name,
+            legislature=legislature,
+        )
+        stats["persons"] += created
+        gorg = group_org(row.group_name)
+        start = row.role_start.earliest if row.role_start else None
+        start_prec = row.role_start.precision if row.role_start else None
+        # A current member with no start date (start=None, end=None) already has
+        # a tenure for this person+org+chamber when re-ingesting (the previous
+        # ingest left a start=None tenure, open or closed). record_authoritative
+        # cannot match a closed start=None tenure, so skip creating a duplicate
+        # open tenure — the existing one already covers this membership.
+        if start is None:
+            existing = session.scalars(
+                select(Membership).where(
+                    Membership.person_id == person.id,
+                    Membership.org_id == committee.id,
+                    Membership.chamber == meta.chamber,
+                    Membership.start_date.is_(None),
+                )
+            ).first()
+            if existing is not None:
+                stats["current"] += 1
+                continue
+        m = writer.record_authoritative(
+            person_id=person.id,
+            org_id=committee.id,
+            chamber=meta.chamber,
+            start=start,
+            end=None,
+            on_behalf_of_id=gorg.id if gorg else None,
+            legislature=legislature,
+            role=row.role,
+            start_precision=start_prec,
+            start_reason="GENERAL_ELECTION",
+            confidence="official_ledger",
+            source_url=meta.source_url,
+            group_acronym=row.group_name,
+        )
+        if m:
+            _add_evidence(
+                session,
+                m,
+                type="official_ledger",
+                source_url=meta.source_url,
+                snapshot_hash=snapshot_hash,
+            )
+        stats["current"] += 1
+
+    for row in ledger.former:
+        if not row.idm:
+            continue
+        person, created = resolver.resolve(
+            scheme="cdep_idm",
+            identifier=row.idm,
+            name=row.name,
+            legislature=legislature,
+        )
+        stats["persons"] += created
+        gorg = group_org(row.group_name)
+        end = row.role_end.earliest if row.role_end else None
+        end_prec = row.role_end.precision if row.role_end else None
+        m = writer.record_authoritative(
+            person_id=person.id,
+            org_id=committee.id,
+            chamber=meta.chamber,
+            start=None,
+            end=end,
+            legislature=legislature,
+            role=row.role,
+            end_precision=end_prec,
+            start_reason=None,
+            end_reason="UNKNOWN",
+            confidence="official_ledger",
+            source_url=meta.source_url,
+            group_acronym=row.group_name,
+        )
+        if m:
+            _add_evidence(
+                session,
+                m,
+                type="official_ledger",
+                source_url=meta.source_url,
+                snapshot_hash=snapshot_hash,
+            )
+        stats["former"] += 1
+
+    session.flush()
     return stats
 
 
