@@ -14,6 +14,11 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     plan: free
+    branch: main
+    # Wait for GitHub checks (test, audit, docker) before deploying main.
+    # Render does not deploy when it detects zero checks, so CI must run on
+    # every push to main. See docs/DEPLOYMENT.md.
+    autoDeployTrigger: checksPass
     healthCheckPath: /api/health/ready
     # Docker downloads the exact release pinned in data/latest-release.txt.
     envVars:

@@ -57,9 +57,9 @@ jobs:
           {
             echo "### Vercel production"
             echo
-            echo "| Deployment | State | Created | Commit |"
-            echo "|---|---|---|---|"
-            jq -r '.deployments[] | "| \(.url // .uid) | \(.state) | \((.createdAt // 0) / 1000 | todate) | \(.meta.githubCommitSha // "-" | .[0:12]) |"' \
+            echo "| UID (rollback target) | State | Created | Commit | URL |"
+            echo "|---|---|---|---|---|"
+            jq -r '.deployments[] | "| \(.uid) | \(.state) | \((.createdAt // 0) / 1000 | todate) | \(.meta.githubCommitSha // "-" | .[0:12]) | \(.url // "-") |"' \
               /tmp/vercel-deployments.json
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
@@ -108,6 +108,6 @@ jobs:
           render=$(curl -sS -o /tmp/render-health.json -w '%{http_code}' https://parlament-deschis.onrender.com/api/health)
           echo "Vercel frontend HTTP ${vercel}"
           echo "Render health HTTP ${render}"
-          jq -r '"release=\(.release // .dataset_release // "-") status=\(.status // "-")"' /tmp/render-health.json || cat /tmp/render-health.json
+          jq -r '"release=\(.dataset.release_tag // "-") published=\(.dataset.published_at // "-") persons=\(.database.persons // "-") memberships=\(.database.memberships // "-") status=\(.status // "-")"' /tmp/render-health.json || cat /tmp/render-health.json
           test "${vercel}" = "200"
           test "${render}" = "200"

@@ -1,0 +1,145 @@
+name: Platform rollback
+
+# Manual, main-only rollback. Defaults to a dry run: it resolves the target
+# and changes nothing. Set dry_run=false and confirm=ROLLBACK to execute.
+#
+# Vercel: target is the deployment UID printed by the Platform status run.
+#         On the Hobby plan you can only roll back to the immediately
+#         previous production deployment.
+# Render: target is the deploy ID (dep_...). A Render rollback does not
+#         disable auto-deploy, so a later push can redeploy over it.
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Platform to roll back"
+        type: choice
+        options: [vercel, render]
+        required: true
+      target:
+        description: "Vercel deployment UID or Render deploy ID"
+        required: true
+      dry_run:
+        description: "Resolve the target without changing production"
+        type: boolean
+        default: true
+      confirm:
+        description: "Type ROLLBACK to execute when dry_run is false"
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-rollback
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate request
+        env:
+          PLATFORM: ${{ inputs.platform }}
+          TARGET: ${{ inputs.target }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          set -euo pipefail
+          case "$PLATFORM" in
+            vercel|render) ;;
+            *) echo "Unknown platform: $PLATFORM" >&2; exit 1 ;;
+          esac
+          if ! printf '%s' "$TARGET" | grep -Eq '^[A-Za-z0-9_-]+$'; then
+            echo "Target must contain only letters, digits, underscore, or dash." >&2
+            exit 1
+          fi
+          if [ "$DRY_RUN" != "true" ] && [ "$CONFIRM" != "ROLLBACK" ]; then
+            echo "Refusing to change production: set confirm=ROLLBACK when dry_run=false." >&2
+            exit 1
+          fi
+          echo "Request valid: platform=${PLATFORM} dry_run=${DRY_RUN}"
+
+      - name: Vercel rollback
+        if: inputs.platform == 'vercel'
+        env:
+          TARGET: ${{ inputs.target }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          VERCEL_TEAM_ID: ${{ vars.VERCEL_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          team_query=""
+          rollback_query="?description=manual%20rollback%20from%20GitHub%20Actions"
+          if [ -n "${VERCEL_TEAM_ID:-}" ]; then
+            team_query="?teamId=${VERCEL_TEAM_ID}"
+            rollback_query="?teamId=${VERCEL_TEAM_ID}&description=manual%20rollback%20from%20GitHub%20Actions"
+          fi
+
+          code=$(curl -sS -o /tmp/vercel-target.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            "https://api.vercel.com/v13/deployments/${TARGET}${team_query}")
+          echo "Vercel deployment lookup HTTP ${code}"
+          if [ "${code}" != "200" ]; then
+            jq -r '.error.message // .' /tmp/vercel-target.json || true
+            exit 1
+          fi
+          jq -r '"target: uid=\(.uid) state=\(.state) target=\(.target // "-") url=\(.url // "-") commit=\(.meta.githubCommitSha // "-")"' \
+            /tmp/vercel-target.json
+
+          if [ "${DRY_RUN}" = "true" ]; then
+            echo "Dry run: no production change."
+            exit 0
+          fi
+
+          code=$(curl -sS -o /tmp/vercel-rollback.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            "https://api.vercel.com/v1/projects/${VERCEL_PROJECT_ID}/rollback/${TARGET}${rollback_query}")
+          echo "Vercel rollback HTTP ${code}"
+          if [ "${code}" != "200" ] && [ "${code}" != "201" ]; then
+            jq -r '.error.message // .' /tmp/vercel-rollback.json || true
+            exit 1
+          fi
+          jq -r '"rollback job: \(.job.status // .status // "accepted")"' /tmp/vercel-rollback.json || true
+          echo "Vercel rollback accepted. Verify with the Deploy verify workflow."
+
+      - name: Render rollback
+        if: inputs.platform == 'render'
+        env:
+          TARGET: ${{ inputs.target }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/render-target.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys/${TARGET}")
+          echo "Render deploy lookup HTTP ${code}"
+          if [ "${code}" != "200" ]; then
+            jq -r '.message // .' /tmp/render-target.json || true
+            exit 1
+          fi
+          jq -r '"target: id=\(.id) status=\(.status) commit=\(.commit.id // "-")"' /tmp/render-target.json
+
+          if [ "${DRY_RUN}" = "true" ]; then
+            echo "Dry run: no production change."
+            exit 0
+          fi
+
+          body=$(jq -n --arg id "$TARGET" '{deployId: $id}')
+          code=$(curl -sS -o /tmp/render-rollback.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Content-Type: application/json" \
+            --data "$body" \
+            "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/rollback")
+          echo "Render rollback HTTP ${code}"
+          if [ "${code}" != "200" ] && [ "${code}" != "201" ]; then
+            jq -r '.message // .' /tmp/render-rollback.json || true
+            exit 1
+          fi
+          jq -r '"rollback deploy: \(.id) status=\(.status) trigger=\(.trigger // "-")"' /tmp/render-rollback.json
+          echo "WARNING: Render auto-deploy remains enabled; a later push can redeploy over this rollback."

@@ -1,0 +1,58 @@
+name: Deploy verify
+
+# Runs after CI succeeds on main and proves the production deployment:
+# the Render deploy for the commit is live, the pinned dataset release is
+# serving, the SPA and the /api rewrite respond, and the read-only API
+# contract is intact. Read-only against both platforms.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: deploy-verify-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Resolve target commit
+        id: target
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_run" ]; then
+            echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.target.outputs.sha }}
+          persist-credentials: false
+
+      - name: Read expected dataset release
+        id: release
+        run: echo "tag=$(tr -d '[:space:]' < data/latest-release.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Verify production
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+          EXPECTED_RELEASE: ${{ steps.release.outputs.tag }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          VERCEL_TEAM_ID: ${{ vars.VERCEL_TEAM_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          set -o pipefail
+          chmod +x scripts/verify-deploy.sh
+          scripts/verify-deploy.sh | tee -a "$GITHUB_STEP_SUMMARY"
