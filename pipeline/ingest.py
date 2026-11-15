@@ -445,6 +445,7 @@ def ingest_cdep_committee_ledger(
         stats["former"] += 1
 
     session.flush()
+    stats["events"] = derive_group_events(session, chamber=meta.chamber)
     return stats
 
 
