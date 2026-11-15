@@ -195,5 +195,49 @@ class PoliteClient:
             return FetchResult(url, resp.status_code, text, etag=etag, last_modified=lm)
         raise RuntimeError(f"failed to fetch {url}")
 
+    def post(
+        self,
+        url: str,
+        data: dict | None = None,
+        **kwargs,
+    ) -> FetchResult:
+        host = self._host(url)
+        self._check_robots(url, host)
+        if self.respect_robots and host.robots and not host.robots.can_fetch(self.user_agent, url):
+            raise RobotsDisallowed(url)
+
+        backoff = 2.0
+        for attempt in range(MAX_RETRIES):
+            self._pace(host)
+            try:
+                resp = self.session.post(url, data=data, timeout=self.timeout, **kwargs)
+            except requests.RequestException as exc:
+                log.warning("request error %s: %s", url, exc)
+                if attempt == MAX_RETRIES - 1:
+                    raise
+                time.sleep(backoff)
+                backoff *= 2
+                continue
+
+            if resp.status_code == 429:
+                wait = int(resp.headers.get("Retry-After", "60"))
+                log.warning("429 from %s, waiting %ss", url, wait)
+                time.sleep(min(wait, 120))
+                continue
+            if resp.status_code >= 500:
+                if attempt == MAX_RETRIES - 1:
+                    resp.raise_for_status()
+                time.sleep(backoff)
+                backoff *= 2
+                continue
+
+            resp.raise_for_status()
+            resp.encoding = resp.encoding or "utf-8"
+            text = resp.text
+            if self._looks_like_challenge(text):
+                raise CaptchaError(url)
+            return FetchResult(url, resp.status_code, text)
+        raise RuntimeError(f"failed to post {url}")
+
     def close(self):
         self.session.close()
