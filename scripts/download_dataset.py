@@ -64,6 +64,7 @@ def _urlopen_with_retry(request: Request, *, timeout: int):
 
 RELEASE_API_URL = "https://api.github.com/repos/nedaktov-ops/parlament-deschis/releases/tags"
 USER_AGENT = "parlament-deschis-deployment"
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 DEFAULT_RELEASE_TAG = Path(__file__).resolve().parent.parent / "data" / "latest-release.txt"
 
 
@@ -95,7 +96,11 @@ def download_dataset(
     tag = _read_release_tag(release_tag)
     release_request = Request(
         f"{RELEASE_API_URL}/{quote(tag, safe='')}",
-        headers={"Accept": "application/vnd.github+json", "User-Agent": USER_AGENT},
+        headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": USER_AGENT,
+            **({"Authorization": f"Bearer {GITHUB_TOKEN}"} if GITHUB_TOKEN else {}),
+        },
     )
     with _urlopen_with_retry(release_request, timeout=30) as response:
         release = json.load(response)
@@ -116,7 +121,11 @@ def download_dataset(
 
     asset_request = Request(
         asset["url"],
-        headers={"Accept": "application/octet-stream", "User-Agent": USER_AGENT},
+        headers={
+            "Accept": "application/octet-stream",
+            "User-Agent": USER_AGENT,
+            **({"Authorization": f"Bearer {GITHUB_TOKEN}"} if GITHUB_TOKEN else {}),
+        },
     )
     destination.parent.mkdir(parents=True, exist_ok=True)
     metadata = {
