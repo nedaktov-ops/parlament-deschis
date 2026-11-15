@@ -3,7 +3,13 @@ from pathlib import Path
 
 import pytest
 
-from pipeline.audit import audit, check_index_reconciliation, scope_totals
+from pipeline.audit import (
+    Finding,
+    audit,
+    check_index_reconciliation,
+    finding_fingerprint,
+    scope_totals,
+)
 from pipeline.db import (
     Event,
     Evidence,
@@ -203,6 +209,52 @@ def test_mandate_coverage_gap_is_an_error(session, monkeypatch):
     assert coverage_errors[0].person_id == alice.id
     assert "gap in group membership" in coverage_errors[0].detail
     assert coverage_errors[0].context["days"] == 92
+
+
+def test_finding_fingerprint_is_stable_across_person_id_regeneration():
+    """Person ids are random UUIDs; the baseline must survive a re-ingest."""
+    first = Finding(
+        check="mandate_coverage",
+        severity="error",
+        chamber="senate",
+        legislature="2004",
+        person_id="11111111-1111-1111-1111-111111111111",
+        name="Şerban-Cezar STRĂTILĂ",
+        detail="gap in group membership between 2006-12-19 and 2007-12-17",
+        context={"days": 363},
+    )
+    second = Finding(
+        check="mandate_coverage",
+        severity="error",
+        chamber="senate",
+        legislature="2004",
+        person_id="22222222-2222-2222-2222-222222222222",
+        name="Serban-Cezar Stratila",
+        detail="gap in group membership between 2006-12-19 and 2007-12-17",
+        context={"days": 363},
+    )
+
+    assert finding_fingerprint(first) == finding_fingerprint(second)
+
+
+def test_finding_fingerprint_separates_different_findings():
+    base = dict(
+        check="overlap",
+        severity="error",
+        chamber="deputies",
+        legislature="2016",
+        person_id="11111111-1111-1111-1111-111111111111",
+        name="Ion POPESCU",
+        detail="sits in PSD and PRO at the same time",
+        context={"overlap_days": 524},
+    )
+
+    same_shape = Finding(**base)
+    other_person = Finding(**{**base, "name": "Maria IONESCU"})
+    other_detail = Finding(**{**base, "detail": "sits in PSD and PNL at the same time"})
+
+    assert finding_fingerprint(same_shape) != finding_fingerprint(other_person)
+    assert finding_fingerprint(same_shape) != finding_fingerprint(other_detail)
 
 
 def test_scope_totals_count_distinct_people_and_switch_events(session, monkeypatch):

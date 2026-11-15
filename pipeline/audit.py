@@ -32,7 +32,7 @@ from sqlalchemy.orm import Session
 
 from .collect import roster_url
 from .db import Event, Evidence, Mandate, Membership, Organization, Person
-from .normalize import name_sort_key
+from .normalize import name_sort_key, normalize_name
 from .parse.cdep_group import parse_group_ledger, parse_group_list
 from .parse.cdep_roster import parse_roster
 
@@ -84,13 +84,22 @@ class AuditReport:
 
 
 def finding_fingerprint(finding: Finding) -> str:
-    """Return a stable identity for an audit finding, excluding display names."""
+    """Return a stable identity for a finding across dataset releases.
+
+    Person ids are random UUIDs regenerated on every ingest, so hashing them
+    turns a reviewed baseline into 100% churn on every release: every known
+    finding looks new and every baseline entry looks resolved. The normalized
+    name plus the scope is the stable natural key the source publishes. The
+    detail and context still separate distinct findings, and callers compare
+    fingerprints as a multiset, so an extra finding of the same shape for the
+    same person is still reported as new.
+    """
     identity = {
         "check": finding.check,
         "severity": finding.severity,
         "chamber": finding.chamber,
         "legislature": finding.legislature,
-        "person_id": finding.person_id,
+        "name": normalize_name(finding.name) if finding.name else "",
         "detail": finding.detail,
         "context": finding.context,
     }
@@ -555,9 +564,7 @@ def check_index_reconciliation(session: Session) -> list[Finding]:
     findings: list[Finding] = []
     cache = Path("data/cache/cdep")
     expected_scopes = set(
-        session.execute(
-            select(Membership.chamber, Membership.legislature).distinct()
-        ).all()
+        session.execute(select(Membership.chamber, Membership.legislature).distinct()).all()
     )
     cached_scopes: set[tuple[str, str]] = set()
     if cache.is_dir():
