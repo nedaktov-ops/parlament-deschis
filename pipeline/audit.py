@@ -32,7 +32,7 @@ from sqlalchemy.orm import Session
 
 from .collect import roster_url
 from .db import Event, Evidence, Mandate, Membership, Organization, Person
-from .normalize import name_sort_key
+from .normalize import name_sort_key, normalize_name
 from .parse.cdep_group import parse_group_ledger, parse_group_list
 from .parse.cdep_roster import parse_roster
 
@@ -84,13 +84,22 @@ class AuditReport:
 
 
 def finding_fingerprint(finding: Finding) -> str:
-    """Return a stable identity for an audit finding, excluding display names."""
+    """Return a stable identity for a finding across dataset releases.
+
+    Person ids are random UUIDs regenerated on every ingest, so hashing them
+    turns a reviewed baseline into 100% churn on every release: every known
+    finding looks new and every baseline entry looks resolved. The normalized
+    name plus the scope is the stable natural key the source publishes. The
+    detail and context still separate distinct findings, and callers compare
+    fingerprints as a multiset, so an extra finding of the same shape for the
+    same person is still reported as new.
+    """
     identity = {
         "check": finding.check,
         "severity": finding.severity,
         "chamber": finding.chamber,
         "legislature": finding.legislature,
-        "person_id": finding.person_id,
+        "name": normalize_name(finding.name) if finding.name else "",
         "detail": finding.detail,
         "context": finding.context,
     }
@@ -366,6 +375,16 @@ def check_switch_events(session: Session) -> list[Finding]:
     """
     findings: list[Finding] = []
     events = list(session.scalars(select(Event).where(Event.type == "switch_group")))
+    person_ids = {ev.person_id for ev in events if ev.person_id}
+    names = (
+        dict(
+            session.execute(
+                select(Person.id, Person.canonical_name).where(Person.id.in_(person_ids))
+            ).all()
+        )
+        if person_ids
+        else {}
+    )
     for ev in events:
         if not ev.source_url:
             findings.append(
@@ -375,6 +394,7 @@ def check_switch_events(session: Session) -> list[Finding]:
                     chamber=ev.chamber,
                     legislature=ev.legislature,
                     person_id=ev.person_id,
+                    name=names.get(ev.person_id),
                     detail="switch event has no source URL",
                 )
             )
@@ -386,6 +406,7 @@ def check_switch_events(session: Session) -> list[Finding]:
                     chamber=ev.chamber,
                     legislature=ev.legislature,
                     person_id=ev.person_id,
+                    name=names.get(ev.person_id),
                     detail="switch event has no date",
                 )
             )
@@ -555,9 +576,7 @@ def check_index_reconciliation(session: Session) -> list[Finding]:
     findings: list[Finding] = []
     cache = Path("data/cache/cdep")
     expected_scopes = set(
-        session.execute(
-            select(Membership.chamber, Membership.legislature).distinct()
-        ).all()
+        session.execute(select(Membership.chamber, Membership.legislature).distinct()).all()
     )
     cached_scopes: set[tuple[str, str]] = set()
     if cache.is_dir():
@@ -750,18 +769,21 @@ def check_interval_order(session: Session) -> list[Finding]:
     rows = session.execute(
         select(
             Membership.person_id,
+            Person.canonical_name,
             Membership.chamber,
             Membership.legislature,
             Membership.start_date,
             Membership.end_date,
             Membership.source_url,
-        ).where(
+        )
+        .join(Person, Person.id == Membership.person_id)
+        .where(
             Membership.end_date.is_not(None),
             Membership.start_date.is_not(None),
             Membership.start_date > Membership.end_date,
         )
     ).all()
-    for person_id, chamber, legislature, start, end, source_url in rows:
+    for person_id, name, chamber, legislature, start, end, source_url in rows:
         findings.append(
             Finding(
                 check="interval_order",
@@ -769,6 +791,7 @@ def check_interval_order(session: Session) -> list[Finding]:
                 chamber=chamber,
                 legislature=legislature,
                 person_id=person_id,
+                name=name,
                 detail=f"tenure starts on {start} and ends on {end}",
                 context={"source_url": source_url},
             )
@@ -787,18 +810,20 @@ def check_missing_start(session: Session) -> list[Finding]:
     rows = session.execute(
         select(
             Membership.person_id,
+            Person.canonical_name,
             Membership.chamber,
             Membership.legislature,
             Membership.source_url,
             Membership.start_reason,
         )
         .join(Organization, Organization.id == Membership.org_id)
+        .join(Person, Person.id == Membership.person_id)
         .where(
             Organization.classification == "group",
             Membership.start_date.is_(None),
         )
     ).all()
-    for person_id, chamber, legislature, source_url, reason in rows:
+    for person_id, name, chamber, legislature, source_url, reason in rows:
         findings.append(
             Finding(
                 check="missing_start",
@@ -806,6 +831,7 @@ def check_missing_start(session: Session) -> list[Finding]:
                 chamber=chamber,
                 legislature=legislature,
                 person_id=person_id,
+                name=name,
                 detail=(
                     "the tenure has no start date, so it cannot take part in the "
                     f"switch analysis (reason: {reason or 'none'})"

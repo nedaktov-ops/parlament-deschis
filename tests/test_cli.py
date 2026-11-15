@@ -101,6 +101,42 @@ def test_audit_strict_allows_only_fingerprinted_baseline_findings(tmp_path, monk
     assert cli_main(["--db", str(db), "audit-corpus", "--strict", "--baseline", str(baseline)]) == 1
 
 
+def test_audit_baseline_survives_person_id_regeneration(tmp_path, monkeypatch):
+    """Regression: random person ids made every release fail the audit gate.
+
+    Two independent ingests of the same corpus produce different UUIDs. A
+    reviewed baseline must still recognise the same findings on the second
+    ingest, otherwise the gate fails on every release and protects nothing.
+    """
+    import json
+
+    from pipeline.audit import audit
+
+    monkeypatch.chdir(tmp_path)
+    first_db = tmp_path / "first.db"
+    _db_with_membership(first_db)
+    session = get_session(first_db)
+    try:
+        findings = [error.as_dict() for error in audit(session).errors]
+    finally:
+        session.close()
+    assert findings  # the fixture membership has no evidence row
+
+    baseline = tmp_path / "baseline.json"
+    baseline.write_text(
+        json.dumps({"schema_version": 1, "findings": findings}),
+        encoding="utf-8",
+    )
+
+    second_db = tmp_path / "second.db"
+    _db_with_membership(second_db)  # fresh uuid4 person/org/membership ids
+
+    assert (
+        cli_main(["--db", str(second_db), "audit-corpus", "--strict", "--baseline", str(baseline)])
+        == 0
+    )
+
+
 def test_audit_does_not_count_unevaluated_baseline_findings_as_resolved(
     tmp_path, monkeypatch, capsys
 ):
@@ -138,7 +174,9 @@ def test_audit_does_not_count_unevaluated_baseline_findings_as_resolved(
     )
 
     assert cli_main(["--db", str(db), "audit-corpus", "--strict", "--baseline", str(baseline)]) == 0
-    assert "0 resolved baseline findings, 1 baseline findings not evaluated" in capsys.readouterr().out
+    assert (
+        "0 resolved baseline findings, 1 baseline findings not evaluated" in capsys.readouterr().out
+    )
 
 
 def test_build_corpus_strict_stops_before_ingesting_partial_sources(tmp_path, monkeypatch):
@@ -164,21 +202,34 @@ def test_build_corpus_strict_stops_before_ingesting_partial_sources(tmp_path, mo
         lambda *_args, **_kwargs: pytest.fail("partial corpus must not be ingested"),
     )
 
-    assert cli_main(
-        ["--db", str(tmp_path / "strict.db"), "build-corpus", "--chamber", "deputies", "--strict"]
-    ) == 1
+    assert (
+        cli_main(
+            [
+                "--db",
+                str(tmp_path / "strict.db"),
+                "build-corpus",
+                "--chamber",
+                "deputies",
+                "--strict",
+            ]
+        )
+        == 1
+    )
 
 
 def test_build_corpus_strict_rejects_empty_legislature_selection(tmp_path):
-    assert cli_main(
-        [
-            "--db",
-            str(tmp_path / "empty.db"),
-            "build-corpus",
-            "--chamber",
-            "deputies",
-            "--from",
-            "9999",
-            "--strict",
-        ]
-    ) == 1
+    assert (
+        cli_main(
+            [
+                "--db",
+                str(tmp_path / "empty.db"),
+                "build-corpus",
+                "--chamber",
+                "deputies",
+                "--from",
+                "9999",
+                "--strict",
+            ]
+        )
+        == 1
+    )
