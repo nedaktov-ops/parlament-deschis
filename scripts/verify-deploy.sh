@@ -83,10 +83,10 @@ while ((SECONDS < deadline)); do
 		vercel_ok=1
 		vercel_skipped=0
 		;;
-	ERROR | CANCELED | BLOCKED)
+	ERROR | BLOCKED)
 		die "Vercel deployment for ${TARGET_SHA} is ${vercel_state}"
 		;;
-	absent)
+	CANCELED | absent)
 		if [ -z "$vercel_absent_since" ]; then
 			vercel_absent_since=$SECONDS
 		fi
