@@ -3,13 +3,64 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import logging
 import os
+import random
 import re
 import shutil
+import socket
 import tempfile
+import time
 from pathlib import Path
+from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
+
+logger = logging.getLogger(__name__)
+
+_RETRYABLE_EXCEPTIONS = (URLError, HTTPError, socket.timeout, ConnectionError, TimeoutError)
+
+_MAX_ATTEMPTS = 6
+_INITIAL_BACKOFF_SECONDS = 2.0
+_MAX_BACKOFF_SECONDS = 30.0
+_JITTER_SECONDS = 1.0
+
+
+def _urlopen_with_retry(request: Request, *, timeout: int):
+    """Open a URL with exponential backoff and jitter for transient failures.
+
+    Retries on ``URLError``, ``HTTPError``, ``socket.timeout``,
+    ``ConnectionError`` and ``TimeoutError`` so that an intermittent cdep.ro
+    or GitHub API timeout does not fail the whole download.
+    """
+    delay = _INITIAL_BACKOFF_SECONDS
+    last_error: Exception | None = None
+    for attempt in range(1, _MAX_ATTEMPTS + 1):
+        try:
+            return urlopen(request, timeout=timeout)
+        except _RETRYABLE_EXCEPTIONS as exc:
+            last_error = exc
+            if attempt == _MAX_ATTEMPTS:
+                logger.error(
+                    "urlopen failed after %d attempts for %s: %s",
+                    _MAX_ATTEMPTS,
+                    request.full_url,
+                    exc,
+                )
+                raise
+            sleep_for = min(delay, _MAX_BACKOFF_SECONDS) + random.uniform(0, _JITTER_SECONDS)
+            logger.warning(
+                "urlopen attempt %d/%d failed for %s (%s); retrying in %.1fs",
+                attempt,
+                _MAX_ATTEMPTS,
+                request.full_url,
+                exc,
+                sleep_for,
+            )
+            time.sleep(sleep_for)
+            delay = min(delay * 2, _MAX_BACKOFF_SECONDS)
+    raise last_error  # pragma: no cover - unreachable once max attempts raise
+
 
 RELEASE_API_URL = "https://api.github.com/repos/nedaktov-ops/parlament-deschis/releases/tags"
 USER_AGENT = "parlament-deschis-deployment"
@@ -46,7 +97,7 @@ def download_dataset(
         f"{RELEASE_API_URL}/{quote(tag, safe='')}",
         headers={"Accept": "application/vnd.github+json", "User-Agent": USER_AGENT},
     )
-    with urlopen(release_request, timeout=30) as response:
+    with _urlopen_with_retry(release_request, timeout=30) as response:
         release = json.load(response)
     if release.get("tag_name") != tag:
         raise RuntimeError(f"GitHub returned a different release than requested: {tag}")
@@ -58,7 +109,9 @@ def download_dataset(
     if asset is None:
         raise RuntimeError(f"Dataset release {tag} has no parlament.db asset")
     expected_digest = asset.get("digest")
-    if not isinstance(expected_digest, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", expected_digest):
+    if not isinstance(expected_digest, str) or not re.fullmatch(
+        r"sha256:[0-9a-f]{64}", expected_digest
+    ):
         raise RuntimeError(f"Dataset release {tag} has no valid SHA-256 asset digest")
 
     asset_request = Request(
@@ -74,9 +127,14 @@ def download_dataset(
         "asset_sha256": expected_digest.removeprefix("sha256:"),
     }
 
-    with tempfile.TemporaryDirectory(prefix=f".{destination.name}.", dir=destination.parent) as temp_dir:
+    with tempfile.TemporaryDirectory(
+        prefix=f".{destination.name}.", dir=destination.parent
+    ) as temp_dir:
         temp_destination = Path(temp_dir) / destination.name
-        with urlopen(asset_request, timeout=300) as response, temp_destination.open("wb") as output:
+        with (
+            _urlopen_with_retry(asset_request, timeout=300) as response,
+            temp_destination.open("wb") as output,
+        ):
             shutil.copyfileobj(response, output)
         actual_digest = _sha256(temp_destination)
         if actual_digest != metadata["asset_sha256"]:
