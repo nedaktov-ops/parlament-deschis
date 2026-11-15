@@ -302,7 +302,10 @@ export const api = {
     const query = params.toString();
     return get<EventItem[]>(`/movements${query ? `?${query}` : ""}`);
   },
-  recentEvents: (limit = 50) => get<EventItem[]>(`/events/recent?limit=${limit}`),
+  recentEvents: (limit = 50, chamber?: string, legislature?: string) =>
+  get<EventItem[]>(
+    `/events/recent?limit=${limit}${chamber ? `&chamber=${chamber}` : ""}${legislature ? `&legislature=${legislature}` : ""}`
+  ),
   coverage: () => get<CoverageItem[]>("/coverage"),
   coverage_detailed: () => get<CoverageRow[]>("/coverage/detailed"),
   about: () => get<AboutResponse>("/about"),

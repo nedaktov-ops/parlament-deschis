@@ -125,7 +125,7 @@ export function LiveDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <ChamberView chamber="deputies" asOf={clamped} onSelect={openPerson} />
           <ChamberView chamber="senate" asOf={clamped} onSelect={openPerson} />
-          <LiveFeed onSelect={openPerson} />
+          <LiveFeed onSelect={openPerson} legislature={selectedLegislature} />
         </div>
       </div>
 

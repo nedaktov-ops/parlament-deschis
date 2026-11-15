@@ -23,9 +23,15 @@ function typeColor(type: string): string {
   }
 }
 
-export default function LiveFeed({ onSelect }: { onSelect: (id: string) => void }) {
+export default function LiveFeed(
+  { onSelect }: { onSelect: (id: string) => void },
+  { legislature, chamber }: { legislature?: string; chamber?: string }
+) {
   const { t, i18n } = useTranslation();
-  const events = useQuery({ queryKey: ["recent"], queryFn: () => api.recentEvents(40) });
+  const events = useQuery({
+    queryKey: ["recent", legislature, chamber],
+    queryFn: () => api.recentEvents(40, chamber, legislature),
+  });
   const health = useQuery({
     queryKey: ["health"],
     queryFn: api.health,
@@ -113,7 +119,11 @@ export default function LiveFeed({ onSelect }: { onSelect: (id: string) => void 
             {t("activityLoadError")}
           </div>
         )}
-        {events.data?.map((e) => (
+        {events.data?.filter((e) => {
+          if (legislature && e.legislature !== legislature) return false;
+          if (chamber && e.chamber !== chamber) return false;
+          return true;
+        })?.map((e) => (
           <button
             key={e.id}
             onClick={() => e.person && onSelect(e.person.id)}
