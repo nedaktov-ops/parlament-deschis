@@ -211,6 +211,40 @@ def test_mandate_coverage_gap_is_an_error(session, monkeypatch):
     assert coverage_errors[0].context["days"] == 92
 
 
+def test_person_scoped_finding_checks_carry_the_person_name(session, monkeypatch):
+    """Fingerprints rely on names; every person-scoped check must populate it.
+
+    Otherwise two findings for two different people with the same detail
+    collapse into one fingerprint and the gate can miss a real regression.
+    """
+    alice, bob, psd, _pro = _seed_clean_database(session)
+
+    event = session.query(Event).filter(Event.person_id == alice.id).one()
+    event.source_url = None
+
+    first = session.query(Membership).filter(Membership.person_id == alice.id).first()
+    first.start_date = date(2024, 6, 1)
+    first.end_date = date(2024, 1, 1)
+
+    _membership(session, bob, psd, start=None, end=date(2024, 12, 31))
+    session.commit()
+    monkeypatch.chdir(Path(session.get_bind().url.database).parent)
+
+    report = audit(session)
+
+    scoped = [
+        finding
+        for finding in report.errors
+        if finding.check in {"switch_event", "interval_order", "missing_start"}
+    ]
+    assert {finding.check for finding in scoped} == {
+        "switch_event",
+        "interval_order",
+        "missing_start",
+    }
+    assert all(finding.name for finding in scoped)
+
+
 def test_finding_fingerprint_is_stable_across_person_id_regeneration():
     """Person ids are random UUIDs; the baseline must survive a re-ingest."""
     first = Finding(

@@ -375,6 +375,16 @@ def check_switch_events(session: Session) -> list[Finding]:
     """
     findings: list[Finding] = []
     events = list(session.scalars(select(Event).where(Event.type == "switch_group")))
+    person_ids = {ev.person_id for ev in events if ev.person_id}
+    names = (
+        dict(
+            session.execute(
+                select(Person.id, Person.canonical_name).where(Person.id.in_(person_ids))
+            ).all()
+        )
+        if person_ids
+        else {}
+    )
     for ev in events:
         if not ev.source_url:
             findings.append(
@@ -384,6 +394,7 @@ def check_switch_events(session: Session) -> list[Finding]:
                     chamber=ev.chamber,
                     legislature=ev.legislature,
                     person_id=ev.person_id,
+                    name=names.get(ev.person_id),
                     detail="switch event has no source URL",
                 )
             )
@@ -395,6 +406,7 @@ def check_switch_events(session: Session) -> list[Finding]:
                     chamber=ev.chamber,
                     legislature=ev.legislature,
                     person_id=ev.person_id,
+                    name=names.get(ev.person_id),
                     detail="switch event has no date",
                 )
             )
@@ -757,18 +769,21 @@ def check_interval_order(session: Session) -> list[Finding]:
     rows = session.execute(
         select(
             Membership.person_id,
+            Person.canonical_name,
             Membership.chamber,
             Membership.legislature,
             Membership.start_date,
             Membership.end_date,
             Membership.source_url,
-        ).where(
+        )
+        .join(Person, Person.id == Membership.person_id)
+        .where(
             Membership.end_date.is_not(None),
             Membership.start_date.is_not(None),
             Membership.start_date > Membership.end_date,
         )
     ).all()
-    for person_id, chamber, legislature, start, end, source_url in rows:
+    for person_id, name, chamber, legislature, start, end, source_url in rows:
         findings.append(
             Finding(
                 check="interval_order",
@@ -776,6 +791,7 @@ def check_interval_order(session: Session) -> list[Finding]:
                 chamber=chamber,
                 legislature=legislature,
                 person_id=person_id,
+                name=name,
                 detail=f"tenure starts on {start} and ends on {end}",
                 context={"source_url": source_url},
             )
@@ -794,18 +810,20 @@ def check_missing_start(session: Session) -> list[Finding]:
     rows = session.execute(
         select(
             Membership.person_id,
+            Person.canonical_name,
             Membership.chamber,
             Membership.legislature,
             Membership.source_url,
             Membership.start_reason,
         )
         .join(Organization, Organization.id == Membership.org_id)
+        .join(Person, Person.id == Membership.person_id)
         .where(
             Organization.classification == "group",
             Membership.start_date.is_(None),
         )
     ).all()
-    for person_id, chamber, legislature, source_url, reason in rows:
+    for person_id, name, chamber, legislature, source_url, reason in rows:
         findings.append(
             Finding(
                 check="missing_start",
@@ -813,6 +831,7 @@ def check_missing_start(session: Session) -> list[Finding]:
                 chamber=chamber,
                 legislature=legislature,
                 person_id=person_id,
+                name=name,
                 detail=(
                     "the tenure has no start date, so it cannot take part in the "
                     f"switch analysis (reason: {reason or 'none'})"
