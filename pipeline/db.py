@@ -163,6 +163,7 @@ class Organization(Base):
     dissolution_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     localised_labels: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     chamber: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    legislature: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
     # Party genealogy
     previous_party_id: Mapped[str | None] = mapped_column(
         ForeignKey("organization.id"), nullable=True
@@ -466,6 +467,9 @@ _ADDED_COLUMNS: dict[str, dict[str, str]] = {
         # The name exactly as the source published it.
         "member_name": "VARCHAR(255)",
     },
+    "organization": {
+        "legislature": "VARCHAR(16)",
+    },
 }
 
 # SQLite treats NULL as distinct from every other value, so a UNIQUE
@@ -515,11 +519,15 @@ def _merge_legacy_cross_chamber_groups(conn) -> None:
     )
 
     for classification, normalized_name in duplicates:
-        rows = conn.exec_driver_sql(
-            "SELECT * FROM organization WHERE classification = ? "
-            "AND normalized_name = ? AND founding_date IS NULL ORDER BY id",
-            (classification, normalized_name),
-        ).mappings().all()
+        rows = (
+            conn.exec_driver_sql(
+                "SELECT * FROM organization WHERE classification = ? "
+                "AND normalized_name = ? AND founding_date IS NULL ORDER BY id",
+                (classification, normalized_name),
+            )
+            .mappings()
+            .all()
+        )
         if (
             len(rows) != 2
             or {row["chamber"] for row in rows} != {"deputies", "senate"}
@@ -567,9 +575,7 @@ def _merge_legacy_cross_chamber_groups(conn) -> None:
                     (canonical_id, duplicate_id),
                 )
             conn.exec_driver_sql("DELETE FROM organization WHERE id = ?", (duplicate_id,))
-        conn.exec_driver_sql(
-            "UPDATE organization SET chamber = NULL WHERE id = ?", (canonical_id,)
-        )
+        conn.exec_driver_sql("UPDATE organization SET chamber = NULL WHERE id = ?", (canonical_id,))
         merged += 1
 
     if merged:

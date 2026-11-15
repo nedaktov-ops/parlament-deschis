@@ -80,12 +80,19 @@ def get_or_create_org(
     founding_date: date | None = None,
     former_name: str | None = None,
     parent_id: str | None = None,
+    legislature: str | None = None,
 ) -> Organization:
     norm = normalize_org_label(name)
-    stmt = select(Organization).where(
+    conditions = [
         Organization.classification == classification,
         Organization.normalized_name == norm,
-    )
+    ]
+    # Committees and bureaus are reconstituted each legislature, so the same
+    # name in a different legislature is a different organisation. Groups and
+    # parties persist across legislatures, so they keep the scope-free dedup.
+    if classification in ("committee", "bureau"):
+        conditions.append(Organization.legislature == legislature)
+    stmt = select(Organization).where(*conditions)
     org = session.scalars(stmt).first()
     if org is not None:
         if short_name and not org.short_name:
@@ -106,6 +113,7 @@ def get_or_create_org(
         normalized_name=norm,
         short_name=short_name,
         chamber=chamber,
+        legislature=legislature,
         founding_date=founding_date,
         alt_labels=alt_labels,
         color=ref.get("color"),
@@ -335,6 +343,7 @@ def ingest_cdep_committee_ledger(
         name=meta.name,
         short_name=meta.short_name,
         chamber=meta.chamber,
+        legislature=legislature,
     )
     resolver = PersonResolver(session)
     writer = MembershipWriter(session)
