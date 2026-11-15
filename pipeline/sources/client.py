@@ -8,6 +8,7 @@ pacing (<=1 req/s), exponential backoff, conditional GET (ETag/Last-Modified),
 from __future__ import annotations
 
 import logging
+import random
 import threading
 import time
 from dataclasses import dataclass, field
@@ -22,6 +23,13 @@ USER_AGENT = "ParlamentDeschis/1.0 (+https://github.com/parlament-deschis; civic
 DEFAULT_SLEEP = 2.5
 DEFAULT_TIMEOUT = 25
 MAX_RETRIES = 4
+# Connection-level errors (timeouts, DNS failures, refused connects) are retried
+# more aggressively than HTTP 5xx responses, since cdep.ro occasionally drops
+# the initial connection from CI runners.
+DEFAULT_CONNECT_RETRIES = 6
+BACKOFF_BASE = 2.0
+BACKOFF_MAX = 30.0
+BACKOFF_JITTER = 0.2
 
 
 class CaptchaError(RuntimeError):
@@ -57,11 +65,15 @@ class PoliteClient:
         timeout: float = DEFAULT_TIMEOUT,
         user_agent: str = USER_AGENT,
         respect_robots: bool = True,
+        connect_retries: int = DEFAULT_CONNECT_RETRIES,
+        connect_backoff: float = BACKOFF_BASE,
     ):
         self.sleep = sleep
         self.timeout = timeout
         self.user_agent = user_agent
         self.respect_robots = respect_robots
+        self.connect_retries = connect_retries
+        self.connect_backoff = connect_backoff
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": user_agent})
         self._hosts: dict[str, _HostState] = {}
@@ -111,6 +123,10 @@ class PoliteClient:
             ]
         )
 
+    def _jitter(self, backoff: float) -> float:
+        """Exponential backoff plus bounded jitter so retries don't stampede."""
+        return min(BACKOFF_MAX, backoff + random.uniform(0.0, backoff * BACKOFF_JITTER))
+
     def get(
         self,
         url: str,
@@ -140,17 +156,21 @@ class PoliteClient:
             if cached.get("last_modified"):
                 headers["If-Modified-Since"] = cached["last_modified"]
 
-        backoff = 2.0
-        for attempt in range(MAX_RETRIES):
+        connect_attempts = 0
+        http_attempts = 0
+        backoff = self.connect_backoff
+        http_backoff = BACKOFF_BASE
+        while connect_attempts < self.connect_retries or http_attempts < MAX_RETRIES:
             self._pace(host)
             try:
                 resp = self.session.get(url, headers=headers, timeout=self.timeout)
             except requests.RequestException as exc:
+                connect_attempts += 1
                 log.warning("request error %s: %s", url, exc)
-                if attempt == MAX_RETRIES - 1:
+                if connect_attempts >= self.connect_retries:
                     raise
-                time.sleep(backoff)
-                backoff *= 2
+                time.sleep(self._jitter(backoff))
+                backoff = min(backoff * 2, BACKOFF_MAX)
                 continue
 
             if resp.status_code == 304:
@@ -173,15 +193,19 @@ class PoliteClient:
                     last_modified=last_modified,
                 )
             if resp.status_code == 429:
+                http_attempts += 1
                 wait = int(resp.headers.get("Retry-After", "60"))
                 log.warning("429 from %s, waiting %ss", url, wait)
+                if http_attempts >= MAX_RETRIES:
+                    break
                 time.sleep(min(wait, 120))
                 continue
             if resp.status_code >= 500:
-                if attempt == MAX_RETRIES - 1:
+                http_attempts += 1
+                if http_attempts >= MAX_RETRIES:
                     resp.raise_for_status()
-                time.sleep(backoff)
-                backoff *= 2
+                time.sleep(self._jitter(http_backoff))
+                http_backoff = min(http_backoff * 2, BACKOFF_MAX)
                 continue
 
             resp.raise_for_status()
@@ -206,29 +230,37 @@ class PoliteClient:
         if self.respect_robots and host.robots and not host.robots.can_fetch(self.user_agent, url):
             raise RobotsDisallowed(url)
 
-        backoff = 2.0
-        for attempt in range(MAX_RETRIES):
+        connect_attempts = 0
+        http_attempts = 0
+        backoff = self.connect_backoff
+        http_backoff = BACKOFF_BASE
+        while connect_attempts < self.connect_retries or http_attempts < MAX_RETRIES:
             self._pace(host)
             try:
                 resp = self.session.post(url, data=data, timeout=self.timeout, **kwargs)
             except requests.RequestException as exc:
+                connect_attempts += 1
                 log.warning("request error %s: %s", url, exc)
-                if attempt == MAX_RETRIES - 1:
+                if connect_attempts >= self.connect_retries:
                     raise
-                time.sleep(backoff)
-                backoff *= 2
+                time.sleep(self._jitter(backoff))
+                backoff = min(backoff * 2, BACKOFF_MAX)
                 continue
 
             if resp.status_code == 429:
+                http_attempts += 1
                 wait = int(resp.headers.get("Retry-After", "60"))
                 log.warning("429 from %s, waiting %ss", url, wait)
+                if http_attempts >= MAX_RETRIES:
+                    break
                 time.sleep(min(wait, 120))
                 continue
             if resp.status_code >= 500:
-                if attempt == MAX_RETRIES - 1:
+                http_attempts += 1
+                if http_attempts >= MAX_RETRIES:
                     resp.raise_for_status()
-                time.sleep(backoff)
-                backoff *= 2
+                time.sleep(self._jitter(http_backoff))
+                http_backoff = min(http_backoff * 2, BACKOFF_MAX)
                 continue
 
             resp.raise_for_status()
