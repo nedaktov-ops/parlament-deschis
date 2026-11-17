@@ -458,11 +458,27 @@ def run_load_test():
 - **Pending**: none. (Party merger/split succession is a declared data gap —
   0 predecessor/successor rows, 0 dissolution dates — delivered as the honest
   observed-span timeline on `/party-timeline`, not a fabricated graph.)
-- **Blockers**: none.
-- **Data validated**: 197 pytest tests pass; `ruff check pipeline backend
-  scripts tests` clean; `npm run build` passes; load test + UI/a11y scans pass.
+- **Blockers**: none. The Data workflow's GitHub runner could not reach
+  cdep.ro (`ConnectTimeout` on `leg=1990`), so its rebuild failed twice;
+  the source was reachable from the dev host. Recovery: a shippable DB was
+  prepared locally from the already-verified enriched corpus and published
+  as release `data-20261117-T060923` (release notes record provenance).
+- **Production release (verified live, not assumed)**: pinned marker
+  `data-20261117-T060923`; `/api/health` reports 3388 persons / 7358 memberships;
+  `/api/committees` 23, `/api/analytics/switch-waves` 142,
+  `/api/analytics/committee-control` 26 committees / 8 parties,
+  `/api/export/report` totals match the local DB. Before this release those
+  endpoints returned **0** — the first pinned dataset predated committee
+  ingestion and wave derivation. The root cause was fixed in `build-corpus`
+  (committee ingest + wave derivation, strict completeness gates), so every
+  future workflow-built release carries the data automatically.
+- **Data validated**: 199 pytest tests pass; `ruff check pipeline backend
+  scripts tests` clean; `npm run build` passes; 50-user load test p95 332 ms;
+  production UI scan 18 routes / 0 JS errors / 0 axe violations; strict audit
+  on the shippable release DB: 275 known errors, 0 new.
 - **Rollbacks**: no data rollback needed (all ingestion backed up and audited).
-  Code rollback = `git revert <feature commit>`; committee data =
+  If a deployment regresses, revert the pin commit to restore the previous
+  release; code rollback = `git revert <commit>`; committee data =
   `cp data/parlament.db.bak-pre-committees data/parlament.db` (same for
   `parlament-real.db`); waves = `DELETE FROM switch_wave`.
 
