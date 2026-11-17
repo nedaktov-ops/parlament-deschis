@@ -761,6 +761,72 @@ def get_generational_shift(
 # OBSERVED movement taken from the chambers' own dated group ledgers.
 
 
+@router.get("/analytics/party-timeline")
+def get_party_timeline_analytics(
+    db: Session = Depends(get_db),
+):
+    """Observed presence span of every party in parliament (Feature 10).
+
+    One row per party: the first and last dated join (``membership.start_date``
+    on behalf of the party) plus its declared founding date when the corpus
+    records one. This is an OBSERVED SPAN, not a merger/split graph — the
+    corpus carries 0 predecessor/successor links, so succession between rows
+    (e.g. PDSR ending then PSD starting) is shown, never asserted.
+    """
+    from sqlalchemy import func, select
+
+    from pipeline.db import Membership, Organization
+
+    rows = db.execute(
+        select(
+            Organization.short_name,
+            Organization.name,
+            Organization.founding_date,
+            func.min(Membership.start_date).label("first_join"),
+            func.max(Membership.start_date).label("last_join"),
+            func.count(Membership.id).label("dated_joins"),
+        )
+        .join(Membership, Membership.on_behalf_of_id == Organization.id)
+        .where(
+            Organization.classification == "party",
+            Membership.start_date.is_not(None),
+        )
+        .group_by(Organization.id)
+        .order_by(func.min(Membership.start_date))
+    ).all()
+
+    data = [
+        {
+            "party": short_name,
+            "name": name,
+            "founding_date": founding.isoformat() if founding else None,
+            "first_join": first.isoformat() if first else None,
+            "last_join": last.isoformat() if last else None,
+            "dated_joins": dated_joins,
+        }
+        for short_name, name, founding, first, last, dated_joins in rows
+    ]
+    return {
+        "status": "ok",
+        "data": data,
+        "gaps": {
+            "predecessor_links": 0,
+            "successor_links": 0,
+            "dissolution_dates": db.scalar(
+                select(func.count(Organization.id)).where(
+                    Organization.classification == "party",
+                    Organization.dissolution_date.is_not(None),
+                )
+            )
+            or 0,
+            "note": (
+                "Merger/split succession is not machine-declared in this "
+                "corpus; spans show observed presence only."
+            ),
+        },
+    }
+
+
 @router.get("/traseism/overview")
 def traseism_overview(db: Session = Depends(get_db)):
     """One row per chamber and legislature: members, switches, switchers, rate."""

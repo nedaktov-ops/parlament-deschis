@@ -25,6 +25,7 @@ const Coalitions = lazy(() => import("./pages/Coalitions").then(m => ({ default:
 const Mps = lazy(() => import("./pages/Mps").then(m => ({ default: m.default })));
 const MpComparison = lazy(() => import("./pages/MpComparison").then(m => ({ default: m.default })));
 const Report = lazy(() => import("./pages/Report").then(m => ({ default: m.default })));
+const PartyTimeline = lazy(() => import("./pages/PartyTimeline").then(m => ({ default: m.default })));
 
 function validateDateSearch(search: Record<string, unknown>) {
   const candidate = search.date;
@@ -203,6 +204,9 @@ function RootLayout() {
           <NavLink to="/report" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("nav.report", "Report")}
           </NavLink>
+          <NavLink to="/party-timeline" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("nav.partyTimeline", "Timeline")}
+          </NavLink>
           <NavLink to="/institutional" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("institutional")}
           </NavLink>
@@ -360,6 +364,13 @@ const reportRoute = createRoute({
   validateSearch: validateDateSearch,
 });
 
+const partyTimelineRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/party-timeline",
+  component: () => <Suspense fallback={<Loading />}><PartyTimeline /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
 const routeTree = rootRoute.addChildren([
   senateHistoryRoute,
   switchLeaderboardRoute,
@@ -370,6 +381,7 @@ const routeTree = rootRoute.addChildren([
   mpsRoute,
   mpComparisonRoute,
   reportRoute,
+  partyTimelineRoute,
   indexRoute,
   electoralRoute,
   institutionalRoute,
