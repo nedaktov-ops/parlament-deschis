@@ -10,7 +10,7 @@ htmlcov/
 
 # Data (DB, caches, snapshots and exports are generated; reference data is committed)
 data/parlament.db
-data/parlament.db-*
+data/parlament.db*
 data/parlament-real.db*
 data/wikidata_cache.db
 data/wikidata_cache.db-*
