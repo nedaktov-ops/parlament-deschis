@@ -556,6 +556,72 @@ def traseism_switches(
     )
 
 
+@router.get("/analytics/switch-leaderboard")
+def switch_leaderboard(
+    limit: int = Query(20, ge=1, le=100),
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    chamber: str | None = Query(None, pattern=r"^(deputies|senate)$"),
+    db: Session = Depends(get_db),
+):
+    """Top party switchers: one row per person, ranked by switch count.
+
+    Every count is an observed switch_group event from the chambers' own
+    dated group ledgers. Rows carry the person id so the UI can link to
+    the deep-dive page.
+    """
+    from sqlalchemy import func, select
+
+    from pipeline.db import Event, Organization, Person
+
+    stmt = (
+        select(
+            Person.id,
+            Person.canonical_name,
+            func.count(Event.id).label("switch_count"),
+            func.min(Event.event_date).label("first_switch"),
+            func.max(Event.event_date).label("last_switch"),
+        )
+        .join(Event, Event.person_id == Person.id)
+        .where(Event.type == "switch_group")
+        .group_by(Person.id, Person.canonical_name)
+        .order_by(func.count(Event.id).desc(), Person.canonical_name)
+        .limit(limit)
+    )
+    if legislature:
+        stmt = stmt.where(Event.legislature == legislature)
+    if chamber:
+        stmt = stmt.where(Event.chamber == chamber)
+
+    rows = db.execute(stmt).all()
+
+    # Collect the parties each top switcher joined, in chronological order.
+    leaderboard = []
+    for person_id, name, count, first_switch, last_switch in rows:
+        parties = db.execute(
+            select(Organization.short_name)
+            .join(Event, Event.to_org_id == Organization.id)
+            .where(
+                Event.person_id == person_id,
+                Event.type == "switch_group",
+                Organization.short_name.is_not(None),
+            )
+            .group_by(Organization.short_name)
+            .order_by(func.count(Event.id).desc())
+        ).all()
+        leaderboard.append(
+            {
+                "person_id": person_id,
+                "name": name,
+                "switch_count": count,
+                "first_switch": first_switch.isoformat() if first_switch else None,
+                "last_switch": last_switch.isoformat() if last_switch else None,
+                "parties": [p for (p,) in parties],
+            }
+        )
+
+    return {"status": "ok", "data": leaderboard}
+
+
 @router.get("/export/popolo")
 def export_popolo(
     chamber: str | None = Query(None, pattern="^(deputies|senate)$"),

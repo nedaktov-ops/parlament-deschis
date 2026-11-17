@@ -463,3 +463,62 @@ export function traseismSwitches(
     `/traseism/switches${qs ? `?${qs}` : ""}`,
   );
 }
+
+// --- Feature 1: Switch leaderboard ---------------------------------------
+
+export interface SwitchLeaderboardEntry {
+  person_id: string;
+  name: string;
+  switch_count: number;
+  first_switch: string | null;
+  last_switch: string | null;
+  parties: string[];
+}
+
+export interface SwitchLeaderboardResponse {
+  status: string;
+  data: SwitchLeaderboardEntry[];
+}
+
+/** Top party switchers, ranked by observed switch_group count. */
+export function switchLeaderboard(
+  limit = 20,
+  legislature?: string,
+  chamber?: string,
+): Promise<SwitchLeaderboardResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (legislature) params.set("legislature", legislature);
+  if (chamber) params.set("chamber", chamber);
+  return get<SwitchLeaderboardResponse>(
+    `/analytics/switch-leaderboard?${params.toString()}`,
+  );
+}
+
+// --- Feature 4: Demographics (age per party) ------------------------------
+
+export interface GenerationalShiftEntry {
+  party: string;
+  mps_with_birth_dates: number;
+  avg_age: number;
+  median_age: number;
+}
+
+export interface GenerationalShiftResponse {
+  status: string;
+  as_of: string;
+  data: GenerationalShiftEntry[];
+}
+
+/** Age summaries per party from dated group memberships. */
+export function generationalShift(
+  legislature?: string,
+  asOf?: string,
+): Promise<GenerationalShiftResponse> {
+  const params = new URLSearchParams();
+  if (legislature) params.set("legislature", legislature);
+  if (asOf) params.set("as_of", asOf);
+  const qs = params.toString();
+  return get<GenerationalShiftResponse>(
+    `/analytics/generational-shift${qs ? `?${qs}` : ""}`,
+  );
+}

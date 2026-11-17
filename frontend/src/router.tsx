@@ -17,6 +17,8 @@ const InstitutionalView = lazy(() => import("./pages/InstitutionalView").then(m 
 const LegislatureDetail = lazy(() => import("./pages/LegislatureDetail").then(m => ({ default: m.LegislatureDetail })));
 const Traseism = lazy(() => import("./pages/Traseism").then(m => ({ default: m.Traseism })));
 const CoverageView = lazy(() => import("./pages/CoverageView").then(m => ({ default: m.default })));
+const SwitchLeaderboard = lazy(() => import("./pages/SwitchLeaderboard").then(m => ({ default: m.default })));
+const Demographics = lazy(() => import("./pages/Demographics").then(m => ({ default: m.default })));
 
 function validateDateSearch(search: Record<string, unknown>) {
   const candidate = search.date;
@@ -174,6 +176,12 @@ function RootLayout() {
           <NavLink to="/traseism" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("traseismShort")}
           </NavLink>
+          <NavLink to="/leaderboard" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("nav.leaderboard", "Leaderboard")}
+          </NavLink>
+          <NavLink to="/demographics" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("nav.demographics", "Demographics")}
+          </NavLink>
           <NavLink to="/institutional" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("institutional")}
           </NavLink>
@@ -274,8 +282,25 @@ const senateHistoryRoute = createRoute({
   component: () => <Suspense fallback={<Loading />}><SenateHistory /></Suspense>,
   validateSearch: validateDateSearch,
 });
+
+const switchLeaderboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/leaderboard",
+  component: () => <Suspense fallback={<Loading />}><SwitchLeaderboard /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
+const demographicsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/demographics",
+  component: () => <Suspense fallback={<Loading />}><Demographics /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
 const routeTree = rootRoute.addChildren([
   senateHistoryRoute,
+  switchLeaderboardRoute,
+  demographicsRoute,
   indexRoute,
   electoralRoute,
   institutionalRoute,
