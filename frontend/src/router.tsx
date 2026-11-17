@@ -22,6 +22,7 @@ const Demographics = lazy(() => import("./pages/Demographics").then(m => ({ defa
 const Committees = lazy(() => import("./pages/Committees").then(m => ({ default: m.default })));
 const PartyComparison = lazy(() => import("./pages/PartyComparison").then(m => ({ default: m.default })));
 const Coalitions = lazy(() => import("./pages/Coalitions").then(m => ({ default: m.default })));
+const Mps = lazy(() => import("./pages/Mps").then(m => ({ default: m.default })));
 
 function validateDateSearch(search: Record<string, unknown>) {
   const candidate = search.date;
@@ -194,6 +195,9 @@ function RootLayout() {
           <NavLink to="/coalitions" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("nav.coalitions", "Coalitions")}
           </NavLink>
+          <NavLink to="/mps" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("nav.mps", "MPs")}
+          </NavLink>
           <NavLink to="/institutional" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("institutional")}
           </NavLink>
@@ -330,6 +334,13 @@ const coalitionsRoute = createRoute({
   validateSearch: validateDateSearch,
 });
 
+const mpsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/mps",
+  component: () => <Suspense fallback={<Loading />}><Mps /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
 const routeTree = rootRoute.addChildren([
   senateHistoryRoute,
   switchLeaderboardRoute,
@@ -337,6 +348,7 @@ const routeTree = rootRoute.addChildren([
   committeesRoute,
   partyComparisonRoute,
   coalitionsRoute,
+  mpsRoute,
   indexRoute,
   electoralRoute,
   institutionalRoute,

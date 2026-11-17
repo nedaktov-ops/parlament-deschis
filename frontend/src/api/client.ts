@@ -248,7 +248,7 @@ export interface CrossChamberResponse {
 
 const BASE = "/api";
 
-async function get<T>(path: string): Promise<T> {
+export async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
   if (!res.ok) {
     let message = `API ${res.status}: ${path}`;

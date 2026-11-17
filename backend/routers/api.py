@@ -130,6 +130,106 @@ def persons(
     return queries.search_persons(db, q, chamber, limit)
 
 
+@router.get("/mps")
+def mps_cards(
+    q: str | None = Query(None, max_length=200),
+    limit: int = Query(60, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    sort: str = Query("name", pattern="^(name|age|switches|committees)$"),
+    db: Session = Depends(get_db),
+):
+    """MP biography cards (Feature 8): person + party + switches + committees.
+
+    Each row is one person with the aggregates a voter scans for: current
+    party group, observed switch count, committee tenures and age from the
+    recorded birth date. Read-only over existing tables; persons without a
+    birth date show age as null rather than a guess.
+    """
+    from sqlalchemy import func, select
+
+    from pipeline.db import Event, Membership, Organization, Person
+
+    base = select(Person.id, Person.canonical_name, Person.birth_date)
+    if q:
+        base = base.where(Person.normalized_name.like(f"%{q.lower()}%"))
+
+    # Aggregates over the whole corpus, grouped by person.
+    switches = (
+        select(Event.person_id, func.count(Event.id).label("n"))
+        .where(Event.type == "switch_group")
+        .group_by(Event.person_id)
+        .subquery()
+    )
+    committees = (
+        select(Membership.person_id, func.count(func.distinct(Membership.org_id)).label("n"))
+        .join(Organization, Organization.id == Membership.org_id)
+        .where(Organization.classification == "committee")
+        .group_by(Membership.person_id)
+        .subquery()
+    )
+    # Most recent party affiliation: latest group membership carrying a party.
+    # ROW_NUMBER dedupes to one row per person so the outer join cannot
+    # multiply biography cards.
+    latest_party = (
+        select(
+            Membership.person_id,
+            Organization.short_name.label("party"),
+            func.row_number()
+            .over(
+                partition_by=Membership.person_id,
+                order_by=func.coalesce(Membership.start_date, date(1900, 1, 1)).desc(),
+            )
+            .label("rn"),
+        )
+        .join(Organization, Organization.id == Membership.on_behalf_of_id)
+        .where(Organization.classification == "party")
+        .subquery()
+    )
+
+    stmt = (
+        base.add_columns(
+            func.coalesce(switches.c.n, 0).label("switches"),
+            func.coalesce(committees.c.n, 0).label("committees"),
+            latest_party.c.party,
+        )
+        .outerjoin(switches, switches.c.person_id == Person.id)
+        .outerjoin(committees, committees.c.person_id == Person.id)
+        .outerjoin(latest_party, (latest_party.c.person_id == Person.id) & (latest_party.c.rn == 1))
+    )
+    if sort == "switches":
+        stmt = stmt.order_by(func.coalesce(switches.c.n, 0).desc(), Person.canonical_name)
+    elif sort == "committees":
+        stmt = stmt.order_by(func.coalesce(committees.c.n, 0).desc(), Person.canonical_name)
+    elif sort == "age":
+        stmt = stmt.order_by(Person.birth_date.asc().nullslast(), Person.canonical_name)
+    else:
+        stmt = stmt.order_by(Person.canonical_name)
+    stmt = stmt.offset(offset).limit(limit)
+
+    today = date.today()
+    cards = []
+    for person_id, name, birth_date, n_switches, n_committees, party in db.execute(stmt):
+        age = None
+        if birth_date:
+            age = (
+                today.year
+                - birth_date.year
+                - ((today.month, today.day) < (birth_date.month, birth_date.day))
+            )
+        cards.append(
+            {
+                "id": person_id,
+                "name": name,
+                "birth_date": birth_date.isoformat() if birth_date else None,
+                "age": age,
+                "party": party,
+                "switches": n_switches,
+                "committees": n_committees,
+            }
+        )
+    return {"status": "ok", "data": cards, "offset": offset, "limit": limit}
+
+
 @router.get("/persons/{person_id}/history")
 def person_history(person_id: str, db: Annotated[Session, Depends(get_db)]):
     data = queries.get_person_history(db, person_id)
