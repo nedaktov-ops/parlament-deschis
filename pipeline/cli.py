@@ -607,6 +607,46 @@ def cmd_build_corpus(args) -> int:
     finally:
         session.close()
     print("corpus ingest:", stats)
+
+    # Features 2 / 11: committees and switch waves are part of the shippable
+    # corpus. The API serves a PINNED release database, so anything not built
+    # here stays empty in production — verified on the 2026-11-17 release:
+    # /api/committees = 0, /api/analytics/switch-waves = 0.
+    session = make_session_factory(engine)()
+    try:
+        if not args.skip_committees and current_legislature:
+            from .sources.cdep_committee import CdepCommitteeSource
+
+            committee_client = PoliteClient()
+            try:
+                totals = CdepCommitteeSource(committee_client).ingest_committees(
+                    session, current_legislature
+                )
+                session.commit()
+                log.info("committee ingest: %s", totals)
+                if args.strict and totals["committees"] == 0:
+                    log.error("strict: committee ingest returned 0 committees")
+                    return 1
+            except Exception as exc:  # noqa: BLE001 - strict gate vs best effort
+                if args.strict:
+                    log.error("strict: committee ingest failed: %s", exc)
+                    return 1
+                log.warning("committee ingest failed (non-strict): %s", exc)
+            finally:
+                committee_client.close()
+
+        # Pure SQL from the events just ingested; signature-based dedupe makes
+        # repeated builds idempotent.
+        from .analytics import derive_all_switch_waves
+
+        waves = derive_all_switch_waves(session)
+        session.commit()
+        log.info("switch waves derived: %d", waves)
+        if args.strict and waves == 0:
+            log.error("strict: no switch waves derived from the corpus")
+            return 1
+    finally:
+        session.close()
     return 0
 
 
@@ -721,6 +761,12 @@ def main(argv=None) -> int:
         "--offline",
         action="store_true",
         help="use only cached responses; never contact the official site",
+    )
+    p_corpus.add_argument(
+        "--skip-committees",
+        action="store_true",
+        help="skip the live cdep.ro committee ledger (still derives switch waves); "
+        "escape hatch if the committee source is temporarily unavailable",
     )
     p_corpus.set_defaults(fn=cmd_build_corpus)
 

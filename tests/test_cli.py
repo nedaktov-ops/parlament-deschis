@@ -233,3 +233,109 @@ def test_build_corpus_strict_rejects_empty_legislature_selection(tmp_path):
         )
         == 1
     )
+
+
+def test_build_corpus_ingests_committees_and_derives_waves(tmp_path, monkeypatch):
+    """Committees + waves are part of the shippable corpus (prod gap fix).
+
+    The pinned release DB exposed 0 committees and 0 waves on 2026-11-17
+    because build-corpus never produced them. Guard the wiring without
+    touching the network: fake the collection, ingest and source clients.
+    """
+    from types import SimpleNamespace
+
+    import pipeline.analytics
+    import pipeline.collect
+    import pipeline.ingest_corpus
+    import pipeline.sources.cdep_committee
+    import pipeline.sources.client
+
+    corpus = SimpleNamespace(
+        errors=[], ledgers=[], profiles={}, clusters={}, rosters=[], index_counts={}
+    )
+    monkeypatch.setattr(pipeline.collect, "build_corpus", lambda *a, **k: corpus)
+    monkeypatch.setattr(pipeline.ingest_corpus, "ingest_corpus", lambda *a, **k: {"persons": 0})
+
+    calls: list[tuple] = []
+
+    class FakeClient:
+        def __init__(self, *a, **k):
+            pass
+
+        def close(self):
+            pass
+
+    class FakeCommitteeSource:
+        def __init__(self, client):
+            self.client = client
+
+        def ingest_committees(self, session, legislature, *, idc_filter=None):
+            calls.append(("committees", legislature))
+            return {
+                "committees": 26,
+                "current": 0,
+                "former": 0,
+                "persons": 0,
+                "unchanged": 0,
+            }
+
+    def fake_waves(session):
+        calls.append(("waves",))
+        return 142
+
+    monkeypatch.setattr(pipeline.sources.client, "PoliteClient", FakeClient)
+    monkeypatch.setattr(pipeline.sources.cdep_committee, "CdepCommitteeSource", FakeCommitteeSource)
+    monkeypatch.setattr(pipeline.analytics, "derive_all_switch_waves", fake_waves)
+
+    assert (
+        cli_main(["--db", str(tmp_path / "build.db"), "build-corpus", "--chamber", "deputies"]) == 0
+    )
+    assert calls[0][0] == "committees"
+    assert calls[0][1]  # a real legislature label, e.g. "2024"
+    assert ("waves",) in calls
+
+
+def test_build_corpus_skip_committees_still_derives_waves(tmp_path, monkeypatch):
+    """Escape hatch: --skip-committees must not skip the SQL-only wave step."""
+    from types import SimpleNamespace
+
+    import pipeline.analytics
+    import pipeline.collect
+    import pipeline.ingest_corpus
+    import pipeline.sources.cdep_committee
+
+    corpus = SimpleNamespace(
+        errors=[], ledgers=[], profiles={}, clusters={}, rosters=[], index_counts={}
+    )
+    monkeypatch.setattr(pipeline.collect, "build_corpus", lambda *a, **k: corpus)
+    monkeypatch.setattr(pipeline.ingest_corpus, "ingest_corpus", lambda *a, **k: {"persons": 0})
+
+    def fail_committees(*a, **k):
+        raise AssertionError("committee ingest must be skipped")
+
+    monkeypatch.setattr(
+        pipeline.sources.cdep_committee,
+        "CdepCommitteeSource",
+        fail_committees,
+    )
+    waves = []
+    monkeypatch.setattr(
+        pipeline.analytics,
+        "derive_all_switch_waves",
+        lambda session: waves.append(1) or 142,
+    )
+
+    assert (
+        cli_main(
+            [
+                "--db",
+                str(tmp_path / "skip.db"),
+                "build-corpus",
+                "--chamber",
+                "deputies",
+                "--skip-committees",
+            ]
+        )
+        == 0
+    )
+    assert waves == [1]
