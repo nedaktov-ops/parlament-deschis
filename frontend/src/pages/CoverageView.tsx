@@ -116,7 +116,12 @@ export default function CoverageView() {
         </div>
 
         {/* Per-scope table */}
-        <div className="overflow-x-auto">
+        <div
+          className="overflow-x-auto"
+          tabIndex={0}
+          role="region"
+          aria-label={t("coverageTableCaption")}
+        >
           <table className="w-full text-xs border-collapse">
             <caption className="sr-only">{t("coverageTableCaption")}</caption>
             <thead>
