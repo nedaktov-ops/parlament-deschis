@@ -27,6 +27,8 @@ export default function Demographics() {
 
   const rows = shift.data?.data ?? [];
   const asOf = shift.data?.as_of;
+  // Derive the in-scope coverage figure from what this page already fetches.
+  const birthDated = rows.reduce((sum, r) => sum + r.mps_with_birth_dates, 0);
 
   // Find min/max avg age for a simple visual scale.
   const ages = rows.map((r) => r.avg_age);
@@ -143,10 +145,7 @@ export default function Demographics() {
           {t("demographics.coverage", "Data coverage")}
         </h2>
         <p>
-          {t(
-            "demographics.coverage.desc",
-            "3113 of 3381 persons (92%) have a birth date, sourced from cdep.ro committee ledgers 1990–2024. Parties with fewer MPs are noisier — read the MP count alongside the average.",
-          )}
+          {t("demographics.coverage.desc", { birthDated })}
         </p>
       </div>
     </div>

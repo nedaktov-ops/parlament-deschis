@@ -49,6 +49,8 @@ export default function PartyTimeline() {
 
   const rows = timeline.data?.data ?? [];
   const gaps = timeline.data?.gaps;
+  // Derive the dated-join total from the rows already fetched by this page.
+  const datedJoins = rows.reduce((sum, p) => sum + p.dated_joins, 0);
 
   return (
     <div className="p-6">
@@ -163,10 +165,7 @@ export default function PartyTimeline() {
           {t("ptimeline.methodology", "Methodology")}
         </h2>
         <p>
-          {t(
-            "ptimeline.methodology.desc",
-            "Span = min/max membership.start_date across all group memberships made on behalf of the party (5826 dated joins). A party whose span ends has no later recorded join — that is an observation about the ledger, not a legal dissolution. The corpus records 6 founding dates and 0 dissolution dates.",
-          )}
+          {t("ptimeline.methodology.desc", { datedJoins })}
         </p>
       </div>
     </div>

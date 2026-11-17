@@ -206,10 +206,7 @@ export default function Mps() {
           {t("mps.coverage", "Data coverage")}
         </h2>
         <p>
-          {t(
-            "mps.coverage.desc",
-            "3113 of 3381 persons (92%) have a birth date from cdep.ro committee ledgers. Switch counts are observed switch_group events; committee counts come from the 2024 legislature ingestion. Party is the most recent recorded affiliation.",
-          )}
+          {t("mps.coverage.desc")}
         </p>
       </div>
     </div>

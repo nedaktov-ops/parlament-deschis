@@ -39,9 +39,9 @@ export default function SenateHistory() {
 
   const rows = coverage.data ?? [];
 
-  // Filter for Senate data if available, otherwise show all
-  const senateRows = rows.filter((r) => r.chamber === "senate");
-  const allRows = senateRows.length > 0 ? senateRows : rows;
+  // Never fall back to all-chamber rows: deputy data must not be presented
+  // under a Senate heading. If Senate coverage is empty, the table says so.
+  const allRows = rows.filter((r) => r.chamber === "senate");
 
   return (
     <div className="p-6">

@@ -239,10 +239,7 @@ export default function PartyComparison() {
           {t("compare.notes", "Reading the numbers")}
         </h2>
         <p>
-          {t(
-            "compare.notes.desc",
-            "Members counts distinct persons with a membership on behalf of the party across all legislatures. Switches in counts observed switch_group events into a group carrying the party acronym. Ages cover MPs with a birth date (92% of the corpus). Chairs count active committee presidents.",
-          )}
+          {t("compare.notes.desc")}
         </p>
       </div>
     </div>

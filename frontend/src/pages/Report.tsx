@@ -318,10 +318,7 @@ export default function Report() {
           </section>
 
           <p className="mt-6 text-xs text-slate-500 print:text-slate-600">
-            {t(
-              "report.footer",
-              "Source: parlament-deschis corpus — cdep.ro and senat.ro dated parliamentary ledgers. Every figure above is an observed count; gaps are stated, never filled with estimates. CC-BY 4.0.",
-            )}
+            {t("report.footer")}
           </p>
         </>
       )}

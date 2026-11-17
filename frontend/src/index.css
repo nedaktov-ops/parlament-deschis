@@ -4,6 +4,16 @@
 
 :root {
   color-scheme: dark;
+
+  /* P2-B — one documented muted-foreground token.
+     Tailwind slate-500 (#64748b) measures 3.75:1 on --ink (#0f172a) and
+     slate-600 (#475569) only 2.36:1: both below the WCAG AA 4.5:1 minimum
+     for normal text. This single value restores AA on the dark theme:
+     8.59:1 on --ink and 7.04:1 on --panel (#1e293b). It is applied only
+     under @media screen below, so print keeps dark-on-white colours (the
+     old unscoped override measured 2.08:1 on white). Re-measure if the
+     palette changes. */
+  --color-muted: #a8b5c7;
 }
 
 body {
@@ -19,28 +29,31 @@ body {
   @apply px-3 py-1.5 rounded-md text-sm font-medium transition-colors;
 }
 
-.text-slate-500,
-.text-slate-600 {
-  color: #a8b5c7;
+/* P2-B — both muted scale steps fail AA on dark, so they map to the single
+   --color-muted token. This is a deliberate AA compensation, not a
+   visual-hierarchy decision; screen-scoped so print is untouched. Prefer a
+   component-level rename/semantic token in a later phase (out of scope here). */
+@media screen {
+  .text-slate-500,
+  .text-slate-600 {
+    color: var(--color-muted);
+  }
 }
 
-[class~="text-[10px]"] {
-  font-size: 0.6875rem;
-  line-height: 1rem;
-}
+/* P2-B — removed the arbitrary text-[10px]/text-[11px] override hacks.
+   Those ~30 call sites now render their literal authored sizes (10px/11px).
+   Renaming them to a documented, legible size token is component work
+   deferred to a later phase; do not reintroduce misleading global hacks. */
 
-[class~="text-[11px]"] {
-  font-size: 0.75rem;
-  line-height: 1rem;
-}
-
-[class~="placeholder:text-slate-500"]::placeholder {
-  color: #a8b5c7;
-  opacity: 1;
-}
-
+/* P2-B — ONE focus-indication system, guide-backed:
+   "Use :focus-visible when styling focus indicators", "Prefer outline over
+   other properties", "Pair custom focus outlines with outline-offset".
+   Colour matches the dominant focus-visible:outline-sky-400 utility so the
+   global rule and per-element utilities agree; the amber variant on the
+   LiveFeed link is an intentional exception left in place (component edits
+   are out of scope this phase). */
 :focus-visible {
-  outline: 2px solid #7dd3fc;
+  outline: 2px solid #38bdf8;
   outline-offset: 2px;
 }
 
@@ -61,4 +74,35 @@ body {
 }
 ::-webkit-scrollbar-thumb {
   @apply bg-slate-600 rounded;
+}
+
+/* P2-B — minimal print rules for the Report page (which uses print: utilities).
+   Hide interactive chrome, give paper a light surface with dark text, and keep
+   table borders. :where() has zero specificity, so Report's print:* utilities
+   still win for per-element colour; body colour is inherited only where an
+   element has no explicit colour. */
+@media print {
+  header,
+  nav,
+  [href="#main-content"] {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #0f172a !important;
+  }
+
+  :where(.text-slate-100, .text-slate-200, .text-slate-300, .text-slate-400, .text-slate-500) {
+    color: #334155; /* slate-700: 10.9:1 on white */
+  }
+
+  table {
+    border-collapse: collapse;
+  }
+  th,
+  td {
+    border: 1px solid #94a3b8;
+  }
 }

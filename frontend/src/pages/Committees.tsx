@@ -157,6 +157,8 @@ export default function Committees() {
   );
 
   const controlData = control.data?.status === "ok" ? control.data.data : null;
+  // Derive the ingested-committee count from this page's own list.
+  const committeeCount = list.data?.length;
 
   return (
     <div className="p-6">
@@ -302,10 +304,8 @@ export default function Committees() {
           {t("committees.coverage", "Data coverage")}
         </h2>
         <p>
-          {t(
-            "committees.coverage.desc",
-            "2024 legislature: 26 committees ingested from cdep.ro ledgers (638 current, 108 former memberships). Earlier legislatures are pending — gaps are shown honestly, never filled with guesses.",
-          )}
+          {committeeCount !== undefined &&
+            t("committees.coverage.desc", { count: committeeCount })}
         </p>
       </div>
     </div>

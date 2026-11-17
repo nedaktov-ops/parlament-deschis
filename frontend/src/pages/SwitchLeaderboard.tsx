@@ -79,6 +79,12 @@ export default function SwitchLeaderboard() {
         </label>
       </div>
 
+      {legislature && (
+        <p role="note" className="mb-4 text-amber-300 text-sm">
+          {t("leaderboard.scope.note")}
+        </p>
+      )}
+
       {leaderboard.isLoading && (
         <div className="text-slate-500">{t("loading", "Loading…")}</div>
       )}
@@ -144,10 +150,11 @@ export default function SwitchLeaderboard() {
                             ? "bg-amber-900/40 text-amber-300"
                             : "bg-red-900/40 text-red-300"
                       }`}
-                      title={t(
-                        "leaderboard.loyalty.hint",
-                        "100 × (1 − switches/events × tenure weight); 100 = never switched",
-                      )}
+                      title={t("leaderboard.loyalty.hint", {
+                        switches: row.switch_count,
+                        events: row.total_events,
+                        years: row.tenure_years,
+                      })}
                     >
                       {row.loyalty_score}
                     </span>
@@ -189,6 +196,9 @@ export default function SwitchLeaderboard() {
             "leaderboard.methodology.loyalty",
             "Loyalty = 100 × (1 − (switches ÷ total events) × tenure weight), where tenure weight = min(1, career years ÷ 4). 100 means no observed switch in the record.",
           )}
+        </p>
+        <p className="mt-2">
+          {t("leaderboard.scope.career")}
         </p>
         <p className="mt-2">
           <a
