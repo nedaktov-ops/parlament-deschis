@@ -92,7 +92,12 @@ export default function PartyTimeline() {
       )}
 
       {rows.length > 0 && (
-        <div className="bg-slate-800 rounded-lg p-4 overflow-x-auto">
+        <div
+          className="bg-slate-800 rounded-lg p-4 overflow-x-auto"
+          tabIndex={0}
+          role="region"
+          aria-label={t("ptimeline.title", "Party Timeline")}
+        >
           {/* Year axis */}
           <div className="relative h-6 mb-2 min-w-[720px]">
             {[1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025].map((y) => (
