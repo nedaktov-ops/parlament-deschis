@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, type EventItem, type HealthResponse } from "../api/client";
@@ -31,7 +32,36 @@ export default function LiveFeed(
   const events = useQuery({
     queryKey: ["recent", legislature ?? undefined, chamber ?? undefined],
     queryFn: () => api.recentEvents(40, chamber ?? undefined, legislature ?? undefined),
+    // Feature 13: switch alerts. Poll only while the tab is visible
+    // (refetchIntervalInBackground defaults to false), so a hidden tab
+    // generates no traffic — this is a live-feed feature, not keep-alive.
+    refetchInterval: 60_000,
   });
+
+  // New-switch detection: everything present on first load is "seen"; any
+  // switch_group/switch_party row arriving later raises a dismissible alert.
+  const [switchAlerts, setSwitchAlerts] = useState<EventItem[]>([]);
+  const [alertsMuted, setAlertsMuted] = useState(false);
+  const seenIdsRef = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const list = events.data;
+    if (!list) return;
+    if (seenIdsRef.current === null) {
+      seenIdsRef.current = new Set(list.map((e) => e.id));
+      return;
+    }
+    const seen = seenIdsRef.current;
+    const fresh = list.filter(
+      (e) =>
+        (e.type === "switch_group" || e.type === "switch_party") &&
+        !seen.has(e.id),
+    );
+    for (const e of list) seen.add(e.id);
+    if (fresh.length > 0) {
+      setAlertsMuted(false);
+      setSwitchAlerts((prev) => [...fresh, ...prev].slice(0, 5));
+    }
+  }, [events.data]);
   const health = useQuery({
     queryKey: ["health"],
     queryFn: api.health,
@@ -112,6 +142,44 @@ export default function LiveFeed(
           ) : null}
         </div>
       </div>
+      {switchAlerts.length > 0 && !alertsMuted && (
+        <div
+          role="alert"
+          className="mb-3 rounded-md border border-amber-500/50 bg-amber-950/40 p-2"
+        >
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <span className="text-amber-300 text-xs font-semibold">
+              {t("switchAlerts.title", "New party switches detected")}
+            </span>
+            <button
+              type="button"
+              onClick={() => setAlertsMuted(true)}
+              className="text-amber-400/80 hover:text-amber-200 text-xs underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
+            >
+              {t("switchAlerts.dismiss", "dismiss")}
+            </button>
+          </div>
+          <ul className="space-y-1">
+            {switchAlerts.map((e) => (
+              <li key={e.id} className="text-xs text-amber-100/90">
+                <span className="font-mono text-amber-300/80">
+                  {e.event_date}
+                </span>{" "}
+                {summary(e)}
+                {e.person && (
+                  <button
+                    type="button"
+                    onClick={() => onSelect(e.person!.id)}
+                    className="ml-1 text-sky-300 hover:underline"
+                  >
+                    {t("switchAlerts.view", "view")}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="overflow-y-auto flex-1 space-y-2 max-h-[420px] pr-1">
         {events.isLoading && <div className="text-slate-500 text-sm">{t("loading")}</div>}
         {events.isError && (
