@@ -514,6 +514,8 @@ I'm now deploying subagents to execute all 15 features. Each subagent works inde
 
 **Status**: Phase 2 delivered, verified, and merged via PR #28 (squash `53c3ece`) on top of Phase 1.
 
+**Phase 2.5 — Fresh dataset release (P3-D propagation) delivered 2026-11-17**: fresh release `data-20261117-T213500` published (DB sha256 `7298ffd…`, prepared DELETE-mode, strict audit 0 new errors) and pinned via PR #31 (`b8701f8`); production `/api/health` now serves it; P3-D-honest derived data (party events) live.
+
 **Delivered** (all re-verified in current code before editing, per `docs/REMEDIATION-STRATEGY.md` §8):
 
 1. **P5-A** — Dead frontend modules deleted (6) + unused npm deps removed (3); build green.
