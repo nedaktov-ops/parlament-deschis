@@ -34,6 +34,6 @@ frontend/.vite/
 .env.local
 .DS_Store
 .idea/
-playwright-mcp/
+.playwright-mcp/
 *.png
 COMPLETION-CERTIFICATE.md
