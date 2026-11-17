@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, PlainTextResponse
 from sqlalchemy.orm import Session
 
+from backend.cache import cached as cache_result
 from backend.deps import get_db
 from pipeline.export import CSV_DATASETS, build_popolo, csv_for
 
@@ -46,6 +47,7 @@ def export_popolo(
 
 
 @router.get("/report")
+@cache_result("export-report")
 def export_report(
     scope: Annotated[dict, Depends(_scope)],
     db: Annotated[Session, Depends(get_db)],

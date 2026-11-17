@@ -13,6 +13,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from backend import queries
+from backend.cache import cached as cache_result
+from backend.cache import invalidate as invalidate_result_cache
 from backend.config import APP_VERSION, DATASET_METADATA_PATH
 from backend.deps import get_db
 from pipeline.analytics import derive_all_switch_waves, derive_switch_waves
@@ -121,6 +123,7 @@ def timeline(
 
 
 @router.get("/persons")
+@cache_result("persons")
 def persons(
     q: str | None = None,
     chamber: str | None = Query(None, pattern="^(deputies|senate)$"),
@@ -131,6 +134,7 @@ def persons(
 
 
 @router.get("/mps")
+@cache_result("mps")
 def mps_cards(
     q: str | None = Query(None, max_length=200),
     limit: int = Query(60, ge=1, le=200),
@@ -239,6 +243,7 @@ def person_history(person_id: str, db: Annotated[Session, Depends(get_db)]):
 
 
 @router.get("/persons/{person_id}")
+@cache_result("person")
 def person(person_id: str, db: Session = Depends(get_db)):
     data = queries.get_person(db, person_id)
     if data is None:
@@ -277,6 +282,7 @@ def coverage_detailed(db: Session = Depends(get_db)):
 
 
 @router.get("/committees")
+@cache_result("committees")
 def committees(as_of: str | None = None, db: Session = Depends(get_db)):
     """Committee list with active dated memberships, when committee data exists.
 
@@ -310,6 +316,7 @@ def committees(as_of: str | None = None, db: Session = Depends(get_db)):
 
 
 @router.get("/committees/{committee_id}/members")
+@cache_result("committee-members")
 def committee_members(
     committee_id: str,
     as_of: str | None = None,
@@ -320,7 +327,7 @@ def committee_members(
     Every row carries the member's name, party group at entry, role and the
     observed start/end dates from the official cdep.ro ledger.
     """
-    from sqlalchemy import or_, select
+    from sqlalchemy import select
 
     from pipeline.db import Membership, Organization, Person
 
@@ -431,6 +438,7 @@ def about(db: Annotated[Session, Depends(get_db)]):
 
 
 @router.get("/parties")
+@cache_result("parties")
 def parties_list(db: Session = Depends(get_db)):
     """All parties with size and switch-flow stats, for comparison UI.
 
@@ -440,7 +448,7 @@ def parties_list(db: Session = Depends(get_db)):
     """
     from sqlalchemy import func, select
 
-    from pipeline.db import Event, Membership, Organization, Person
+    from pipeline.db import Event, Membership, Organization
 
     party_rows = db.execute(
         select(
@@ -461,24 +469,28 @@ def parties_list(db: Session = Depends(get_db)):
         .order_by(func.count(func.distinct(Membership.person_id)).desc())
     ).all()
 
+    # One grouped query instead of one per party (was37 serial queries —
+    # measured260 ms serial, the endpoint's whole cost).
+    switch_counts = dict(
+        db.execute(
+            select(Organization.short_name, func.count(Event.id))
+            .join(Event, Event.to_org_id == Organization.id)
+            .where(
+                Event.type == "switch_group",
+                Organization.classification == "group",
+            )
+            .group_by(Organization.short_name)
+        ).all()
+    )
+
     result = []
     for org_id, short_name, name, color, total_members in party_rows:
         # Switches in: observed switch_group events whose destination GROUP
         # carries this party's acronym. Groups and parties are separate org
         # rows sharing the short_name (several PSD groups + one PSD party),
-        # so match on the acronym, not the id.
-        switches_in = (
-            db.scalar(
-                select(func.count(Event.id))
-                .join(Organization, Organization.id == Event.to_org_id)
-                .where(
-                    Event.type == "switch_group",
-                    Organization.classification == "group",
-                    Organization.short_name == short_name,
-                )
-            )
-            or 0
-        )
+        # so match on the acronym, not the id — the grouped query above
+        # already aggregates every group sharing the acronym.
+        switches_in = switch_counts.get(short_name, 0)
         result.append(
             {
                 "id": org_id,
@@ -540,6 +552,7 @@ def admin_poll(
     except Exception as exc:  # noqa: BLE001 - report upstream failure as 502
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     invalidate_traseism_overview_cache()
+    invalidate_result_cache()
     return {"status": "ok", "legislature": legislature, "results": results}
 
 
@@ -630,6 +643,8 @@ def analytics_waves_recompute(
     db.execute(delete(SwitchWave))
     count = derive_all_switch_waves(db)
     db.commit()
+    # Waves changed — drop cached analytics so the next GET is fresh.
+    invalidate_result_cache()
     return {"status": "ok", "created": count}
 
 
@@ -639,6 +654,7 @@ def analytics_waves_recompute_get_not_allowed():
 
 
 @router.get("/analytics/switch-waves")
+@cache_result("switch-waves")
 def get_switch_waves(
     chamber: str | None = Query(None, pattern="^(deputies|senate)$"),
     legislature: str | None = Query(None, pattern=r"^\d{4}$"),
@@ -711,6 +727,7 @@ def get_cross_chamber(
 
 
 @router.get("/analytics/committee-control")
+@cache_result("committee-control")
 def get_committee_control(
     legislature: str | None = Query(None, pattern=r"^\d{4}$"),
     as_of: str | None = None,
@@ -737,6 +754,7 @@ def get_committee_control(
 
 
 @router.get("/analytics/generational-shift")
+@cache_result("generational-shift")
 def get_generational_shift(
     legislature: str | None = Query(None, pattern=r"^\d{4}$"),
     as_of: str | None = None,
@@ -762,6 +780,7 @@ def get_generational_shift(
 
 
 @router.get("/analytics/party-timeline")
+@cache_result("party-timeline")
 def get_party_timeline_analytics(
     db: Session = Depends(get_db),
 ):
@@ -877,6 +896,7 @@ def traseism_switches(
 
 
 @router.get("/analytics/switch-leaderboard")
+@cache_result("switch-leaderboard")
 def switch_leaderboard(
     limit: int = Query(20, ge=1, le=100),
     legislature: str | None = Query(None, pattern=r"^\d{4}$"),
@@ -914,37 +934,67 @@ def switch_leaderboard(
 
     rows = db.execute(stmt).all()
 
-    # Collect the parties each top switcher joined, in chronological order,
-    # plus the ingredients of the loyalty score (Feature 10):
+    # Batch the loyalty ingredients for the whole page in 3 grouped queries
+    # instead of 3 queries per row (was 60+ round-trips at limit=20).
+    top_ids = [r[0] for r in rows]
+    parties_by_person: dict[str, list[str]] = {pid: [] for pid in top_ids}
+    totals_by_person: dict[str, int] = {}
+    span_by_person: dict[str, tuple] = {}
+    if top_ids:
+        # Per-person destination parties, ordered by count desc within the
+        # person (the trailing count is consumed by the ORDER BY only).
+        for pid, short_name, _n in db.execute(
+            select(
+                Event.person_id,
+                Organization.short_name,
+                func.count(Event.id),
+            )
+            .join(Organization, Organization.id == Event.to_org_id)
+            .where(
+                Event.person_id.in_(top_ids),
+                Event.type == "switch_group",
+                Organization.short_name.is_not(None),
+            )
+            .group_by(Event.person_id, Organization.short_name)
+            .order_by(Event.person_id, func.count(Event.id).desc())
+        ):
+            parties_by_person.setdefault(pid, []).append(short_name)
+        totals_by_person = dict(
+            db.execute(
+                select(Event.person_id, func.count(Event.id))
+                .where(Event.person_id.in_(top_ids))
+                .group_by(Event.person_id)
+            ).all()
+        )
+        # 3-column rows: (person_id, min, max) — dict() needs pairs, so
+        # fold manually.
+        span_by_person = {
+            pid: (first, last)
+            for pid, first, last in db.execute(
+                select(
+                    Event.person_id,
+                    func.min(Event.event_date),
+                    func.max(Event.event_date),
+                )
+                .where(
+                    Event.person_id.in_(top_ids),
+                    Event.event_date.is_not(None),
+                )
+                .group_by(Event.person_id)
+            ).all()
+        }
+
+    # Loyalty score (Feature 10):
     #   volatility = (switch_group_count / total_events) * tenure_weight
     #   loyalty    = 100 * (1 - volatility), clipped to [0, 100]
     # tenure_weight scales short careers down (a 6-month MP with 1 switch
     # is noisier than a 10-year MP with the same ratio): min(1, years/4).
     leaderboard = []
     for person_id, name, count, first_switch, last_switch in rows:
-        parties = db.execute(
-            select(Organization.short_name)
-            .join(Event, Event.to_org_id == Organization.id)
-            .where(
-                Event.person_id == person_id,
-                Event.type == "switch_group",
-                Organization.short_name.is_not(None),
-            )
-            .group_by(Organization.short_name)
-            .order_by(func.count(Event.id).desc())
-        ).all()
-
-        total_events = (
-            db.scalar(select(func.count(Event.id)).where(Event.person_id == person_id)) or 0
-        )
-        span = db.execute(
-            select(func.min(Event.event_date), func.max(Event.event_date)).where(
-                Event.person_id == person_id,
-                Event.event_date.is_not(None),
-            )
-        ).one()
+        total_events = totals_by_person.get(person_id, 0)
+        span = span_by_person.get(person_id)
         tenure_years = 0.0
-        if span[0] and span[1]:
+        if span and span[0] and span[1]:
             tenure_years = max((span[1] - span[0]).days / 365.25, 0.0)
         tenure_weight = min(1.0, tenure_years / 4.0)
         switch_ratio = (count / total_events) if total_events else 0.0
@@ -958,7 +1008,7 @@ def switch_leaderboard(
                 "switch_count": count,
                 "first_switch": first_switch.isoformat() if first_switch else None,
                 "last_switch": last_switch.isoformat() if last_switch else None,
-                "parties": [p for (p,) in parties],
+                "parties": parties_by_person.get(person_id, []),
                 "total_events": total_events,
                 "tenure_years": round(tenure_years, 1),
                 "loyalty_score": loyalty,
