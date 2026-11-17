@@ -8,6 +8,8 @@ from pipeline.parse.cdep_group import parse_group_ledger, parse_group_list
 CACHE = Path(__file__).resolve().parents[1] / "data" / "cache" / "cdep" / "deputies" / "2016"
 
 if not (CACHE / "group_5.html").exists() or not (CACHE / "list.html").exists():
+    # P5-F: intentional skip - data/cache/cdep is gitignored and no trimmed
+    # fixture is checked in; the optional archived cdep corpus is required.
     pytest.skip("requires the optional archived cdep corpus", allow_module_level=True)
 
 

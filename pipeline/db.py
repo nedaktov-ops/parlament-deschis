@@ -39,6 +39,12 @@ from sqlalchemy.orm import (
 
 log = logging.getLogger("parlament.db")
 
+# user_version is the migration gate for one-off, destructive data fixes (the
+# legacy cross-chamber group merge below). A database prepared for shipping by
+# scripts/prepare_db.py carries this version, so a read-only runtime copy never
+# replays the merge. Bump it only when adding another one-off data migration.
+SCHEMA_VERSION = 1
+
 # --- Enumerations (stored as strings for SQLite portability) ---------------
 CHAMBERS = ("deputies", "senate")
 ORG_CLASS = (
@@ -493,8 +499,31 @@ _PARTIAL_INDEXES: tuple[str, ...] = (
     "ON person_identifier(scheme, identifier) WHERE legislature IS NULL",
     "CREATE UNIQUE INDEX IF NOT EXISTS ux_org_name "
     "ON organization(classification, normalized_name) WHERE founding_date IS NULL",
+    # uq_stint includes post_id, which is NULL on every shipped row, so SQLite
+    # treats each key as distinct and duplicate CLOSED stints slip through.
+    # This partial unique index closes that hole for future rows. It cannot be
+    # created on databases that already contain the legacy duplicates; that is
+    # reported (not deleted/merged) by ensure_schema's best-effort handling.
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_membership_closed_stint "
+    "ON membership(org_id, person_id, COALESCE(post_id, ''), COALESCE(chamber, ''), "
+    "COALESCE(legislature, ''), end_date, COALESCE(start_date, '')) WHERE end_date IS NOT NULL",
     "CREATE INDEX IF NOT EXISTS ix_membership_leg_chamber ON membership(legislature, chamber)",
+    # Foreign keys that are actually used as query predicates (verified with
+    # EXPLAIN QUERY PLAN): party-membership lookups and event from/to joins.
+    # Other FKs (organization.parent_id/previous_party_id/successor_party_id,
+    # membership.post_id, event.post_id, vacancy.post_id) are only read by PK or
+    # selected, never filtered on, so indexing them would add write cost for no
+    # gain. event.post_id / membership.post_id are also 100% NULL in the corpus.
+    "CREATE INDEX IF NOT EXISTS ix_membership_on_behalf_of ON membership(on_behalf_of_id)",
+    "CREATE INDEX IF NOT EXISTS ix_event_from_org_id ON event(from_org_id)",
+    "CREATE INDEX IF NOT EXISTS ix_event_to_org_id ON event(to_org_id)",
 )
+
+
+def _index_name(ddl: str) -> str:
+    """Pull the index name out of a CREATE INDEX statement for log messages."""
+    marker = "INDEX IF NOT EXISTS "
+    return ddl.split(marker, 1)[1].split()[0] if marker in ddl else ddl.split()[2]
 
 
 def _merge_legacy_cross_chamber_groups(conn) -> None:
@@ -587,9 +616,13 @@ def ensure_schema(engine) -> None:
 
     Safe to call repeatedly: columns are added only when missing, and an
     index that cannot be created (because a legacy database still contains
-    duplicates) is reported instead of aborting startup.
+    duplicates) is reported instead of aborting startup. The one-off,
+    destructive data merge runs at most once, gated by ``user_version``.
     """
     with engine.begin() as conn:
+        version = conn.exec_driver_sql("PRAGMA user_version").scalar()
+        needs_migration = (version or 0) < SCHEMA_VERSION
+
         # The first version of the open-stint index was not scoped by
         # chamber and legislature, so it rejected a member who held an open
         # tenure in the same group in two different legislatures. The scoped
@@ -605,12 +638,22 @@ def ensure_schema(engine) -> None:
             for name, ddl in columns.items():
                 if name not in existing:
                     conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
-        _merge_legacy_cross_chamber_groups(conn)
+
+        # Destructive one-off migration: only for un-migrated databases. A
+        # shipped/read-only runtime DB is already at SCHEMA_VERSION, so this
+        # merge (which UPDATEs and DELETEs organization rows) never runs there.
+        if needs_migration:
+            _merge_legacy_cross_chamber_groups(conn)
+
         for ddl in _PARTIAL_INDEXES:
             try:
                 conn.exec_driver_sql(ddl)
             except Exception as exc:  # noqa: BLE001 - legacy duplicate data
-                log.warning("could not create index %s: %s", ddl.split()[5], exc)
+                log.warning("could not create index %s: %s", _index_name(ddl), exc)
+
+        # Mark the migration done only after every step succeeded.
+        if needs_migration:
+            conn.exec_driver_sql(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
 
 def make_session_factory(engine):

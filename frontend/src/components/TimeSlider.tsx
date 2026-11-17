@@ -21,6 +21,12 @@ export default function TimeSlider({
   const { t } = useTranslation();
   const [playing, setPlaying] = useState(false);
   const timer = useRef<number | null>(null);
+  // Keep the latest value/onChange in refs so the interval can read them
+  // without being torn down and recreated on every tick (value changes each tick).
+  const valueRef = useRef(value);
+  const onChangeRef = useRef(onChange);
+  valueRef.current = value;
+  onChangeRef.current = onChange;
   const minMs = new Date(min).getTime();
   const maxMs = new Date(max).getTime();
   const valMs = new Date(value).getTime();
@@ -33,19 +39,19 @@ export default function TimeSlider({
   useEffect(() => {
     if (!playing) return;
     timer.current = window.setInterval(() => {
-      const cur = new Date(value).getTime();
+      const cur = new Date(valueRef.current).getTime();
       const next = cur + 7 * 86400_000;
       if (next >= maxMs) {
-        onChange(toISO(new Date(maxMs)));
+        onChangeRef.current(toISO(new Date(maxMs)));
         setPlaying(false);
       } else {
-        onChange(toISO(new Date(next)));
+        onChangeRef.current(toISO(new Date(next)));
       }
     }, 300);
     return () => {
       if (timer.current) window.clearInterval(timer.current);
     };
-  }, [playing, value, maxMs, onChange]);
+  }, [playing, maxMs]);
 
   return (
     <div className="card p-4">

@@ -34,7 +34,7 @@ export default function MembershipGantt({ memberships }: { memberships: Membersh
 
   return (
     <div>
-      <div className="flex justify-between text-[10px] text-slate-500 font-mono mb-1">
+      <div className="flex justify-between text-xs text-slate-500 font-mono mb-1">
         <span>{fmt(domainStart)}</span>
         <span>{fmt(domainEnd)}</span>
       </div>
@@ -59,7 +59,7 @@ export default function MembershipGantt({ memberships }: { memberships: Membersh
                 <div className="text-xs font-medium truncate" title={m.org?.name ?? ""}>
                   {label}
                 </div>
-                {m.role && <div className="text-[10px] text-slate-500 truncate">{m.role}</div>}
+                {m.role && <div className="text-xs text-slate-500 truncate">{m.role}</div>}
               </div>
               <div className="relative flex-1 h-5 bg-slate-800/50 rounded">
                 <div

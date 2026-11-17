@@ -97,7 +97,7 @@ function StatCard({
       <div className="text-2xl font-bold text-slate-100" title={title}>
         {value}
       </div>
-      {hint ? <div className="text-[11px] text-slate-500 mt-1">{hint}</div> : null}
+      {hint ? <div className="text-xs text-slate-500 mt-1">{hint}</div> : null}
     </div>
   );
 }
@@ -279,7 +279,7 @@ function PartyNetTable({ scope }: { scope: TraseismScope }) {
                 </td>
                 <td className="py-1.5 pr-3 font-mono text-slate-200">
                   <span>{fmtSigned(net)}</span>{" "}
-                  <span className="text-[11px] text-slate-400">({netLabel})</span>
+                  <span className="text-xs text-slate-400">({netLabel})</span>
                 </td>
                 <td className="py-1.5 pr-3 font-mono text-slate-300">
                   {fmtInt(row.seats_start)}

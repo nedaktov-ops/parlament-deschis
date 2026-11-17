@@ -15,6 +15,8 @@ ROSTER = (
 )
 
 if not ROSTER.exists():
+    # P5-F: intentional skip - data/cache/cdep is gitignored and no trimmed
+    # fixture is checked in; the optional archived cdep corpus is required.
     pytest.skip("requires the optional archived cdep corpus", allow_module_level=True)
 
 

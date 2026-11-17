@@ -172,41 +172,48 @@ export default function Report() {
             <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
               {t("report.topSwitchers", "Top party switchers")}
             </h2>
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="text-left text-slate-400 print:text-slate-600 border-b border-slate-700 print:border-slate-300">
-                  <th scope="col" className="py-1 pr-3">{t("report.col.mp", "MP")}</th>
-                  <th scope="col" className="py-1 pr-3 text-right">
-                    {t("report.col.switches", "Switches")}
-                  </th>
-                  <th scope="col" className="py-1 pr-3 text-right">
-                    {t("report.col.loyalty", "Loyalty")}
-                  </th>
-                  <th scope="col" className="py-1 pr-3">{t("report.col.period", "Period")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {d.top_switchers.map((s) => (
-                  <tr
-                    key={s.person_id}
-                    className="border-b border-slate-700/40 print:border-slate-200"
-                  >
-                    <th scope="row" className="py-1 pr-3 text-slate-200 print:text-slate-900 font-normal text-left">
-                      {s.name}
+            <div
+              className="overflow-x-auto"
+              tabIndex={0}
+              role="region"
+              aria-label={t("report.topSwitchers", "Top party switchers")}
+            >
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-slate-400 print:text-slate-600 border-b border-slate-700 print:border-slate-300">
+                    <th scope="col" className="py-1 pr-3">{t("report.col.mp", "MP")}</th>
+                    <th scope="col" className="py-1 pr-3 text-right">
+                      {t("report.col.switches", "Switches")}
                     </th>
-                    <td className="py-1 pr-3 text-right text-slate-300 print:text-slate-700">
-                      {s.switches}
-                    </td>
-                    <td className="py-1 pr-3 text-right text-slate-300 print:text-slate-700">
-                      {s.loyalty_score}
-                    </td>
-                    <td className="py-1 pr-3 text-slate-400 print:text-slate-600 text-xs">
-                      {s.first_switch ?? "—"} → {s.last_switch ?? "—"}
-                    </td>
+                    <th scope="col" className="py-1 pr-3 text-right">
+                      {t("report.col.loyalty", "Loyalty")}
+                    </th>
+                    <th scope="col" className="py-1 pr-3">{t("report.col.period", "Period")}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {d.top_switchers.map((s) => (
+                    <tr
+                      key={s.person_id}
+                      className="border-b border-slate-700/40 print:border-slate-200"
+                    >
+                      <th scope="row" className="py-1 pr-3 text-slate-200 print:text-slate-900 font-normal text-left">
+                        {s.name}
+                      </th>
+                      <td className="py-1 pr-3 text-right text-slate-300 print:text-slate-700">
+                        {s.switches}
+                      </td>
+                      <td className="py-1 pr-3 text-right text-slate-300 print:text-slate-700">
+                        {s.loyalty_score}
+                      </td>
+                      <td className="py-1 pr-3 text-slate-400 print:text-slate-600 text-xs">
+                        {s.first_switch ?? "—"} → {s.last_switch ?? "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
 
           <section className="mb-6">
@@ -278,43 +285,50 @@ export default function Report() {
             <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
               {t("report.coverage", "Data coverage")}
             </h2>
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="text-left text-slate-400 print:text-slate-600 border-b border-slate-700 print:border-slate-300">
-                  <th scope="col" className="py-1 pr-3">
-                    {t("report.col.chamber", "Chamber")}
-                  </th>
-                  <th scope="col" className="py-1 pr-3">
-                    {t("report.col.legislature", "Legislature")}
-                  </th>
-                  <th scope="col" className="py-1 pr-3">
-                    {t("report.col.completeness", "Completeness")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {d.coverage.map((c) => (
-                  <tr
-                    key={`${c.chamber}-${c.legislature}`}
-                    className="border-b border-slate-700/40 print:border-slate-200"
-                  >
-                    <th scope="row" className="py-1 pr-3 text-slate-300 print:text-slate-700 font-normal text-left">
-                      {c.chamber}
+            <div
+              className="overflow-x-auto"
+              tabIndex={0}
+              role="region"
+              aria-label={t("report.coverage", "Data coverage")}
+            >
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-slate-400 print:text-slate-600 border-b border-slate-700 print:border-slate-300">
+                    <th scope="col" className="py-1 pr-3">
+                      {t("report.col.chamber", "Chamber")}
                     </th>
-                    <td className="py-1 pr-3 text-slate-300 print:text-slate-700">
-                      {c.legislature ?? "—"}
-                    </td>
-                    <td
-                      className={`py-1 pr-3 font-medium ${completenessColor(
-                        c.completeness,
-                      )}`}
-                    >
-                      {c.completeness}
-                    </td>
+                    <th scope="col" className="py-1 pr-3">
+                      {t("report.col.legislature", "Legislature")}
+                    </th>
+                    <th scope="col" className="py-1 pr-3">
+                      {t("report.col.completeness", "Completeness")}
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {d.coverage.map((c) => (
+                    <tr
+                      key={`${c.chamber}-${c.legislature}`}
+                      className="border-b border-slate-700/40 print:border-slate-200"
+                    >
+                      <th scope="row" className="py-1 pr-3 text-slate-300 print:text-slate-700 font-normal text-left">
+                        {c.chamber}
+                      </th>
+                      <td className="py-1 pr-3 text-slate-300 print:text-slate-700">
+                        {c.legislature ?? "—"}
+                      </td>
+                      <td
+                        className={`py-1 pr-3 font-medium ${completenessColor(
+                          c.completeness,
+                        )}`}
+                      >
+                        {c.completeness}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
 
           <p className="mt-6 text-xs text-slate-500 print:text-slate-600">

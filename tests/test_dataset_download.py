@@ -75,6 +75,65 @@ def test_download_dataset_checksum_mismatch_preserves_existing_file(tmp_path, mo
     assert destination.read_bytes() == b"last known good"
 
 
+@pytest.mark.parametrize(
+    "bad_digest",
+    [
+        "not-a-digest",
+        "md5:" + "a" * 32,
+        "sha256:deadbeef",
+        "sha256:" + "g" * 64,
+        None,
+    ],
+)
+def test_download_dataset_rejects_tampered_digest_format(tmp_path, monkeypatch, bad_digest):
+    """A malformed/tampered digest in the release response must be rejected
+    before any asset bytes are trusted (download_dataset.py digest validation).
+    """
+    tag = "data-123-1"
+    release = _release_response(tag, b"verified database asset")
+    asset = release["assets"][0]
+    if bad_digest is None:
+        asset.pop("digest")
+    else:
+        asset["digest"] = bad_digest
+
+    def fake_urlopen(request, timeout):
+        if request.full_url.endswith(f"/releases/tags/{tag}"):
+            return io.BytesIO(json.dumps(release).encode())
+        raise AssertionError(
+            f"asset must not be fetched with a tampered digest: {request.full_url}"
+        )
+
+    monkeypatch.setattr(download_dataset, "urlopen", fake_urlopen)
+
+    with pytest.raises(RuntimeError, match="no valid SHA-256 asset digest"):
+        download_dataset.download_dataset(tmp_path / "parlament.db", release_tag=tag)
+
+
+def test_download_dataset_rejects_tampered_digest_value(tmp_path, monkeypatch):
+    """A well-formed but wrong (tampered) digest must fail verification:
+    the real asset bytes do not match the digest claimed by the release.
+    """
+    tag = "data-123-1"
+    dataset = b"verified database asset"
+    release = _release_response(tag, dataset)
+    # Tamper the digest to the SHA-256 of DIFFERENT bytes, keep serving the
+    # original asset -> a mismatch must be detected, like a corrupted transfer.
+    release["assets"][0]["digest"] = f"sha256:{hashlib.sha256(b'attacker bytes').hexdigest()}"
+
+    def fake_urlopen(request, timeout):
+        if request.full_url.endswith(f"/releases/tags/{tag}"):
+            return io.BytesIO(json.dumps(release).encode())
+        return io.BytesIO(dataset)
+
+    monkeypatch.setattr(download_dataset, "urlopen", fake_urlopen)
+
+    with pytest.raises(RuntimeError, match="checksum mismatch"):
+        download_dataset.download_dataset(tmp_path / "parlament.db", release_tag=tag)
+
+    assert not (tmp_path / "parlament.db").exists()
+
+
 def test_download_dataset_rejects_unpinned_tag(tmp_path):
     with pytest.raises(ValueError, match="invalid dataset release tag"):
         download_dataset.download_dataset(tmp_path / "parlament.db", release_tag="../latest")

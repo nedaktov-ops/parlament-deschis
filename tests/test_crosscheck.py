@@ -33,6 +33,8 @@ _REQUIRED_PAGES = (
     CACHE / "senate" / "2020" / "roster.html",
 )
 if not all(path.exists() for path in _REQUIRED_PAGES):
+    # P5-F: intentional skip - data/cache/cdep is gitignored and no trimmed
+    # fixture is checked in; the optional archived cdep corpus is required.
     pytest.skip("requires the optional archived cdep corpus", allow_module_level=True)
 
 

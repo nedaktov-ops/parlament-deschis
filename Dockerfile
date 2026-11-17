@@ -47,6 +47,17 @@ RUN uv sync --no-dev
 # --- stage 3: the database -------------------------------------------------
 # The build must fail loudly when the database is missing: an image without
 # it would serve an empty tool, which is worse than no tool at all.
+#
+# Residual risk (P5-E): this in-build download calls the GitHub releases API
+# WITHOUT a token, so it shares the shared-runner IP's unauthenticated 60
+# requests/hour allowance and can intermittently 403 under load. The `audit`
+# job in ci.yml already authenticates its download with GITHUB_TOKEN (P4-C);
+# the image build does not. Authenticating here would require plumbing a new
+# BuildKit `--mount=type=secret` plus a `secrets:` entry on the build step in
+# ci.yml. No such build-secret mechanism exists anywhere in this repo, so we
+# deliberately do NOT introduce an unconfigured secret requirement that would
+# break builds. Retry/backoff in download_dataset.py mitigates transient
+# failures; the rate-limit ceiling is accepted as a documented residual.
 FROM backend AS data
 COPY data/latest-release.txt ./data/latest-release.txt
 RUN python scripts/download_dataset.py \
