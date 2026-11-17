@@ -130,3 +130,20 @@ Re-verified on merged `main` (`1f4df92`) on 2026-11-17, not assumed. Each item b
 
 ### Phase 2 acceptance
 All §5 global gates stay mandatory; additionally: 0 dead-module imports, 0 missing i18n keys (`/tmp/i18n-extract.mjs`), `ui_validate.py` 18/18, PR CI `test`+`audit`+`docker` green, production health unchanged until an explicit data release.
+
+### Phase 2.5 — Fresh dataset release (P3-D propagation) — delivered 2026-11-17
+
+**Goal:** propagate the P3-D pipeline-honesty fixes into the shipped database (party switch events were absent / pre-fix values).
+
+**Execution (evidence-led):**
+1. First attempt: Data workflow `44147411835` via `workflow_dispatch` → failed at Collect (empty runner cache → live fetch → `ConnectTimeout` to `www.cdep.ro`). Cache restore hit an effectively empty entry.
+2. Local rebuild attempts failed strict (live `cdp.ro` profile fetch errors; invalid cache entries → offline fallback also failed).
+3. Offline re-derivation on a copy of the verified local corpus (`derive_group_events`, `derive_party_events`, `derive_all_switch_waves`) → fresh derived state: 13,144 events (incl. 785 `switch_party` + related party events), waves 142.
+4. `audit-corpus --strict` on the fresh DB → **exit 0**, 275 known errors, **0 new**.
+5. `scripts/prepare_db.py` on fresh DB → `journal_mode=delete`, `user_version=1`, `integrity ok`, `foreign_key_check` clean, **header bytes 18/19 = 1,1 (DELETE)**.
+6. Published release `data-20261117-T213500` (assets: `parlament.db` sha256 `7298ffd…`, `manifest.jsonl`, `audit-report.json`).
+7. Pinned via PR #31 → merged (`b8701f8`) → Render deploy picked it up → prod `/api/health` now reports `data-20261117-T213500`.
+
+**Gates:** strict audit exit 0 · prepare verified · prod health ok on new release · prod endpoints serving new data (committees, waves, events).
+
+**Residual:** scheduled/automated data refresh remains best-effort pending `cdp.ro` availability; recovery path = local rebuild + publish (as executed).
