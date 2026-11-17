@@ -180,7 +180,7 @@ export default function About({ open, onClose }: { open: boolean; onClose: () =>
             {CONFIDENCE_LEVELS.map((level) => (
               <span
                 key={level}
-                className={`text-[10px] rounded px-2 py-0.5 ${confidenceClass(level)}`}
+                className={`text-xs rounded px-2 py-0.5 ${confidenceClass(level)}`}
               >
                 {t(`confidence.${level}`)}
               </span>
@@ -207,7 +207,7 @@ export default function About({ open, onClose }: { open: boolean; onClose: () =>
                     {source.name} ↗
                   </a>
                   {source.note && (
-                    <div className="text-[11px] text-slate-500 mt-0.5">{source.note}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{source.note}</div>
                   )}
                 </li>
               ))}
@@ -305,7 +305,7 @@ export default function About({ open, onClose }: { open: boolean; onClose: () =>
           )}
         </section>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 border-t border-slate-700/60 pt-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 border-t border-slate-700/60 pt-3">
           <span>
             {t("generatedAt")}:{" "}
             <span className="font-mono">{data?.generated_at ?? "—"}</span>

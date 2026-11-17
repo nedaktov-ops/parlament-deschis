@@ -115,7 +115,7 @@ export function PartyProfile() {
                   </span>
                   <span className="text-slate-500 font-mono">{m.event_date}</span>
                   {m.chamber && (
-                    <span className="text-[10px] text-slate-500 px-1.5 py-0.5 bg-slate-800 rounded">
+                    <span className="text-xs text-slate-500 px-1.5 py-0.5 bg-slate-800 rounded">
                       {m.chamber}
                     </span>
                   )}

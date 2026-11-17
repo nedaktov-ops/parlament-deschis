@@ -98,14 +98,14 @@ export function PersonDeepDive() {
                     <span className={`font-semibold ${typeColor(e.type)}`}>{e.type}</span>
                     <span className="text-slate-500 font-mono">{e.event_date}</span>
                     {e.chamber && (
-                      <span className="text-[10px] text-slate-500 px-1.5 py-0.5 bg-slate-800 rounded">
+                      <span className="text-xs text-slate-500 px-1.5 py-0.5 bg-slate-800 rounded">
                         {e.chamber}
                       </span>
                     )}
                   </div>
                   <div className="text-sm mt-0.5">{summary(e)}</div>
                   {(e.from_org || e.to_org) && (
-                    <div className="text-[11px] text-slate-500 mt-0.5">
+                    <div className="text-xs text-slate-500 mt-0.5">
                       {e.from_org?.short_name || e.from_org?.name || "—"} →{" "}
                       {e.to_org?.short_name || e.to_org?.name || "—"}
                     </div>
@@ -145,7 +145,7 @@ export function PersonDeepDive() {
                     href={m.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[11px] text-sky-400 hover:underline"
+                    className="text-xs text-sky-400 hover:underline"
                   >
                     {t("source", "source")} ↗
                   </a>
@@ -172,7 +172,7 @@ export function PersonDeepDive() {
                     {m.org?.short_name || m.org?.name}
                     {m.role && <span className="text-slate-400"> · {m.role}</span>}
                   </div>
-                  <div className="text-[11px] text-slate-500 font-mono">
+                  <div className="text-xs text-slate-500 font-mono">
                     {m.start_date ?? "?"} → {m.end_date ?? t("present")}
                     {m.party && <span className="text-slate-400"> · {m.party.short_name}</span>}
                   </div>

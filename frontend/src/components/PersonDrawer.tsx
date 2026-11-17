@@ -131,7 +131,7 @@ export default function PersonDrawer({
               {p.identifiers.map((id) => (
                 <span
                   key={`${id.scheme}-${id.identifier}-${id.legislature}`}
-                  className="text-[10px] bg-slate-800 rounded px-1.5 py-0.5 text-slate-400 font-mono"
+                  className="text-xs bg-slate-800 rounded px-1.5 py-0.5 text-slate-400 font-mono"
                   title={t("identifiers")}
                 >
                   {id.scheme}:{id.identifier}
@@ -143,7 +143,7 @@ export default function PersonDrawer({
                   href={`https://www.wikidata.org/wiki/${p.wikidata_qid}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[10px] bg-slate-800 rounded px-1.5 py-0.5 text-sky-400 font-mono hover:underline"
+                  className="text-xs bg-slate-800 rounded px-1.5 py-0.5 text-sky-400 font-mono hover:underline"
                 >
                   {p.wikidata_qid} ↗
                 </a>
@@ -174,7 +174,7 @@ export default function PersonDrawer({
                           {m.org?.short_name || m.org?.name}
                           {m.role && <span className="text-slate-400"> · {m.role}</span>}
                         </div>
-                        <div className="text-[11px] text-slate-500 font-mono">
+                        <div className="text-xs text-slate-500 font-mono">
                           {m.start_date ?? "?"} → {m.end_date ?? t("present")}
                           {m.party && <span className="text-slate-400"> · {m.party.short_name}</span>}
                         </div>
@@ -201,7 +201,7 @@ export default function PersonDrawer({
                     </div>
                     <div className="text-sm mt-0.5">{summary(e)}</div>
                     {(e.from_org || e.to_org) && (
-                      <div className="text-[11px] text-slate-500 mt-0.5">
+                      <div className="text-xs text-slate-500 mt-0.5">
                         {e.from_org?.short_name || e.from_org?.name || "—"} →{" "}
                         {e.to_org?.short_name || e.to_org?.name || "—"}
                       </div>
@@ -234,7 +234,7 @@ export default function PersonDrawer({
                         )}
                       </div>
                       {(h.event_type || h.org) && (
-                        <div className="text-[10px] text-slate-500 mt-0.5">
+                        <div className="text-xs text-slate-500 mt-0.5">
                           {[h.event_type, h.org].filter(Boolean).join(" · ")}
                         </div>
                       )}
@@ -243,7 +243,7 @@ export default function PersonDrawer({
                           href={h.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-block text-[10px] text-sky-400 hover:underline mt-0.5"
+                          className="inline-block text-xs text-sky-400 hover:underline mt-0.5"
                         >
                           {t("viewOriginal")} ↗
                           <span className="sr-only">
