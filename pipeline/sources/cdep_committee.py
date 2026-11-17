@@ -57,7 +57,7 @@ class CdepCommitteeSource:
         url = self.committee_ledger_url(legislature, idc)
         res = self.client.get(url)
         ledger = parse_committee_ledger(
-            res.text, chamber=self.CHAMBER, legislature=legislature, source_url=url
+            res.text, chamber=CHAMBER, legislature=legislature, source_url=url
         )
         return ledger, res.text
 
@@ -91,7 +91,7 @@ class CdepCommitteeSource:
                 url = self.committee_ledger_url(legislature, item.idc)
                 res = self.client.get(url)
                 ledger = parse_committee_ledger(
-                    res.text, chamber=self.CHAMBER, legislature=legislature, source_url=url
+                    res.text, chamber=CHAMBER, legislature=legislature, source_url=url
                 )
                 frag, changed = record_fragment(
                     session,

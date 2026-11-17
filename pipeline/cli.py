@@ -136,13 +136,7 @@ def cmd_committees(args) -> int:
     writing.
     """
     from .sources.client import PoliteClient
-    from .sources.cdep_committee import (
-        CdepCommitteeSource,
-        parse_committee_list,
-        parse_committee_ledger,
-    )
-    from pipeline.db import Session, Organization, Membership
-    from sqlalchemy import select
+    from .sources.cdep_committee import CdepCommitteeSource, parse_committee_list
 
     db_path = args.db or "data/parlament.db"
     session = get_session(db_path)
@@ -150,79 +144,33 @@ def cmd_committees(args) -> int:
     legislature = args.legislature
     idc_filter = args.idc
 
-    # Fetch committee list.
-    items = parse_committee_list(
-        open(f"tests/fixtures/cdep_committee_list_{legislature}.html", encoding="utf-8").read()
-        if args.dry_run
-        else None,
-    )
-    if items is None:
-        # Live fetch (may be slow from CI; use --dry-run first).
-        csrc = CdepCommitteeSource(client)
-        items = csrc.fetch_committee_list(legislature)
-
-    print(f"Committee list for {legislature}: {len(items)} committees")
-    for item in items:
-        print(f"  idc={item.idc} name={item.name[:60]}")
-
     if args.dry_run:
+        # Report from fixtures only; never touches the network or the DB.
+        items = parse_committee_list(
+            open(f"tests/fixtures/cdep_committee_list_{legislature}.html", encoding="utf-8").read()
+        )
+        if idc_filter:
+            items = [i for i in items if i.idc in idc_filter]
+        print(f"Committee list for {legislature}: {len(items)} committees")
+        for item in items:
+            print(f"  idc={item.idc} name={item.name[:60]}")
         print("Dry run: not writing to DB.")
         session.close()
         return 0
 
-    # Ingest each committee ledger.
-    totals = {"committees": 0, "current": 0, "former": 0, "former_bureau": 0, "persons": 0}
-    for item in items:
-        # Fetch the ledger page.
-        if args.dry_run:
-            ledger_html = open(
-                f"tests/fixtures/cdep_committee_{item.idc}.html", encoding="utf-8"
-            ).read()
-        else:
-            csrc = CdepCommitteeSource(client)
-            ledger, _ = csrc.fetch_committee_ledger(legislature, item.idc)
-            ledger_html = ledger
+    # Live ingest via the source's own idempotent path: per-committee
+    # fragment dedupe, per-committee commit, PipelineRun audit row.
+    csrc = CdepCommitteeSource(client)
+    items = csrc.fetch_committee_list(legislature)
+    print(f"Committee list for {legislature}: {len(items)} committees")
 
-        ledger = parse_committee_ledger(
-            ledger_html, chamber="deputies", legislature=legislature, source_url="live"
-        )
-        totals["committees"] += 1
-        totals["current"] += len(ledger.current)
-        totals["former"] += len(ledger.former)
-        totals["former_bureau"] += len(ledger.former_bureau)
-        totals["persons"] += ledger.meta.chamber  # placeholder; real count from ingest
-
-        frag, changed = record_fragment(
-            session,
-            model="committee_ledger",
-            source_name="cdep_committees",
-            group_key=f"{legislature}:{item.idc}",
-            content=ledger_html,
-            source_id=item.idc,
-            source_url=f"https://www.cdep.ro/ords/pls/parlam/structura2015.co?cam=2&idc={item.idc}&leg={legislature}",
-            data={"short_name": ledger.meta.short_name, "name": item.name},
-            force=False,
-        )
-        if not changed and not False:
-            continue
-
-        stats = ingest_cdep_committee_ledger(
-            session,
-            ledger,
-            legislature=legislature,
-            snapshot_hash=frag.checksum if frag else None,
-        )
-        totals["current"] += stats["current"]
-        totals["former"] += stats["former"]
-        totals["persons"] += stats["persons"]
-        totals["committees"] += 1
-
-    session.commit()
+    totals = csrc.ingest_committees(session, legislature, idc_filter=idc_filter or None)
     print(
         f"Committees ingested: {totals['committees']} committees, "
         f"{totals['current']} current members, {totals['former']} former members, "
-        f"{totals['former_bureau']} bureau members, {totals['persons']} persons"
+        f"{totals['persons']} persons, {totals['unchanged']} unchanged"
     )
+    session.close()
     return 0
 
 
