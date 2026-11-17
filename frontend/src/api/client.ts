@@ -522,3 +522,55 @@ export function generationalShift(
     `/analytics/generational-shift${qs ? `?${qs}` : ""}`,
   );
 }
+
+// --- Feature 2: Commitment Tracker (committee membership) -----------------
+
+export interface CommitteeListItem {
+  id: string;
+  name: string;
+  chamber: string | null;
+  party: string | null;
+}
+
+export interface CommitteeMember {
+  person_id: string;
+  name: string;
+  role: string | null;
+  group: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  start_precision: string | null;
+  end_precision: string | null;
+  active: boolean;
+  source_url: string | null;
+}
+
+export interface CommitteeMembersResponse {
+  committee: {
+    id: string;
+    name: string;
+    chamber: string | null;
+    legislature: string | null;
+  };
+  as_of: string;
+  members: CommitteeMember[];
+  active_count: number;
+  total_count: number;
+}
+
+/** Committees with at least one active dated member. */
+export function committees(asOf?: string): Promise<CommitteeListItem[]> {
+  const qs = asOf ? `?as_of=${encodeURIComponent(asOf)}` : "";
+  return get<CommitteeListItem[]>(`/committees${qs}`);
+}
+
+/** Dated member ledger of one committee. */
+export function committeeMembers(
+  committeeId: string,
+  asOf?: string,
+): Promise<CommitteeMembersResponse> {
+  const qs = asOf ? `?as_of=${encodeURIComponent(asOf)}` : "";
+  return get<CommitteeMembersResponse>(
+    `/committees/${encodeURIComponent(committeeId)}/members${qs}`,
+  );
+}

@@ -301,6 +301,20 @@ def get_person(session: Session, person_id: str) -> dict | None:
             .order_by(Membership.start_date)
         )
     )
+    # Committee tenures are a separate axis from party/group tenures: they are
+    # exposed as their own field so existing `memberships` consumers (party
+    # flow, coverage ratios, gantt) keep their exact current semantics.
+    committee_ms = list(
+        session.scalars(
+            select(Membership)
+            .join(Organization, Organization.id == Membership.org_id)
+            .where(
+                Organization.classification == "committee",
+                Membership.person_id == person_id,
+            )
+            .order_by(Membership.start_date)
+        )
+    )
     events = list(
         session.scalars(
             select(Event).where(Event.person_id == person_id).order_by(Event.event_date)
@@ -335,6 +349,7 @@ def get_person(session: Session, person_id: str) -> dict | None:
             for i in idents
         ],
         "memberships": [serialize_membership(session, m) for m in ms],
+        "committee_memberships": [serialize_membership(session, m) for m in committee_ms],
         "events": [serialize_event(session, e) for e in events],
         "evidence": evidence,
     }

@@ -209,6 +209,72 @@ def committees(as_of: str | None = None, db: Session = Depends(get_db)):
     return [{"id": o.id, "name": o.name, "chamber": o.chamber, "party": None} for o in rows]
 
 
+@router.get("/committees/{committee_id}/members")
+def committee_members(
+    committee_id: str,
+    as_of: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """Dated member ledger of one committee: current and former members.
+
+    Every row carries the member's name, party group at entry, role and the
+    observed start/end dates from the official cdep.ro ledger.
+    """
+    from sqlalchemy import or_, select
+
+    from pipeline.db import Membership, Organization, Person
+
+    committee = db.get(Organization, committee_id)
+    if committee is None or committee.classification != "committee":
+        raise HTTPException(status_code=404, detail="committee not found")
+
+    reference_date = _parse_date(as_of, date.today())
+    stmt = (
+        select(Membership, Person.canonical_name)
+        .join(Person, Person.id == Membership.person_id)
+        .where(Membership.org_id == committee_id)
+        .order_by(
+            # Active members first, then by name.
+            (Membership.end_date.is_(None)).desc(),
+            Person.canonical_name,
+        )
+    )
+    rows = db.execute(stmt).all()
+
+    members = []
+    for m, name in rows:
+        is_active = (m.start_date is None or m.start_date <= reference_date) and (
+            m.end_date is None or m.end_date >= reference_date
+        )
+        members.append(
+            {
+                "person_id": m.person_id,
+                "name": name,
+                "role": m.role,
+                "group": m.group_acronym_at_event,
+                "start_date": m.start_date.isoformat() if m.start_date else None,
+                "end_date": m.end_date.isoformat() if m.end_date else None,
+                "start_precision": m.start_precision,
+                "end_precision": m.end_precision,
+                "active": is_active,
+                "source_url": m.source_url,
+            }
+        )
+
+    return {
+        "committee": {
+            "id": committee.id,
+            "name": committee.name,
+            "chamber": committee.chamber,
+            "legislature": committee.legislature,
+        },
+        "as_of": reference_date.isoformat(),
+        "members": members,
+        "active_count": sum(1 for m in members if m["active"]),
+        "total_count": len(members),
+    }
+
+
 @router.get("/evidence/{evidence_id}")
 def evidence(evidence_id: str, db: Session = Depends(get_db)):
     ev = db.get(Evidence, evidence_id)
