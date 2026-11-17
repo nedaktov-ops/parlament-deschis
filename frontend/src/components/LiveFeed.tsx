@@ -6,6 +6,12 @@ import { api, type EventItem, type HealthResponse } from "../api/client";
 type SourceHealth = Exclude<HealthResponse["sources"][string], string>;
 const DATASET_STALE_AFTER_MS = 48 * 60 * 60 * 1000;
 
+interface LiveFeedProps {
+  onSelect: (id: string) => void;
+  legislature?: string | null;
+  chamber?: string | null;
+}
+
 function typeColor(type: string): string {
   switch (type) {
     case "switch_group":
@@ -24,10 +30,14 @@ function typeColor(type: string): string {
   }
 }
 
-export default function LiveFeed(
-  { onSelect }: { onSelect: (id: string) => void; legislature?: string | null; chamber?: string | null },
-  { legislature, chamber }: { legislature?: string | null; chamber?: string | null }
-) {
+// P0-A: a React component receives ONE props argument (the second argument is
+// legacy context). The previous two-parameter signature silently discarded
+// legislature/chamber, so the feed and its switch alerts mixed all scopes.
+export default function LiveFeed({
+  onSelect,
+  legislature,
+  chamber,
+}: LiveFeedProps) {
   const { t, i18n } = useTranslation();
   const events = useQuery({
     queryKey: ["recent", legislature ?? undefined, chamber ?? undefined],
