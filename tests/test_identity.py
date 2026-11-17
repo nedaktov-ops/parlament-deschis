@@ -98,3 +98,58 @@ def test_score_match_qid():
     assert score_match(a, b) == 100.0
     b.wikidata_qid = "Q2"
     assert score_match(a, b) == 0.0
+
+
+def test_resolve_rejects_birthdateless_candidate_when_birthdate_known(session):
+    r = PersonResolver(session)
+    candidate, _ = r.resolve(
+        scheme="cdep_idm", identifier="1", name="Same Name", legislature="2024"
+    )
+    assert candidate.birth_date is None
+    # A known birth date cannot be matched to an undated same-name candidate.
+    other, created = r.resolve(
+        scheme="senat_guid",
+        identifier="G",
+        name="Same Name",
+        legislature="2024",
+        birth_date=date(1980, 5, 10),
+    )
+    assert created
+    assert other.id != candidate.id
+
+
+def test_resolve_flags_review_for_ambiguous_name(session):
+    from pipeline.db import MatchReview
+
+    r = PersonResolver(session)
+    r.resolve(scheme="cdep_idm", identifier="1", name="Ion Popescu", legislature="2024")
+    r.resolve(scheme="cdep_idm", identifier="2", name="Ion Popescu", legislature="2024")
+    # A third ambiguous same-name source: never guess, but flag for review.
+    p, created = r.resolve(
+        scheme="senat_guid", identifier="G", name="Ion Popescu", legislature="2024"
+    )
+    assert created
+    reviews = session.query(MatchReview).all()
+    assert reviews  # score_match + flag_review are wired into the live path
+    assert {r_.status for r_ in reviews} == {"pending"}
+    # Re-running the same identifier short-circuits; no duplicate reviews.
+    r.resolve(scheme="senat_guid", identifier="G", name="Ion Popescu", legislature="2024")
+    assert session.query(MatchReview).count() == len(reviews)
+
+
+def test_revert_merge_restores_birth_date_and_qid(session):
+    r = PersonResolver(session)
+    a, _ = r.resolve(scheme="cdep_idm", identifier="1", name="Winner", legislature="2024")
+    b, _ = r.resolve(scheme="wikidata", identifier="Q9", name="Loser", legislature="2024")
+    b.birth_date = date(1975, 3, 4)
+    b.wikidata_qid = "Q9b"
+    session.flush()
+    audit = merge_persons(session, a.id, b.id)
+    session.flush()
+    assert a.birth_date == date(1975, 3, 4)
+    assert a.wikidata_qid == "Q9b"
+    revert_merge(session, audit.id)
+    session.flush()
+    # 'replace' ops used to be ignored on revert, leaving absorbed values.
+    assert a.birth_date is None
+    assert a.wikidata_qid is None

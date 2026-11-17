@@ -16,6 +16,7 @@ membership that opens a new legislature is not a switch either.
 
 from __future__ import annotations
 
+import json
 import logging
 from collections import defaultdict
 from datetime import date, timedelta
@@ -32,6 +33,46 @@ log = logging.getLogger("parlament.events")
 # The published dates are day-precise but the source records the departure
 # and the arrival either on the same day or on consecutive days.
 _HANDOFF_TOLERANCE = 1
+
+
+def _log_ambiguous_handoff(
+    person_id: str, prev: Membership, nxt: Membership, chamber: str | None, legislature: str | None
+) -> None:
+    """Emit a fully-specified record for a handoff the source cannot date.
+
+    ``match_review`` holds *person* identity candidacies (person_a/person_b) and
+    cannot represent a membership-to-membership handoff, and ``Event`` has no
+    column for an undated/ambiguous boundary. Writing either would fabricate a
+    record the schema cannot honestly hold, so we log every input instead: the
+    person, both organisations, both published dates and the scope. This makes
+    the skipped boundary recoverable without inventing an event.
+    """
+    payload = {
+        "person_id": person_id,
+        "from_org_id": prev.org_id,
+        "to_org_id": nxt.org_id,
+        "from_end_date": prev.end_date.isoformat() if prev.end_date else None,
+        "to_start_date": nxt.start_date.isoformat() if nxt.start_date else None,
+        "chamber": chamber,
+        "legislature": legislature,
+    }
+    log.warning("ambiguous_membership_handoff %s", json.dumps(payload, sort_keys=True))
+
+
+def _flag_one_day_overlap(
+    person_id: str, prev: Membership, nxt: Membership, chamber: str | None, legislature: str | None
+) -> None:
+    """Flag (never hide) a handoff whose source dates overlap by exactly one day."""
+    payload = {
+        "person_id": person_id,
+        "from_org_id": prev.org_id,
+        "to_org_id": nxt.org_id,
+        "from_end_date": prev.end_date.isoformat() if prev.end_date else None,
+        "to_start_date": nxt.start_date.isoformat() if nxt.start_date else None,
+        "chamber": chamber,
+        "legislature": legislature,
+    }
+    log.warning("one_day_overlap_switch %s", json.dumps(payload, sort_keys=True))
 
 
 def _group_memberships(session: Session, chamber: str | None) -> list[Membership]:
@@ -159,7 +200,7 @@ def derive_group_events(session: Session, chamber: str | None = None) -> int:
                         to_org_id=m.org_id,
                         event_date=m.start_date,
                         precision=m.start_precision,
-                        reason="GENERAL_ELECTION",
+                        reason=m.start_reason or "GENERAL_ELECTION",
                         confidence=m.confidence,
                         group_acronym_at_event=to_label,
                         source_url=m.source_url,
@@ -176,13 +217,18 @@ def derive_group_events(session: Session, chamber: str | None = None) -> int:
                     # Y"; two thirds of the handoffs in the corpus have X == Y
                     # (the member moved on the same day) and a small number
                     # have Y == X + 1. A Y == X - 1 handoff is a one-day
-                    # overlap in the source's own dates, which is recorded as
-                    # a switch but flagged, not hidden.
+                    # overlap in the source's own dates: it is still recorded
+                    # as a switch, but flagged in the event summary and in a
+                    # structured log line - never silently hidden.
                     if prev.end_date is None or m.start_date < prev.end_date - timedelta(
                         days=_HANDOFF_TOLERANCE
                     ):
                         ambiguous += 1
+                        _log_ambiguous_handoff(pid, prev, m, ch, leg)
                         continue
+                    one_day_overlap = m.start_date < prev.end_date
+                    if one_day_overlap:
+                        _flag_one_day_overlap(pid, prev, m, ch, leg)
                     frm_label = org_name(prev.org_id)
                     key = (
                         f"switch:{pid}:{prev.org_id}:{m.org_id}:{ch}:{leg}"
@@ -211,8 +257,10 @@ def derive_group_events(session: Session, chamber: str | None = None) -> int:
                         confidence=m.confidence,
                         group_acronym_at_event=to_label,
                         source_url=m.source_url,
-                        summary_ro=_summary_ro("switch_group", pname, frm_label, to_label),
-                        summary_en=_summary_en("switch_group", pname, frm_label, to_label),
+                        summary_ro=_summary_ro("switch_group", pname, frm_label, to_label)
+                        + (" (suprapunere de o zi în datele sursei)" if one_day_overlap else ""),
+                        summary_en=_summary_en("switch_group", pname, frm_label, to_label)
+                        + (" (one-day overlap in source dates)" if one_day_overlap else ""),
                     )
                     created += ev is not None
                     continue
@@ -255,7 +303,7 @@ def derive_group_events(session: Session, chamber: str | None = None) -> int:
                 )
                 created += ev is not None
     if ambiguous:
-        log.warning("%d ambiguous membership boundaries were not counted as switches", ambiguous)
+        log.warning("ambiguous_membership_handoffs_total %d", ambiguous)
     session.flush()
     return created
 
@@ -312,7 +360,9 @@ def derive_party_events(session: Session, chamber: str | None = None) -> int:
     The party is the one named in the ledger's ``Partid`` column, which the
     chamber publishes **without a join date**; it is therefore a secondary,
     lower-confidence view of the same movement that ``switch_group`` records
-    from the dated ledgers.
+    from the dated ledgers. Party events are deliberately left undated
+    (``event_date=None``, ``precision="unknown"``): borrowing the dated group
+    tenure's start would be fabricated precision.
     """
     memberships = _party_memberships(session, chamber)
     by_person: dict[str, list[Membership]] = defaultdict(list)
@@ -362,14 +412,18 @@ def derive_party_events(session: Session, chamber: str | None = None) -> int:
                         chamber=ch,
                         legislature=leg,
                         to_org_id=party_id,
-                        event_date=m.start_date,
-                        precision=m.start_precision,
-                        reason="GENERAL_ELECTION",
+                        # The "Partid" cell carries NO join date. Reusing the
+                        # group tenure's dated start here would fabricate a
+                        # precision the source never published, so the party
+                        # event is explicitly undated.
+                        event_date=None,
+                        precision="unknown",
+                        reason=m.start_reason or "UNKNOWN",
                         confidence=m.confidence,
                         group_acronym_at_event=to_label,
                         source_url=m.source_url,
-                        summary_ro=f"{pname} — partid: {to_label}",
-                        summary_en=f"{pname} — party: {to_label}",
+                        summary_ro=f"{pname} — partid: {to_label} (fără dată de aderare publicată)",
+                        summary_en=f"{pname} — party: {to_label} (no join date published)",
                     )
                     created += ev is not None
                     continue
@@ -399,8 +453,10 @@ def derive_party_events(session: Session, chamber: str | None = None) -> int:
                     legislature=leg,
                     from_org_id=prev.on_behalf_of_id,
                     to_org_id=party_id,
-                    event_date=m.start_date,
-                    precision=m.start_precision,
+                    # No party join date is published; do not borrow the dated
+                    # group tenure's start (see join_party above).
+                    event_date=None,
+                    precision="unknown",
                     reason="CHANGED_PARTY",
                     confidence="derived",
                     group_acronym_at_event=to_label,

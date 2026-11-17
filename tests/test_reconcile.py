@@ -216,3 +216,76 @@ def test_observation_same_group_idempotent(session):
         org_class="group",
     )
     assert m1.id == m2.id
+
+
+def test_observation_closure_scoped_by_legislature(session):
+    from sqlalchemy import select
+
+    from pipeline.db import Membership
+
+    p = _person(session)
+    a, b = _org(session, "PSD"), _org(session, "UPR")
+    w = MembershipWriter(session)
+    w.record_observation(
+        person_id=p.id,
+        org_id=a.id,
+        chamber="deputies",
+        observed_on=date(2020, 6, 1),
+        org_class="group",
+        legislature="2020",
+    )
+    session.flush()
+    w.record_observation(
+        person_id=p.id,
+        org_id=b.id,
+        chamber="deputies",
+        observed_on=date(2024, 12, 21),
+        org_class="group",
+        legislature="2024",
+    )
+    session.flush()
+    ms = list(session.scalars(select(Membership).where(Membership.person_id == p.id)))
+    assert len(ms) == 2
+    psd = next(m for m in ms if m.org_id == a.id)
+    upr = next(m for m in ms if m.org_id == b.id)
+    # A 2024 snapshot says nothing about an open 2020 tenure: neither closes.
+    assert psd.end_date is None
+    assert psd.legislature == "2020"
+    assert upr.end_date is None
+    assert upr.legislature == "2024"
+
+
+def test_observation_closure_marks_inferred_end(session):
+    from sqlalchemy import select
+
+    from pipeline.db import Membership
+
+    p = _person(session)
+    a, b = _org(session, "PSD"), _org(session, "UPR")
+    w = MembershipWriter(session)
+    w.record_observation(
+        person_id=p.id,
+        org_id=a.id,
+        chamber="deputies",
+        observed_on=date(2024, 1, 1),
+        org_class="group",
+        legislature="2024",
+    )
+    session.flush()
+    w.record_observation(
+        person_id=p.id,
+        org_id=b.id,
+        chamber="deputies",
+        observed_on=date(2024, 6, 15),
+        org_class="group",
+        legislature="2024",
+    )
+    session.flush()
+    psd = next(
+        m
+        for m in session.scalars(select(Membership).where(Membership.person_id == p.id))
+        if m.org_id == a.id
+    )
+    assert psd.end_date == date(2024, 6, 14)
+    assert psd.end_precision == "inferred"
+    assert psd.end_reason == "UNKNOWN"  # not a fabricated CHANGED_PARTY

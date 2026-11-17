@@ -101,9 +101,10 @@ class PersonResolver:
         # if their names are identical).
         candidates = _name_candidates(self.session, name)
         if birth_date:
-            candidates = [
-                p for p in candidates if p.birth_date is None or p.birth_date == birth_date
-            ]
+            # A supplied birth date is decisive: a same-name candidate with no
+            # birth date cannot be confirmed as the same person, so it must be
+            # rejected rather than auto-merged on the name alone.
+            candidates = [p for p in candidates if p.birth_date == birth_date]
         candidates = [
             p
             for p in candidates
@@ -134,6 +135,16 @@ class PersonResolver:
             )
         )
         self._add_identifier(person, scheme, identifier, legislature)
+        if len(candidates) > 1:
+            # An ambiguous name is never auto-merged, but the competing
+            # candidates are worth a human decision. Wire the previously-dead
+            # score_match/flag_review helpers into the live path, persisting to
+            # the existing match_review table (no new schema). The new person
+            # stands until a reviewer approves a merge.
+            for candidate in candidates:
+                score = score_match(person, candidate)
+                if score >= REVIEW_THRESHOLD:
+                    self.flag_review(candidate, person, score, "ambiguous_name")
         return person, True
 
     def _add_identifier(self, person, scheme, identifier, legislature):
@@ -147,9 +158,21 @@ class PersonResolver:
         )
 
     def flag_review(self, person_a: Person, person_b: Person, score: float, reason: str):
-        self.session.add(
-            MatchReview(person_a=person_a.id, person_b=person_b.id, score=score, reason=reason)
-        )
+        # Normalise the pair so re-running ingestion does not pile up duplicate
+        # reviews for the same two people in opposite argument orders.
+        a, b = sorted((person_a.id, person_b.id))
+        existing = self.session.scalars(
+            select(MatchReview).where(
+                MatchReview.person_a == a,
+                MatchReview.person_b == b,
+                MatchReview.status == "pending",
+            )
+        ).first()
+        if existing is not None:
+            return existing
+        review = MatchReview(person_a=a, person_b=b, score=score, reason=reason)
+        self.session.add(review)
+        return review
 
 
 def score_match(a: Person, b: Person) -> float:
@@ -240,11 +263,20 @@ def merge_persons(session: Session, winner_id: str, loser_id: str) -> MergeAudit
         e.person_id = winner_id
     # Absorb birth date / qid if winner lacks them.
     if winner.birth_date is None and loser.birth_date:
+        ops.append(
+            {
+                "op": "replace",
+                "field": "birth_date",
+                "from": None,
+                "to": loser.birth_date.isoformat(),
+            }
+        )
         winner.birth_date = loser.birth_date
-        ops.append({"op": "replace", "field": "birth_date", "value": str(loser.birth_date)})
     if winner.wikidata_qid is None and loser.wikidata_qid:
+        ops.append(
+            {"op": "replace", "field": "wikidata_qid", "from": None, "to": loser.wikidata_qid}
+        )
         winner.wikidata_qid = loser.wikidata_qid
-        ops.append({"op": "replace", "field": "wikidata_qid", "value": loser.wikidata_qid})
 
     winner.match_status = "merged"
     audit = MergeAudit(winner_id=winner_id, loser_id=loser_id, operations=ops)
@@ -264,6 +296,7 @@ def revert_merge(session: Session, audit_id: str) -> None:
         "membership": Membership,
         "event": Event,
     }
+    winner = session.get(Person, audit.winner_id)
     for op in reversed(audit.operations):
         if op["op"] == "repoint":
             model = table_map[op["table"]]
@@ -279,8 +312,17 @@ def revert_merge(session: Session, audit_id: str) -> None:
                 )
             ):
                 session.delete(pn)
+        elif op["op"] == "replace" and winner is not None:
+            # Restore the value the winner held before the merge. Replace ops
+            # were previously ignored, leaving birth_date/qid absorbed after a
+            # revert. "from" is stored as an ISO string for dates.
+            field = op["field"]
+            old = op.get("from")
+            if old is not None and field == "birth_date":
+                old = date.fromisoformat(old)
+            if field in ("birth_date", "wikidata_qid"):
+                setattr(winner, field, old)
     audit.reverted = True
-    winner = session.get(Person, audit.winner_id)
     if winner is not None:
         winner.match_status = "unmatched"
     session.flush()

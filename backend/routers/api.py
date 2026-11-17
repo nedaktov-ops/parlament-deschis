@@ -77,14 +77,62 @@ def _parse_date(s: str | None, default: date) -> date:
 
 
 def _require_admin_token(token: str | None, operation: str = "admin operations") -> None:
+    """Fail-closed token check with a small in-process per-token lockout.
+
+    State is held on the function object so the helper owns it (no module
+    globals, no new dependencies). Only a saltless SHA-256 fingerprint of the
+    guess is retained — raw secret values are never stored or logged. There is
+    no request object in this helper's scope, so the key is per-token rather
+    than per-IP; see the P4-D report for that residual.
+    """
+    import hashlib
+    import logging
+    import time
+
+    state = getattr(_require_admin_token, "_auth_state", None)
+    if state is None:
+        state = {"lock": threading.Lock(), "failures": {}}
+        _require_admin_token._auth_state = state
+    lock = state["lock"]
+    failures: dict[str, list[float]] = state["failures"]
+    window_s = 60.0
+    max_failures = 5
+    log = logging.getLogger("parlament.api")
+
     expected = os.environ.get("PARLAMENT_ADMIN_TOKEN", "")
     if not expected:
         raise HTTPException(
             status_code=503,
             detail=f"{operation} disabled (set PARLAMENT_ADMIN_TOKEN)",
         )
-    if not token or not secrets.compare_digest(token, expected):
-        raise HTTPException(status_code=401, detail="invalid admin token")
+
+    fingerprint = hashlib.sha256((token or "").encode("utf-8")).hexdigest()[:16]
+    with lock:
+        now = time.monotonic()
+        recent = [t for t in failures.get(fingerprint, ()) if now - t < window_s]
+        if len(recent) >= max_failures:
+            log.warning(
+                "admin auth lockout: operation=%s fingerprint=%s failures=%d",
+                operation,
+                fingerprint,
+                len(recent),
+            )
+            raise HTTPException(
+                status_code=429, detail="too many failed admin attempts; try again later"
+            )
+        # compare_digest on bytes keeps this constant-time and avoids the
+        # TypeError that str inputs with non-ASCII characters would trigger.
+        if not token or not secrets.compare_digest(token.encode("utf-8"), expected.encode("utf-8")):
+            recent.append(now)
+            failures[fingerprint] = recent
+            log.warning(
+                "admin auth failure: operation=%s fingerprint=%s failures=%d",
+                operation,
+                fingerprint,
+                len(recent),
+            )
+            raise HTTPException(status_code=401, detail="invalid admin token")
+        failures.pop(fingerprint, None)
 
 
 @router.get("/meta")
@@ -551,8 +599,11 @@ def admin_poll(
     _require_admin_token(x_admin_token, "admin polling")
     try:
         results = run_poll_cycle(db, legislature)
-    except Exception as exc:  # noqa: BLE001 - report upstream failure as 502
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception:  # noqa: BLE001 - upstream failure is reported generically
+        import logging
+
+        logging.getLogger("parlament.api").exception("admin poll cycle failed")
+        raise HTTPException(status_code=502, detail="upstream poll failed") from None
     invalidate_traseism_overview_cache()
     invalidate_result_cache()
     return {"status": "ok", "legislature": legislature, "results": results}

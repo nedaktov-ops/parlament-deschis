@@ -111,8 +111,16 @@ def create_app() -> FastAPI:
     app.include_router(api_router)
     app.include_router(exports_router)
 
-    # GraphQL endpoint
-    graphql_app = GraphQLRouter(schema)
+    # GraphQL endpoint. GraphiQL is a supported Strawberry flag (graphql_ide):
+    # turn it off on hosted production (Render/Vercel) or via the explicit flag.
+    # Introspection itself has no clean toggle in strawberry 0.341.2 — residual.
+    _prod = bool(os.environ.get("RENDER")) or os.environ.get("VERCEL_ENV") == "production"
+    _ide_off = _prod or os.environ.get("PARLAMENT_GRAPHQL_IDE", "1").strip().lower() in {
+        "0",
+        "false",
+        "off",
+    }
+    graphql_app = GraphQLRouter(schema, graphql_ide=None if _ide_off else "graphiql")
     app.include_router(graphql_app, prefix="/graphql")
 
     if SNAPSHOT_DIR.exists():

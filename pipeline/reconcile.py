@@ -96,7 +96,9 @@ class MembershipWriter:
     def __init__(self, session: Session):
         self.session = session
 
-    def _existing(self, person_id: str, org_id: str, post_id: str | None) -> list[Membership]:
+    def _existing(
+        self, person_id: str, org_id: str, post_id: str | None, legislature: str | None
+    ) -> list[Membership]:
         stmt = select(Membership).where(
             Membership.person_id == person_id,
             Membership.org_id == org_id,
@@ -105,6 +107,13 @@ class MembershipWriter:
             stmt = stmt.where(Membership.post_id.is_(None))
         else:
             stmt = stmt.where(Membership.post_id == post_id)
+        # Tenures are scoped by legislature (see ux_membership_open_stint_scope
+        # in db.py): a member who sat in the same group in two terms has two
+        # distinct tenures, and one term's observation must not close another's.
+        if legislature is None:
+            stmt = stmt.where(Membership.legislature.is_(None))
+        else:
+            stmt = stmt.where(Membership.legislature == legislature)
         return list(self.session.scalars(stmt))
 
     def record_authoritative(
@@ -136,7 +145,7 @@ class MembershipWriter:
         if start and end and end < start:
             # Never persist an inverted interval; clamp defensively.
             end = start
-        existing = self._existing(person_id, org_id, post_id)
+        existing = self._existing(person_id, org_id, post_id, legislature)
 
         # Exact match (same start/end) → idempotent; refresh last_seen only.
         for m in existing:
@@ -226,13 +235,23 @@ class MembershipWriter:
     ) -> Membership:
         """Current-only roster: ensure an open membership for (person, org).
 
-        Closes any other open membership of the same org_class for this person
-        at observed_on - 1 day. Derived confidence.
+        Closes any other open membership of the same org_class in this
+        legislature for this person at observed_on - 1 day, marking the end as
+        inferred (UNKNOWN reason) because the sparse snapshot publishes
+        neither a departure date nor a cause. Derived confidence.
         """
-        existing = self._existing(person_id, org_id, post_id)
+        existing = self._existing(person_id, org_id, post_id, legislature)
         open_match = next((m for m in existing if m.end_date is None), None)
 
-        # Close other open memberships of the same class (person moved).
+        # Close other open memberships of the same class (person moved), but
+        # ONLY inside this legislature. A snapshot of one term says nothing
+        # about an open tenure in a different term; closing that would invent a
+        # cross-legislature departure the source never published.
+        others_scope = (
+            Membership.legislature.is_(None)
+            if legislature is None
+            else Membership.legislature == legislature
+        )
         others = self.session.scalars(
             select(Membership)
             .join(_Org, _Org.id == Membership.org_id)
@@ -242,11 +261,18 @@ class MembershipWriter:
                 Membership.org_id != org_id,
                 _Org.classification == org_class,
                 Membership.chamber == chamber,
+                others_scope,
             )
         )
         for m in others:
+            # The snapshot is sparse: "seen in org B on date D" constrains the
+            # departure to before D, it does not publish D-1 as the leave day,
+            # nor a party change as its cause. Keep the derived end_date for
+            # non-overlapping intervals, but mark it inferred and leave the
+            # reason UNKNOWN rather than fabricating exact precision.
             m.end_date = observed_on - timedelta(days=1)
-            m.end_reason = "CHANGED_PARTY" if org_class == "group" else "UNKNOWN"
+            m.end_precision = "inferred"
+            m.end_reason = "UNKNOWN"
             m.last_seen_at = _utcnow()
 
         if open_match is not None:
