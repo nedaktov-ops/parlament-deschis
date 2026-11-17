@@ -127,14 +127,16 @@ def derive_switch_waves(
     events = list(session.scalars(stmt))
 
     if legislature:
-        # Filter events by legislature
-        leg_key_events = session.scalars(
+        # Filter events by legislature. An unknown (or undated) legislature
+        # must fail loudly instead of silently deriving waves across every era.
+        leg_key_event = session.scalars(
             select(KeyEvent).where(KeyEvent.type == "legislature", KeyEvent.label == legislature)
         ).first()
-        if leg_key_events:
-            leg_start = leg_key_events.start_date
-            leg_end = leg_key_events.end_date or date.today()
-            events = [e for e in events if e.event_date and leg_start <= e.event_date <= leg_end]
+        if leg_key_event is None or leg_key_event.start_date is None:
+            raise ValueError(f"legislature not found: {legislature}")
+        leg_start = leg_key_event.start_date
+        leg_end = leg_key_event.end_date or date.today()
+        events = [e for e in events if e.event_date and leg_start <= e.event_date <= leg_end]
 
     if not events:
         return 0
@@ -178,12 +180,12 @@ def derive_switch_waves(
                     for ke in session.scalars(
                         select(KeyEvent).where(KeyEvent.type == "legislature")
                     ):
-                        if ke.start_date and ke.end_date:
-                            if (
-                                ke.start_date
-                                <= window_events[-1].event_date
-                                <= (ke.end_date or date.today())
-                            ):
+                        if ke.start_date:
+                            # A NULL end means an ongoing legislature: treat it
+                            # as open through today so current waves keep the
+                            # legislature label instead of falling back to "any".
+                            ke_end = ke.end_date or date.today()
+                            if ke.start_date <= window_events[-1].event_date <= ke_end:
                                 leg_label = ke.label
                                 break
 
@@ -383,10 +385,10 @@ def generational_shift(
     )
     if legislature:
         stmt = stmt.where(Membership.legislature == legislature)
-    else:
-        stmt = stmt.where(
-            or_(Membership.end_date.is_(None), Membership.end_date >= evaluation_date)
-        )
+    # An MP counts only if the membership is still active at the evaluation
+    # date (end is exclusive, matching the temporal core), whether or not the
+    # query is scoped to a legislature. Departed MPs must never be included.
+    stmt = stmt.where(or_(Membership.end_date.is_(None), Membership.end_date > evaluation_date))
 
     ages_by_party: dict[str, dict[str, int]] = {}
     party_names: dict[str, str] = {}
@@ -460,12 +462,13 @@ def derive_committee_control(
         .where(
             Organization.classification == "committee",
             Membership.role == "presedinte",
-            # Active chair as of the reference date: open tenure or one that
-            # has not ended yet. Chairs with only an end date (former) count
-            # only when that end date is still in the future.
+            # Active chair as of the reference date: the tenure must have
+            # started on/before the reference and not yet have ended. End is
+            # exclusive, matching the temporal core (pipeline/queries.py).
+            Membership.start_date <= reference,
             or_(
                 Membership.end_date.is_(None),
-                Membership.end_date >= reference,
+                Membership.end_date > reference,
             ),
         )
         .order_by(Organization.name)
