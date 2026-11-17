@@ -42,8 +42,10 @@ export default function TimeSlider({
       const cur = new Date(valueRef.current).getTime();
       const next = cur + 7 * 86400_000;
       if (next >= maxMs) {
-        onChangeRef.current(toISO(new Date(maxMs)));
-        setPlaying(false);
+        // Loop back to the beginning of the timeline so play is a continuous
+        // animation instead of stopping immediately when already at the latest
+        // date (which is the default "as of" value).
+        onChangeRef.current(toISO(new Date(minMs)));
       } else {
         onChangeRef.current(toISO(new Date(next)));
       }
@@ -51,7 +53,7 @@ export default function TimeSlider({
     return () => {
       if (timer.current) window.clearInterval(timer.current);
     };
-  }, [playing, maxMs]);
+  }, [playing, minMs, maxMs]);
 
   return (
     <div className="card p-4">

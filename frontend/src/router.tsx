@@ -460,7 +460,35 @@ const routeTree = rootRoute.addChildren([
   coverageRoute,
 ]);
 
-export const router = createRouter({ routeTree });
+// TanStack Router's default search serializer JSON-stringifies values that
+// happen to be valid JSON numbers, so the /electoral -> /traseism redirect
+// emitted `legislature=%222024%22` (literal double-quote characters). Serialize
+// primitive values as plain query values instead, and parse them back as-is.
+const stringifySearch = (search: Record<string, unknown>) => {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(search ?? {})) {
+    if (value === undefined) continue;
+    params.set(key, typeof value === "string" ? value : String(value));
+  }
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+};
+
+const parseSearch = (searchStr: string) => {
+  const raw = searchStr.startsWith("?") ? searchStr.slice(1) : searchStr;
+  const query = new URLSearchParams(raw);
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of query.entries()) {
+    if (value !== "") result[key] = value;
+  }
+  return result;
+};
+
+export const router = createRouter({
+  routeTree,
+  stringifySearch,
+  parseSearch,
+});
 
 declare module "@tanstack/react-router" {
   interface Register {
