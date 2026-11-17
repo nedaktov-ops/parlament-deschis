@@ -421,14 +421,14 @@ function SwitchLedger({
             <div className="flex items-center gap-2">
               <button type="button"onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
-                className={`btn bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed ${FOCUS}`}
+                className={`btn bg-slate-700 hover:bg-slate-600 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed ${FOCUS}`}
               >
                 {t("traseismPreviousPage")}
               </button>
               <span>{t("traseismPage", { page: page + 1, pages: totalPages })}</span>
               <button type="button"onClick={() => setPage((p) => p + 1)}
                 disabled={(page + 1) * PAGE_SIZE >= total}
-                className={`btn bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed ${FOCUS}`}
+                className={`btn bg-slate-700 hover:bg-slate-600 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed ${FOCUS}`}
               >
                 {t("traseismNextPage")}
               </button>
@@ -764,7 +764,7 @@ export function Traseism() {
                   aria-pressed={chamber === c}
                   className={`btn ${
                     chamber === c
-                      ? "bg-sky-600 text-white"
+                      ? "bg-sky-700 text-white"
                       : "bg-slate-700 hover:bg-slate-600 text-slate-200"
                   } ${FOCUS}`}
                 >

@@ -177,16 +177,24 @@ export default function PartyComparison() {
                 <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                   {t("compare.col.metric", "Metric")}
                 </th>
-                <th
-                  className="px-4 py-3 text-center text-sm font-semibold"
-                  style={{ color: a.color || "#e2e8f0" }}
-                >
+                <th className="px-4 py-3 text-center text-sm font-semibold text-slate-100">
+                  {a.color && (
+                    <span
+                      aria-hidden="true"
+                      className="inline-block w-2.5 h-2.5 rounded-full mr-1.5 align-middle"
+                      style={{ backgroundColor: a.color }}
+                    />
+                  )}
                   {a.short_name}
                 </th>
-                <th
-                  className="px-4 py-3 text-center text-sm font-semibold"
-                  style={{ color: b.color || "#e2e8f0" }}
-                >
+                <th className="px-4 py-3 text-center text-sm font-semibold text-slate-100">
+                  {b.color && (
+                    <span
+                      aria-hidden="true"
+                      className="inline-block w-2.5 h-2.5 rounded-full mr-1.5 align-middle"
+                      style={{ backgroundColor: b.color }}
+                    />
+                  )}
                   {b.short_name}
                 </th>
               </tr>

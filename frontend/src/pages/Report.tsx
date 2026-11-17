@@ -114,7 +114,7 @@ export default function Report() {
           <button
             type="button"
             onClick={() => window.print()}
-            className="bg-sky-600 hover:bg-sky-500 text-white px-4 py-2 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+            className="bg-sky-700 hover:bg-sky-800 text-white px-4 py-2 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
           >
             {t("report.print", "Print / Save as PDF")}
           </button>

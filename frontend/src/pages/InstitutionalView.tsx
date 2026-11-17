@@ -45,7 +45,7 @@ export function InstitutionalView() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="card p-4">
-            <h3 className="font-semibold mb-3">{t("committeeControl")}</h3>
+            <h2 className="font-semibold mb-3">{t("committeeControl")}</h2>
             {committees.isError ? (
               <div role="alert" className="text-rose-200 text-sm">
                 {t("institutionalLoadError")}
@@ -69,13 +69,13 @@ export function InstitutionalView() {
           </div>
 
           <div className="card p-4">
-            <h3 className="font-semibold mb-3">{t("bureauComposition")}</h3>
+            <h2 className="font-semibold mb-3">{t("bureauComposition")}</h2>
             <div className="text-slate-500 text-sm">{t("bureauDataUnavailable")}</div>
           </div>
         </div>
 
         <div className="card p-4">
-          <h3 className="font-semibold mb-3">{t("crossChamberMPs")}</h3>
+          <h2 className="font-semibold mb-3">{t("crossChamberMPs")}</h2>
           {crossChamber.isError ? (
             <div role="alert" className="text-rose-200 text-sm">
               {t("institutionalLoadError")}

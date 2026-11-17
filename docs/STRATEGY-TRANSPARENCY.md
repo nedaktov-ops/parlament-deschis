@@ -423,12 +423,48 @@ def run_load_test():
 | **UI** | Component removal/restoration | 10-15 minutes | Feature doesn't match user needs |
 | **Deploy** | Feature flag off / rollback deployment | 10-20 minutes | Production issue, critical bug |
 
-### Validation Before Merge (MANDATORY)
-1. **SQL validation**: `SELECT COUNT(*) FROM <table> EXPECT AT LEAST N` — all queries pass
-2. **UI validation**: All 15 features render without JS errors (`console.error` = 0)
-3. **Data validation**: `person` count 3381, `events` count 7429, `memberships` count 6623 — unchanged
-4. **Performance**: p95 < 500ms for all API endpoints (Load Test Feature 15)
-5. **Accessibility**: `axe-core` scan — 0 violations
+### Validation Before Merge (MANDATORY) — ✅ all five passed 2026-11-17
+
+1. **SQL validation** — PASS. Counted from `data/parlament-real.db` (API-serving DB):
+   `person` 3388, `membership` 7358, `event` 7429, `organization` 120,
+   `switch_wave` 142, `switch_group` events 1217. Every feature query executed
+   through `/api/export/report` returned 200 with non-empty blocks.
+2. **UI validation** — PASS. `python3 scripts/ui_validate.py` (Playwright +
+   Chromium): **18 routes rendered, 0 JS errors** (no `console.error`, no
+   uncaught `pageerror`). Covers every feature route plus the dynamic
+   `/person/:id`, `/party/:shortName`, `/legislature/:year`.
+3. **Data validation** — PASS. Baseline 3381 persons / 6623 memberships changed
+   **intentionally** with Feature 2 (cdep.ro committee ingestion: 26 committees,
+   735 memberships, 7 persons) → current 3388 / 7358. Events unchanged at 7429.
+   Audit corpus byte-identical before/after ingestion (275 pre-existing errors,
+   0 new). No ANAF asset data used; gaps declared, never filled with guesses.
+4. **Performance** — PASS. `uv run python scripts/load_test.py` at 50 concurrent
+   users × 6 rounds × 3 endpoints: **p50 217 ms, p95 332 ms (< 500 ms target),
+   900 requests, 0 errors**. Before the fix: p95 5262 ms (15 req/s). The N+1 in
+   `/api/parties` and per-row queries in the leaderboard were batched, and a
+   TTL result cache was added with invalidation on admin writes.
+5. **Accessibility** — PASS. axe-core 4.10.2 injected on every route in the
+   UI validation run: **0 violations** across all 18 routes. Fixed 5 classes
+   of findings: `bg-sky-600` buttons (4.09:1 → `bg-sky-700`, 5.86:1),
+   inherited `text-slate-400` on pagination buttons (4.03:1 → `text-slate-300`,
+   6.99:1), zero-switch badges on `/mps` (55 nodes, same fix), party-coloured
+   table headers (`#e63946` on `#334155` = 2.48:1 → readable text + small
+   `aria-hidden` colour swatch), and `h1 → h3` skips on `/institutional` and
+   `/legislature/2024` (promoted to `h2`).
+
+### Final check-in — 2026-11-17
+
+- **Completed**: all 15 features from the tables above, each in its own commit.
+- **Pending**: none. (Party merger/split succession is a declared data gap —
+  0 predecessor/successor rows, 0 dissolution dates — delivered as the honest
+  observed-span timeline on `/party-timeline`, not a fabricated graph.)
+- **Blockers**: none.
+- **Data validated**: 197 pytest tests pass; `ruff check pipeline backend
+  scripts tests` clean; `npm run build` passes; load test + UI/a11y scans pass.
+- **Rollbacks**: no data rollback needed (all ingestion backed up and audited).
+  Code rollback = `git revert <feature commit>`; committee data =
+  `cp data/parlament.db.bak-pre-committees data/parlament.db` (same for
+  `parlament-real.db`); waves = `DELETE FROM switch_wave`.
 
 ---
 

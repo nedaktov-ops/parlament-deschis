@@ -39,7 +39,7 @@ function fetchMps(
 }
 
 function switchBadge(n: number): string {
-  if (n === 0) return "bg-slate-700 text-slate-400";
+  if (n === 0) return "bg-slate-700 text-slate-300";
   if (n <= 2) return "bg-amber-900/40 text-amber-300";
   return "bg-red-900/40 text-red-300";
 }
@@ -122,7 +122,7 @@ export default function Mps() {
         </label>
         <button
           type="submit"
-          className="bg-sky-600 hover:bg-sky-500 text-white px-4 py-2 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+          className="bg-sky-700 hover:bg-sky-800 text-white px-4 py-2 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
         >
           {t("mps.go", "Go")}
         </button>

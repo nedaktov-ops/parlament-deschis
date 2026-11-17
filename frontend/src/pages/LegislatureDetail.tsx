@@ -74,7 +74,7 @@ export function LegislatureDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="card p-4">
-          <h3 className="font-semibold mb-3">{t("deputies")}</h3>
+          <h2 className="font-semibold mb-3">{t("deputies")}</h2>
           {meta.isLoading || chamber.isLoading ? (
             <div role="status" className="text-slate-300 text-sm py-8">{t("loading")}</div>
           ) : chamber.isError ? (
@@ -104,7 +104,7 @@ export function LegislatureDetail() {
         </div>
 
         <div className="card p-4">
-          <h3 className="font-semibold mb-3">{t("recentMovements")}</h3>
+          <h2 className="font-semibold mb-3">{t("recentMovements")}</h2>
           {movements.isLoading ? (
             <div role="status" className="text-slate-300 text-sm">{t("loading")}</div>
           ) : movements.isError ? (
