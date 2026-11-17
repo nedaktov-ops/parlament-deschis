@@ -117,6 +117,45 @@ export function PersonDeepDive() {
         </div>
       </div>
 
+      {(p.committee_memberships?.length ?? 0) > 0 && (
+        <div className="card p-4">
+          <h2 className="font-semibold mb-3">
+            {t("committeeService", "Committee service")}
+          </h2>
+          <p className="text-xs text-slate-500 mb-3">
+            {t(
+              "committeeService.desc",
+              "Dated committee tenures from the official cdep.ro ledgers (separate from party/group membership).",
+            )}
+          </p>
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+            {(p.committee_memberships ?? []).map((m) => (
+              <div key={m.id} className="bg-slate-800/40 rounded-md p-2">
+                <div className="text-sm">
+                  {m.org?.name || m.org?.short_name || "—"}
+                  {m.role && (
+                    <span className="text-sky-400 ml-1.5">· {m.role}</span>
+                  )}
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5">
+                  {m.start_date ?? "—"} → {m.end_date ?? "present"}
+                </div>
+                {m.source_url && (
+                  <a
+                    href={m.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-sky-400 hover:underline"
+                  >
+                    {t("source", "source")} ↗
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="card p-4">
         <h2 className="font-semibold mb-3">{t("citations")}</h2>
         <div className="space-y-3">

@@ -80,6 +80,7 @@ export interface PersonDetail {
   match_status: string;
   identifiers: { scheme: string; identifier: string; legislature: string | null }[];
   memberships: Membership[];
+  committee_memberships?: Membership[];
   events: EventItem[];
   evidence: EvidenceItem[];
 }
