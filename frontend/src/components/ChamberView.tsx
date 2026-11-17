@@ -33,7 +33,7 @@ export default function ChamberView({
       {data.isError && (
         <div role="alert" className="text-rose-200 text-sm py-4">
           {t("chamberLoadError")}
-          <button type="button" className="ml-3 underline" onClick={() => data.refetch()}>
+          <button type="button"className="ml-3 underline" onClick={() => data.refetch()}>
             {t("traseismRetry")}
           </button>
         </div>

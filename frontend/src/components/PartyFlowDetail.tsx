@@ -163,8 +163,7 @@ export default function PartyFlowDetail({
     <div className="card p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={onBack}
+        <button type="button"onClick={onBack}
           className="btn bg-slate-700 hover:bg-slate-600 text-sm"
         >
           ← {t("backToDefections")}
@@ -220,8 +219,7 @@ function PartyFlowTabs({
   return (
     <div>
       <div className="flex gap-1 border-b border-slate-700 mb-4">
-        <button
-          onClick={() => setActiveTab("in")}
+        <button type="button"onClick={() => setActiveTab("in")}
           className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
             activeTab === "in"
               ? "bg-slate-800 text-emerald-300 border-b-2 border-emerald-500 -mb-px"
@@ -230,8 +228,7 @@ function PartyFlowTabs({
         >
           {t("joined")} ({flow.membersIn.length})
         </button>
-        <button
-          onClick={() => setActiveTab("out")}
+        <button type="button"onClick={() => setActiveTab("out")}
           className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
             activeTab === "out"
               ? "bg-slate-800 text-rose-300 border-b-2 border-rose-500 -mb-px"
@@ -244,8 +241,7 @@ function PartyFlowTabs({
 
       <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
         {(activeTab === "in" ? flow.membersIn : flow.membersOut).map((m) => (
-          <button
-            key={m.person_id}
+          <button type="button"key={m.person_id}
             onClick={() => onPersonSelect(m.person_id)}
             className="w-full text-left bg-slate-800/40 hover:bg-slate-800 rounded-md p-3 transition-colors"
           >

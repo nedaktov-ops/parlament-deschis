@@ -44,6 +44,10 @@ _LEGISLATURE_FIELD = "ddlLegislatura"
 _SEARCH_BUTTON = "btnSearch"
 
 
+class HistoricalDiscoveryError(RuntimeError):
+    """Raised when historical discovery cannot reliably separate legislatures."""
+
+
 class SenatSource:
     name = "senat"
 
@@ -78,55 +82,151 @@ class SenatSource:
                 return html_mod.unescape(m.group("value"))
         return ""
 
-    def _historical_legislature_labels(self) -> list[str]:
-        """Discover the legislature labels published on FisaSenatori.aspx."""
+    def _historical_legislature_labels(self) -> dict[str, str]:
+        """Map leading year → ``ddLegislatura`` GUID value from the live page.
+
+        The live page's ``<select name="ctl00$B_Center$ddLegislatura">`` lists
+        options where ``value`` is a GUID and the displayed label is a range
+        ``"1990-1992"`` etc. We return a dict ``{"1990": "<guid>", ...}`` so
+        callers pass the exact GUID rather than relying on year-anchored label
+        matching, which was a silent wrong-data bug (the field was ignored and the
+        default current legislature was always returned).
+        """
         res = self.client.get(_FISA_SENATORI)
-        labels: list[str] = []
+        mapping: dict[str, str] = {}
         for m in _OPTION.finditer(res.text):
             val = html_mod.unescape(m.group("val")).strip()
             label = re.sub(r"\s+", " ", html_mod.unescape(m.group("label"))).strip()
-            if _YEAR.match(val) or _YEAR.search(label):
-                if val not in labels:
-                    labels.append(val)
-        return labels
+            y = re.search(r"^(19|20)\d{2}", label)
+            if y and val not in mapping:
+                mapping[y.group(0)] = val
+        return mapping
 
     def fetch_historical_guids(self, legislatures: list[str] | None = None) -> list[str]:
-        """Discover historical senator GUIDs via ``FisaSenatori.aspx`` POST.
+        """Discover historical senator GUIDs via the two-step FisaSenatori.aspx flow.
 
-        ``FisaSenatori.aspx`` is senat.ro's ASP.NET WebForms search page for
-        historical legislatures. For each requested legislature label we GET
-        the page (to capture ``__VIEWSTATE``/``__EVENTVALIDATION`` and honor
-        pacing/robots via :class:`PoliteClient`), then POST the legislature
-        selection back and parse ``FisaSenator.aspx?ParlamentarID={guid}``
-        links from the result.
+        Step 1: GET the page and POST the legislature GUID (no search button).
+        The response repopulates ``ddSesiune`` (session) with session‑specific
+        GUIDs.
+        Step 2: For each session, POST the session GUID together with the
+        ``__EVENTTARGET=ctl00$B_Center$cmdSearch`` to render the senator cards.
 
-        ``legislatures`` is a list of legislature labels (e.g.
-        ``["1990", "1992"]``). ``None`` means "all legislatures published on
-        the page": we GET once and read the legislature dropdown options.
+        Each legislature is expected to yield a **different** GUID set from every
+        other requested legislature. If two legislatures produce identical GUID
+        sets the guard raises :class:`HistoricalDiscoveryError`; if a legislature
+        yields zero GUIDs the guard also raises.
 
-        Returns GUIDs in discovery order, de-duped. Never bypasses CAPTCHA or
-        robots: :meth:`PoliteClient.post` raises :class:`CaptchaError` on a
-        challenge and :class:`RobotsDisallowed` when robots.txt forbids it.
+        ``legislatures`` is a list of leading-year strings (e.g. ``["1990", "2024"]``).
+        ``None`` means all legislatures found on the live page.
+
+        Returns GUIDs in discovery order, de-duped across all sessions of all
+        requested legislatures.
+
+        Raises :class:`HistoricalDiscoveryError` if any requested legislature
+        yields zero GUIDs or if two requested legislatures yield identical GUID
+        sets (silent wrong‑data guard).
         """
         if legislatures is None:
-            legislatures = self._historical_legislature_labels()
-        guids: list[str] = []
-        seen: set[str] = set()
+            mapping = self._historical_legislature_labels()
+            legislatures = sorted(mapping.keys())
+
+        # Per-legislature GUID sets, for the cross-legislature guard.
+        leg_sets: dict[str, set[str]] = {}
+
+        all_guids: list[str] = []
+
         for leg in legislatures:
+            if leg not in self._historical_legislature_labels():
+                raise HistoricalDiscoveryError(
+                    f"Legislature {leg!r} not found on FisaSenatori.aspx"
+                )
             page = self.client.get(_FISA_SENATORI)
+            vs = self._input_value(page.text, "_VIEWSTATE")
+            ev = self._input_value(page.text, "__EVENTVALIDATION")
+            leg_guid = self._historical_legislature_labels()[leg]
+
+            # Step 1: POST legislature GUID only (no search button).
+            # This is the ASP.NET AutoPostBack equivalent that refreshes the
+            # session dropdown.
             data = {
-                _VIEWSTATE_FIELD: self._input_value(page.text, _VIEWSTATE_FIELD),
-                _EVENTVALIDATION_FIELD: self._input_value(page.text, _EVENTVALIDATION_FIELD),
-                _LEGISLATURE_FIELD: leg,
-                _SEARCH_BUTTON: "Caută",
+                "_VIEWSTATE": vs,
+                "__EVENTVALIDATION": ev,
+                "ctl00$B_Center$ddLegislatura": leg_guid,
             }
-            res = self.client.post(_FISA_SENATORI, data=data)
-            for m in _GUID.finditer(res.text):
-                guid = m.group(1)
-                if guid not in seen:
-                    seen.add(guid)
-                    guids.append(guid)
-        return guids
+            p1 = self.client.post(_FISA_SENATORI, data=data)
+
+            # Parse session dropdown.
+            sel = re.search(
+                r'<select[^>]*name="[^"]*ddSesiune"[^>]*>.*?</select>',
+                p1.text,
+                re.S | re.I,
+            )
+            if not sel:
+                raise HistoricalDiscoveryError(
+                    f"Could not find ddSesiune after legislature POST for {leg!r}"
+                )
+            # Extract option values and labels.
+            session_opts: list[tuple[str, str]] = []
+            for o in re.finditer(
+                r'<option[^>]*value=["\'](?P<v>[^"\']*)["\'][^>]*>(?P<l>.*?)</option>',
+                sel.group(0),
+                re.I | re.S,
+            ):
+                val = o.group("v")
+                lbl = re.sub(r"\s+", " ", html_mod.unescape(o.group("l"))).strip()
+                session_opts.append((val, lbl))
+
+            if not session_opts:
+                raise HistoricalDiscoveryError(f"No sessions found for legislature {leg!r}")
+
+            leg_guids: set[str] = set()
+
+            # Step 2: For each session, POST session GUID + search.
+            for sv, _sl in session_opts:
+                sdata = {
+                    "_VIEWSTATE": self._input_value(p1.text, "_VIEWSTATE"),
+                    "__EVENTVALIDATION": self._input_value(p1.text, "__EVENTVALIDATION"),
+                    "ctl00$B_Center$ddLegislatura": leg_guid,
+                    "ctl00$B_Center$ddSesiune": sv,
+                    "__EVENTTARGET": "ctl00$B_Center$cmdSearch",
+                    "__EVENTARGUMENT": "",
+                }
+                p2 = self.client.post(_FISA_SENATORI, data=sdata)
+
+                # Parse senator cards: <a href="...ParlamentarID=GUID">Name</a>
+                for m in re.finditer(
+                    r'<a[^>]+?href=["\']([^"\']*ParlamentarID=([0-9A-Fa-f-]{36}))["\'][^>]*>(.*?)</a>',
+                    p2.text,
+                    re.I | re.S,
+                ):
+                    g = m.group(2)
+                    if g not in leg_guids:
+                        leg_guids.add(g)
+
+            if not leg_guids:
+                raise HistoricalDiscoveryError(
+                    f"Legislature {leg!r} yielded zero GUIDs — "
+                    f"historical discovery returned no senators."
+                )
+
+            leg_sets[leg] = leg_guids
+            all_guids.extend(sorted(leg_guids))
+
+        # Cross-legislature guard: if any two legislatures produce identical GUID
+        # sets, raise — this was the silent bug: the old code returned the same
+        # 134 GUIDs for 2024, 2020, 2016 and 1990.
+        leg_fingerprints: dict[str, frozenset[str]] = {}
+        for leg in legislatures:
+            fp = frozenset(leg_sets[leg])
+            if leg in leg_fingerprints and leg_fingerprints[leg] == fp:
+                raise HistoricalDiscoveryError(
+                    f"Legislatures {leg!r} and {next(k for k, v in leg_fingerprints.items() if v == fp)!r} "
+                    f"yield identical GUID sets — historical discovery cannot "
+                    f"separate them; this is a silent data‑corruption risk."
+                )
+            leg_fingerprints[leg] = fp
+
+        return all_guids
 
     def ingest_profiles(
         self,

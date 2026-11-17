@@ -38,7 +38,7 @@ export function LegislatureDetail() {
     return (
       <div className="card p-4" role="alert">
         <p className="text-rose-200 text-sm">{t("chamberLoadError")}</p>
-        <button type="button" className="btn mt-3 bg-slate-700 hover:bg-slate-600" onClick={() => {
+        <button type="button"className="btn mt-3 bg-slate-700 hover:bg-slate-600" onClick={() => {
           void meta.refetch();
         }}>
           {t("traseismRetry")}
@@ -80,7 +80,7 @@ export function LegislatureDetail() {
           ) : chamber.isError ? (
             <div className="text-rose-200 text-sm py-4">
               {t("chamberLoadError")}
-              <button type="button" className="ml-3 underline" onClick={() => chamber.refetch()}>
+              <button type="button"className="ml-3 underline" onClick={() => chamber.refetch()}>
                 {t("traseismRetry")}
               </button>
             </div>
@@ -110,7 +110,7 @@ export function LegislatureDetail() {
           ) : movements.isError ? (
             <div role="alert" className="text-rose-200 text-sm">
               {t("electoralLoadError")}
-              <button type="button" className="ml-3 underline" onClick={() => movements.refetch()}>
+              <button type="button"className="ml-3 underline" onClick={() => movements.refetch()}>
                 {t("traseismRetry")}
               </button>
             </div>
@@ -121,10 +121,7 @@ export function LegislatureDetail() {
               )}
               <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                 {movements.data?.slice(0, 20).map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    disabled={!m.person}
+                  <button type="button"key={m.id}disabled={!m.person}
                     onClick={() => {
                       if (m.person) {
                         navigate({

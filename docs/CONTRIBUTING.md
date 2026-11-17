@@ -304,3 +304,32 @@ Good first contributions:
 
 If you are unsure where a change belongs, open an issue with the official URL and a short
 description. A precise question with evidence is more useful than a large speculative PR.
+## Modern Web Compliance Checklist
+
+Before submitting a PR, please verify the following:
+
+### HTML & Semantics
+- [ ] `index.html` has `<!DOCTYPE html>`, `lang` attribute, `<meta viewport>`, semantic landmarks (`<header>`, `<nav>`, `<main>`, `<aside>`, `<footer>`), and a single `<h1>`
+- All `<button>` elements have `type="button"` (for non-submit buttons) or `type="submit"` (for form submit buttons)
+- All interactive elements have accessible names (via `aria-label`, implicit semantics, or visible text)
+
+### Accessibility
+- No `aria-hidden="true` on informative SVGs (data visualizations must have `aria-label` or visible text alternative)
+- Focus management works correctly — focus returns to the right element when modals/dialogs close
+- Color contrast meets WCAG AA for all text/background combinations used
+- Modals/dialogs are closable via Escape key
+- `stopPropagation` does not prevent closing modals by clicking on content
+
+### Modern Web Patterns
+- `type="button"` is set on all non-submit buttons
+- `overscroll-behavior: contain` is used on modal overlays per guide
+- `popover` attribute used where appropriate (with polyfill fallback for older browsers)
+- Invoker Commands (`command`/`commandfor`) used per guide, with polyfill for older browsers
+- Translation keys (`t("key")`) have corresponding entries in translation files
+
+### Project-Specific
+- No `role="dialog"` on `<aside>` elements (use native `<dialog>` or remove `role="dialog"`)
+- Color contrast verified against WCAG AA
+- Focus management doesn't jump — keyboard users can navigate open/close without losing context
+
+If any of these items are not applicable to your change, please explain why in the PR description.

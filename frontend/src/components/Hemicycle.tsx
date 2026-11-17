@@ -114,9 +114,7 @@ export default function Hemicycle({
               <ul className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-1">
                 {group.members.map((member) => (
                   <li key={member.person_id}>
-                    <button
-                      type="button"
-                      onClick={() => onSelect(member.person_id)}
+                    <button type="button"onClick={() => onSelect(member.person_id)}
                       className="w-full text-left px-2 py-1 rounded text-slate-200 hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
                     >
                       {member.name}

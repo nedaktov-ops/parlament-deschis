@@ -21,7 +21,7 @@ from pipeline.db import (
     Person,
     PersonIdentifier,
 )
-from pipeline.queries import chamber_composition
+from pipeline.queries import chamber_composition, is_group
 
 
 def _label(org: Organization | None) -> str | None:
@@ -182,7 +182,7 @@ def get_timeline(
         .join(Organization, Organization.id == Membership.org_id)
         .where(
             Membership.chamber == chamber,
-            Organization.classification == "group",
+            is_group(),
             Membership.start_date <= end,
             or_(Membership.end_date.is_(None), Membership.end_date > start),
         )
@@ -266,7 +266,13 @@ def search_persons(
     people = list(session.scalars(stmt.limit(limit)))
     out = []
     for p in people:
-        ms = list(session.scalars(select(Membership).where(Membership.person_id == p.id)))
+        ms = list(
+            session.scalars(
+                select(Membership)
+                .join(Organization, Organization.id == Membership.org_id)
+                .where(is_group(), Membership.person_id == p.id)
+            )
+        )
         chambers = sorted({m.chamber for m in ms})
         if chamber and chamber not in chambers:
             continue
@@ -290,7 +296,8 @@ def get_person(session: Session, person_id: str) -> dict | None:
     ms = list(
         session.scalars(
             select(Membership)
-            .where(Membership.person_id == person_id)
+            .join(Organization, Organization.id == Membership.org_id)
+            .where(is_group(), Membership.person_id == person_id)
             .order_by(Membership.start_date)
         )
     )
@@ -352,7 +359,7 @@ def get_person_history(session: Session, person_id: str) -> dict | None:
     rows = session.execute(
         select(Membership, Organization)
         .join(Organization, Organization.id == Membership.org_id)
-        .where(Membership.person_id == person_id)
+        .where(is_group(), Membership.person_id == person_id)
         .order_by(
             Membership.start_date.is_(None),
             Membership.start_date,
@@ -394,7 +401,7 @@ def get_person_history(session: Session, person_id: str) -> dict | None:
     for m, org in rows:
         start = m.start_date.isoformat() if m.start_date else None
 
-        if org.classification == "group":
+        if is_group(org):
             if prev_group is not None and prev_group.id != org.id:
                 _emit(
                     {
@@ -602,6 +609,8 @@ def get_coverage_detailed(session: Session) -> list[dict]:
     )
 
     # --- Batched membership stats (1 query) ---
+    # Group semantics: committee memberships are not party/group tenures and
+    # must not inflate "total memberships" or skew the dated/sourced ratios.
     mem_rows = session.execute(
         select(
             Membership.chamber,
@@ -609,7 +618,10 @@ def get_coverage_detailed(session: Session) -> list[dict]:
             func.count(Membership.id).label("total"),
             func.sum(case((Membership.start_date.is_not(None), 1), else_=0)).label("dated"),
             func.sum(case((Membership.source_url.is_not(None), 1), else_=0)).label("sourced"),
-        ).group_by(Membership.chamber, Membership.legislature)
+        )
+        .join(Organization, Organization.id == Membership.org_id)
+        .where(is_group())
+        .group_by(Membership.chamber, Membership.legislature)
     ).all()
     mem_stats: dict[tuple, tuple] = {
         (r.chamber, r.legislature): (r.total or 0, r.dated or 0, r.sourced or 0) for r in mem_rows
@@ -687,8 +699,7 @@ def get_meta(session: Session) -> dict:
             },
         )
     groups = [
-        _org_brief(session, o.id)
-        for o in session.scalars(select(Organization).where(Organization.classification == "group"))
+        _org_brief(session, o.id) for o in session.scalars(select(Organization).where(is_group()))
     ]
     return {"legislatures": legs, "groups": groups}
 
@@ -712,7 +723,7 @@ def get_party_profile(session: Session, short_name: str, as_of: date) -> dict:
             .select_from(Membership)
             .join(Organization, Organization.id == Membership.org_id)
             .where(
-                Organization.classification == "group",
+                is_group(),
                 Membership.on_behalf_of_id == org.id,
                 Membership.chamber.in_(["deputies", "senate"]),
                 Membership.legislature == legislature,

@@ -43,8 +43,7 @@ export default function CitationPopover({ items }: { items: EvidenceItem[] }) {
 
   return (
     <div className="relative inline-block" ref={ref}>
-      <button
-        onClick={() => setOpen((o) => !o)}
+      <button type="button"onClick={() => setOpen((o) => !o)}
         className="inline-flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 transition-colors"
         title={t("citations")}
         aria-expanded={open}

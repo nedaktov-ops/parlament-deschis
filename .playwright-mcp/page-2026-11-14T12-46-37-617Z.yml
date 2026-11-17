@@ -1,0 +1,21 @@
+- generic [ref=f4e3]:
+  - banner [ref=f4e4]:
+    - generic [ref=f4e5]:
+      - generic [ref=f4e6]:
+        - heading "Parlament Deschis" [level=1] [ref=f4e7]
+        - paragraph [ref=f4e8]: Unde stau aleșii tăi, în orice moment din 1990 până azi
+      - generic [ref=f4e9]:
+        - combobox "Caută un parlamentar…" [ref=f4e11]
+        - button "Despre" [ref=f4e12] [cursor=pointer]
+        - button "Schimbă limba" [ref=f4e13] [cursor=pointer]: EN
+    - navigation "Navigare principală" [ref=f4e14]:
+      - link "Prezentare generală" [ref=f4e15] [cursor=pointer]:
+        - /url: /?date=2026-11-14&chamber=deputies
+      - link "Traseism" [ref=f4e16] [cursor=pointer]:
+        - /url: /traseism?date=2026-11-14&chamber=deputies
+      - link "Instituțional" [ref=f4e17] [cursor=pointer]:
+        - /url: /institutional?date=2026-11-14&chamber=deputies
+      - link "Acoperire" [ref=f4e18] [cursor=pointer]:
+        - /url: /coverage?date=2026-11-14&chamber=deputies
+  - main [ref=f4e19]:
+    - generic [ref=f4e20]: Se încarcă…

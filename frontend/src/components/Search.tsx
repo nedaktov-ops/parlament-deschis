@@ -108,8 +108,7 @@ export default function Search({ onSelect }: { onSelect: (id: string) => void })
             <div className="px-3 py-2 text-sm text-slate-300">{t("noResults")}</div>
           )}
           {people.map((p, index) => (
-            <button
-              key={p.id}
+            <button type="button"key={p.id}
               ref={(element) => { optionRefs.current[index] = element; }}
               id={`person-option-${index}`}
               role="option"

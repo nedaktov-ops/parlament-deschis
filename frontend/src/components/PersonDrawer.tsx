@@ -110,7 +110,7 @@ export default function PersonDrawer({
               </div>
             )}
           </div>
-          <button className="btn bg-slate-700 hover:bg-slate-600" onClick={onClose}>
+          <button type="button"className="btn bg-slate-700 hover:bg-slate-600" onClick={onClose}>
             {t("close")}
           </button>
         </div>
@@ -119,7 +119,7 @@ export default function PersonDrawer({
         {person.isError && (
           <div className="p-5 text-rose-200 text-sm" role="alert">
             {t("personLoadError")}
-            <button type="button" className="ml-3 underline" onClick={() => person.refetch()}>
+            <button type="button"className="ml-3 underline" onClick={() => person.refetch()}>
               {t("traseismRetry")}
             </button>
           </div>

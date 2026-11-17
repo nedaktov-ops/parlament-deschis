@@ -118,9 +118,7 @@ function ErrorState({
         {message ?? t("traseismLoadError")}
       </p>
       {onRetry ? (
-        <button
-          type="button"
-          onClick={onRetry}
+        <button type="button"onClick={onRetry}
           className={`btn mt-2 bg-slate-700 hover:bg-slate-600 ${FOCUS}`}
         >
           {t("traseismRetry")}
@@ -420,18 +418,14 @@ function SwitchLedger({
           <div className="flex flex-wrap items-center justify-between gap-2 mt-3 text-xs text-slate-400">
             <span>{t("traseismShowing", { from, to, total })}</span>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
+              <button type="button"onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
                 className={`btn bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed ${FOCUS}`}
               >
                 {t("traseismPreviousPage")}
               </button>
               <span>{t("traseismPage", { page: page + 1, pages: totalPages })}</span>
-              <button
-                type="button"
-                onClick={() => setPage((p) => p + 1)}
+              <button type="button"onClick={() => setPage((p) => p + 1)}
                 disabled={(page + 1) * PAGE_SIZE >= total}
                 className={`btn bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed ${FOCUS}`}
               >
@@ -488,9 +482,7 @@ function ScopesOverview({ rows }: { rows: TraseismScope[] }) {
         aria-sort={isSorted ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
         className="py-1 pr-3 font-medium"
       >
-        <button
-          type="button"
-          className={`flex items-center gap-1 rounded px-1 py-1 text-left hover:bg-slate-700/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 ${
+        <button type="button"className={`flex items-center gap-1 rounded px-1 py-1 text-left hover:bg-slate-700/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 ${
             isSorted ? "text-slate-100" : "text-slate-300"
           }`}
           onClick={() => {
@@ -657,9 +649,7 @@ export function Traseism() {
               {t("traseismNotMotive")}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setAboutOpen(true)}
+          <button type="button"onClick={() => setAboutOpen(true)}
             className={`btn bg-slate-700 hover:bg-slate-600 shrink-0 ${FOCUS}`}
           >
             {t("traseismAboutButton")}
@@ -693,10 +683,7 @@ export function Traseism() {
               aria-labelledby="traseism-chamber-label"
             >
               {(["deputies", "senate"] as const).map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setScope({ chamber: c })}
+                <button type="button"key={c}onClick={() => setScope({ chamber: c })}
                   aria-pressed={chamber === c}
                   className={`btn ${
                     chamber === c

@@ -163,8 +163,14 @@ def test_upr_former_bureau_ingested(session):
 
 
 def test_committee_ingested(session):
-    """Committee org and dated memberships are ingested from a chamber
-    group ledger's former-bureau table."""
+    """Committee org and dated memberships are ingested from the current-member
+    table and the "Foşti membri" table of a committee ledger.
+
+    The bureau-history rows ("Fosti membri ai biroului comisiei") are a role
+    history, not committee membership: they are no longer counted as current
+    members. The old contract asserted 25 current rows, which was 22 committee
+    members plus the 3 bureau rows (two of them duplicates of sitting members
+    and one a member who had already left)."""
     # First ingest a group ledger (needed because committee poller
     # is separate; here we test committee ingest standalone).
 
@@ -176,7 +182,7 @@ def test_committee_ingested(session):
     )
     stats = ingest_cdep_committee_ledger(session, ledger, legislature="2024")
 
-    assert stats["current"] == 25
+    assert stats["current"] == 22
     assert stats["former"] == 2
     assert stats["persons"] > 0
 

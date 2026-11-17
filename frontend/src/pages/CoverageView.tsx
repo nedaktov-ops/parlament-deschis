@@ -61,7 +61,7 @@ export default function CoverageView() {
       <div className="card p-4">
         <div role="alert" className="text-rose-200 text-sm py-8">
           {t("coverageLoadError")}
-          <button type="button" className="ml-3 underline" onClick={() => coverage.refetch()}>
+          <button type="button"className="ml-3 underline" onClick={() => coverage.refetch()}>
             {t("traseismRetry")}
           </button>
         </div>

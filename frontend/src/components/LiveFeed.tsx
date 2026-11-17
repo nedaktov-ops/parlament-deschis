@@ -24,13 +24,13 @@ function typeColor(type: string): string {
 }
 
 export default function LiveFeed(
-  { onSelect }: { onSelect: (id: string) => void },
-  { legislature, chamber }: { legislature?: string; chamber?: string }
+  { onSelect }: { onSelect: (id: string) => void; legislature?: string | null; chamber?: string | null },
+  { legislature, chamber }: { legislature?: string | null; chamber?: string | null }
 ) {
   const { t, i18n } = useTranslation();
   const events = useQuery({
-    queryKey: ["recent", legislature, chamber],
-    queryFn: () => api.recentEvents(40, chamber, legislature),
+    queryKey: ["recent", legislature ?? undefined, chamber ?? undefined],
+    queryFn: () => api.recentEvents(40, chamber ?? undefined, legislature ?? undefined),
   });
   const health = useQuery({
     queryKey: ["health"],
@@ -124,8 +124,7 @@ export default function LiveFeed(
           if (chamber && e.chamber !== chamber) return false;
           return true;
         })?.map((e) => (
-          <button
-            key={e.id}
+          <button type="button"key={e.id}
             onClick={() => e.person && onSelect(e.person.id)}
             disabled={!e.person}
             className="w-full text-left bg-slate-800/40 hover:bg-slate-800 disabled:cursor-default disabled:hover:bg-slate-800/40 rounded-md p-2 transition-colors"

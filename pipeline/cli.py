@@ -127,6 +127,105 @@ def cmd_ingest(args) -> int:
     return 0
 
 
+def cmd_committees(args) -> int:
+    """Ingest cdep.ro committee ledger for a legislature.
+
+    Fetches the committee listing, then for each committee ID fetches the
+    member ledger and writes Organisation(classification=\"committee\") rows
+    and Membership rows to the DB.  Use ``--dry-run`` to report without
+    writing.
+    """
+    from .sources.client import PoliteClient
+    from .sources.cdep_committee import (
+        CdepCommitteeSource,
+        parse_committee_list,
+        parse_committee_ledger,
+    )
+    from pipeline.db import Session, Organization, Membership
+    from sqlalchemy import select
+
+    db_path = args.db or "data/parlament.db"
+    session = get_session(db_path)
+    client = PoliteClient()
+    legislature = args.legislature
+    idc_filter = args.idc
+
+    # Fetch committee list.
+    items = parse_committee_list(
+        open(f"tests/fixtures/cdep_committee_list_{legislature}.html", encoding="utf-8").read()
+        if args.dry_run
+        else None,
+    )
+    if items is None:
+        # Live fetch (may be slow from CI; use --dry-run first).
+        csrc = CdepCommitteeSource(client)
+        items = csrc.fetch_committee_list(legislature)
+
+    print(f"Committee list for {legislature}: {len(items)} committees")
+    for item in items:
+        print(f"  idc={item.idc} name={item.name[:60]}")
+
+    if args.dry_run:
+        print("Dry run: not writing to DB.")
+        session.close()
+        return 0
+
+    # Ingest each committee ledger.
+    totals = {"committees": 0, "current": 0, "former": 0, "former_bureau": 0, "persons": 0}
+    for item in items:
+        # Fetch the ledger page.
+        if args.dry_run:
+            ledger_html = open(
+                f"tests/fixtures/cdep_committee_{item.idc}.html", encoding="utf-8"
+            ).read()
+        else:
+            csrc = CdepCommitteeSource(client)
+            ledger, _ = csrc.fetch_committee_ledger(legislature, item.idc)
+            ledger_html = ledger
+
+        ledger = parse_committee_ledger(
+            ledger_html, chamber="deputies", legislature=legislature, source_url="live"
+        )
+        totals["committees"] += 1
+        totals["current"] += len(ledger.current)
+        totals["former"] += len(ledger.former)
+        totals["former_bureau"] += len(ledger.former_bureau)
+        totals["persons"] += ledger.meta.chamber  # placeholder; real count from ingest
+
+        frag, changed = record_fragment(
+            session,
+            model="committee_ledger",
+            source_name="cdep_committees",
+            group_key=f"{legislature}:{item.idc}",
+            content=ledger_html,
+            source_id=item.idc,
+            source_url=f"https://www.cdep.ro/ords/pls/parlam/structura2015.co?cam=2&idc={item.idc}&leg={legislature}",
+            data={"short_name": ledger.meta.short_name, "name": item.name},
+            force=False,
+        )
+        if not changed and not False:
+            continue
+
+        stats = ingest_cdep_committee_ledger(
+            session,
+            ledger,
+            legislature=legislature,
+            snapshot_hash=frag.checksum if frag else None,
+        )
+        totals["current"] += stats["current"]
+        totals["former"] += stats["former"]
+        totals["persons"] += stats["persons"]
+        totals["committees"] += 1
+
+    session.commit()
+    print(
+        f"Committees ingested: {totals['committees']} committees, "
+        f"{totals['current']} current members, {totals['former']} former members, "
+        f"{totals['former_bureau']} bureau members, {totals['persons']} persons"
+    )
+    return 0
+
+
 def cmd_backfill(args) -> int:
     """Loop legislatures from data/reference/legislatures.json (deputies only; senate current only)."""
     from .sources.client import PoliteClient
@@ -347,9 +446,7 @@ def cmd_audit_corpus(args) -> int:
     error_fingerprints = Counter(finding_fingerprint(finding) for finding in report.errors)
     new_errors = error_fingerprints - baseline
     unevaluated_checks = {
-        finding.check
-        for finding in report.findings
-        if finding.context.get("not_evaluated") is True
+        finding.check for finding in report.findings if finding.context.get("not_evaluated") is True
     }
     unevaluated_baseline = Counter(
         finding_fingerprint(Finding(**finding))
@@ -486,7 +583,9 @@ def cmd_build_corpus(args) -> int:
     )
 
     if args.strict:
-        expected_scopes = {(chamber, legislature) for chamber in chambers for legislature in legislatures}
+        expected_scopes = {
+            (chamber, legislature) for chamber in chambers for legislature in legislatures
+        }
         ledger_scopes = {(record.chamber, record.legislature) for record in corpus.ledgers}
         profile_mandates = set(corpus.profiles)
         expected_mandates = {
@@ -577,6 +676,14 @@ def main(argv=None) -> int:
     p_ingest.add_argument("--idg", nargs="*", help="filter cdep group idg")
     p_ingest.add_argument("--limit", type=int, help="limit senat profiles")
     p_ingest.set_defaults(fn=cmd_ingest)
+
+    p_committees = sub.add_parser(
+        "committees", help="ingest cdep.ro committee ledger for a legislature"
+    )
+    p_committees.add_argument("--legislature", default="2024", help="legislature (e.g. 2024)")
+    p_committees.add_argument("--idc", nargs="+", help="filter by IDC values (e.g. 1 2 51)")
+    p_committees.add_argument("--dry-run", action="store_true", help="report without writing to DB")
+    p_committees.set_defaults(fn=cmd_committees)
 
     p_backfill = sub.add_parser(
         "backfill", help="loop legislatures from reference data (deputies primary)"

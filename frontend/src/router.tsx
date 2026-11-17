@@ -4,6 +4,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Search from "./components/Search";
+import SenateHistory from "./pages/SenateHistory";
 import { isISODate, localISODate } from "./utils/date";
 import "./i18n";
 import "./index.css";
@@ -112,7 +113,7 @@ function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
       >
         <div className="sticky top-0 bg-panel/95 backdrop-blur border-b border-slate-700 px-5 py-4 flex items-center justify-between">
           <h2 id="about-title" className="text-lg font-semibold">{t("about")}</h2>
-          <button className="btn bg-slate-700 hover:bg-slate-600" onClick={onClose}>{t("close")}</button>
+          <button type="button"className="btn bg-slate-700 hover:bg-slate-600" onClick={onClose}>{t("close")}</button>
         </div>
         <div className="p-5 space-y-4 text-sm">
           <h3 className="font-semibold">{t("method")}</h3>
@@ -153,14 +154,12 @@ function RootLayout() {
               params: { id },
               search: { date: currentDate },
             })} />
-            <button
-              className="btn bg-slate-700 hover:bg-slate-600"
+            <button type="button"className="btn bg-slate-700 hover:bg-slate-600"
               onClick={() => setAboutOpen(true)}
             >
               {t("about")}
             </button>
-            <button
-              className="btn bg-slate-700 hover:bg-slate-600 uppercase"
+            <button type="button"className="btn bg-slate-700 hover:bg-slate-600 uppercase"
               onClick={() => i18n.changeLanguage(i18n.language === "ro" ? "en" : "ro")}
               aria-label={t("changeLanguage")}
             >
@@ -268,7 +267,15 @@ const coverageRoute = createRoute({
   validateSearch: validateDateSearch,
 });
 
+
+const senateHistoryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/senate-history",
+  component: () => <Suspense fallback={<Loading />}><SenateHistory /></Suspense>,
+  validateSearch: validateDateSearch,
+});
 const routeTree = rootRoute.addChildren([
+  senateHistoryRoute,
   indexRoute,
   electoralRoute,
   institutionalRoute,

@@ -49,7 +49,7 @@ export function InstitutionalView() {
             {committees.isError ? (
               <div role="alert" className="text-rose-200 text-sm">
                 {t("institutionalLoadError")}
-                <button type="button" className="ml-3 underline" onClick={() => committees.refetch()}>
+                <button type="button"className="ml-3 underline" onClick={() => committees.refetch()}>
                   {t("traseismRetry")}
                 </button>
               </div>
@@ -79,7 +79,7 @@ export function InstitutionalView() {
           {crossChamber.isError ? (
             <div role="alert" className="text-rose-200 text-sm">
               {t("institutionalLoadError")}
-              <button type="button" className="ml-3 underline" onClick={() => crossChamber.refetch()}>
+              <button type="button"className="ml-3 underline" onClick={() => crossChamber.refetch()}>
                 {t("traseismRetry")}
               </button>
             </div>

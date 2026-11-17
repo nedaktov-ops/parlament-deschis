@@ -92,7 +92,7 @@ export function LiveDashboard() {
         {meta.isError && (
           <div className="text-rose-200 text-sm" role="alert">
             {t("metaLoadError")}
-            <button type="button" className="ml-3 underline" onClick={() => meta.refetch()}>
+            <button type="button"className="ml-3 underline" onClick={() => meta.refetch()}>
               {t("traseismRetry")}
             </button>
           </div>
@@ -100,7 +100,7 @@ export function LiveDashboard() {
         {coverage.isError ? (
           <div className="text-rose-200 text-sm" role="alert">
             {t("coverageLoadError")}
-            <button type="button" className="ml-3 underline" onClick={() => coverage.refetch()}>
+            <button type="button"className="ml-3 underline" onClick={() => coverage.refetch()}>
               {t("traseismRetry")}
             </button>
           </div>

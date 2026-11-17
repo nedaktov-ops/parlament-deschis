@@ -19,6 +19,7 @@ from .db import (
     make_engine,
     make_session_factory,
 )
+from .queries import is_group
 
 # Known trigger dates for Romanian elections and government formations
 # These help label detected waves
@@ -251,9 +252,7 @@ def party_switching_rates(
     from collections import defaultdict
 
     period_start, period_end = (
-        _legislature_period(session, legislature)
-        if legislature
-        else (date.min, date.today())
+        _legislature_period(session, legislature) if legislature else (date.min, date.today())
     )
     event_stmt = select(Event).where(
         Event.type == "switch_party",
@@ -276,7 +275,7 @@ def party_switching_rates(
             if not org:
                 continue
             party_id = org.id if org.classification == "party" else None
-            if org.classification == "group":
+            if is_group(org):
                 membership_stmt = select(Membership.on_behalf_of_id).where(
                     Membership.person_id == switch.person_id,
                     Membership.org_id == org.id,
@@ -285,9 +284,7 @@ def party_switching_rates(
                     or_(Membership.end_date.is_(None), Membership.end_date >= switch.event_date),
                 )
                 if legislature:
-                    membership_stmt = membership_stmt.where(
-                        Membership.legislature == legislature
-                    )
+                    membership_stmt = membership_stmt.where(Membership.legislature == legislature)
                 party_id = session.scalar(
                     membership_stmt.order_by(Membership.start_date.desc()).limit(1)
                 )
@@ -306,7 +303,7 @@ def party_switching_rates(
             continue
         membership_filters = [
             Membership.on_behalf_of_id == party_id,
-            group.classification == "group",
+            is_group(group),
             party_org.classification == "party",
             Membership.start_date <= period_end,
             or_(Membership.end_date.is_(None), Membership.end_date >= period_start),
@@ -342,12 +339,8 @@ def party_switching_rates(
                 "members": len(member_ids),
                 "switches": total_switches,
                 "switchers": len(person_switches),
-                "avg_tenure_years": round(
-                    sum(tenure_days.values()) / len(tenure_days) / 365.25, 1
-                ),
-                "switch_rate_per_mp_per_year": round(
-                    total_switches / total_person_years, 4
-                ),
+                "avg_tenure_years": round(sum(tenure_days.values()) / len(tenure_days) / 365.25, 1),
+                "switch_rate_per_mp_per_year": round(total_switches / total_person_years, 4),
             }
         )
     return sorted(results, key=lambda result: result["party_name"])
@@ -380,7 +373,7 @@ def generational_shift(
         .join(party, party.id == Membership.on_behalf_of_id)
         .where(
             Person.birth_date.is_not(None),
-            group.classification == "group",
+            is_group(group),
             party.classification == "party",
             Membership.start_date <= evaluation_date,
         )

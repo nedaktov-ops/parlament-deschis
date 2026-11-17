@@ -111,8 +111,7 @@ export default function CurrentLegislatureView({
             </p>
           </div>
           {showDiff && (
-            <button
-              onClick={() => window.location.search = window.location.search.replace(/date=[^&]*/, `date=${LEGISLATURE_START}`)}
+            <button type="button"onClick={() => window.location.search = window.location.search.replace(/date=[^&]*/, `date=${LEGISLATURE_START}`)}
               className="btn bg-slate-700 hover:bg-slate-600 text-xs"
             >
               {t("viewStartOfLegislature")}
@@ -208,8 +207,7 @@ export default function CurrentLegislatureView({
                 })
                 .slice(0, 25)
                 .map((m) => (
-                  <button
-                    key={m.id}
+                  <button type="button"key={m.id}
                     onClick={() => m.person && onSelect(m.person.id)}
                     className="w-full text-left bg-slate-800/40 hover:bg-slate-800 rounded-md p-2 transition-colors"
                   >
