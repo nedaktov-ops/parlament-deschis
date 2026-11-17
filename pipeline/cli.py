@@ -135,8 +135,8 @@ def cmd_committees(args) -> int:
     and Membership rows to the DB.  Use ``--dry-run`` to report without
     writing.
     """
-    from .sources.client import PoliteClient
     from .sources.cdep_committee import CdepCommitteeSource, parse_committee_list
+    from .sources.client import PoliteClient
 
     db_path = args.db or "data/parlament.db"
     session = get_session(db_path)

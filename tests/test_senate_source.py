@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
-
-from pipeline.sources.senat import SenatSource, HistoricalDiscoveryError
-
+from pipeline.sources.senat import HistoricalDiscoveryError, SenatSource
 
 # ---------------------------------------------------------------------------
 # Verification that the corrected code loads and the guard class exists
