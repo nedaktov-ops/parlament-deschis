@@ -473,6 +473,9 @@ export interface SwitchLeaderboardEntry {
   first_switch: string | null;
   last_switch: string | null;
   parties: string[];
+  total_events: number;
+  tenure_years: number;
+  loyalty_score: number;
 }
 
 export interface SwitchLeaderboardResponse {

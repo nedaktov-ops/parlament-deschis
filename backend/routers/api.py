@@ -686,7 +686,12 @@ def switch_leaderboard(
 
     rows = db.execute(stmt).all()
 
-    # Collect the parties each top switcher joined, in chronological order.
+    # Collect the parties each top switcher joined, in chronological order,
+    # plus the ingredients of the loyalty score (Feature 10):
+    #   volatility = (switch_group_count / total_events) * tenure_weight
+    #   loyalty    = 100 * (1 - volatility), clipped to [0, 100]
+    # tenure_weight scales short careers down (a 6-month MP with 1 switch
+    # is noisier than a 10-year MP with the same ratio): min(1, years/4).
     leaderboard = []
     for person_id, name, count, first_switch, last_switch in rows:
         parties = db.execute(
@@ -700,6 +705,24 @@ def switch_leaderboard(
             .group_by(Organization.short_name)
             .order_by(func.count(Event.id).desc())
         ).all()
+
+        total_events = (
+            db.scalar(select(func.count(Event.id)).where(Event.person_id == person_id)) or 0
+        )
+        span = db.execute(
+            select(func.min(Event.event_date), func.max(Event.event_date)).where(
+                Event.person_id == person_id,
+                Event.event_date.is_not(None),
+            )
+        ).one()
+        tenure_years = 0.0
+        if span[0] and span[1]:
+            tenure_years = max((span[1] - span[0]).days / 365.25, 0.0)
+        tenure_weight = min(1.0, tenure_years / 4.0)
+        switch_ratio = (count / total_events) if total_events else 0.0
+        volatility = switch_ratio * tenure_weight
+        loyalty = round(max(0.0, min(100.0, 100.0 * (1.0 - volatility))), 1)
+
         leaderboard.append(
             {
                 "person_id": person_id,
@@ -708,6 +731,9 @@ def switch_leaderboard(
                 "first_switch": first_switch.isoformat() if first_switch else None,
                 "last_switch": last_switch.isoformat() if last_switch else None,
                 "parties": [p for (p,) in parties],
+                "total_events": total_events,
+                "tenure_years": round(tenure_years, 1),
+                "loyalty_score": loyalty,
             }
         )
 

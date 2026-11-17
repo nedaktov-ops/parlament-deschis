@@ -102,6 +102,9 @@ export default function SwitchLeaderboard() {
                 <th className="px-4 py-3 text-right text-sm font-medium text-slate-300">
                   {t("leaderboard.col.switches", "Switches")}
                 </th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                  {t("leaderboard.col.loyalty", "Loyalty")}
+                </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                   {t("leaderboard.col.parties", "Parties joined")}
                 </th>
@@ -130,6 +133,23 @@ export default function SwitchLeaderboard() {
                   <td className="px-4 py-3 text-right">
                     <span className="inline-block bg-amber-900/40 text-amber-300 px-2 py-1 rounded text-sm font-semibold">
                       {row.switch_count}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <span
+                      className={`inline-block px-2 py-1 rounded text-sm font-semibold ${
+                        row.loyalty_score >= 70
+                          ? "bg-emerald-900/40 text-emerald-300"
+                          : row.loyalty_score >= 40
+                            ? "bg-amber-900/40 text-amber-300"
+                            : "bg-red-900/40 text-red-300"
+                      }`}
+                      title={t(
+                        "leaderboard.loyalty.hint",
+                        "100 × (1 − switches/events × tenure weight); 100 = never switched",
+                      )}
+                    >
+                      {row.loyalty_score}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-slate-400 text-sm">
@@ -162,6 +182,12 @@ export default function SwitchLeaderboard() {
           {t(
             "leaderboard.methodology.desc",
             "A switch is one observed switch_group event between two parliamentary groups. Counts come from cdep.ro and senat.ro dated group ledgers. Unaffiliated periods (NEAFILIATI) are counted as a destination group.",
+          )}
+        </p>
+        <p className="mt-2">
+          {t(
+            "leaderboard.methodology.loyalty",
+            "Loyalty = 100 × (1 − (switches ÷ total events) × tenure weight), where tenure weight = min(1, career years ÷ 4). 100 means no observed switch in the record.",
           )}
         </p>
         <p className="mt-2">
