@@ -13,10 +13,44 @@ import tempfile
 import time
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote
-from urllib.request import Request, urlopen
+from urllib.parse import quote, urlsplit
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 logger = logging.getLogger(__name__)
+
+# Only GitHub's own hosts may serve the dataset. The release API supplies the
+# asset URL, so trusting it blindly would be SSRF; GitHub redirects asset
+# downloads from api.github.com to objects.githubusercontent.com.
+ALLOWED_ASSET_HOSTS = frozenset({"api.github.com", "objects.githubusercontent.com"})
+
+
+class UnsafeRedirectError(RuntimeError):
+    """Raised when a redirect leaves the GitHub-controlled asset hosts."""
+
+
+class _SafeRedirectHandler(HTTPRedirectHandler):
+    """Follow redirects, but never forward Authorization to another host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if redirected is None:
+            return None
+        new_host = (urlsplit(newurl).hostname or "").lower()
+        if new_host not in ALLOWED_ASSET_HOSTS:
+            raise UnsafeRedirectError(f"refusing redirect to disallowed host: {new_host!r}")
+        original_host = (urlsplit(req.full_url).hostname or "").lower()
+        if original_host != new_host:
+            redirected.remove_header("Authorization")
+        return redirected
+
+
+_OPENER = build_opener(_SafeRedirectHandler())
+
+
+def urlopen(request: Request, *, timeout: int):
+    """Open a request through the allowlisting, auth-stripping opener."""
+    return _OPENER.open(request, timeout=timeout)
+
 
 _RETRYABLE_EXCEPTIONS = (URLError, HTTPError, socket.timeout, ConnectionError, TimeoutError)
 
@@ -85,6 +119,12 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _validate_asset_url(url: str) -> None:
+    host = (urlsplit(url).hostname or "").lower()
+    if host not in ALLOWED_ASSET_HOSTS:
+        raise RuntimeError(f"refusing dataset download from untrusted host: {host!r}")
+
+
 def download_dataset(
     destination: Path,
     *,
@@ -119,6 +159,7 @@ def download_dataset(
     ):
         raise RuntimeError(f"Dataset release {tag} has no valid SHA-256 asset digest")
 
+    _validate_asset_url(asset["url"])
     asset_request = Request(
         asset["url"],
         headers={

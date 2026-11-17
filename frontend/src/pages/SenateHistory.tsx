@@ -83,20 +83,20 @@ export default function SenateHistory() {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("senate.history", "Senate Historical Coverage")}>
         <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
           <thead className="bg-slate-700">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+              <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                 {t("senate.history.legislature", "Legislature")}
               </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+              <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                 {t("senate.history.period", "Period")}
               </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+              <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                 {t("senate.history.completeness", "Completeness")}
               </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+              <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                 {t("senate.history.notes", "Notes")}
               </th>
             </tr>
@@ -104,7 +104,7 @@ export default function SenateHistory() {
           <tbody className="divide-y divide-slate-700">
             {allRows.map((row: CoverageRow) => (
               <tr key={`${row.chamber}-${row.legislature}`} className="hover:bg-slate-700/50">
-                <td className="px-4 py-3 text-slate-200">{row.legislature ?? "—"}</td>
+                <th scope="row" className="px-4 py-3 text-slate-200 font-normal text-left">{row.legislature ?? "—"}</th>
                 <td className="px-4 py-3 text-slate-300">
                   {formatDate(row.period_start)} — {formatDate(row.period_end)}
                 </td>

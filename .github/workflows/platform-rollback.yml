@@ -143,3 +143,22 @@ jobs:
           fi
           jq -r '"rollback deploy: \(.id) status=\(.status) trigger=\(.trigger // "-")"' /tmp/render-rollback.json
           echo "WARNING: Render auto-deploy remains enabled; a later push can redeploy over this rollback."
+
+      - name: Dry-run smoke test (read-only)
+        if: inputs.dry_run == 'true'
+        run: |
+          set -euo pipefail
+          render_code=$(curl -sS -o /tmp/rollback-render-health.json -w '%{http_code}' --max-time 30 \
+            https://parlament-deschis.onrender.com/api/health)
+          echo "Render /api/health HTTP ${render_code}"
+          jq -r '"release=\(.dataset.release_tag // "-") status=\(.status // "-") persons=\(.database.persons // "-")"' \
+            /tmp/rollback-render-health.json || cat /tmp/rollback-render-health.json
+          test "${render_code}" = "200"
+
+          vercel_code=$(curl -sS -o /tmp/rollback-vercel-index.html -w '%{http_code}' --max-time 30 \
+            https://parlament-deschis.vercel.app/)
+          echo "Vercel frontend HTTP ${vercel_code}"
+          grep -q '<div id="root">' /tmp/rollback-vercel-index.html
+          test "${vercel_code}" = "200"
+
+          echo "Dry-run smoke test passed: production is healthy. No rollback was performed."

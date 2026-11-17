@@ -95,29 +95,29 @@ export default function SwitchLeaderboard() {
       )}
 
       {rows.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("leaderboard.title", "Party Switching Leaderboard")}>
           <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
             <thead className="bg-slate-700">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                   #
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                   {t("leaderboard.col.name", "MP")}
                 </th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
                   {t("leaderboard.col.switches", "Switches")}
                 </th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
                   {t("leaderboard.col.loyalty", "Loyalty")}
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                   {t("leaderboard.col.parties", "Parties joined")}
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                   {t("leaderboard.col.first", "First")}
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                   {t("leaderboard.col.last", "Last")}
                 </th>
               </tr>
@@ -125,7 +125,7 @@ export default function SwitchLeaderboard() {
             <tbody className="divide-y divide-slate-700">
               {rows.map((row: SwitchLeaderboardEntry, index: number) => (
                 <tr key={row.person_id} className="hover:bg-slate-700/50">
-                  <td className="px-4 py-3 text-slate-500">{index + 1}</td>
+                  <th scope="row" className="px-4 py-3 text-slate-500 font-normal text-left">{index + 1}</th>
                   <td className="px-4 py-3">
                     <Link
                       to="/person/$id"

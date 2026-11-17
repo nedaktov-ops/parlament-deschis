@@ -1,8 +1,10 @@
 # Data Completeness Recovery — Action Plan
 
-Status: **in progress**. Production remains pinned to `data-20261115-T203142`.
-No data release is published by this plan until every gate below is green and the
-impact report on a copy database shows no regression.
+> **Current-state banner (2026-11-17).** This is the historical recovery plan, captured 2026-11-15/16. Its release tag, counts, "in progress" status and evidence rows are as-of-that-date records, not the shipped state. The release pinned today in `data/latest-release.txt` is `data-20261117-T060923` (3,388 persons / 7,358 memberships, 26 committees, 142 switch waves). The E1 baseline counts below are explicitly historical evidence. Do not read this plan as current status.
+
+Status (as of 2026-11-15/16): **in progress**. Production was pinned to `data-20261115-T203142`.
+No data release was to be published by this plan until every gate below was green and the
+impact report on a copy database showed no regression.
 
 ## 1. Why this plan exists
 
@@ -14,7 +16,7 @@ plan is based on live-source evidence, not assumptions.
 
 | # | Assumption | Live evidence | Verdict |
 | --- | --- | --- | --- |
-| E1 | The published dataset contains committee organisations/memberships | Release `data-20261115-T203142` has only `group` and `party` organisations; old and new releases have identical row counts (3381 persons, 86 orgs, 6623 memberships, 5273 mandates, 7429 events) | **False** |
+| E1 | The published dataset contains committee organisations/memberships | *(historical evidence, 2026-11-15/16)* Release `data-20261115-T203142` had only `group` and `party` organisations; old and new releases had identical row counts (3381 persons, 86 orgs, 6623 memberships, 5273 mandates, 7429 events) | **False** |
 | E2 | Committee listing parsing works | `parse_committee_list` returns 0 on a live page with 26 `idc` links; the parser searches for `</a>` inside the opening tag | **Bug proven** |
 | E3 | The committee listing is per-legislature | Live counts: 1990 = 18, 2000 = 19, 2012 = 22, 2024 = 26 committees; 1990 uses different `idc` values (51, 52) | **True** |
 | E4 | Only the list parser is broken | `parse_committee_ledger` returns 0 current / 0 former on live pages; live links are `structura2015.mp?idm=`, role dates are plain text after `<br>`, committee name is the third `<h1>` | **False — ledger parser is broken too** |
@@ -56,7 +58,7 @@ plan is based on live-source evidence, not assumptions.
   proven safe. A copy-DB impact report is required first.
 - **D4 — No publish until parity.** The release is only published after parser
   tests, the audit gate, an API parity report on a copy DB, and checksum
-  verification. Production stays on `data-20261115-T203142` until then.
+  verification. Production stayed on `data-20261115-T203142` until then *(historical; current pin is `data-20261117-T060923` — see banner)*.
 
 ## 4. Work breakdown (subagent recipes)
 

@@ -80,20 +80,20 @@ export default function Coalitions() {
             {t("coalitions.noBreakups", "No coalition breakups recorded.")}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("coalitions.breakups", "Coalition breakups")}>
             <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
               <thead className="bg-slate-700">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                  <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                     {t("coalitions.col.event", "Event")}
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                  <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                     {t("coalitions.col.date", "Date")}
                   </th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                  <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
                     {t("coalitions.col.switches", "Switches in wave")}
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                  <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                     {t("coalitions.col.since", "Since prior formation")}
                   </th>
                 </tr>
@@ -101,7 +101,7 @@ export default function Coalitions() {
               <tbody className="divide-y divide-slate-700">
                 {spans.map(({ breakup, formation, days }) => (
                   <tr key={breakup.waveId} className="hover:bg-slate-700/50">
-                    <td className="px-4 py-3 text-slate-200">{breakup.name}</td>
+                    <th scope="row" className="px-4 py-3 text-slate-200 font-normal text-left">{breakup.name}</th>
                     <td className="px-4 py-3 text-slate-300">{breakup.date}</td>
                     <td className="px-4 py-3 text-right">
                       <span className="bg-amber-900/40 text-amber-300 px-2 py-0.5 rounded text-sm">

@@ -77,23 +77,23 @@ export default function Demographics() {
       )}
 
       {rows.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("demographics.title", "Demographics: Age per Party")}>
           <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
             <thead className="bg-slate-700">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                   {t("demographics.col.party", "Party")}
                 </th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
                   {t("demographics.col.mps", "MPs with birth date")}
                 </th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
                   {t("demographics.col.avg", "Average age")}
                 </th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
                   {t("demographics.col.median", "Median age")}
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                   {t("demographics.col.dist", "Distribution")}
                 </th>
               </tr>
@@ -103,9 +103,9 @@ export default function Demographics() {
                 const width = ((row.avg_age - minAge) / span) * 100;
                 return (
                   <tr key={row.party} className="hover:bg-slate-700/50">
-                    <td className="px-4 py-3 text-slate-200 font-medium">
+                    <th scope="row" className="px-4 py-3 text-slate-200 font-medium text-left">
                       {row.party}
-                    </td>
+                    </th>
                     <td className="px-4 py-3 text-right text-slate-300">
                       {row.mps_with_birth_dates}
                     </td>

@@ -30,7 +30,7 @@ The denominator is **members at risk**: distinct people who held a group seat in
 
 ## Data: real, source-cited, with known limitations
 
-- **3,381 persons**, **6,623 memberships** (100% carry source URL + SHA-256 evidence), **7,429 events**, **1,217 switches** across all 20 scopes.
+- **3,388 persons**, **7,358 memberships** (100% carry source URL + SHA-256 evidence), **7,429 events**, **1,217 switches** across all 20 scopes. Counts are from the release pinned in `data/latest-release.txt` (currently `data-20261117-T060923`).
 - Primary source: `cdep.ro` — group ledgers (`structura2015.gp`) publish dated membership intervals ("Membru din" / "până în"); MP profiles (`structura2015.mp`) link every mandate a person ever held (`idm` is per-mandate, so identity is resolved via the mandate graph, never by name).
 - The group index **omits** groups that no longer exist (e.g. the 2016–2020 Deputies ALDE group). The collector probes the id space to find them: **15 hidden groups across 10 scopes**.
 - The alphabetical roster (`structura2015.de?par=A`) is a second view of the same data; the three views are reconciled against each other (group page vs. index count vs. roster). **141 of 143 groups reconcile exactly**; the 2 exceptions are documented source inconsistencies.

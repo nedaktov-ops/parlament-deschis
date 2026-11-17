@@ -5,6 +5,19 @@ plus configuration, CI and deployment. Each finding is backed by a reproduction 
 sources or from the repository itself. Severity is judged by one question only: **does this defect make
 the published statistics about traseism wrong?**
 
+## Status update — 2026-11-17 (current)
+
+The findings below are the 2026-11-13 baseline. Two of them are now **resolved** and must not be read
+as current defects:
+
+- §2.5 "derive_committee_control is a stub returning `0`" — **resolved**: `pipeline/analytics.py::derive_committee_control`
+  now derives per-party chair counts from dated `role='presedinte'` committee memberships (26 chair rows,
+  26 committees in the shipped release `data-20261117-T060923`).
+- §3 "`GET /api/committees` returns `[]`" — **resolved**: the route now returns committees with active
+  dated memberships; `/api/analytics/committee-control` is served and the corpus holds 142 switch waves.
+
+See `docs/REMEDIATION-STRATEGY.md` for the active reference.
+
 ## Status update — 2026-11-14
 
 This document records the initial audit baseline; its historical “open” labels below are not a current
@@ -139,7 +152,7 @@ the **undated** `Partid` column — the tech evaluation concluded group switches
 `GET /api/analytics/waves/recompute` recomputes waves and `GET /api/admin/poll` triggers collection.
 Both mutate state, are not idempotent and can be triggered by a crawler.
 
-### 2.5 `derive_committee_control` is a stub returning `0`
+### 2.5 `derive_committee_control` is a stub returning `0` *(resolved 2026-11-17 — see status update above)*
 It is exposed as if it were an analysis.
 
 ### 2.6 `derive_org_events` dates group renames to the founding date
@@ -156,7 +169,7 @@ It is exposed as if it were an analysis.
 | `scripts/` is empty | the verification entry point referenced in the docs does not exist |
 | `frontend/dist` is gitignored | a fresh clone has no SPA; the backend serves `FRONTEND_DIST`, so the UI 404s unless a build step is defined |
 | No data build step | there is no command that produces the production database from the live sources |
-| `GET /api/committees` returns `[]` | honest, but the endpoint advertises a capability that does not exist |
+| `GET /api/committees` returns `[]` *(resolved 2026-11-17 — see status update above)* | honest, but the endpoint advertises a capability that does not exist |
 
 ---
 

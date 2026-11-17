@@ -57,7 +57,7 @@ export default function CitationPopover({ items }: { items: EvidenceItem[] }) {
         <div className="absolute right-0 z-50 mt-1 w-72 card p-3 text-left shadow-xl">
           <div className="text-xs font-semibold text-slate-300 mb-2">{t("citations")}</div>
           <div className="space-y-3">
-            {items.map((ev) => (
+            {items.map((ev, i) => (
               <div key={ev.id} className="border-l-2 border-slate-600 pl-2">
                 <div className="flex items-center gap-2 text-xs">
                   <span className="font-medium text-emerald-400">
@@ -77,6 +77,9 @@ export default function CitationPopover({ items }: { items: EvidenceItem[] }) {
                       className="text-xs text-sky-400 hover:underline"
                     >
                       {t("viewOriginal")} ↗
+                      <span className="sr-only">
+                        {ev.observed_at ? ` (${ev.observed_at.slice(0, 10)})` : ` (${i + 1})`}
+                      </span>
                     </a>
                   )}
                   {ev.snapshot_url && (
@@ -87,6 +90,9 @@ export default function CitationPopover({ items }: { items: EvidenceItem[] }) {
                       className="text-xs text-slate-400 hover:underline"
                     >
                       {t("viewArchive")} ↗
+                      <span className="sr-only">
+                        {ev.observed_at ? ` (${ev.observed_at.slice(0, 10)})` : ` (${i + 1})`}
+                      </span>
                     </a>
                   )}
                 </div>

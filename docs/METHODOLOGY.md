@@ -489,11 +489,11 @@ Interactive schema explorer available at `GET /graphql` (Strawberry default).
 
 | Domain | Gap | Reason | Impact |
 | --- | --- | --- | --- |
-| **Senate historical (1990–2020)** | No ledger publications discoverable via sitemap; only 2024 legislature available. | Source unavailable. | Senate coverage `none` pre-2024. Badge shows `none`. |
+| **Senate historical ingest (1990–2020)** | Discovery is fixed and guarded: 128 GUIDs for 1990, 134 for 2024 — but profile ingest is not wired into `build-corpus`. | Deferred on **identity risk**, not source unavailability: 127/128 name overlap for 1990 and 0 existing `senat_guid` identifiers. | Name overlap is not a verified identity match; do not badge pre-2024 profiles as ingested. See `docs/DATA-COMPLETENESS-RECOVERY.md`. |
 | **Voting records** | No roll-call or vote publications found. | Source unavailable. | No whip compliance / voting alignment analysis. |
 | **Asset declarations pre-2020** | PDFs not published / not discoverable. | Source unavailable. | Asset extraction only for 2020, 2024. |
-| **Committee chairs** | Chair names not published in structured form. | Source gap. | Committee control index not yet computed. |
-| **Wikidata birth dates** | ~4% of MPs have birth dates via reconciliation. | Low match rate. | Generational shift limited to ~3 parties. |
+| **Committee chairs** | Resolved: dated chair roles are ingested from cdep.ro committee ledgers. | 26 committees / 26 `role='presedinte'` rows in the shipped release. | Committee control is now computed by `derive_committee_control`; 142 switch waves stored. Former gap, not current. |
+| **Birth-date coverage** | 3,113 of 3,388 persons (92%) have `birth_date`. | Sourced from cdep.ro committee ledgers 1990–2024, not the ~4% Wikidata reconciliation rate of the earlier spec. | Generational shift is available across parties; ~275 persons still lack a sourced date. |
 | **Party genealogy pre-1990** | Pre-1990 parties not in scope. | Scope boundary. | Genealogy starts at 1990. |
 
 ---

@@ -20,7 +20,7 @@ function MemberRow({ member }: { member: CommitteeMember }) {
   const { t } = useTranslation();
   return (
     <tr className="hover:bg-slate-700/40">
-      <td className="px-3 py-2">
+      <th scope="row" className="px-3 py-2 font-normal text-left">
         <Link
           to="/person/$id"
           params={{ id: member.person_id }}
@@ -29,7 +29,7 @@ function MemberRow({ member }: { member: CommitteeMember }) {
         >
           {member.name}
         </Link>
-      </td>
+      </th>
       <td className="px-3 py-2 text-slate-400 text-sm">{member.group ?? "—"}</td>
       <td className="px-3 py-2 text-slate-400 text-sm">{member.role ?? "—"}</td>
       <td className="px-3 py-2 text-slate-400 text-sm">
@@ -90,7 +90,7 @@ function CommitteeCard({ committee }: { committee: CommitteeListItem }) {
       </button>
 
       {open && (
-        <div className="border-t border-slate-700 overflow-x-auto">
+        <div className="border-t border-slate-700 overflow-x-auto" tabIndex={0} role="region" aria-label={committee.name}>
           {members.isError && (
             <div className="px-4 py-3 text-red-400 text-sm">
               {t("committees.loadError", "Failed to load members.")}
@@ -100,22 +100,22 @@ function CommitteeCard({ committee }: { committee: CommitteeListItem }) {
             <table className="min-w-full text-sm">
               <thead className="bg-slate-700/60">
                 <tr>
-                  <th className="px-3 py-2 text-left text-slate-300 font-medium">
+                  <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">
                     {t("committees.col.member", "Member")}
                   </th>
-                  <th className="px-3 py-2 text-left text-slate-300 font-medium">
+                  <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">
                     {t("committees.col.group", "Group")}
                   </th>
-                  <th className="px-3 py-2 text-left text-slate-300 font-medium">
+                  <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">
                     {t("committees.col.role", "Role")}
                   </th>
-                  <th className="px-3 py-2 text-left text-slate-300 font-medium">
+                  <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">
                     {t("committees.col.joined", "Joined")}
                   </th>
-                  <th className="px-3 py-2 text-left text-slate-300 font-medium">
+                  <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">
                     {t("committees.col.left", "Left")}
                   </th>
-                  <th className="px-3 py-2 text-left text-slate-300 font-medium">
+                  <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">
                     {t("committees.col.status", "Status")}
                   </th>
                 </tr>
@@ -214,16 +214,16 @@ export default function Committees() {
             <table className="min-w-full text-sm mt-3">
               <thead className="bg-slate-700/60">
                 <tr>
-                  <th className="px-3 py-2 text-left text-slate-300 font-medium">
+                  <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">
                     {t("control.col.committee", "Committee")}
                   </th>
-                  <th className="px-3 py-2 text-left text-slate-300 font-medium">
+                  <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">
                     {t("control.col.chair", "Chair")}
                   </th>
-                  <th className="px-3 py-2 text-left text-slate-300 font-medium">
+                  <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">
                     {t("control.col.party", "Party")}
                   </th>
-                  <th className="px-3 py-2 text-left text-slate-300 font-medium">
+                  <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">
                     {t("control.col.since", "Since")}
                   </th>
                 </tr>
@@ -231,7 +231,7 @@ export default function Committees() {
               <tbody className="divide-y divide-slate-700/60">
                 {controlData.chairs.map((c) => (
                   <tr key={c.committee_id} className="hover:bg-slate-700/40">
-                    <td className="px-3 py-2 text-slate-300">{c.committee}</td>
+                    <th scope="row" className="px-3 py-2 text-slate-300 font-normal text-left">{c.committee}</th>
                     <td className="px-3 py-2">
                       <Link
                         to="/person/$id"
