@@ -5,6 +5,7 @@ import { Link } from "@tanstack/react-router";
 import {
   committees,
   committeeMembers,
+  committeeControl,
   type CommitteeListItem,
   type CommitteeMember,
 } from "../api/client";
@@ -146,9 +147,16 @@ export default function Committees() {
     queryFn: () => committees(),
   });
 
+  const control = useQuery({
+    queryKey: ["committee-control"],
+    queryFn: () => committeeControl(),
+  });
+
   const rows = (list.data ?? []).filter(
     (c) => !chamber || c.chamber === chamber,
   );
+
+  const controlData = control.data?.status === "ok" ? control.data.data : null;
 
   return (
     <div className="p-6">
@@ -161,6 +169,94 @@ export default function Committees() {
           "Which committees does your MP serve on, and when did they join or leave? Data comes from the official cdep.ro committee ledgers.",
         )}
       </p>
+
+      {/* Feature 5: Committee Control Index */}
+      {controlData && controlData.total_committees > 0 && (
+        <section
+          aria-label={t("control.title", "Committee control index")}
+          className="mb-8 bg-slate-800/60 rounded-lg p-4"
+        >
+          <h2 className="text-lg font-semibold text-slate-100 mb-1">
+            {t("control.title", "Committee Control Index")}
+          </h2>
+          <p className="text-slate-400 text-sm mb-4">
+            {t(
+              "control.intro",
+              "Which party chairs which committees ({{count}} committees, as of {{date}}).",
+              { count: controlData.total_committees, date: controlData.as_of },
+            )}
+          </p>
+          <div className="space-y-2 mb-4">
+            {controlData.parties.map((p) => (
+              <div key={p.party} className="flex items-center gap-3">
+                <span className="w-24 text-sm text-slate-300 shrink-0">
+                  {p.party}
+                </span>
+                <div className="bg-slate-700 rounded-full h-4 flex-1 min-w-[120px]">
+                  <div
+                    className="bg-sky-500 rounded-full h-4"
+                    style={{ width: `${p.share_pct}%` }}
+                    title={`${p.chairs} / ${controlData.total_committees}`}
+                  />
+                </div>
+                <span className="w-20 text-sm text-slate-400 text-right shrink-0">
+                  {p.chairs} ({p.share_pct}%)
+                </span>
+              </div>
+            ))}
+          </div>
+          <details>
+            <summary className="text-sm text-sky-400 cursor-pointer hover:text-sky-300">
+              {t("control.showChairs", "Show all chairs →")}
+            </summary>
+            <table className="min-w-full text-sm mt-3">
+              <thead className="bg-slate-700/60">
+                <tr>
+                  <th className="px-3 py-2 text-left text-slate-300 font-medium">
+                    {t("control.col.committee", "Committee")}
+                  </th>
+                  <th className="px-3 py-2 text-left text-slate-300 font-medium">
+                    {t("control.col.chair", "Chair")}
+                  </th>
+                  <th className="px-3 py-2 text-left text-slate-300 font-medium">
+                    {t("control.col.party", "Party")}
+                  </th>
+                  <th className="px-3 py-2 text-left text-slate-300 font-medium">
+                    {t("control.col.since", "Since")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700/60">
+                {controlData.chairs.map((c) => (
+                  <tr key={c.committee_id} className="hover:bg-slate-700/40">
+                    <td className="px-3 py-2 text-slate-300">{c.committee}</td>
+                    <td className="px-3 py-2">
+                      <Link
+                        to="/person/$id"
+                        params={{ id: c.chair_person_id }}
+                        search={{ date: localISODate() }}
+                        className="text-sky-400 hover:text-sky-300 hover:underline"
+                      >
+                        {c.chair}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2 text-slate-400">{c.party}</td>
+                    <td className="px-3 py-2 text-slate-400">
+                      {c.chair_since ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </details>
+        </section>
+      )}
+
+      {control.isError && (
+        <div className="mb-6 text-amber-400 text-sm">
+          {t("control.loadError", "Committee control data unavailable.")}
+        </div>
+      )}
 
       <div className="mb-6">
         <label className="flex flex-col gap-1 text-sm text-slate-400 max-w-xs">

@@ -430,19 +430,82 @@ def derive_party_cohesion(
 def derive_committee_control(
     session: Session,
     legislature: str | None = None,
-) -> None:
-    """Return no result until source-backed committee chair data is available."""
-    if legislature and not session.scalar(
-        select(KeyEvent.id)
-        .where(
-            KeyEvent.type == "legislature",
-            KeyEvent.label == legislature,
+    as_of: date | None = None,
+) -> dict:
+    """Which party chairs which committees.
+
+    Source-backed: one row per committee with ``role='presedinte'`` in the
+    dated membership ledger (cdep.ro committee ledgers). Returns per-party
+    chair counts plus the full chair list; parties with no chair are absent
+    rather than zero-filled.
+    """
+    reference = as_of or date.today()
+    stmt = (
+        select(
+            Organization.id.label("committee_id"),
+            Organization.name.label("committee_name"),
+            Organization.chamber,
+            Organization.legislature.label("org_legislature"),
+            Person.id.label("person_id"),
+            Person.canonical_name,
+            Membership.group_acronym_at_event,
+            Membership.start_date,
         )
-        .limit(1)
-    ):
-        raise ValueError(f"legislature not found: {legislature}")
-    # Committee chair data is not present in the current corpus.
-    return None
+        .select_from(Membership)
+        .join(Organization, Organization.id == Membership.org_id)
+        .join(Person, Person.id == Membership.person_id)
+        .where(
+            Organization.classification == "committee",
+            Membership.role == "presedinte",
+            # Active chair as of the reference date: open tenure or one that
+            # has not ended yet. Chairs with only an end date (former) count
+            # only when that end date is still in the future.
+            or_(
+                Membership.end_date.is_(None),
+                Membership.end_date >= reference,
+            ),
+        )
+        .order_by(Organization.name)
+    )
+    if legislature:
+        stmt = stmt.where(
+            or_(
+                Organization.legislature == legislature,
+                Membership.legislature == legislature,
+            )
+        )
+
+    chairs = []
+    by_party: dict[str, int] = {}
+    for row in session.execute(stmt):
+        party = row.group_acronym_at_event or "unknown"
+        by_party[party] = by_party.get(party, 0) + 1
+        chairs.append(
+            {
+                "committee_id": row.committee_id,
+                "committee": row.committee_name,
+                "chamber": row.chamber,
+                "chair_person_id": row.person_id,
+                "chair": row.canonical_name,
+                "party": party,
+                "chair_since": row.start_date.isoformat() if row.start_date else None,
+            }
+        )
+
+    total = len(chairs)
+    return {
+        "as_of": reference.isoformat(),
+        "total_committees": total,
+        "parties": [
+            {
+                "party": party,
+                "chairs": count,
+                "share_pct": round(100 * count / total, 1) if total else 0.0,
+            }
+            for party, count in sorted(by_party.items(), key=lambda kv: (-kv[1], kv[0]))
+        ],
+        "chairs": chairs,
+    }
 
 
 def derive_cross_chamber_careers(session: Session, as_of: date | None = None) -> int:

@@ -574,3 +574,48 @@ export function committeeMembers(
     `/committees/${encodeURIComponent(committeeId)}/members${qs}`,
   );
 }
+
+// --- Feature 5: Committee Control Index -----------------------------------
+
+export interface CommitteeControlParty {
+  party: string;
+  chairs: number;
+  share_pct: number;
+}
+
+export interface CommitteeControlChair {
+  committee_id: string;
+  committee: string;
+  chamber: string | null;
+  chair_person_id: string;
+  chair: string;
+  party: string;
+  chair_since: string | null;
+}
+
+export interface CommitteeControlData {
+  as_of: string;
+  total_committees: number;
+  parties: CommitteeControlParty[];
+  chairs: CommitteeControlChair[];
+}
+
+export interface CommitteeControlResponse {
+  status: string;
+  reason?: string;
+  data: CommitteeControlData;
+}
+
+/** Which party chairs which committees (dated, source-backed). */
+export function committeeControl(
+  legislature?: string,
+  asOf?: string,
+): Promise<CommitteeControlResponse> {
+  const params = new URLSearchParams();
+  if (legislature) params.set("legislature", legislature);
+  if (asOf) params.set("as_of", asOf);
+  const qs = params.toString();
+  return get<CommitteeControlResponse>(
+    `/analytics/committee-control${qs ? `?${qs}` : ""}`,
+  );
+}

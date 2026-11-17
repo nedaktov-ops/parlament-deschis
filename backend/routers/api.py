@@ -548,6 +548,32 @@ def get_cross_chamber(
     }
 
 
+@router.get("/analytics/committee-control")
+def get_committee_control(
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    as_of: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """Which party chairs which committees (source-backed, dated)."""
+    from pipeline.analytics import derive_committee_control
+
+    try:
+        result = derive_committee_control(
+            db,
+            legislature=legislature,
+            as_of=_parse_date(as_of, date.today()) if as_of else None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if result["total_committees"] == 0:
+        return {
+            "status": "unavailable",
+            "reason": "No dated committee chair rows in the corpus yet.",
+            "data": result,
+        }
+    return {"status": "ok", "data": result}
+
+
 @router.get("/analytics/generational-shift")
 def get_generational_shift(
     legislature: str | None = Query(None, pattern=r"^\d{4}$"),
