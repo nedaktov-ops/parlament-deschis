@@ -619,3 +619,30 @@ export function committeeControl(
     `/analytics/committee-control${qs ? `?${qs}` : ""}`,
   );
 }
+
+// --- Feature 11: Switch waves --------------------------------------------
+
+export interface SwitchWave {
+  id: string;
+  label: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  switch_count: number;
+  trigger_type: string | null;
+  trigger_event: string | null;
+  legislature: string | null;
+  chamber: string | null;
+  created_at: string | null;
+}
+
+/** Detected switch waves (bursts of affiliation change), newest first. */
+export function switchWaves(
+  chamber?: string,
+  legislature?: string,
+): Promise<SwitchWave[]> {
+  const params = new URLSearchParams();
+  if (chamber) params.set("chamber", chamber);
+  if (legislature) params.set("legislature", legislature);
+  const qs = params.toString();
+  return get<SwitchWave[]>(`/analytics/switch-waves${qs ? `?${qs}` : ""}`);
+}

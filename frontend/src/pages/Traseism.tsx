@@ -7,6 +7,7 @@ import {
   traseismOverview,
   traseismSummary,
   traseismSwitches,
+  switchWaves,
   type TraseismCoverage,
   type TraseismScope,
 } from "../api/client";
@@ -579,6 +580,82 @@ function ScopesOverview({ rows }: { rows: TraseismScope[] }) {
     </div>
   );
 }
+
+/**
+ * Feature 11: switch waves — detected bursts of affiliation change.
+ * Read-only view of /analytics/switch-waves; filtered to the active scope.
+ */
+function SwitchWavesSection({
+  chamber,
+  legislature,
+}: {
+  chamber: string;
+  legislature: string;
+}) {
+  const { t } = useTranslation();
+  const waves = useQuery({
+    queryKey: ["switch-waves", chamber, legislature],
+    queryFn: () => switchWaves(chamber, legislature),
+  });
+
+  const rows = (waves.data ?? []).slice(0, 10);
+
+  return (
+    <section className="card p-4">
+      <h2 className="font-semibold">{t("waves.title", "Switch waves")}</h2>
+      <p className="text-sm text-slate-400 mt-1 mb-3">
+        {t(
+          "waves.desc",
+          "Periods where affiliation changes clustered (30-day windows, 3+ switches). Election and coalition triggers are annotated when the corpus records them.",
+        )}
+      </p>
+      {waves.isLoading ? (
+        <div className="text-slate-500 text-sm py-4">{t("loading")}</div>
+      ) : waves.isError ? (
+        <div className="text-red-400 text-sm py-4">
+          {t("waves.error", "Failed to load waves.")}
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="text-slate-500 text-sm py-4">
+          {t("waves.empty", "No waves detected for this scope.")}
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="text-left text-slate-400 border-b border-slate-700">
+                <th className="py-2 pr-4">{t("waves.col.period", "Period")}</th>
+                <th className="py-2 pr-4 text-right">
+                  {t("waves.col.count", "Switches")}
+                </th>
+                <th className="py-2 pr-4">{t("waves.col.trigger", "Trigger")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((w) => (
+                <tr key={w.id} className="border-b border-slate-700/50">
+                  <td className="py-2 pr-4 text-slate-300">
+                    {w.start_date ?? "?"} → {w.end_date ?? "?"}
+                  </td>
+                  <td className="py-2 pr-4 text-right">
+                    <span className="bg-amber-900/40 text-amber-300 px-2 py-0.5 rounded">
+                      {w.switch_count}
+                    </span>
+                  </td>
+                  <td className="py-2 pr-4 text-slate-400">
+                    {w.trigger_type ?? "—"}
+                    {w.trigger_event ? ` (${w.trigger_event})` : ""}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function Traseism() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -803,6 +880,8 @@ export function Traseism() {
           ) : null}
 
           <SwitchLedger legislature={legislature} chamber={chamber} />
+
+          <SwitchWavesSection chamber={chamber} legislature={legislature} />
         </>
       )}
 

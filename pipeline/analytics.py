@@ -103,7 +103,7 @@ def derive_switch_waves(
     min_switches: int = 3,
 ) -> int:
     """
-    Detect switch waves by clustering switch_party events in sliding windows.
+    Detect switch waves by clustering switch events in sliding windows.
 
     Args:
         session: Database session
@@ -115,8 +115,11 @@ def derive_switch_waves(
     Returns:
         Number of newly created SwitchWave records
     """
-    # Get all switch_party events, optionally filtered
-    stmt = select(Event).where(Event.type == "switch_party")
+    # Get all switch events, optionally filtered. The corpus carries
+    # switch_group (observed parliamentary-group moves from the chambers'
+    # ledgers); derived party-level moves are switch_party. Waves cluster
+    # both, so a wave is "a burst of affiliation change" regardless of axis.
+    stmt = select(Event).where(Event.type.in_(("switch_party", "switch_group")))
     if chamber:
         stmt = stmt.where(Event.chamber == chamber)
     stmt = stmt.where(Event.event_date.is_not(None)).order_by(Event.event_date)
