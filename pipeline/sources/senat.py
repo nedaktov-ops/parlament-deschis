@@ -126,8 +126,10 @@ class SenatSource:
         yields zero GUIDs or if two requested legislatures yield identical GUID
         sets (silent wrong‑data guard).
         """
+        # Discover the year→GUID mapping exactly once: it needs a live GET,
+        # and the old code re-fetched it twice per loop iteration.
+        mapping = self._historical_legislature_labels()
         if legislatures is None:
-            mapping = self._historical_legislature_labels()
             legislatures = sorted(mapping.keys())
 
         # Per-legislature GUID sets, for the cross-legislature guard.
@@ -136,21 +138,24 @@ class SenatSource:
         all_guids: list[str] = []
 
         for leg in legislatures:
-            if leg not in self._historical_legislature_labels():
+            if leg not in mapping:
                 raise HistoricalDiscoveryError(
                     f"Legislature {leg!r} not found on FisaSenatori.aspx"
                 )
             page = self.client.get(_FISA_SENATORI)
-            vs = self._input_value(page.text, "_VIEWSTATE")
-            ev = self._input_value(page.text, "__EVENTVALIDATION")
-            leg_guid = self._historical_legislature_labels()[leg]
+            # ASP.NET hidden fields are DOUBLE-underscored (__VIEWSTATE): an
+            # exact-name lookup misses "_VIEWSTATE", empties the field, and
+            # senat.ro answers 500. Use the module constants.
+            vs = self._input_value(page.text, _VIEWSTATE_FIELD)
+            ev = self._input_value(page.text, _EVENTVALIDATION_FIELD)
+            leg_guid = mapping[leg]
 
             # Step 1: POST legislature GUID only (no search button).
             # This is the ASP.NET AutoPostBack equivalent that refreshes the
             # session dropdown.
             data = {
-                "_VIEWSTATE": vs,
-                "__EVENTVALIDATION": ev,
+                _VIEWSTATE_FIELD: vs,
+                _EVENTVALIDATION_FIELD: ev,
                 "ctl00$B_Center$ddLegislatura": leg_guid,
             }
             p1 = self.client.post(_FISA_SENATORI, data=data)
@@ -184,8 +189,8 @@ class SenatSource:
             # Step 2: For each session, POST session GUID + search.
             for sv, _sl in session_opts:
                 sdata = {
-                    "_VIEWSTATE": self._input_value(p1.text, "_VIEWSTATE"),
-                    "__EVENTVALIDATION": self._input_value(p1.text, "__EVENTVALIDATION"),
+                    _VIEWSTATE_FIELD: self._input_value(p1.text, _VIEWSTATE_FIELD),
+                    _EVENTVALIDATION_FIELD: self._input_value(p1.text, _EVENTVALIDATION_FIELD),
                     "ctl00$B_Center$ddLegislatura": leg_guid,
                     "ctl00$B_Center$ddSesiune": sv,
                     "__EVENTTARGET": "ctl00$B_Center$cmdSearch",
@@ -218,12 +223,16 @@ class SenatSource:
         leg_fingerprints: dict[str, frozenset[str]] = {}
         for leg in legislatures:
             fp = frozenset(leg_sets[leg])
-            if leg in leg_fingerprints and leg_fingerprints[leg] == fp:
-                raise HistoricalDiscoveryError(
-                    f"Legislatures {leg!r} and {next(k for k, v in leg_fingerprints.items() if v == fp)!r} "
-                    f"yield identical GUID sets — historical discovery cannot "
-                    f"separate them; this is a silent data‑corruption risk."
-                )
+            # Compare against every EARLIER legislature — the old check tested
+            # `leg in leg_fingerprints` before inserting, so each key was only
+            # ever compared with itself and the guard never fired.
+            for other, other_fp in leg_fingerprints.items():
+                if other_fp == fp:
+                    raise HistoricalDiscoveryError(
+                        f"Legislatures {leg!r} and {other!r} "
+                        f"yield identical GUID sets — historical discovery cannot "
+                        f"separate them; this is a silent data‑corruption risk."
+                    )
             leg_fingerprints[leg] = fp
 
         return all_guids
