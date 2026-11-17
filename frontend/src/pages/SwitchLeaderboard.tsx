@@ -79,6 +79,12 @@ export default function SwitchLeaderboard() {
         </label>
       </div>
 
+      {legislature && (
+        <p role="note" className="mb-4 text-amber-300 text-sm">
+          {t("leaderboard.scope.note")}
+        </p>
+      )}
+
       {leaderboard.isLoading && (
         <div className="text-slate-500">{t("loading", "Loading…")}</div>
       )}
@@ -89,29 +95,29 @@ export default function SwitchLeaderboard() {
       )}
 
       {rows.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("leaderboard.title", "Party Switching Leaderboard")}>
           <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
             <thead className="bg-slate-700">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                   #
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                   {t("leaderboard.col.name", "MP")}
                 </th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
                   {t("leaderboard.col.switches", "Switches")}
                 </th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
                   {t("leaderboard.col.loyalty", "Loyalty")}
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                   {t("leaderboard.col.parties", "Parties joined")}
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                   {t("leaderboard.col.first", "First")}
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                   {t("leaderboard.col.last", "Last")}
                 </th>
               </tr>
@@ -119,7 +125,7 @@ export default function SwitchLeaderboard() {
             <tbody className="divide-y divide-slate-700">
               {rows.map((row: SwitchLeaderboardEntry, index: number) => (
                 <tr key={row.person_id} className="hover:bg-slate-700/50">
-                  <td className="px-4 py-3 text-slate-500">{index + 1}</td>
+                  <th scope="row" className="px-4 py-3 text-slate-500 font-normal text-left">{index + 1}</th>
                   <td className="px-4 py-3">
                     <Link
                       to="/person/$id"
@@ -144,10 +150,11 @@ export default function SwitchLeaderboard() {
                             ? "bg-amber-900/40 text-amber-300"
                             : "bg-red-900/40 text-red-300"
                       }`}
-                      title={t(
-                        "leaderboard.loyalty.hint",
-                        "100 × (1 − switches/events × tenure weight); 100 = never switched",
-                      )}
+                      title={t("leaderboard.loyalty.hint", {
+                        switches: row.switch_count,
+                        events: row.total_events,
+                        years: row.tenure_years,
+                      })}
                     >
                       {row.loyalty_score}
                     </span>
@@ -189,6 +196,9 @@ export default function SwitchLeaderboard() {
             "leaderboard.methodology.loyalty",
             "Loyalty = 100 × (1 − (switches ÷ total events) × tenure weight), where tenure weight = min(1, career years ÷ 4). 100 means no observed switch in the record.",
           )}
+        </p>
+        <p className="mt-2">
+          {t("leaderboard.scope.career")}
         </p>
         <p className="mt-2">
           <a

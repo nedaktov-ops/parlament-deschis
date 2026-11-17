@@ -221,16 +221,17 @@ export default function MpComparison() {
       )}
 
       {chosen.length >= 2 && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("mpc.title", "MP Comparison")}>
           <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
             <thead className="bg-slate-700">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                   {t("mpc.col.metric", "Metric")}
                 </th>
                 {chosen.map((c) => (
                   <th
                     key={c.id}
+                    scope="col"
                     className="px-4 py-3 text-center text-sm font-semibold text-slate-100"
                   >
                     {c.name}
@@ -241,7 +242,7 @@ export default function MpComparison() {
             <tbody className="divide-y divide-slate-700">
               {rows.map((row) => (
                 <tr key={row.label} className="hover:bg-slate-700/50">
-                  <td className="px-4 py-3 text-slate-400">{row.label}</td>
+                  <th scope="row" className="px-4 py-3 text-slate-400 font-normal text-left">{row.label}</th>
                   {row.values.map((v, idx) => (
                     <td
                       key={idx}

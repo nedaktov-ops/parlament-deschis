@@ -175,14 +175,14 @@ export default function Report() {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="text-left text-slate-400 print:text-slate-600 border-b border-slate-700 print:border-slate-300">
-                  <th className="py-1 pr-3">{t("report.col.mp", "MP")}</th>
-                  <th className="py-1 pr-3 text-right">
+                  <th scope="col" className="py-1 pr-3">{t("report.col.mp", "MP")}</th>
+                  <th scope="col" className="py-1 pr-3 text-right">
                     {t("report.col.switches", "Switches")}
                   </th>
-                  <th className="py-1 pr-3 text-right">
+                  <th scope="col" className="py-1 pr-3 text-right">
                     {t("report.col.loyalty", "Loyalty")}
                   </th>
-                  <th className="py-1 pr-3">{t("report.col.period", "Period")}</th>
+                  <th scope="col" className="py-1 pr-3">{t("report.col.period", "Period")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -191,9 +191,9 @@ export default function Report() {
                     key={s.person_id}
                     className="border-b border-slate-700/40 print:border-slate-200"
                   >
-                    <td className="py-1 pr-3 text-slate-200 print:text-slate-900">
+                    <th scope="row" className="py-1 pr-3 text-slate-200 print:text-slate-900 font-normal text-left">
                       {s.name}
-                    </td>
+                    </th>
                     <td className="py-1 pr-3 text-right text-slate-300 print:text-slate-700">
                       {s.switches}
                     </td>
@@ -281,13 +281,13 @@ export default function Report() {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="text-left text-slate-400 print:text-slate-600 border-b border-slate-700 print:border-slate-300">
-                  <th className="py-1 pr-3">
+                  <th scope="col" className="py-1 pr-3">
                     {t("report.col.chamber", "Chamber")}
                   </th>
-                  <th className="py-1 pr-3">
+                  <th scope="col" className="py-1 pr-3">
                     {t("report.col.legislature", "Legislature")}
                   </th>
-                  <th className="py-1 pr-3">
+                  <th scope="col" className="py-1 pr-3">
                     {t("report.col.completeness", "Completeness")}
                   </th>
                 </tr>
@@ -298,9 +298,9 @@ export default function Report() {
                     key={`${c.chamber}-${c.legislature}`}
                     className="border-b border-slate-700/40 print:border-slate-200"
                   >
-                    <td className="py-1 pr-3 text-slate-300 print:text-slate-700">
+                    <th scope="row" className="py-1 pr-3 text-slate-300 print:text-slate-700 font-normal text-left">
                       {c.chamber}
-                    </td>
+                    </th>
                     <td className="py-1 pr-3 text-slate-300 print:text-slate-700">
                       {c.legislature ?? "—"}
                     </td>
@@ -318,10 +318,7 @@ export default function Report() {
           </section>
 
           <p className="mt-6 text-xs text-slate-500 print:text-slate-600">
-            {t(
-              "report.footer",
-              "Source: parlament-deschis corpus — cdep.ro and senat.ro dated parliamentary ledgers. Every figure above is an observed count; gaps are stated, never filled with estimates. CC-BY 4.0.",
-            )}
+            {t("report.footer")}
           </p>
         </>
       )}

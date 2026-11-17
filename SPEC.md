@@ -1,5 +1,7 @@
 # 10x Sprint Specification — Detailed Acceptance Criteria
 
+> **Current-state banner (2026-11-17).** This is the original sprint specification, retained as a historical record; its figures are as observed at the time, not the shipped state. The release pinned in `data/latest-release.txt` (`data-20261117-T060923`) carries **3,388 persons / 7,358 memberships**, **3,113/3,388 persons with a birth date** (92%), **26 committees** and **142 switch waves**. Senate historical *discovery* was later fixed (128 GUIDs for 1990, 134 for 2024); ingest is deferred on identity/name-overlap risk, not source unavailability — see `docs/DATA-COMPLETENESS-RECOVERY.md`. Party-genealogy columns exist but hold **0 links** (declared gap below). Active work is tracked in `docs/REMEDIATION-STRATEGY.md`.
+
 **Branch Strategy:**
 - `main` — production-ready
 - `wip/week-1-data` — Week 1 data completeness
@@ -25,7 +27,7 @@
 - [x] Auto-accept threshold ≥95, review queue 80-95 (stored in `wikidata_review` table), reject <80
 - [x] Output: `Person.wikidata_qid`, `Person.birth_date` (gender, photo_url pending DB migration)
 - [x] CLI: `parlament enrich --limit N --dry-run --legislature YYYY` → `--apply`
-- [x] Results: 97 persons enriched (4.9% of 1,978), 79 with birth dates
+- [x] Results: 97 persons enriched (4.9% of 1,978), 79 with birth dates *(historical Wikidata-enrichment result; current coverage is 3,113/3,388 from cdep.ro ledgers — see banner)*
 - [ ] Tests: mock API response, verify cache hit/miss, verify scoring logic
 
 ### Task 1.2: Explicit Party Memberships Backfill ✅ DONE
@@ -70,7 +72,7 @@
 - [x] Update `docs/METHODOLOGY.md` with explicit gap statement (see docs/RESEARCH.md)
 - [ ] Coverage badge in UI: "Senate 1990-2020: data incomplete" (UI not updated yet)
 - [x] No fake data inserted
-- [x] Documented in docs/RESEARCH.md: Senate historical data not discoverable via sitemap; only 2024 legislature available
+- [x] Documented in docs/RESEARCH.md: Senate historical data not discoverable via sitemap; only 2024 legislature available *(superseded — discovery now returns 128 GUIDs for 1990 and 134 for 2024; see banner and `docs/DATA-COMPLETENESS-RECOVERY.md`)*
 
 ---
 
@@ -184,7 +186,8 @@
 ### Task 4.2: Party Genealogy Manual Population
 **Acceptance Criteria:**
 - [x] `Organization.previous_party_id`, `successor_party_id` columns added
-- [x] Populated: PSD←FDSN←FSN, PNL splits (PNTCD, PNL-CD), POT→UPR, ALDE→USR, UDMR continuous
+- [~] **Declared gap — schema only, not populated:** planned links PSD←FDSN←FSN, PNL splits (PNTCD, PNL-CD), POT→UPR, ALDE→USR, UDMR continuous. The shipped DB has **0 non-null** `previous_party_id`/`successor_party_id` values; no genealogy data was loaded. Never present this as populated.
+- [ ] Populate the declared genealogy links from sourced party history (data work outstanding)
 - [ ] Party Profile shows genealogy timeline (frontend work remaining)
 
 ### Task 4.3: Documentation Updates

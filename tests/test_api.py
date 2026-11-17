@@ -284,9 +284,14 @@ def test_timeline_include_switches(api):
 
 
 def test_cache_control_isolates_health_and_writes(api):
-    """Reads may be cached; health, writes, and errors must never be."""
+    """Mutable API reads, health, writes and errors must never be cached.
+
+    P0-B: the old contract allowed a 24h CDN cache on all /api GETs, which
+    made the 60s switch-alert poll and the freshness indicator stale. Reads
+    are now no-store at the origin (and the Vercel CDN rule matches).
+    """
     read = api.client.get("/api/chamber", params={"chamber": "deputies", "as_of": "2025-01-01"})
-    assert "s-maxage=86400" in read.headers.get("cache-control", "")
+    assert "no-store" in read.headers.get("cache-control", "")
 
     live = api.client.get("/api/health/live")
     assert "no-store" in live.headers.get("cache-control", "")
@@ -696,6 +701,14 @@ def test_party_cohesion_reports_missing_switch_data(api):
 
 
 def test_generational_shift_uses_group_party_and_historical_age(api):
+    """At as_of, ages use the party of an MP's ACTIVE membership.
+
+    P3-A: a departed membership must not be counted under its old party when
+    a legislature/as_of is given. Here p1 left PSD in 2024-12 (before the
+    2025-01-14 evaluation date) and is active under PNL; p2 is active under
+    PSD but has no recorded birth date. So only PNL has a birth-dated active
+    MP — the old expectation of a PSD row encoded the exclusion bug.
+    """
     response = api.client.get(
         "/api/analytics/generational-shift",
         params={"legislature": "2024", "as_of": "2025-01-14"},
@@ -706,12 +719,6 @@ def test_generational_shift_uses_group_party_and_historical_age(api):
     assert body["data"] == [
         {
             "party": "PNL",
-            "mps_with_birth_dates": 1,
-            "avg_age": 45.0,
-            "median_age": 45,
-        },
-        {
-            "party": "PSD",
             "mps_with_birth_dates": 1,
             "avg_age": 45.0,
             "median_age": 45,
@@ -778,6 +785,73 @@ def test_analytics_wave_recompute_removes_stale_rows(api, monkeypatch):
     assert response.status_code == 200
     assert response.json()["created"] == 0
     assert api.client.get("/api/analytics/switch-waves").json() == []
+
+
+def test_analytics_waves_post_invalidates_seeded_cache(api, monkeypatch):
+    """P0-F regression: the waves POST wrote rows but never invalidated the
+    result cache, so a GET seeded before the write kept serving stale data.
+    """
+    monkeypatch.setenv("PARLAMENT_ADMIN_TOKEN", "test-token")
+    session = api.factory()
+    session.add_all(
+        [
+            Event(
+                type="switch_party",
+                person_id=api.ids.p1,
+                chamber="deputies",
+                event_date=date(2025, 1, 11),
+                dedup_key="evt:wave:invalidate:1",
+            ),
+            Event(
+                type="switch_party",
+                person_id=api.ids.p2,
+                chamber="deputies",
+                event_date=date(2025, 1, 12),
+                dedup_key="evt:wave:invalidate:2",
+            ),
+        ]
+    )
+    session.commit()
+    session.close()
+
+    path = "/api/analytics/switch-waves"
+    # Seed the cache BEFORE the write: no waves yet -> [] is cached.
+    assert api.client.get(path).json() == []
+
+    response = api.client.post(
+        "/api/analytics/waves?chamber=deputies&legislature=2024",
+        headers={"X-Admin-Token": "test-token"},
+    )
+    assert response.status_code == 200
+    assert response.json()["created"] == 1
+
+    # Fresh GET must see the new wave, not the seeded stale [].
+    assert len(api.client.get(path).json()) == 1
+
+
+def test_analytics_waves_post_calls_both_invalidators(api, monkeypatch):
+    """The waves POST must clear both the result cache and the traseism
+    overview cache, like the other admin write paths."""
+    monkeypatch.setenv("PARLAMENT_ADMIN_TOKEN", "test-token")
+    from backend.routers import api as api_router
+
+    calls = {"result": 0, "traseism": 0}
+
+    def mark_result():
+        calls["result"] += 1
+
+    def mark_traseism():
+        calls["traseism"] += 1
+
+    monkeypatch.setattr(api_router, "invalidate_result_cache", mark_result)
+    monkeypatch.setattr(api_router, "invalidate_traseism_overview_cache", mark_traseism)
+
+    response = api.client.post(
+        "/api/analytics/waves?chamber=deputies&legislature=2024",
+        headers={"X-Admin-Token": "test-token"},
+    )
+    assert response.status_code == 200
+    assert calls == {"result": 1, "traseism": 1}
 
 
 def test_movements_excludes_undated_events(api):
@@ -875,3 +949,174 @@ def test_party_profile_reports_missing_switch_data_as_unavailable(api):
     assert response.json()["switches_in"] is None
     assert response.json()["switches_out"] is None
     assert response.json()["net_change"] is None
+
+
+# --- P3-B: backend/data correctness ----------------------------------------
+
+
+def test_switch_leaderboard_scope_covers_all_loyalty_ingredients(api):
+    """P3-B: switch_count, total_events, span, parties and loyalty_score must
+    all describe the requested chamber/legislature, not the whole career."""
+    session = api.factory()
+    senate_group = Organization(
+        classification="group",
+        name="Grupul senatorilor USR",
+        short_name="USR",
+        normalized_name="grupul senatorilor usr",
+        chamber="senate",
+    )
+    session.add(senate_group)
+    session.flush()
+    # Out-of-scope events for p1 (the seeded switch_group is deputies-only and
+    # has no legislature): unscoped ingredients would include these.
+    session.add_all(
+        [
+            Event(
+                type="switch_group",
+                person_id=api.ids.p1,
+                chamber="senate",
+                legislature="2024",
+                to_org_id=senate_group.id,
+                event_date=date(2025, 3, 1),
+                dedup_key="p3b:leaderboard:senate-switch",
+            ),
+            Event(
+                type="mandate_start",
+                person_id=api.ids.p1,
+                chamber="senate",
+                legislature="2024",
+                event_date=date(2025, 4, 1),
+                dedup_key="p3b:leaderboard:senate-other",
+            ),
+        ]
+    )
+    session.commit()
+    session.close()
+
+    scoped = api.client.get(
+        "/api/analytics/switch-leaderboard", params={"chamber": "deputies"}
+    ).json()
+    assert scoped["status"] == "ok"
+    assert scoped["score_scope"] == "deputies"
+    row = next(r for r in scoped["data"] if r["person_id"] == api.ids.p1)
+    assert row["switch_count"] == 1
+    assert row["total_events"] == 1  # was 3 when ingredients were global
+    assert row["parties"] == ["PNL"]  # senate "USR" leaked in before the fix
+    assert row["last_switch"] == "2024-12-01"
+    assert row["tenure_years"] == 0.0
+
+    unscoped = api.client.get("/api/analytics/switch-leaderboard").json()
+    assert unscoped["score_scope"] == "all_chambers_all_legislatures"
+    whole_career = next(r for r in unscoped["data"] if r["person_id"] == api.ids.p1)
+    assert whole_career["total_events"] == 3
+    assert set(whole_career["parties"]) == {"PNL", "USR"}
+
+    by_leg = api.client.get(
+        "/api/analytics/switch-leaderboard", params={"legislature": "2024"}
+    ).json()
+    assert by_leg["score_scope"] == "2024"
+    leg_row = next(r for r in by_leg["data"] if r["person_id"] == api.ids.p1)
+    assert leg_row["total_events"] == 2
+    assert leg_row["parties"] == ["USR"]
+
+
+def test_persons_search_chamber_filter_applied_before_limit(api):
+    """P3-B: ?chamber=senate filters in SQL before LIMIT (with a stable ORDER
+    BY), rather than dropping rows in Python after the page was taken."""
+    session = api.factory()
+    senate_group = Organization(
+        classification="group",
+        name="Grupul senatorilor",
+        short_name="USR",
+        normalized_name="grupul senatorilor",
+        chamber="senate",
+    )
+    session.add(senate_group)
+    session.flush()
+    senator = Person(
+        canonical_name="Zoe Senatoare",
+        normalized_name="zoe senatoare",
+        sort_key="senatoare zoe",
+        match_status="unmatched",
+    )
+    session.add(senator)
+    session.flush()
+    session.add(
+        Membership(
+            person_id=senator.id,
+            org_id=senate_group.id,
+            chamber="senate",
+            legislature="2024",
+            confidence="official_ledger",
+        )
+    )
+    session.commit()
+    session.close()
+
+    response = api.client.get("/api/persons", params={"chamber": "senate", "limit": 1})
+    assert response.status_code == 200
+    people = response.json()
+    # Without the SQL pushdown the first (deputy) row is taken then dropped,
+    # returning [] even though a senator exists.
+    assert [p["id"] for p in people] == [senator.id]
+    assert people[0]["chambers"] == ["senate"]
+
+    ordered = api.client.get("/api/persons", params={"limit": 10}).json()
+    assert [p["name"] for p in ordered] == [
+        "Ion Ștefan Popescu",
+        "Maria Ionescu",
+        "Zoe Senatoare",
+    ]
+    assert [p["id"] for p in ordered] == [
+        p["id"] for p in api.client.get("/api/persons", params={"limit": 10}).json()
+    ]
+
+
+def test_export_routes_defined_once(api):
+    """P3-B: exports.py is the single source; api.py must not register shadow
+    /api/export routes that win resolution but are dead in the OpenAPI."""
+    from backend.routers import api as api_mod
+    from backend.routers import exports as exports_mod
+
+    shadowed = [r.path for r in api_mod.router.routes if "/export/" in r.path]
+    assert shadowed == [], shadowed
+    served = [r.path for r in exports_mod.router.routes if "/export/" in r.path]
+    assert {"/api/export/popolo", "/api/export/{dataset}.csv"} <= set(served)
+
+    popolo = api.client.get("/api/export/popolo", params={"chamber": "deputies"})
+    assert popolo.status_code == 200
+    assert popolo.headers["content-type"].startswith("application/json")
+    csv = api.client.get("/api/export/persons.csv", params={"chamber": "deputies"})
+    assert csv.status_code == 200
+    assert csv.headers["content-type"].startswith("text/csv")
+
+
+def test_recent_events_honours_chamber_and_legislature(api):
+    """P3-B: the frontend sends chamber/legislature on /events/recent; the
+    backend must apply them instead of silently ignoring them."""
+    session = api.factory()
+    session.add(
+        Event(
+            type="mandate_start",
+            person_id=api.ids.p1,
+            chamber="senate",
+            legislature="2024",
+            event_date=date(2025, 5, 1),
+            dedup_key="p3b:recent:senate",
+        )
+    )
+    session.commit()
+    session.close()
+
+    assert len(api.client.get("/api/events/recent").json()) == 3
+    deputies = api.client.get("/api/events/recent", params={"chamber": "deputies"}).json()
+    assert len(deputies) == 2
+    assert {e["chamber"] for e in deputies} == {"deputies"}
+    senate = api.client.get("/api/events/recent", params={"chamber": "senate"}).json()
+    assert [e["chamber"] for e in senate] == ["senate"]
+    leg = api.client.get("/api/events/recent", params={"legislature": "2024"}).json()
+    assert [e["chamber"] for e in leg] == ["senate"]
+    combined = api.client.get(
+        "/api/events/recent", params={"chamber": "deputies", "legislature": "2024"}
+    ).json()
+    assert combined == []

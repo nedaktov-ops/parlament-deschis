@@ -7,10 +7,10 @@
 
 This strategy delivers **15 transparency features** enabling voters to draw meaningful conclusions about Romanian parliamentary politics — **without** collecting every possible data point. The project has solid infrastructure (pipeline, DB, API, frontend) but its core mission was failing: users couldn't draw useful conclusions.
 
-**The core problem**: 3381 persons, 7429 events, but zero visibility into party switching, committee control, demographic distribution, or Senate historical gaps. The UI was tab-based without purpose, organized by data structure not user questions.
+**The core problem**: 3388 persons, 7429 events, but zero visibility into party switching, committee control, demographic distribution, or Senate historical gaps. The UI was tab-based without purpose, organized by data structure not user questions.
 
 **The solution**: 15 transparency features grounded in **actual available data**:
-- 3113/3381 persons have birth_date (92%) — from cdep.ro committee ledgers 1990-2024
+- 3113/3388 persons have birth_date (92%) — from cdep.ro committee ledgers 1990-2024
 - 1217 switch_group events — our pipeline, proven
 - 1217 switch events across 11 legislatures — proven data
 - 469 current MPs from 281.ro API — CC-BY 4.0, party + county + chamber
@@ -25,12 +25,12 @@ This strategy delivers **15 transparency features** enabling voters to draw mean
 
 | Metric | Value | Source |
 |--------|-------|--------|
-| Total persons | 3381 | `person` table |
-| Persons with birth_date | 3113 (92%) | `person.birth_date` from cdep.ro ledgers |
+| Total persons | 3388 | `person` table |
+| Persons with birth_date | 3113 / 3388 (92%) | `person.birth_date` from cdep.ro ledgers |
 | Persons with Wikidata QID | 0 | `wikidata_cache.db` infrastructure present |
 | Switch_group events | 1217 | `event` table, proven |
 | Total events | 7429 | `event` table |
-| Memberships | 6623 | `membership` table |
+| Memberships | 7358 | `membership` table |
 | Committees (2024) | 26 | `cdep_committee.py` parsers fixed (28/28 tests) |
 | Committees (1990) | 18 | `cdep_committee.py` parsers fixed (28/28 tests) |
 | Current MPs (281.ro API) | 469 | JSON API, CC-BY 4.0 |
@@ -50,7 +50,7 @@ This strategy delivers **15 transparency features** enabling voters to draw mean
 | 1 | **Party Switching Leaderboard** | 1217 switch_group events | 3 days | "Here are the MPs who changed parties — and when" |
 | 2 | **Commitment Tracker** (MP committee membership) | Fixed cdep.ro parsers (28/28 tests) | 3 days | "Which committees does my MP serve on, and when did they join/leave?" |
 | 3 | **Senate Historical Gap: Transparent Page** | `coverage` table + sitemap data | 2 days | "We're explicitly honest about what Senate data exists 1990-2024 vs. what's missing" |
-| 4 | **Demographic Distribution** (age per party, from birth_date) | 3113/3381 persons with birth_date | 2 days | "What's the average age of PSD deputies? PNL?" |
+| 4 | **Demographic Distribution** (age per party, from birth_date) | 3113/3388 persons with birth_date | 2 days | "What's the average age of PSD deputies? PNL?" |
 | 5 | **Committee Control Index** (which party chairs what per legislature) | Committee data + membership roles | 3 days | "Which party controls which committees — and when?" |
 
 ### Phase 2: Question-Driven UI (Week 2-4) — "Usability"
@@ -311,7 +311,7 @@ def get_coalition_stability(legislature=None):
 
 **11. `compute_loyalty_score.py`**
 ```python
-def compute_loyalty_score(person_id, total_mp_count=3381):
+def compute_loyalty_score(person_id, total_mp_count=3388):
     """Loyalty score computation"""
     conn = sqlite3.connect('data/parlament.db')
     cursor = conn.cursor()
@@ -433,7 +433,7 @@ def run_load_test():
    Chromium): **18 routes rendered, 0 JS errors** (no `console.error`, no
    uncaught `pageerror`). Covers every feature route plus the dynamic
    `/person/:id`, `/party/:shortName`, `/legislature/:year`.
-3. **Data validation** — PASS. Baseline 3381 persons / 6623 memberships changed
+3. **Data validation** — PASS. Historical baseline 3381 persons / 6623 memberships changed
    **intentionally** with Feature 2 (cdep.ro committee ingestion: 26 committees,
    735 memberships, 7 persons) → current 3388 / 7358. Events unchanged at 7429.
    Audit corpus byte-identical before/after ingestion (275 pre-existing errors,

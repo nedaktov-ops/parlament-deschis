@@ -186,7 +186,7 @@ function MatrixTable({ scope }: { scope: TraseismScope }) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("traseismMatrixCaption")}>
       <table className="w-full text-xs border-collapse">
         <caption className="sr-only">{t("traseismMatrixCaption")}</caption>
         <thead>
@@ -229,7 +229,7 @@ function PartyNetTable({ scope }: { scope: TraseismScope }) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("traseismPartyNetCaption")}>
       <table className="w-full text-xs border-collapse">
         <caption className="sr-only">{t("traseismPartyNetCaption")}</caption>
         <thead>
@@ -342,7 +342,7 @@ function SwitchLedger({
         <div className="text-slate-500 text-sm py-6">{t("traseismNoRows")}</div>
       ) : (
         <>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("traseismLedgerCaption")}>
             <table className="w-full text-xs border-collapse">
               <caption className="sr-only">{t("traseismLedgerCaption")}</caption>
               <thead>
@@ -507,7 +507,7 @@ function ScopesOverview({ rows }: { rows: TraseismScope[] }) {
   };
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("traseismAllScopesCaption")}>
       <table className="w-full text-xs border-collapse">
         <caption className="sr-only">{t("traseismAllScopesCaption")}</caption>
         <thead>
@@ -529,7 +529,10 @@ function ScopesOverview({ rows }: { rows: TraseismScope[] }) {
             const key = completenessKey(row.coverage?.completeness ?? "none");
             const metric = (value: string) =>
               key === "none" ? (
-                <span aria-label={t("none")}>—</span>
+                <>
+                  <span className="sr-only">{t("none")}</span>
+                  <span aria-hidden="true">—</span>
+                </>
               ) : (
                 value
               );
@@ -620,23 +623,23 @@ function SwitchWavesSection({
           {t("waves.empty", "No waves detected for this scope.")}
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("waves.title", "Switch waves")}>
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-slate-400 border-b border-slate-700">
-                <th className="py-2 pr-4">{t("waves.col.period", "Period")}</th>
-                <th className="py-2 pr-4 text-right">
+                <th scope="col" className="py-2 pr-4">{t("waves.col.period", "Period")}</th>
+                <th scope="col" className="py-2 pr-4 text-right">
                   {t("waves.col.count", "Switches")}
                 </th>
-                <th className="py-2 pr-4">{t("waves.col.trigger", "Trigger")}</th>
+                <th scope="col" className="py-2 pr-4">{t("waves.col.trigger", "Trigger")}</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((w) => (
                 <tr key={w.id} className="border-b border-slate-700/50">
-                  <td className="py-2 pr-4 text-slate-300">
+                  <th scope="row" className="py-2 pr-4 text-slate-300 font-normal text-left">
                     {w.start_date ?? "?"} → {w.end_date ?? "?"}
-                  </td>
+                  </th>
                   <td className="py-2 pr-4 text-right">
                     <span className="bg-amber-900/40 text-amber-300 px-2 py-0.5 rounded">
                       {w.switch_count}

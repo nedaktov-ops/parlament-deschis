@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from datetime import date
 
+import pytest
+
 from pipeline.analytics import main as analytics_main
 from pipeline.cli import main as cli_main
 from pipeline.db import Membership, Organization, Person, get_session
@@ -293,6 +295,94 @@ def test_build_corpus_ingests_committees_and_derives_waves(tmp_path, monkeypatch
     assert calls[0][0] == "committees"
     assert calls[0][1]  # a real legislature label, e.g. "2024"
     assert ("waves",) in calls
+
+
+@pytest.mark.parametrize(
+    ("ingest_totals", "expected"),
+    [
+        # First build: every fragment changed -> pass.
+        ({"committees": 26, "unchanged": 0, "status": "SUCCESS"}, 0),
+        # Idempotent re-run: 0 changed, all 26 unchanged -> must still pass.
+        ({"committees": 0, "unchanged": 26, "status": "SUCCESS"}, 0),
+        # Empty committee source -> must fail (completeness guarantee).
+        ({"committees": 0, "unchanged": 0, "status": "SUCCESS"}, 1),
+        # Failed/partial ingest: some committees but status FAILURE -> must fail.
+        ({"committees": 5, "unchanged": 0, "status": "FAILURE"}, 1),
+    ],
+)
+def test_build_corpus_strict_committee_gate(tmp_path, monkeypatch, ingest_totals, expected):
+    """The --strict gate must accept unchanged pages and reject failed ingests.
+
+    Regression: ``totals["committees"]`` counts only *changed* fragments, so a
+    healthy idempotent second build reported 0 and falsely failed the gate.
+    """
+    from types import SimpleNamespace
+
+    import pipeline.analytics
+    import pipeline.collect
+    import pipeline.ingest_corpus
+    import pipeline.sources.cdep_committee
+    import pipeline.sources.client
+    from pipeline.cli import _load_legislatures
+
+    # A corpus that satisfies the strict collection gate: one empty ledger,
+    # roster and index per (chamber, legislature) scope, with no referenced
+    # mandates. This lets the test reach the *committee* strict gate.
+    legs = sorted(_load_legislatures())
+    ledgers = [
+        SimpleNamespace(
+            chamber="deputies",
+            legislature=leg,
+            idg="1",
+            ledger=SimpleNamespace(current=[], former=[], name_only=[]),
+        )
+        for leg in legs
+    ]
+    corpus = SimpleNamespace(
+        errors=[],
+        ledgers=ledgers,
+        profiles={},
+        clusters={},
+        rosters=[SimpleNamespace(chamber="deputies", legislature=leg) for leg in legs],
+        index_counts={("deputies", leg): {} for leg in legs},
+    )
+    monkeypatch.setattr(pipeline.collect, "build_corpus", lambda *a, **k: corpus)
+    monkeypatch.setattr(pipeline.ingest_corpus, "ingest_corpus", lambda *a, **k: {"persons": 0})
+
+    class FakeClient:
+        def __init__(self, *a, **k):
+            pass
+
+        def close(self):
+            pass
+
+    totals = {"committees": 0, "current": 0, "former": 0, "persons": 0, "unchanged": 0}
+    totals.update(ingest_totals)
+
+    class FakeCommitteeSource:
+        def __init__(self, client):
+            self.client = client
+
+        def ingest_committees(self, session, legislature, **kwargs):
+            return dict(totals)
+
+    monkeypatch.setattr(pipeline.sources.client, "PoliteClient", FakeClient)
+    monkeypatch.setattr(pipeline.sources.cdep_committee, "CdepCommitteeSource", FakeCommitteeSource)
+    monkeypatch.setattr(pipeline.analytics, "derive_all_switch_waves", lambda session: 142)
+
+    assert (
+        cli_main(
+            [
+                "--db",
+                str(tmp_path / "gate.db"),
+                "build-corpus",
+                "--chamber",
+                "deputies",
+                "--strict",
+            ]
+        )
+        == expected
+    )
 
 
 def test_build_corpus_skip_committees_still_derives_waves(tmp_path, monkeypatch):

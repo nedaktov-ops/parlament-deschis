@@ -9,7 +9,7 @@ import threading
 from datetime import UTC, date, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from backend import queries
@@ -21,11 +21,8 @@ from pipeline.analytics import derive_all_switch_waves, derive_switch_waves
 from pipeline.db import Evidence
 from pipeline.export import (
     CODE_LICENSE,
-    CSV_DATASETS,
     DATA_LICENSE,
     PROJECT_URL,
-    build_popolo,
-    csv_for,
 )
 from pipeline.poller import run_poll_cycle, source_health
 
@@ -80,14 +77,62 @@ def _parse_date(s: str | None, default: date) -> date:
 
 
 def _require_admin_token(token: str | None, operation: str = "admin operations") -> None:
+    """Fail-closed token check with a small in-process per-token lockout.
+
+    State is held on the function object so the helper owns it (no module
+    globals, no new dependencies). Only a saltless SHA-256 fingerprint of the
+    guess is retained — raw secret values are never stored or logged. There is
+    no request object in this helper's scope, so the key is per-token rather
+    than per-IP; see the P4-D report for that residual.
+    """
+    import hashlib
+    import logging
+    import time
+
+    state = getattr(_require_admin_token, "_auth_state", None)
+    if state is None:
+        state = {"lock": threading.Lock(), "failures": {}}
+        _require_admin_token._auth_state = state
+    lock = state["lock"]
+    failures: dict[str, list[float]] = state["failures"]
+    window_s = 60.0
+    max_failures = 5
+    log = logging.getLogger("parlament.api")
+
     expected = os.environ.get("PARLAMENT_ADMIN_TOKEN", "")
     if not expected:
         raise HTTPException(
             status_code=503,
             detail=f"{operation} disabled (set PARLAMENT_ADMIN_TOKEN)",
         )
-    if not token or not secrets.compare_digest(token, expected):
-        raise HTTPException(status_code=401, detail="invalid admin token")
+
+    fingerprint = hashlib.sha256((token or "").encode("utf-8")).hexdigest()[:16]
+    with lock:
+        now = time.monotonic()
+        recent = [t for t in failures.get(fingerprint, ()) if now - t < window_s]
+        if len(recent) >= max_failures:
+            log.warning(
+                "admin auth lockout: operation=%s fingerprint=%s failures=%d",
+                operation,
+                fingerprint,
+                len(recent),
+            )
+            raise HTTPException(
+                status_code=429, detail="too many failed admin attempts; try again later"
+            )
+        # compare_digest on bytes keeps this constant-time and avoids the
+        # TypeError that str inputs with non-ASCII characters would trigger.
+        if not token or not secrets.compare_digest(token.encode("utf-8"), expected.encode("utf-8")):
+            recent.append(now)
+            failures[fingerprint] = recent
+            log.warning(
+                "admin auth failure: operation=%s fingerprint=%s failures=%d",
+                operation,
+                fingerprint,
+                len(recent),
+            )
+            raise HTTPException(status_code=401, detail="invalid admin token")
+        failures.pop(fingerprint, None)
 
 
 @router.get("/meta")
@@ -266,8 +311,13 @@ def movements(
 
 
 @router.get("/events/recent")
-def recent_events(limit: int = Query(50, ge=1, le=500), db: Session = Depends(get_db)):
-    return queries.get_recent_events(db, limit)
+def recent_events(
+    limit: int = Query(50, ge=1, le=500),
+    chamber: str | None = Query(None, pattern="^(deputies|senate)$"),
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    db: Session = Depends(get_db),
+):
+    return queries.get_recent_events(db, limit, chamber=chamber, legislature=legislature)
 
 
 @router.get("/coverage")
@@ -549,8 +599,11 @@ def admin_poll(
     _require_admin_token(x_admin_token, "admin polling")
     try:
         results = run_poll_cycle(db, legislature)
-    except Exception as exc:  # noqa: BLE001 - report upstream failure as 502
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception:  # noqa: BLE001 - upstream failure is reported generically
+        import logging
+
+        logging.getLogger("parlament.api").exception("admin poll cycle failed")
+        raise HTTPException(status_code=502, detail="upstream poll failed") from None
     invalidate_traseism_overview_cache()
     invalidate_result_cache()
     return {"status": "ok", "legislature": legislature, "results": results}
@@ -621,6 +674,11 @@ def analytics_waves(
         min_switches=min_switches,
     )
     db.commit()
+    # Waves changed — drop cached analytics and the traseism overview so the
+    # next GET is fresh, matching the other admin write paths (/admin/poll,
+    # /waves/recompute).
+    invalidate_result_cache()
+    invalidate_traseism_overview_cache()
     return {"status": "ok", "created": count}
 
 
@@ -907,11 +965,25 @@ def switch_leaderboard(
 
     Every count is an observed switch_group event from the chambers' own
     dated group ledgers. Rows carry the person id so the UI can link to
-    the deep-dive page.
+    the deep-dive page. When ``chamber``/``legislature`` are supplied, the
+    ranking AND every loyalty ingredient are restricted to that same scope.
     """
     from sqlalchemy import func, select
 
     from pipeline.db import Event, Organization, Person
+
+    # P3-B: one scope shared by the ranking and all three loyalty queries.
+    # Previously only switch_count was scoped while total_events, span and
+    # parties counted the person's entire career, so the loyalty/party columns
+    # did not describe the filtered ranking. Scoping every input keeps the
+    # documented formula (volatility = switch_count / total_events *
+    # tenure_weight) intact but makes the numerator, denominator, span and
+    # party list come from the same chamber/legislature as the switch count.
+    scope = []
+    if legislature:
+        scope.append(Event.legislature == legislature)
+    if chamber:
+        scope.append(Event.chamber == chamber)
 
     stmt = (
         select(
@@ -922,15 +994,11 @@ def switch_leaderboard(
             func.max(Event.event_date).label("last_switch"),
         )
         .join(Event, Event.person_id == Person.id)
-        .where(Event.type == "switch_group")
+        .where(Event.type == "switch_group", *scope)
         .group_by(Person.id, Person.canonical_name)
         .order_by(func.count(Event.id).desc(), Person.canonical_name)
         .limit(limit)
     )
-    if legislature:
-        stmt = stmt.where(Event.legislature == legislature)
-    if chamber:
-        stmt = stmt.where(Event.chamber == chamber)
 
     rows = db.execute(stmt).all()
 
@@ -954,6 +1022,7 @@ def switch_leaderboard(
                 Event.person_id.in_(top_ids),
                 Event.type == "switch_group",
                 Organization.short_name.is_not(None),
+                *scope,
             )
             .group_by(Event.person_id, Organization.short_name)
             .order_by(Event.person_id, func.count(Event.id).desc())
@@ -962,7 +1031,7 @@ def switch_leaderboard(
         totals_by_person = dict(
             db.execute(
                 select(Event.person_id, func.count(Event.id))
-                .where(Event.person_id.in_(top_ids))
+                .where(Event.person_id.in_(top_ids), *scope)
                 .group_by(Event.person_id)
             ).all()
         )
@@ -979,6 +1048,7 @@ def switch_leaderboard(
                 .where(
                     Event.person_id.in_(top_ids),
                     Event.event_date.is_not(None),
+                    *scope,
                 )
                 .group_by(Event.person_id)
             ).all()
@@ -1015,37 +1085,21 @@ def switch_leaderboard(
             }
         )
 
-    return {"status": "ok", "data": leaderboard}
+    # Declare the scope so the UI's loyalty label is truthful: every number in
+    # ``data`` now describes exactly this chamber/legislature combination.
+    if chamber and legislature:
+        score_scope = f"{chamber}:{legislature}"
+    elif chamber:
+        score_scope = chamber
+    elif legislature:
+        score_scope = legislature
+    else:
+        score_scope = "all_chambers_all_legislatures"
+
+    return {"status": "ok", "score_scope": score_scope, "data": leaderboard}
 
 
-@router.get("/export/popolo")
-def export_popolo(
-    chamber: str | None = Query(None, pattern="^(deputies|senate)$"),
-    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
-    db: Session = Depends(get_db),
-):
-    """Export the scoped dataset as Popolo 1.0 JSON."""
-    doc = build_popolo(db, chamber=chamber, legislature=legislature)
-    return Response(
-        content=json.dumps(doc, ensure_ascii=False, indent=2),
-        media_type="application/json; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="popolo.json"'},
-    )
-
-
-@router.get("/export/{dataset}.csv")
-def export_csv(
-    dataset: str,
-    chamber: str | None = Query(None, pattern="^(deputies|senate)$"),
-    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
-    db: Session = Depends(get_db),
-):
-    """Export one dataset (persons, organizations, posts, memberships, events) as CSV."""
-    if dataset not in CSV_DATASETS:
-        raise HTTPException(status_code=404, detail=f"unknown dataset: {dataset}")
-    text = csv_for(db, dataset, chamber=chamber, legislature=legislature)
-    return Response(
-        content=text,
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{dataset}.csv"'},
-    )
+# P3-B: export endpoints live only in backend/routers/exports.py. They were
+# duplicated here under /api/export with identical path/operation IDs; because
+# api_router is registered first, these shadows won route resolution while
+# OpenAPI advertised a dead duplicate. exports.py is now the single source.

@@ -110,6 +110,7 @@ def serialize_event(session: Session, e: Event) -> dict:
         "summary_ro": e.summary_ro,
         "summary_en": e.summary_en,
         "detected_at": e.detected_at.isoformat() if e.detected_at else None,
+        "source_url": e.source_url,
     }
 
 
@@ -263,7 +264,19 @@ def search_persons(
                 Person.canonical_name.like(like),
             )
         )
-    people = list(session.scalars(stmt.limit(limit)))
+    # P3-B: push the chamber filter into SQL *before* LIMIT. Filtering in Python
+    # after ``limit`` rows were taken made ``?chamber=senate`` return arbitrary,
+    # too-few results (and silently depend on table order).
+    if chamber:
+        stmt = stmt.where(
+            Person.id.in_(
+                select(Membership.person_id)
+                .join(Organization, Organization.id == Membership.org_id)
+                .where(is_group(), Membership.chamber == chamber)
+            )
+        )
+    # Deterministic order before LIMIT so pages are stable across runs.
+    people = list(session.scalars(stmt.order_by(Person.canonical_name, Person.id).limit(limit)))
     out = []
     for p in people:
         ms = list(
@@ -274,8 +287,6 @@ def search_persons(
             )
         )
         chambers = sorted({m.chamber for m in ms})
-        if chamber and chamber not in chambers:
-            continue
         out.append(
             {
                 "id": p.id,
@@ -511,9 +522,21 @@ def get_movements(
     return [serialize_event(session, e) for e in evs]
 
 
-def get_recent_events(session: Session, limit: int = 50) -> list[dict]:
+def get_recent_events(
+    session: Session,
+    limit: int = 50,
+    chamber: str | None = None,
+    legislature: str | None = None,
+) -> list[dict]:
+    stmt = select(Event)
+    # P3-B: the client sends chamber/legislature on /events/recent; honour them
+    # here instead of silently ignoring them in the router.
+    if chamber:
+        stmt = stmt.where(Event.chamber == chamber)
+    if legislature:
+        stmt = stmt.where(Event.legislature == legislature)
     evs = session.scalars(
-        select(Event).order_by(Event.event_date.desc(), Event.detected_at.desc()).limit(limit)
+        stmt.order_by(Event.event_date.desc(), Event.detected_at.desc()).limit(limit)
     ).all()
     return [serialize_event(session, e) for e in evs]
 

@@ -170,14 +170,14 @@ export default function PartyComparison() {
       )}
 
       {a && b && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("compare.title", "Party Comparison")}>
           <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
             <thead className="bg-slate-700">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                   {t("compare.col.metric", "Metric")}
                 </th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-slate-100">
+                <th scope="col" className="px-4 py-3 text-center text-sm font-semibold text-slate-100">
                   {a.color && (
                     <span
                       aria-hidden="true"
@@ -187,7 +187,7 @@ export default function PartyComparison() {
                   )}
                   {a.short_name}
                 </th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-slate-100">
+                <th scope="col" className="px-4 py-3 text-center text-sm font-semibold text-slate-100">
                   {b.color && (
                     <span
                       aria-hidden="true"
@@ -202,7 +202,7 @@ export default function PartyComparison() {
             <tbody className="divide-y divide-slate-700">
               {metrics.map((m) => (
                 <tr key={m.label} className="hover:bg-slate-700/50">
-                  <td className="px-4 py-3 text-slate-400">{m.label}</td>
+                  <th scope="row" className="px-4 py-3 text-slate-400 font-normal text-left">{m.label}</th>
                   <td
                     className={`px-4 py-3 text-center font-semibold ${
                       m.higherIsBetter === "a" ? "text-emerald-300" : "text-slate-200"
@@ -210,8 +210,9 @@ export default function PartyComparison() {
                   >
                     {m.a}
                     {m.higherIsBetter === "a" && (
-                      <span className="ml-1.5 text-xs" aria-label={t("compare.higher", "higher")}>
-                        ▲
+                      <span className="ml-1.5 text-xs">
+                        <span className="sr-only">{t("compare.higher", "higher")}</span>
+                        <span aria-hidden="true">▲</span>
                       </span>
                     )}
                   </td>
@@ -222,8 +223,9 @@ export default function PartyComparison() {
                   >
                     {m.b}
                     {m.higherIsBetter === "b" && (
-                      <span className="ml-1.5 text-xs" aria-label={t("compare.higher", "higher")}>
-                        ▲
+                      <span className="ml-1.5 text-xs">
+                        <span className="sr-only">{t("compare.higher", "higher")}</span>
+                        <span aria-hidden="true">▲</span>
                       </span>
                     )}
                   </td>
@@ -239,10 +241,7 @@ export default function PartyComparison() {
           {t("compare.notes", "Reading the numbers")}
         </h2>
         <p>
-          {t(
-            "compare.notes.desc",
-            "Members counts distinct persons with a membership on behalf of the party across all legislatures. Switches in counts observed switch_group events into a group carrying the party acronym. Ages cover MPs with a birth date (92% of the corpus). Chairs count active committee presidents.",
-          )}
+          {t("compare.notes.desc")}
         </p>
       </div>
     </div>

@@ -153,10 +153,13 @@ are counted once per party. For a legislature, ages are measured at its end
 }
 ```
 
-Committee and bureau data are not included in the current corpus. The
-`GET /api/committees` endpoint therefore returns an empty list until source
-records are ingested; the frontend labels this limitation rather than showing
-an empty chart as a zero result.
+Committee data is now part of the corpus (release pinned in
+`data/latest-release.txt`): `GET /api/committees` lists committees with active
+dated memberships (26 in the current release), `GET /api/committees/{committee_id}/members`
+returns a committee's dated member ledger, and `GET /api/analytics/committee-control`
+derives per-party chair counts from dated `role='presedinte'` rows. Bureau data
+is not separately ingested. This section formerly documented an empty list
+pending ingest; that limitation no longer applies.
 
 ---
 

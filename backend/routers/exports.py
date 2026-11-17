@@ -1,8 +1,12 @@
-"""Open-data export endpoints: Popolo JSON and flat CSV.
+"""Open-data export endpoints: Popolo JSON, flat CSV, and a transparency report.
 
-Both endpoints share one scope helper so ``chamber`` / ``legislature`` filters
-mean exactly the same thing across formats, and both delegate to
-``pipeline.export`` so the CLI and the API never diverge.
+``/popolo`` and ``/<dataset>.csv`` share one scope helper so ``chamber`` /
+``legislature`` filters mean exactly the same thing across those two formats,
+and both delegate to ``pipeline.export`` so the CLI and the API never diverge.
+
+``/report`` is deliberately different: it is a single whole-corpus snapshot.
+It takes no scope parameters and declares ``scope: "all"`` so the payload can
+never be mistaken for a chamber/legislature-filtered result.
 """
 
 from __future__ import annotations
@@ -49,16 +53,18 @@ def export_popolo(
 @router.get("/report")
 @cache_result("export-report")
 def export_report(
-    scope: Annotated[dict, Depends(_scope)],
     db: Annotated[Session, Depends(get_db)],
 ):
-    """One-page transparency report as structured JSON (Feature 6).
+    """Whole-corpus transparency report as structured JSON (Feature 6).
 
-    Composes the same figures the UI shows — corpus totals, coverage,
-    top switchers with loyalty, committee chair control, switch waves and
-    party ages — so the print view and this download can never disagree.
-    No numbers are computed differently here than in the analytics
-    endpoints; each block delegates to the existing query helpers.
+    Every block (corpus totals, coverage, top switchers with loyalty,
+    committee chair control, switch waves and party ages) aggregates over the
+    entire pinned dataset. This endpoint intentionally accepts no
+    ``chamber`` / ``legislature`` scope: the underlying helpers are not
+    uniformly scope-able (``get_coverage_detailed`` takes only a session), so
+    echoing a scope here would advertise a filter that is never applied. For
+    filtered figures use the analytics endpoints; this download is the
+    unfiltered snapshot that backs the print view.
     """
     from sqlalchemy import func, select
 
@@ -141,7 +147,7 @@ def export_report(
         content={
             "report": "parlament-deschis transparency report",
             "generated_at": datetime.now(UTC).isoformat(),
-            "scope": scope,
+            "scope": "all",
             "totals": totals,
             "coverage": queries.get_coverage_detailed(db),
             "top_switchers": top_switchers,

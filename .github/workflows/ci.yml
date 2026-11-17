@@ -10,6 +10,9 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -50,6 +53,10 @@ jobs:
       - run: uv sync --locked
 
       - name: Download latest published dataset
+        env:
+          # Authenticate the GitHub API call: unauthenticated requests share a
+          # 60/hour IP limit that has already produced a 403 on CI.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: uv run python scripts/download_dataset.py data/parlament.db
 
       - name: Audit the published corpus
@@ -59,7 +66,7 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
-    needs: [test]
+    needs: [test, audit]
     steps:
       - uses: actions/checkout@v4
 

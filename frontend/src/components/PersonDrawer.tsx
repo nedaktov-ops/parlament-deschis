@@ -246,6 +246,9 @@ export default function PersonDrawer({
                           className="inline-block text-[10px] text-sky-400 hover:underline mt-0.5"
                         >
                           {t("viewOriginal")} ↗
+                          <span className="sr-only">
+                            {h.date ? ` (${h.date})` : h.org ? ` (${h.org})` : ` (${i + 1})`}
+                          </span>
                         </a>
                       )}
                     </div>

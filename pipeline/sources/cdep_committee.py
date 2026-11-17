@@ -127,6 +127,10 @@ class CdepCommitteeSource:
         finally:
             run.finished_at = datetime.now(UTC)
             run.rows = totals["current"] + totals["former"]
+            # Surface the terminal status so callers (e.g. the --strict build
+            # gate) can distinguish a failed/partial ingest from a healthy
+            # idempotent re-run where every fragment was unchanged.
+            totals["status"] = run.status
             session.commit()
         return totals
 

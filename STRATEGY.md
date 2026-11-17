@@ -1,7 +1,9 @@
 # Parlament Deschis — Red Team Analysis & 10x Improvement Strategy
 
+> **Historical-document banner (2026-11-17).** Proposed on 2025-11-12 and never adopted as the active strategy. Every status, priority and count below is an as-of-2025-11-12 proposal, not a current commitment. Active direction: `docs/REMEDIATION-STRATEGY.md` (active reference) and `docs/STRATEGY-TRANSPARENCY.md` (15-feature transparency strategy, updated 2026-11-17). The "0/1,978 birth dates" and "0 Wikidata QIDs" figures were true then; the shipped release now has **3,113/3,388 persons with a birth date**. **ANAF asset declarations are explicitly excluded** by the transparency strategy (a new law makes them unavailable), so the ANAF P0 items below are historical proposals, not scheduled work. Committee control is now computed from **26 committees / 142 switch waves**.
+
 **Date:** 2025-11-12  
-**Status:** For approval before implementation
+**Status:** Historical — proposed 2025-11-12, superseded (see banner); never implemented as written.
 
 ---
 
@@ -54,7 +56,7 @@ The project has **solid infrastructure** (pipeline, DB, API, frontend) but **fai
 
 - **Wikidata enrichment:** Placeholder only (`pipeline/enrich.py` missing)
 - **Senate historical:** Only 2024 via sitemap; pre-2024 needs JO/Monitorul Oficial PDF parsing
-- **Asset declarations:** ANAF/Integrity Agency data not ingested
+- **Asset declarations:** ANAF/Integrity Agency data not ingested *(historical note — ANAF explicitly excluded by the current transparency strategy; see banner)*
 - **Voting records:** Camera Deputaților stenograme not parsed
 - **Media monitoring:** No GDELT/NewsAPI integration
 
@@ -69,7 +71,7 @@ The project has **solid infrastructure** (pipeline, DB, API, frontend) but **fai
 |------|-------|--------|------------|
 | Implement `pipeline/enrich.py` — Wikidata SPARQL batch with local cache, disambiguation rules | Backend | 3 days | >90% persons matched |
 | Parse Monitorul Oficial / JO PDFs for Senate 1990-2020 validation lists | Pipeline | 5 days | Senate coverage >80% all legs |
-| Integrate ANAF asset declarations (public CSV/API) | Pipeline | 3 days | Asset data for 2020, 2024 legs |
+| ~~Integrate ANAF asset declarations (public CSV/API)~~ — historical proposal, excluded by current transparency strategy (see banner) | Pipeline | 3 days | Asset data for 2020, 2024 legs |
 | Add gender inference (first name + Wikidata) | Pipeline | 1 day | Gender for >95% |
 | Download person photos from Wikidata/Parliament CDN | Pipeline | 1 day | Photos for >80% current MPs |
 
@@ -136,7 +138,7 @@ The project has **solid infrastructure** (pipeline, DB, API, frontend) but **fai
 | Source | Value | Priority |
 |--------|-------|----------|
 | **Chamber stenograme (voting)** | Loyalty scores, rebellion tracking | P0 |
-| **ANAF asset declarations** | Wealth tracking, conflict detection | P0 |
+| **ANAF asset declarations** | Wealth tracking, conflict detection | ~~P0~~ — excluded in current strategy (see banner) |
 | **Monitorul Oficial (Senate history)** | Complete Senate 1990-2020 | P1 |
 | **Wikidata** | Bios, photos, party history, EU refs | P0 |
 | **GDELT / NewsAPI** | Media mentions, scandal tracking | P2 |
@@ -187,7 +189,7 @@ The project has **solid infrastructure** (pipeline, DB, API, frontend) but **fai
 ### Week 1: Data Completeness
 - [ ] `pipeline/enrich.py` — Wikidata batch (birth_date, gender, photo, QID, party history)
 - [ ] `pipeline/senat_historical.py` — Monitorul Oficial PDF parsing for Senate 1990-2020
-- [ ] `pipeline/assets.py` — ANAF asset declarations ingestion
+- [ ] ~~`pipeline/assets.py` — ANAF asset declarations ingestion~~ — excluded in current transparency strategy (see banner)
 - [ ] DB migration: add `gender`, `photo_url`, `asset_declarations` table
 - [ ] Validation: >90% persons enriched; Senate >80% all legislatures
 

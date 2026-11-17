@@ -15,6 +15,16 @@ from pipeline.db import (
 )
 from pipeline.queries import is_group
 
+# The GraphQL surface has no REST-style Query(ge=..., le=...) validation, so a
+# single `limit: 10**9` could otherwise pull the whole table. Bound every list
+# resolver at entry. (REST caps most equivalents at 500; 200 is the safe floor.)
+_MAX_RESULT_LIMIT = 200
+
+
+def _clamp_limit(limit: int) -> int:
+    """Coerce a GraphQL limit into [1, _MAX_RESULT_LIMIT]."""
+    return max(1, min(limit, _MAX_RESULT_LIMIT))
+
 
 @strawberry.type
 class PartyType:
@@ -71,8 +81,9 @@ class EventType:
 class SwitchWaveType:
     id: str
     label: str | None
-    start_date: date
-    end_date: date
+    # REST null-handles these; a NULL row must not break GraphQL serialization.
+    start_date: date | None
+    end_date: date | None
     switch_count: int
     trigger_type: str | None
     trigger_event: str | None
@@ -130,6 +141,7 @@ class Query:
     def persons(
         self, q: str | None = None, chamber: str | None = None, limit: int = 50
     ) -> list[PersonType]:
+        limit = _clamp_limit(limit)
         engine = make_engine()
         session = make_session_factory(engine)()
         try:
@@ -186,6 +198,7 @@ class Query:
 
     @strawberry.field
     def parties(self, classification: str | None = None, limit: int = 100) -> list[PartyType]:
+        limit = _clamp_limit(limit)
         engine = make_engine()
         session = make_session_factory(engine)()
         try:
@@ -218,6 +231,7 @@ class Query:
         chamber: str | None = None,
         limit: int = 100,
     ) -> list[MembershipType]:
+        limit = _clamp_limit(limit)
         engine = make_engine()
         session = make_session_factory(engine)()
         try:
@@ -262,6 +276,7 @@ class Query:
         end: date | None = None,
         limit: int = 200,
     ) -> list[EventType]:
+        limit = _clamp_limit(limit)
         engine = make_engine()
         session = make_session_factory(engine)()
         try:
@@ -302,6 +317,7 @@ class Query:
     def switch_waves(
         self, chamber: str | None = None, legislature: str | None = None, limit: int = 100
     ) -> list[SwitchWaveType]:
+        limit = _clamp_limit(limit)
         engine = make_engine()
         session = make_session_factory(engine)()
         try:
@@ -336,6 +352,7 @@ class Query:
     def party_cohesion(
         self, legislature: str | None = None, limit: int = 100
     ) -> list[AnalyticsPartyCohesionType]:
+        limit = _clamp_limit(limit)
         engine = make_engine()
         session = make_session_factory(engine)()
         try:
@@ -431,7 +448,7 @@ class Query:
                     )
                 )
 
-            return results
+            return results[:limit]
         finally:
             session.close()
 
@@ -472,6 +489,7 @@ class Query:
     def generational_shift(
         self, legislature: str | None = None, limit: int = 100
     ) -> list[AnalyticsGenerationalShiftType]:
+        limit = _clamp_limit(limit)
         engine = make_engine()
         session = make_session_factory(engine)()
         try:
@@ -537,7 +555,7 @@ class Query:
                         )
                     )
 
-            return results
+            return results[:limit]
         finally:
             session.close()
 

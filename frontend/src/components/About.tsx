@@ -62,6 +62,7 @@ function renderValue(value: unknown): string {
 export default function About({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const closeRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const about = useQuery({
     queryKey: ["about"],
@@ -90,7 +91,12 @@ export default function About({ open, onClose }: { open: boolean; onClose: () =>
   }, [open, onClose]);
 
   useEffect(() => {
-    if (open) closeRef.current?.focus();
+    if (!open) return;
+    const previousFocus = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    closeRef.current?.focus();
+    return () => previousFocus?.focus();
   }, [open]);
 
   if (!open) return null;
@@ -119,11 +125,28 @@ export default function About({ open, onClose }: { open: boolean; onClose: () =>
       onClick={onClose}
     >
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="about-title"
         className="card w-full max-w-3xl max-h-[85vh] overflow-y-auto p-5 sm:p-6 space-y-6 my-auto"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key !== "Tab") return;
+          const items = panelRef.current?.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          );
+          if (!items?.length) return;
+          const first = items[0];
+          const last = items[items.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }}
       >
         <div className="flex items-start justify-between gap-3 border-b border-slate-700/60 pb-3">
           <div>
@@ -202,9 +225,9 @@ export default function About({ open, onClose }: { open: boolean; onClose: () =>
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr className="text-left text-slate-500">
-                  <th className="py-1 pr-2 font-medium">{t("chamber")}</th>
-                  <th className="py-1 pr-2 font-medium">{t("legislature")}</th>
-                  <th className="py-1 font-medium">{t("completeness")}</th>
+                  <th scope="col" className="py-1 pr-2 font-medium">{t("chamber")}</th>
+                  <th scope="col" className="py-1 pr-2 font-medium">{t("legislature")}</th>
+                  <th scope="col" className="py-1 font-medium">{t("completeness")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -213,7 +236,7 @@ export default function About({ open, onClose }: { open: boolean; onClose: () =>
                     key={`${row.chamber}-${row.legislature ?? "none"}-${i}`}
                     className="border-t border-slate-700/60"
                   >
-                    <td className="py-1.5 pr-2">{chamberLabel(row.chamber)}</td>
+                    <th scope="row" className="py-1.5 pr-2 font-normal text-left">{chamberLabel(row.chamber)}</th>
                     <td className="py-1.5 pr-2 font-mono">{row.legislature ?? "—"}</td>
                     <td className="py-1.5">
                       <span

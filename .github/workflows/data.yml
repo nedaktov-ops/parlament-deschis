@@ -2,9 +2,11 @@ name: Data
 
 # Rebuild the corpus from the official sources and publish it.
 #
-# A release is published only after strict validation. Updating the pinned
-# release marker then triggers Render's connected Git deployment. Scheduled
-# runs are best-effort; workflow_dispatch remains the recovery path.
+# A release is published only after strict validation. The tracked marker is
+# then pinned to that release and Render is triggered explicitly through its
+# API: a push made with GITHUB_TOKEN does not start CI or Render's connected
+# Git deployment. Scheduled runs are best-effort; workflow_dispatch remains
+# the recovery path.
 
 on:
   schedule:
@@ -39,11 +41,15 @@ jobs:
 
       - run: uv sync --locked
 
-      - name: Cache the page archive
-        uses: actions/cache@v4
+      # Restore and save are deliberately split: actions/cache's automatic
+      # post-save is skipped when a job fails, which is exactly when fresh
+      # pages are most needed. A separate always() save step below fixes that.
+      - name: Restore the page archive
+        id: page-cache
+        uses: actions/cache/restore@v4
         with:
           path: data/cache/cdep
-          key: cdep-pages-${{ github.run_id }}
+          key: cdep-pages-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             cdep-pages-
 
@@ -60,6 +66,13 @@ jobs:
               --chamber both --cache data/cache/cdep --strict \
               --current-cache-ttl-hours 24 --historical-cache-ttl-hours 720
           fi
+
+      - name: Save the page archive (even on failure)
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/cache/cdep
+          key: cdep-pages-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Audit the corpus
         run: >-
@@ -95,9 +108,13 @@ jobs:
       - name: Pin the release and trigger Render
         env:
           DATASET_RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          pinned=0
           for attempt in 1 2 3; do
             git fetch origin main
             git checkout -B main origin/main
@@ -105,17 +122,42 @@ jobs:
             git add data/latest-release.txt
             if git diff --cached --quiet; then
               echo "Release marker already points to $DATASET_RELEASE_TAG"
-              exit 0
+              pinned=1
+              break
             fi
             git commit -m "Update dataset release marker to $DATASET_RELEASE_TAG"
             if git push origin main; then
-              exit 0
+              echo "Pinned $DATASET_RELEASE_TAG in commit $(git rev-parse HEAD)"
+              pinned=1
+              break
             fi
             echo "Push attempt $attempt failed; retrying against current main"
             sleep "$((attempt * 3))"
           done
-          echo "Failed to update the pinned dataset release marker" >&2
-          exit 1
+          if [ "$pinned" != "1" ]; then
+            echo "Failed to update the pinned dataset release marker" >&2
+            exit 1
+          fi
+
+          # A push made with GITHUB_TOKEN starts neither CI nor Render's
+          # connected Git deployment. Trigger Render explicitly through its
+          # API using the credentials already used by the platform workflows.
+          # Fail loudly if either is absent rather than silently not deploying.
+          : "${RENDER_API_KEY:?RENDER_API_KEY secret is required to trigger deployment}"
+          : "${RENDER_SERVICE_ID:?RENDER_SERVICE_ID variable is required to trigger deployment}"
+          code=$(curl -sS -o /tmp/render-trigger.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Content-Type: application/json" \
+            --data '{"clearCache": false}' \
+            "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys")
+          echo "Render deploy trigger HTTP ${code}"
+          if [ "${code}" != "200" ] && [ "${code}" != "201" ]; then
+            jq -r '.message // .' /tmp/render-trigger.json || true
+            echo "Failed to trigger Render deployment" >&2
+            exit 1
+          fi
+          jq -r '"triggered deploy: id=\(.id // "-") status=\(.status // "-") commit=\(.commit.id // "-")"' \
+            /tmp/render-trigger.json || true
 
       - name: Verify the deployed release
         env:
@@ -149,6 +191,32 @@ jobs:
           done
           echo "Render did not confirm dataset $DATASET_RELEASE_TAG within 30 minutes" >&2
           exit 1
+
+      - name: Close failure issue on success
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "Automated dataset refresh/deployment failure";
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const { data: issues } = await github.rest.issues.listForRepo({
+              ...context.repo,
+              state: "open",
+              per_page: 100,
+            });
+            const issue = issues.find((item) => item.title === title && !item.pull_request);
+            if (!issue) {
+              core.info("No matching failure issue to close.");
+              return;
+            }
+            await github.rest.issues.update({
+              ...context.repo,
+              issue_number: issue.number,
+              state: "closed",
+              state_reason: "completed",
+              body: `${issue.body || ""}\n- ${new Date().toISOString()}: resolved by successful run ${runUrl}.`,
+            });
+            core.info(`Closed failure issue #${issue.number}.`);
 
       - name: Report refresh or deployment failure
         if: failure()
