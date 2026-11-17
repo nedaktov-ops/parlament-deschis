@@ -621,6 +621,11 @@ def analytics_waves(
         min_switches=min_switches,
     )
     db.commit()
+    # Waves changed — drop cached analytics and the traseism overview so the
+    # next GET is fresh, matching the other admin write paths (/admin/poll,
+    # /waves/recompute).
+    invalidate_result_cache()
+    invalidate_traseism_overview_cache()
     return {"status": "ok", "created": count}
 
 

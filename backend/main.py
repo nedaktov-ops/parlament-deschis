@@ -34,11 +34,12 @@ _scheduler = None
 # ---------------------------------------------------------------------------
 # Cache-Control middleware
 # ---------------------------------------------------------------------------
-# Health endpoints MUST never be cached so container probes reflect live state.
-# Write endpoints (POST) and any error response must never be cached either.
-# Only successful read-only /api/* responses get the public CDN cache.
+# Every /api/* response MUST be no-store. All API data is derived from the DB
+# and mutated by admin writes that invalidate only process memory, so any
+# shared/CDN cache hit can serve stale data (the "real-time" feed and the
+# freshness timestamps on /api/about must reflect current state).
+# Health probes, non-GET writes and error responses stay no-store as before.
 _NO_STORE = "no-store, no-cache, must-revalidate"
-_PUBLIC_CACHE = "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800"
 _HEALTH_PATHS = {"/api/health", "/api/health/live", "/api/health/ready"}
 _CACHEABLE_METHODS = {"GET", "HEAD"}
 
@@ -50,15 +51,14 @@ class CacheControlMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         path = request.url.path
         uncacheable = (
-            path in _HEALTH_PATHS
+            path.startswith("/api/")
+            or path in _HEALTH_PATHS
             or request.method not in _CACHEABLE_METHODS
             or response.status_code >= 400
         )
         if uncacheable:
+            # Override any endpoint-set value so no-store always wins.
             response.headers["Cache-Control"] = _NO_STORE
-        elif path.startswith("/api/"):
-            # Respect an endpoint's own stricter Cache-Control if it set one.
-            response.headers.setdefault("Cache-Control", _PUBLIC_CACHE)
         return response
 
 

@@ -110,6 +110,7 @@ def serialize_event(session: Session, e: Event) -> dict:
         "summary_ro": e.summary_ro,
         "summary_en": e.summary_en,
         "detected_at": e.detected_at.isoformat() if e.detected_at else None,
+        "source_url": e.source_url,
     }
 
 

@@ -284,9 +284,14 @@ def test_timeline_include_switches(api):
 
 
 def test_cache_control_isolates_health_and_writes(api):
-    """Reads may be cached; health, writes, and errors must never be."""
+    """Mutable API reads, health, writes and errors must never be cached.
+
+    P0-B: the old contract allowed a 24h CDN cache on all /api GETs, which
+    made the 60s switch-alert poll and the freshness indicator stale. Reads
+    are now no-store at the origin (and the Vercel CDN rule matches).
+    """
     read = api.client.get("/api/chamber", params={"chamber": "deputies", "as_of": "2025-01-01"})
-    assert "s-maxage=86400" in read.headers.get("cache-control", "")
+    assert "no-store" in read.headers.get("cache-control", "")
 
     live = api.client.get("/api/health/live")
     assert "no-store" in live.headers.get("cache-control", "")
@@ -778,6 +783,73 @@ def test_analytics_wave_recompute_removes_stale_rows(api, monkeypatch):
     assert response.status_code == 200
     assert response.json()["created"] == 0
     assert api.client.get("/api/analytics/switch-waves").json() == []
+
+
+def test_analytics_waves_post_invalidates_seeded_cache(api, monkeypatch):
+    """P0-F regression: the waves POST wrote rows but never invalidated the
+    result cache, so a GET seeded before the write kept serving stale data.
+    """
+    monkeypatch.setenv("PARLAMENT_ADMIN_TOKEN", "test-token")
+    session = api.factory()
+    session.add_all(
+        [
+            Event(
+                type="switch_party",
+                person_id=api.ids.p1,
+                chamber="deputies",
+                event_date=date(2025, 1, 11),
+                dedup_key="evt:wave:invalidate:1",
+            ),
+            Event(
+                type="switch_party",
+                person_id=api.ids.p2,
+                chamber="deputies",
+                event_date=date(2025, 1, 12),
+                dedup_key="evt:wave:invalidate:2",
+            ),
+        ]
+    )
+    session.commit()
+    session.close()
+
+    path = "/api/analytics/switch-waves"
+    # Seed the cache BEFORE the write: no waves yet -> [] is cached.
+    assert api.client.get(path).json() == []
+
+    response = api.client.post(
+        "/api/analytics/waves?chamber=deputies&legislature=2024",
+        headers={"X-Admin-Token": "test-token"},
+    )
+    assert response.status_code == 200
+    assert response.json()["created"] == 1
+
+    # Fresh GET must see the new wave, not the seeded stale [].
+    assert len(api.client.get(path).json()) == 1
+
+
+def test_analytics_waves_post_calls_both_invalidators(api, monkeypatch):
+    """The waves POST must clear both the result cache and the traseism
+    overview cache, like the other admin write paths."""
+    monkeypatch.setenv("PARLAMENT_ADMIN_TOKEN", "test-token")
+    from backend.routers import api as api_router
+
+    calls = {"result": 0, "traseism": 0}
+
+    def mark_result():
+        calls["result"] += 1
+
+    def mark_traseism():
+        calls["traseism"] += 1
+
+    monkeypatch.setattr(api_router, "invalidate_result_cache", mark_result)
+    monkeypatch.setattr(api_router, "invalidate_traseism_overview_cache", mark_traseism)
+
+    response = api.client.post(
+        "/api/analytics/waves?chamber=deputies&legislature=2024",
+        headers={"X-Admin-Token": "test-token"},
+    )
+    assert response.status_code == 200
+    assert calls == {"result": 1, "traseism": 1}
 
 
 def test_movements_excludes_undated_events(api):

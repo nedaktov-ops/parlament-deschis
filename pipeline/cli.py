@@ -624,8 +624,21 @@ def cmd_build_corpus(args) -> int:
                 )
                 session.commit()
                 log.info("committee ingest: %s", totals)
-                if args.strict and totals["committees"] == 0:
-                    log.error("strict: committee ingest returned 0 committees")
+                # "committees" counts only *changed* fragments, so a healthy
+                # idempotent re-run reports 0 there and all pages in
+                # "unchanged". Gate on explicit failure plus a non-empty
+                # committee source instead, so re-runs pass while an empty or
+                # failed/partial ingest still fails the strict build.
+                seen = totals["committees"] + totals["unchanged"]
+                if args.strict and (totals.get("status") == "FAILURE" or seen == 0):
+                    log.error(
+                        "strict: committee ingest status=%s, saw %d committees "
+                        "(changed=%d, unchanged=%d)",
+                        totals.get("status"),
+                        seen,
+                        totals["committees"],
+                        totals["unchanged"],
+                    )
                     return 1
             except Exception as exc:  # noqa: BLE001 - strict gate vs best effort
                 if args.strict:

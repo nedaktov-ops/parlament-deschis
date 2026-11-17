@@ -10,15 +10,33 @@ interface Seat {
   member: MemberBrief | null;
 }
 
-function layout(n: number, rows: number): { x: number; y: number }[] {
-  if (n <= 0) return [];
-  const radii = Array.from({ length: rows }, (_, i) => i + 1);
+/**
+ * Pure seat-count distribution for a hemicycle. Exported so termination and
+ * exact totals can be asserted without React.
+ *
+ * Guarantees: returns exactly `n` seats for every `n >= 1, rows >= 1`; never
+ * produces an empty row (rows are capped at `n`); and always terminates.
+ *
+ * The clamp `Math.max(1, ...)` can make the rounded counts sum to more than
+ * `n` while every count is already 1 (e.g. n=1, rows=3 -> [1,1,1], diff=-2).
+ * Capping rows at `n` removes that deadlock: when rows <= n, a negative diff
+ * implies at least one count > 1, so the decrement branch always makes
+ * progress. A bounded iteration guard is kept as defence in depth.
+ */
+export function computeHemicycleRows(n: number, rows: number): number[] {
+  if (n <= 0 || rows <= 0) return [];
+  const effectiveRows = Math.min(rows, n);
+  const radii = Array.from({ length: effectiveRows }, (_, i) => i + 1);
   const sum = radii.reduce((a, b) => a + b, 0);
   const counts = radii.map((r) => Math.max(1, Math.round((n * r) / sum)));
   let diff = n - counts.reduce((a, b) => a + b, 0);
-  let i = rows - 1;
-  while (diff !== 0) {
-    const idx = ((i % rows) + rows) % rows;
+  let i = effectiveRows - 1;
+  // Defensive bound: each full pass over `effectiveRows` indices makes at
+  // least one unit of progress, so this is always >= the work required.
+  const maxIterations = (Math.abs(diff) + 1) * (effectiveRows + 1);
+  let iterations = 0;
+  while (diff !== 0 && iterations < maxIterations) {
+    const idx = ((i % effectiveRows) + effectiveRows) % effectiveRows;
     if (diff > 0) {
       counts[idx] += 1;
       diff -= 1;
@@ -27,10 +45,17 @@ function layout(n: number, rows: number): { x: number; y: number }[] {
       diff += 1;
     }
     i -= 1;
+    iterations += 1;
   }
+  return counts;
+}
+
+function layout(n: number, rows: number): { x: number; y: number }[] {
+  const counts = computeHemicycleRows(n, rows);
+  const maxR = counts.length;
+  if (maxR === 0) return [];
   const pts: { x: number; y: number }[] = [];
-  const maxR = rows;
-  for (let r = 0; r < rows; r++) {
+  for (let r = 0; r < maxR; r++) {
     const radius = ((r + 1) / maxR) * 48;
     const c = counts[r];
     for (let s = 0; s < c; s++) {

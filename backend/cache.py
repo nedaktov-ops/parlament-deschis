@@ -30,6 +30,9 @@ MAX_ENTRIES = 512
 
 _lock = threading.Lock()
 _store: dict[str, tuple[float, Any]] = {}
+# Monotonic generation bumped by invalidate(). A compute captures it under the
+# lock and only writes its result back if no invalidation landed in between.
+_generation = 0
 
 
 def cached(label: str) -> Callable:
@@ -52,13 +55,18 @@ def cached(label: str) -> Callable:
                 hit = _store.get(key)
                 if hit is not None and now - hit[0] < TTL_SECONDS:
                     return hit[1]
+                # Snapshot under the lock: if an admin write invalidates while
+                # the (slow) compute runs outside it, this generation goes
+                # stale and the write-back below is suppressed (TOCTOU fix).
+                generation = _generation
             value = fn(*args, **kwargs)
             with _lock:
-                if len(_store) >= MAX_ENTRIES:
-                    # Dicts preserve insertion order: drop the oldest third.
-                    for stale in list(_store)[: MAX_ENTRIES // 3]:
-                        del _store[stale]
-                _store[key] = (time.monotonic(), value)
+                if generation == _generation:
+                    if len(_store) >= MAX_ENTRIES:
+                        # Dicts preserve insertion order: drop the oldest third.
+                        for stale in list(_store)[: MAX_ENTRIES // 3]:
+                            del _store[stale]
+                    _store[key] = (time.monotonic(), value)
             return value
 
         return wrapper
@@ -67,6 +75,13 @@ def cached(label: str) -> Callable:
 
 
 def invalidate() -> None:
-    """Drop every cached value (call after any admin write)."""
+    """Drop every cached value (call after any admin write).
+
+    Bumping the generation also discards any value computed *before* this call
+    that is still in flight, so it cannot be stored with a fresh timestamp
+    afterwards and served for another TTL window.
+    """
+    global _generation
     with _lock:
+        _generation += 1
         _store.clear()
