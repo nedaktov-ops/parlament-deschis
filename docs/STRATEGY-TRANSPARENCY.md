@@ -510,6 +510,28 @@ I'm now deploying subagents to execute all 15 features. Each subagent works inde
 
 ---
 
+## Final Check-In — Phase 2 (P5) Remediation Completion (2026-11-17)
+
+**Status**: Phase 2 delivered, verified, and merged via PR #28 (squash `53c3ece`) on top of Phase 1.
+
+**Delivered** (all re-verified in current code before editing, per `docs/REMEDIATION-STRATEGY.md` §8):
+
+1. **P5-A** — Dead frontend modules deleted (6) + unused npm deps removed (3); build green.
+2. **P5-B** — TimeSlider single-interval fix; tsc strictness flags triaged one-by-one.
+3. **P5-C** — Report table overflow wrappers; 10/11px → 12px.
+4. **P5-D** — One-off destructive merge gated by `user_version`; prepared DBs stamped; FK indexes + partial unique index + `foreign_key_check`.
+5. **P5-E** — CI actions SHA-pinned; Dockerfile download residual documented.
+6. **P5-F** — CI `evidence-guards` job; cdep-corpus skips documented.
+
+**Gates (final, post-merge on `main` @ `53c3ece`)**:
+- ruff clean · pytest **259 passed** · YAML valid · LiveFeed guard **PASS** · tsc clean · build OK
+- **Production UI scan: 18 routes / 0 JS errors / 0 axe violations** · prod API `/api/health` ok · release pin `data-20261117-T060923` unchanged
+- Post-merge CI on `main`: **success** (audit, test, evidence-guards, docker)
+
+**Not done in Phase 2 (by design, follow-ups)**: no data churn / no new dataset release (P3-D DB values); Dockerfile in-build download auth; frontend unit-test framework.
+
+---
+
 ## Subagent Execution — Checkpoint 1 (Day 1)
 
 I'm now deploying the subagents with specific tasks and checking that they start correctly.
