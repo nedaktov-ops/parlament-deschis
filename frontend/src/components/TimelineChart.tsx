@@ -246,7 +246,7 @@ export default function TimelineChart({
           <summary className="cursor-pointer text-sky-300 hover:text-sky-200">
             {t("timelineTableCaption")}
           </summary>
-          <div className="overflow-x-auto mt-2">
+          <div className="overflow-x-auto mt-2" tabIndex={0} role="region" aria-label={t("timelineTableCaption")}>
             <table className="w-full text-xs border-collapse">
               <caption className="sr-only">{t("timelineTableCaption")}</caption>
               <thead>
