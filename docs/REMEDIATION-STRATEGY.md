@@ -1,6 +1,6 @@
 # Remediation Strategy — Audit Findings → Verified Fixes
 
-**Status:** active reference. Every change made after `2026-11-17` must be checked against this document before and after implementation. **Source of findings:** the 20-agent read-only audit (recipes at `/tmp/opencode/parlament-audit-recipes.md`, consolidated report delivered `2026-11-17`). **Web-standard source:** Chrome `modern-web-guidance` skill version `2026_11_10-47b4c80e`, retrieved guides: `accessibility`, `responsive-table`, `dialog`, `persistent-toast-notifications`; project browser policy in `AGENTS.md`.
+**Status:** active reference. Every change made after `2026-11-17` must be checked against this document before and after implementation. **Source of findings:** the 20-agent read-only audit (recipes at `/tmp/opencode/parlament-audit-recipes.md`, consolidated report delivered `2026-11-17`). Phase 1 (P0–P4) was implemented and merged (`5134231`, `1f4df92`); **Phase 2 (P5) below covers the evidence-verified residuals.** **Web-standard source:** Chrome `modern-web-guidance` skill version `2026_11_10-47b4c80e`, retrieved guides: `accessibility`, `responsive-table`, `dialog`, `persistent-toast-notifications`; project browser policy in `AGENTS.md`.
 
 ---
 
@@ -106,3 +106,27 @@ P3: B2/B1 analytics, P1 parsers, P2 business logic.
 P4: T1 tests, D1/Q1 docs, I1 infra, X1 product labels.
 
 **This document is the reference point: before each change, state which phase/ID it belongs to and after each change, record the gate evidence.**
+
+---
+
+## 8. Phase 2 (P5) — evidence-verified residuals
+
+Re-verified on merged `main` (`1f4df92`) on 2026-11-17, not assumed. Each item below was checked with a concrete command; if a follow-up agent finds the evidence stale, it must report and drop the item, not force a change.
+
+| ID | Fleet recipe (exclusive ownership) | Verified evidence | Intended change / smarter alternative | Gate |
+|---|---|---|---|---|
+| P5-A | `frontend/src/pages/ElectoralDynamics.tsx`, `components/{DefectionSankey,DefectionSankeyCurrent,DefectionsList,PartyFlowDetail,CurrentLegislatureView}.tsx`, `frontend/package.json`, `frontend/package-lock.json` | grep: 5 page/component modules have **0 importers**; the 2 Sankey components are imported **only** by the dead `CurrentLegislatureView`; `d3`, `@types/d3`, `@tanstack/router-devtools` have no imports (source uses `d3-scale`, `d3-scale-chromatic`, `d3-sankey`) | Delete dead modules and unused deps; keep `@types/d3-sankey` (verify it is actually needed). Deleting is the smarter alternative — no refactor, no rewrite. Confirm `/electoral` still redirects and 18 routes still render after removal. | `npm run build`; `ui_validate.py`; grep 0 dangling imports |
+| P5-B | `frontend/src/components/TimeSlider.tsx`, `frontend/tsconfig.json`, `frontend/src/router.tsx` (TimelineChart import line only) | `TimeSlider` effect deps `[playing, value, maxMs, onChange]` recreate the 300 ms interval on every tick; `tsconfig` has `strict` but lacks `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`; ECharts chunk 487 kB is on the **initial** route via `LiveDashboard` | Use refs for the latest `value`/`onChange` so the interval depends only on `[playing, maxMs]`; enable stricter tsc flags **only if tsc stays green** (fix genuine errors, do not add `any`/suppressions); lazy-load the chart below the fold if it is imported eagerly. No new dependencies. | `npx tsc --noEmit`; `npm run build`; node assertion that interval setup count is stable across ticks |
+| P5-C | `frontend/src/pages/Report.tsx` + ONLY live components containing `text-[10px]`/`text-[11px]` (PartyProfile, Traseism, PersonDeepDive, MembershipGantt, About, PersonDrawer) | `Report.tsx:175,281` tables lack the overflow wrapper used elsewhere; 10/11 px classes render small (P2-B removed the override hacks, so they are literally 10/11 px) | Add `overflow-x-auto` + keyboard scroll wrapper (`tabindex=0 role=region aria-label`) to Report tables; bump 10/11 px to 12 px in live components using the existing class names (no new CSS, no dead-file edits) | `ui_validate.py`; Playwright print emulation of `/report` |
+| P5-D | `pipeline/db.py`, `scripts/prepare_db.py`, `tests/test_db_schema.py`, `tests/test_prepare_db.py` | ~7 unindexed FKs; `uq_stint` includes `post_id` (100 % NULL) and admits duplicate closed stints; `user_version=0`, no migration gate; `ensure_schema` + destructive legacy merge run at startup; `prepare_db` skips `foreign_key_check` | Add indexes on the FK columns actually queried; add a partial unique index for closed stints; add `foreign_key_check` to `prepare_db`; gate the one-off legacy merge behind a `user_version` check so a read-only runtime never mutates. **No data rewrite, no change to shipped DB files.** | `uv run pytest tests/test_db_schema.py tests/test_prepare_db.py -q`; read-only PRAGMA on a copy |
+| P5-E | `.github/workflows/ci.yml`, `Dockerfile`, `scripts/download_dataset.py`, `tests/test_dataset_download.py` | actions pinned to mutable tags; Dockerfile in-build dataset download unauthenticated; dataset digest self-attested by the release. Action SHA pinning requires resolvable hashes — **do not guess**; if unavailable read-only, document as residual | Pass `GITHUB_TOKEN` to the Dockerfile download if the build step supports secrets, otherwise document; pin action SHAs only from a resolvable source; add a test proving a tampered digest is rejected (already partly covered). No new secrets invented. | YAML parse; `ruff`; `pytest tests/test_dataset_download.py -q` |
+| P5-F | `tests/` (files not owned by earlier phases), `scripts/` standalone guards | 6 tests skip in CI because `data/cache/cdep` is gitignored; standalone guards (`ui_validate.py`, `check_livefeed_props.mjs`) are not wired into CI | Decide per skipped test: check in a **trimmed** fixture only if it preserves the parser contract, otherwise keep skip with an explicit reason comment. Add the two standalone guards to a CI job as non-blocking evidence (do not require Playwright if the runner lacks it — print SKIPPED instead of failing). | `pytest -q`; workflow YAML valid; CI green |
+
+### Phase 2 decision rules
+- **Deletion over refactor:** dead code with 0 importers is deleted, not modernised (strategy §1.2).
+- **Strictness over suppression:** if a tsc flag surfaces errors, fix the types; if that is disproportionate, revert the flag and document why — never `any` cascades.
+- **No data churn:** the pinned release asset is still WAL-mode; the entrypoint guard now fails loudly on a future bad asset. Republishing the 22 MB dataset is NOT part of Phase 2 — it needs an explicit data-release decision with its own verification.
+- **No guessed hashes/secrets:** action SHAs and new credentials are only introduced with a resolvable source.
+
+### Phase 2 acceptance
+All §5 global gates stay mandatory; additionally: 0 dead-module imports, 0 missing i18n keys (`/tmp/i18n-extract.mjs`), `ui_validate.py` 18/18, PR CI `test`+`audit`+`docker` green, production health unchanged until an explicit data release.
