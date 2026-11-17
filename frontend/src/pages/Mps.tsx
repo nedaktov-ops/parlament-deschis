@@ -63,15 +63,26 @@ export default function Mps() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-100 mb-2">
-        {t("mps.title", "MP Biography Cards")}
-      </h1>
-      <p className="text-slate-400 mb-6">
-        {t(
-          "mps.intro",
-          "Browse every person in the corpus with their party, age, observed switches and committee seats. Ages come from recorded birth dates — cards with no birth date show age as unknown, never a guess.",
-        )}
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-100 mb-2">
+            {t("mps.title", "MP Biography Cards")}
+          </h1>
+          <p className="text-slate-400 mb-6">
+            {t(
+              "mps.intro",
+              "Browse every person in the corpus with their party, age, observed switches and committee seats. Ages come from recorded birth dates — cards with no birth date show age as unknown, never a guess.",
+            )}
+          </p>
+        </div>
+        <Link
+          to="/compare-mps"
+          search={{ date: localISODate() }}
+          className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+        >
+          {t("mps.compareLink", "Compare MPs →")}
+        </Link>
+      </div>
 
       <form
         onSubmit={(e) => {

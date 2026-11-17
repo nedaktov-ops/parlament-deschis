@@ -23,6 +23,7 @@ const Committees = lazy(() => import("./pages/Committees").then(m => ({ default:
 const PartyComparison = lazy(() => import("./pages/PartyComparison").then(m => ({ default: m.default })));
 const Coalitions = lazy(() => import("./pages/Coalitions").then(m => ({ default: m.default })));
 const Mps = lazy(() => import("./pages/Mps").then(m => ({ default: m.default })));
+const MpComparison = lazy(() => import("./pages/MpComparison").then(m => ({ default: m.default })));
 
 function validateDateSearch(search: Record<string, unknown>) {
   const candidate = search.date;
@@ -341,6 +342,13 @@ const mpsRoute = createRoute({
   validateSearch: validateDateSearch,
 });
 
+const mpComparisonRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/compare-mps",
+  component: () => <Suspense fallback={<Loading />}><MpComparison /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
 const routeTree = rootRoute.addChildren([
   senateHistoryRoute,
   switchLeaderboardRoute,
@@ -349,6 +357,7 @@ const routeTree = rootRoute.addChildren([
   partyComparisonRoute,
   coalitionsRoute,
   mpsRoute,
+  mpComparisonRoute,
   indexRoute,
   electoralRoute,
   institutionalRoute,
