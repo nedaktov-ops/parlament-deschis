@@ -45,6 +45,29 @@ function Loading() {
   );
 }
 
+// Branded recovery UI for missing routes and render errors
+function NotFound() {
+  const { t } = useTranslation();
+  return (
+    <div className="card p-8 text-center space-y-3">
+      <h2 className="text-xl font-semibold">{t("notFoundTitle", "Page not found")}</h2>
+      <p className="text-slate-400">{t("notFoundBody", "The page you were looking for does not exist.")}</p>
+      <Link to="/" search={{ date: localISODate() }} className="btn bg-sky-700 hover:bg-sky-600">{t("backHome", "Back to overview")}</Link>
+    </div>
+  );
+}
+
+function RouteError({ error }: { error?: Error }) {
+  const { t } = useTranslation();
+  return (
+    <div className="card p-8 text-center space-y-3" role="alert">
+      <h2 className="text-xl font-semibold">{t("routeErrorTitle", "Something went wrong")}</h2>
+      <p className="text-slate-400">{error?.message || t("routeErrorBody", "This page could not be displayed.")}</p>
+      <Link to="/" search={{ date: localISODate() }} className="btn bg-sky-700 hover:bg-sky-600">{t("backHome", "Back to overview")}</Link>
+    </div>
+  );
+}
+
 // Navigation link component
 interface NavLinkProps {
   to: string;
@@ -131,7 +154,7 @@ function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           <p className="text-slate-400">{t("codeLicense")}: AGPL-3.0-or-later</p>
           <p className="text-slate-400">{t("dataLicense")}: CC-BY-4.0</p>
           <h3 className="font-semibold">{t("project")}</h3>
-          <a href="https://github.com/parlament-deschis" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">https://github.com/parlament-deschis</a>
+          <a href="https://github.com/nedaktov-ops/parlament-deschis" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">https://github.com/nedaktov-ops/parlament-deschis</a>
         </div>
       </div>
     </div>
@@ -149,8 +172,39 @@ function RootLayout() {
     date: new URLSearchParams(location.href.split("?")[1] ?? "").get("date"),
   }).date;
 
+  // Keep the document language and SPA title in sync with route/language changes.
+  useEffect(() => {
+    document.documentElement.lang = i18n.language;
+  }, [i18n.language]);
+
+  useEffect(() => {
+    const path = location.pathname;
+    let label: string;
+    if (path === "/") label = t("overview");
+    else if (path.startsWith("/traseism") || path.startsWith("/electoral")) label = t("traseismShort");
+    else if (path === "/leaderboard") label = t("nav.leaderboard", "Leaderboard");
+    else if (path === "/demographics") label = t("nav.demographics", "Demographics");
+    else if (path === "/committees") label = t("nav.committees", "Committees");
+    else if (path === "/compare") label = t("nav.compare", "Compare");
+    else if (path === "/coalitions") label = t("nav.coalitions", "Coalitions");
+    else if (path === "/mps") label = t("nav.mps", "MPs");
+    else if (path === "/report") label = t("nav.report", "Report");
+    else if (path === "/party-timeline") label = t("nav.partyTimeline", "Timeline");
+    else if (path === "/institutional") label = t("institutional");
+    else if (path === "/coverage") label = t("coverage");
+    else if (path === "/senate-history") label = t("nav.senateHistory", t("senate"));
+    else if (path.startsWith("/party/")) label = t("party");
+    else if (path.startsWith("/person/")) label = t("person");
+    else if (path.startsWith("/legislature/")) label = t("legislature");
+    else label = t("title");
+    document.title = `${label} — ${t("title")}`;
+  }, [location.pathname, i18n.language, t]);
+
   return (
     <div className="min-h-screen">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-2 focus:rounded-md focus:bg-sky-700 focus:text-white">
+        {t("skipToContent", "Skip to content")}
+      </a>
       <header className="border-b border-slate-700/60 bg-panel/50 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1">
@@ -176,6 +230,7 @@ function RootLayout() {
             </button>
           </div>
         </div>
+        <div className="relative">
         <nav className="flex gap-1 border-b border-slate-700 px-4 overflow-x-auto" aria-label={t("mainNavigation")}>
           <NavLink to="/" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("overview")}
@@ -213,9 +268,20 @@ function RootLayout() {
           <NavLink to="/coverage" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("coverage")}
           </NavLink>
+          <NavLink to="/senate-history" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("nav.senateHistory", t("senate"))}
+          </NavLink>
+          <NavLink to="/legislature/2024" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("nav.legislature", t("legislature"))}
+          </NavLink>
+          <NavLink to="/party/PSD" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("party")}
+          </NavLink>
         </nav>
+        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-ink to-transparent" />
+        </div>
       </header>
-      <main className="max-w-7xl mx-auto px-4 py-5">
+      <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto px-4 py-5">
         <Outlet />
       </main>
       <AboutModal open={aboutOpen} onClose={closeAbout} />
@@ -226,6 +292,8 @@ function RootLayout() {
 // Route tree
 const rootRoute = createRootRoute({
   component: RootLayout,
+  notFoundComponent: NotFound,
+  errorComponent: RouteError,
 });
 
 const indexRoute = createRoute({
