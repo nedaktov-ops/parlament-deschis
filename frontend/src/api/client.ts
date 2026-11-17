@@ -291,6 +291,7 @@ export const api = {
   partyTimeline: (shortName: string, from: string, to: string) =>
     get<PartyTimelineResponse>(`/party/${encodeURIComponent(shortName)}/timeline?from=${from}&to=${to}`),
   committees: (asOf: string) => get<CommitteeResponse[]>(`/committees?as_of=${asOf}`),
+  parties: () => get<{ status: string; data: PartyListEntry[] }>("/parties"),
   crossChamber: (asOf: string) =>
     get<CrossChamberResponse>(`/analytics/cross-chamber?as_of=${asOf}`),
   movements: (filters: MovementFilters | string = {}) => {
@@ -528,6 +529,15 @@ export function generationalShift(
 }
 
 // --- Feature 2: Commitment Tracker (committee membership) -----------------
+
+export interface PartyListEntry {
+  id: string;
+  short_name: string;
+  name: string;
+  color: string | null;
+  total_members: number;
+  switches_in: number;
+}
 
 export interface CommitteeListItem {
   id: string;

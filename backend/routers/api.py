@@ -330,6 +330,68 @@ def about(db: Annotated[Session, Depends(get_db)]):
     }
 
 
+@router.get("/parties")
+def parties_list(db: Session = Depends(get_db)):
+    """All parties with size and switch-flow stats, for comparison UI.
+
+    Size = distinct persons with a group membership on behalf of the party;
+    flows count observed switch_group events whose destination group maps to
+    the party. Read-only over existing tables.
+    """
+    from sqlalchemy import func, select
+
+    from pipeline.db import Event, Membership, Organization, Person
+
+    party_rows = db.execute(
+        select(
+            Organization.id,
+            Organization.short_name,
+            Organization.name,
+            Organization.color,
+            func.count(func.distinct(Membership.person_id)).label("total_members"),
+        )
+        .select_from(Organization)
+        .outerjoin(
+            Membership,
+            (Membership.on_behalf_of_id == Organization.id)
+            & (Membership.chamber.in_(["deputies", "senate"])),
+        )
+        .where(Organization.classification == "party")
+        .group_by(Organization.id)
+        .order_by(func.count(func.distinct(Membership.person_id)).desc())
+    ).all()
+
+    result = []
+    for org_id, short_name, name, color, total_members in party_rows:
+        # Switches in: observed switch_group events whose destination GROUP
+        # carries this party's acronym. Groups and parties are separate org
+        # rows sharing the short_name (several PSD groups + one PSD party),
+        # so match on the acronym, not the id.
+        switches_in = (
+            db.scalar(
+                select(func.count(Event.id))
+                .join(Organization, Organization.id == Event.to_org_id)
+                .where(
+                    Event.type == "switch_group",
+                    Organization.classification == "group",
+                    Organization.short_name == short_name,
+                )
+            )
+            or 0
+        )
+        result.append(
+            {
+                "id": org_id,
+                "short_name": short_name,
+                "name": name,
+                "color": color,
+                "total_members": total_members or 0,
+                "switches_in": switches_in,
+            }
+        )
+    return {"status": "ok", "data": result}
+
+
 @router.get("/party/{short_name}")
 def party_profile(
     short_name: str,

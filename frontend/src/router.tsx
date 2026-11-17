@@ -20,6 +20,7 @@ const CoverageView = lazy(() => import("./pages/CoverageView").then(m => ({ defa
 const SwitchLeaderboard = lazy(() => import("./pages/SwitchLeaderboard").then(m => ({ default: m.default })));
 const Demographics = lazy(() => import("./pages/Demographics").then(m => ({ default: m.default })));
 const Committees = lazy(() => import("./pages/Committees").then(m => ({ default: m.default })));
+const PartyComparison = lazy(() => import("./pages/PartyComparison").then(m => ({ default: m.default })));
 
 function validateDateSearch(search: Record<string, unknown>) {
   const candidate = search.date;
@@ -186,6 +187,9 @@ function RootLayout() {
           <NavLink to="/committees" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("nav.committees", "Committees")}
           </NavLink>
+          <NavLink to="/compare" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("nav.compare", "Compare")}
+          </NavLink>
           <NavLink to="/institutional" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("institutional")}
           </NavLink>
@@ -308,11 +312,19 @@ const committeesRoute = createRoute({
   validateSearch: validateDateSearch,
 });
 
+const partyComparisonRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/compare",
+  component: () => <Suspense fallback={<Loading />}><PartyComparison /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
 const routeTree = rootRoute.addChildren([
   senateHistoryRoute,
   switchLeaderboardRoute,
   demographicsRoute,
   committeesRoute,
+  partyComparisonRoute,
   indexRoute,
   electoralRoute,
   institutionalRoute,
