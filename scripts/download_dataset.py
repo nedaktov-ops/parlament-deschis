@@ -19,9 +19,17 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 logger = logging.getLogger(__name__)
 
 # Only GitHub's own hosts may serve the dataset. The release API supplies the
-# asset URL, so trusting it blindly would be SSRF; GitHub redirects asset
-# downloads from api.github.com to objects.githubusercontent.com.
-ALLOWED_ASSET_HOSTS = frozenset({"api.github.com", "objects.githubusercontent.com"})
+# asset URL, so trusting it blindly would be SSRF. Verified 2026-11-17 with a
+# read-only HEAD probe: api.github.com redirects release assets to
+# release-assets.githubusercontent.com (NOT objects.githubusercontent.com,
+# which is used for other GitHub assets). Both are GitHub-controlled.
+ALLOWED_ASSET_HOSTS = frozenset(
+    {
+        "api.github.com",
+        "objects.githubusercontent.com",
+        "release-assets.githubusercontent.com",
+    }
+)
 
 
 class UnsafeRedirectError(RuntimeError):

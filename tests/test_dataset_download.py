@@ -88,3 +88,26 @@ def test_download_dataset_rejects_metadata_path_equal_to_database(tmp_path):
             release_tag="data-123-1",
             metadata_path=destination,
         )
+
+
+def test_github_release_asset_redirect_host_is_allowlisted():
+    """Regression: a real HEAD probe (2026-11-17) showed GitHub redirects
+    release assets to release-assets.githubusercontent.com, not to
+    objects.githubusercontent.com. Omitting it made CI's audit download fail
+    with UnsafeRedirectError. Pin all observed hosts here.
+    """
+    assert "release-assets.githubusercontent.com" in download_dataset.ALLOWED_ASSET_HOSTS
+    assert "objects.githubusercontent.com" in download_dataset.ALLOWED_ASSET_HOSTS
+    assert "api.github.com" in download_dataset.ALLOWED_ASSET_HOSTS
+
+    handler = download_dataset._SafeRedirectHandler()
+    from urllib.request import Request
+
+    req = Request("https://api.github.com/assets/1", headers={"Authorization": "Bearer secret"})
+    # Same-host redirect forwards the header; cross-host strips it.
+    same = handler.redirect_request(req, None, 302, "Found", {}, "https://api.github.com/assets/2")
+    assert same.get_header("Authorization") == "Bearer secret"
+    redirected = handler.redirect_request(
+        req, None, 302, "Found", {}, "https://release-assets.githubusercontent.com/x"
+    )
+    assert redirected.get_header("Authorization") is None
