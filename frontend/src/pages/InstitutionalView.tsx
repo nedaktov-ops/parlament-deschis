@@ -93,7 +93,12 @@ export function InstitutionalView() {
                 {t("crossChamberCount", { count: crossChamber.data?.count ?? 0 })}
               </p>
               <p className="text-xs text-slate-500 mb-3">{t("crossChamberDateLimit")}</p>
-              <div className="overflow-x-auto">
+              <div
+                className="overflow-x-auto"
+                tabIndex={0}
+                role="region"
+                aria-label={t("crossChamberTableCaption")}
+              >
                 <table className="w-full text-sm text-left">
                   <caption className="sr-only">{t("crossChamberTableCaption")}</caption>
                   <thead>
