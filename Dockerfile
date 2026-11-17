@@ -14,7 +14,7 @@
 # opened on a read-only filesystem because it needs -wal/-shm sidecars.
 
 # --- stage 1: the single-page app -----------------------------------------
-FROM node:22-alpine AS frontend
+FROM node:25-alpine AS frontend
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
