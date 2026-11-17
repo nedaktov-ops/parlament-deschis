@@ -9,7 +9,9 @@ from __future__ import annotations
 import logging
 import re
 from datetime import UTC, datetime
+from html import unescape
 
+from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
 from ..db import PipelineRun
@@ -23,7 +25,8 @@ log = logging.getLogger("parlament.cdep_committees")
 BASE = "https://www.cdep.ro/ords/pls/parlam/structura2015"
 CHAMBER = "deputies"
 
-_IDC = re.compile(r"idc=(\d+)")
+# Committee listing links, current (structura2015.co) and legacy (structura.co).
+_LIST_IDC = re.compile(r"structura(?:2015)?\.co\?[^\"'#]*?\bidc=(\d+)")
 
 
 class CommitteeItem:
@@ -54,7 +57,7 @@ class CdepCommitteeSource:
         url = self.committee_ledger_url(legislature, idc)
         res = self.client.get(url)
         ledger = parse_committee_ledger(
-            res.text, chamber=self.CHAMBER, legislature=legislature, source_url=url
+            res.text, chamber=CHAMBER, legislature=legislature, source_url=url
         )
         return ledger, res.text
 
@@ -88,7 +91,7 @@ class CdepCommitteeSource:
                 url = self.committee_ledger_url(legislature, item.idc)
                 res = self.client.get(url)
                 ledger = parse_committee_ledger(
-                    res.text, chamber=self.CHAMBER, legislature=legislature, source_url=url
+                    res.text, chamber=CHAMBER, legislature=legislature, source_url=url
                 )
                 frag, changed = record_fragment(
                     session,
@@ -129,24 +132,22 @@ class CdepCommitteeSource:
 
 
 def parse_committee_list(html: str) -> list[CommitteeItem]:
-    """Extract committee items (idc, name) from the listing page."""
-    items: list[CommitteeItem] = []
-    for m in _IDC.finditer(html):
+    """Extract committee items (idc, name) from the listing page.
+
+    Every committee is one ``<a>`` whose href carries ``idc``; the name is the
+    anchor text (entities already decoded, e.g. ``constitu&#539;ionalitate``).
+    The page also carries an "print" link with an empty ``idc`` — that is not a
+    committee. Items are de-duplicated by ``idc``, keeping document order.
+    """
+    soup = BeautifulSoup(html, "lxml")
+    items: dict[str, CommitteeItem] = {}
+    for a in soup.find_all("a", href=True):
+        m = _LIST_IDC.search(a["href"])
+        if not m:
+            continue
         idc = m.group(1)
-        # Find the surrounding anchor tag to get the committee name.
-        start = html.rfind("<a ", 0, m.start())
-        if start < 0:
+        name = " ".join(unescape(a.get_text(" ", strip=True)).split())
+        if not name or idc in items:
             continue
-        end = html.find(">", m.start())
-        if end < 0:
-            continue
-        tag = html[start : end + 1]
-        # Extract text between > and </a>
-        text_start = tag.find(">") + 1
-        text_end = tag.find("</a>")
-        if text_start < 1 or text_end < 0:
-            continue
-        name = tag[text_start:text_end].strip()
-        if name:
-            items.append(CommitteeItem(idc=idc, name=name))
-    return items
+        items[idc] = CommitteeItem(idc=idc, name=name)
+    return list(items.values())

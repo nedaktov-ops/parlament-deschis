@@ -19,6 +19,7 @@ from .db import (
     make_engine,
     make_session_factory,
 )
+from .queries import is_group
 
 # Known trigger dates for Romanian elections and government formations
 # These help label detected waves
@@ -102,7 +103,7 @@ def derive_switch_waves(
     min_switches: int = 3,
 ) -> int:
     """
-    Detect switch waves by clustering switch_party events in sliding windows.
+    Detect switch waves by clustering switch events in sliding windows.
 
     Args:
         session: Database session
@@ -114,8 +115,11 @@ def derive_switch_waves(
     Returns:
         Number of newly created SwitchWave records
     """
-    # Get all switch_party events, optionally filtered
-    stmt = select(Event).where(Event.type == "switch_party")
+    # Get all switch events, optionally filtered. The corpus carries
+    # switch_group (observed parliamentary-group moves from the chambers'
+    # ledgers); derived party-level moves are switch_party. Waves cluster
+    # both, so a wave is "a burst of affiliation change" regardless of axis.
+    stmt = select(Event).where(Event.type.in_(("switch_party", "switch_group")))
     if chamber:
         stmt = stmt.where(Event.chamber == chamber)
     stmt = stmt.where(Event.event_date.is_not(None)).order_by(Event.event_date)
@@ -251,9 +255,7 @@ def party_switching_rates(
     from collections import defaultdict
 
     period_start, period_end = (
-        _legislature_period(session, legislature)
-        if legislature
-        else (date.min, date.today())
+        _legislature_period(session, legislature) if legislature else (date.min, date.today())
     )
     event_stmt = select(Event).where(
         Event.type == "switch_party",
@@ -276,7 +278,7 @@ def party_switching_rates(
             if not org:
                 continue
             party_id = org.id if org.classification == "party" else None
-            if org.classification == "group":
+            if is_group(org):
                 membership_stmt = select(Membership.on_behalf_of_id).where(
                     Membership.person_id == switch.person_id,
                     Membership.org_id == org.id,
@@ -285,9 +287,7 @@ def party_switching_rates(
                     or_(Membership.end_date.is_(None), Membership.end_date >= switch.event_date),
                 )
                 if legislature:
-                    membership_stmt = membership_stmt.where(
-                        Membership.legislature == legislature
-                    )
+                    membership_stmt = membership_stmt.where(Membership.legislature == legislature)
                 party_id = session.scalar(
                     membership_stmt.order_by(Membership.start_date.desc()).limit(1)
                 )
@@ -306,7 +306,7 @@ def party_switching_rates(
             continue
         membership_filters = [
             Membership.on_behalf_of_id == party_id,
-            group.classification == "group",
+            is_group(group),
             party_org.classification == "party",
             Membership.start_date <= period_end,
             or_(Membership.end_date.is_(None), Membership.end_date >= period_start),
@@ -342,12 +342,8 @@ def party_switching_rates(
                 "members": len(member_ids),
                 "switches": total_switches,
                 "switchers": len(person_switches),
-                "avg_tenure_years": round(
-                    sum(tenure_days.values()) / len(tenure_days) / 365.25, 1
-                ),
-                "switch_rate_per_mp_per_year": round(
-                    total_switches / total_person_years, 4
-                ),
+                "avg_tenure_years": round(sum(tenure_days.values()) / len(tenure_days) / 365.25, 1),
+                "switch_rate_per_mp_per_year": round(total_switches / total_person_years, 4),
             }
         )
     return sorted(results, key=lambda result: result["party_name"])
@@ -380,7 +376,7 @@ def generational_shift(
         .join(party, party.id == Membership.on_behalf_of_id)
         .where(
             Person.birth_date.is_not(None),
-            group.classification == "group",
+            is_group(group),
             party.classification == "party",
             Membership.start_date <= evaluation_date,
         )
@@ -437,19 +433,82 @@ def derive_party_cohesion(
 def derive_committee_control(
     session: Session,
     legislature: str | None = None,
-) -> None:
-    """Return no result until source-backed committee chair data is available."""
-    if legislature and not session.scalar(
-        select(KeyEvent.id)
-        .where(
-            KeyEvent.type == "legislature",
-            KeyEvent.label == legislature,
+    as_of: date | None = None,
+) -> dict:
+    """Which party chairs which committees.
+
+    Source-backed: one row per committee with ``role='presedinte'`` in the
+    dated membership ledger (cdep.ro committee ledgers). Returns per-party
+    chair counts plus the full chair list; parties with no chair are absent
+    rather than zero-filled.
+    """
+    reference = as_of or date.today()
+    stmt = (
+        select(
+            Organization.id.label("committee_id"),
+            Organization.name.label("committee_name"),
+            Organization.chamber,
+            Organization.legislature.label("org_legislature"),
+            Person.id.label("person_id"),
+            Person.canonical_name,
+            Membership.group_acronym_at_event,
+            Membership.start_date,
         )
-        .limit(1)
-    ):
-        raise ValueError(f"legislature not found: {legislature}")
-    # Committee chair data is not present in the current corpus.
-    return None
+        .select_from(Membership)
+        .join(Organization, Organization.id == Membership.org_id)
+        .join(Person, Person.id == Membership.person_id)
+        .where(
+            Organization.classification == "committee",
+            Membership.role == "presedinte",
+            # Active chair as of the reference date: open tenure or one that
+            # has not ended yet. Chairs with only an end date (former) count
+            # only when that end date is still in the future.
+            or_(
+                Membership.end_date.is_(None),
+                Membership.end_date >= reference,
+            ),
+        )
+        .order_by(Organization.name)
+    )
+    if legislature:
+        stmt = stmt.where(
+            or_(
+                Organization.legislature == legislature,
+                Membership.legislature == legislature,
+            )
+        )
+
+    chairs = []
+    by_party: dict[str, int] = {}
+    for row in session.execute(stmt):
+        party = row.group_acronym_at_event or "unknown"
+        by_party[party] = by_party.get(party, 0) + 1
+        chairs.append(
+            {
+                "committee_id": row.committee_id,
+                "committee": row.committee_name,
+                "chamber": row.chamber,
+                "chair_person_id": row.person_id,
+                "chair": row.canonical_name,
+                "party": party,
+                "chair_since": row.start_date.isoformat() if row.start_date else None,
+            }
+        )
+
+    total = len(chairs)
+    return {
+        "as_of": reference.isoformat(),
+        "total_committees": total,
+        "parties": [
+            {
+                "party": party,
+                "chairs": count,
+                "share_pct": round(100 * count / total, 1) if total else 0.0,
+            }
+            for party, count in sorted(by_party.items(), key=lambda kv: (-kv[1], kv[0]))
+        ],
+        "chairs": chairs,
+    }
 
 
 def derive_cross_chamber_careers(session: Session, as_of: date | None = None) -> int:

@@ -16,7 +16,8 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from .db import Coverage, KeyEvent, Membership
+from .db import Coverage, KeyEvent, Membership, Organization
+from .queries import is_group
 
 # Modern (2004+) chamber sizes. Used as a conservative "full" bar.
 SEATS = {"deputies": 330, "senate": 136}
@@ -24,9 +25,18 @@ FULL_RATIO = 0.9
 
 
 def _distinct_persons(session: Session, chamber: str, legislature: str) -> int:
+    """Distinct people who held a *group* tenure in the scope.
+
+    Committee memberships are organisations too; counting them here would
+    report seats that do not exist and could mark a term "full" on committee
+    rows alone.
+    """
     return int(
         session.scalar(
-            select(func.count(func.distinct(Membership.person_id))).where(
+            select(func.count(func.distinct(Membership.person_id)))
+            .join(Organization, Organization.id == Membership.org_id)
+            .where(
+                is_group(),
                 Membership.chamber == chamber,
                 Membership.legislature == legislature,
             )

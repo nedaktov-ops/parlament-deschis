@@ -206,13 +206,12 @@ export default function DefectionSankeyCurrent({ fromDate, chamber = "deputies" 
         </div>
         <div className="flex items-center gap-1" role="group" aria-label={t("chamber")}>
           {(["deputies", "senate"] as const).map((c) => (
-            <button
-              key={c}
+            <button type="button"key={c}
               onClick={() => setActiveChamber(c)}
               aria-pressed={activeChamber === c}
               className={`btn ${
                 activeChamber === c
-                  ? "bg-sky-600 text-white"
+                  ? "bg-sky-700 text-white"
                   : "bg-slate-700 hover:bg-slate-600 text-slate-200"
               }`}
             >

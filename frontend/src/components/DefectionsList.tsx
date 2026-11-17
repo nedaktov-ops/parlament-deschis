@@ -128,8 +128,7 @@ export default function DefectionsList({
 
       <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
         {switchers.map((s) => (
-          <button
-            key={s.person_id}
+          <button type="button"key={s.person_id}
             onClick={() => onSelect(s.person_id)}
             className="w-full text-left bg-slate-800/40 hover:bg-slate-800 rounded-md p-3 transition-colors"
           >
@@ -161,8 +160,7 @@ export default function DefectionsList({
                     <span className="text-slate-500 font-mono">{sw.date}</span>
                     <span className="text-slate-500">:</span>
                     {onPartySelect && sw.from ? (
-                      <button
-                        onClick={(e) => {
+                      <button type="button"onClick={(e) => {
                           e.stopPropagation();
                           onPartySelect(sw.from!);
                         }}
@@ -175,8 +173,7 @@ export default function DefectionsList({
                     )}
                     <span className="text-slate-500">→</span>
                     {onPartySelect && sw.to ? (
-                      <button
-                        onClick={(e) => {
+                      <button type="button"onClick={(e) => {
                           e.stopPropagation();
                           onPartySelect(sw.to!);
                         }}

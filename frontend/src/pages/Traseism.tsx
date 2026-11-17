@@ -7,6 +7,7 @@ import {
   traseismOverview,
   traseismSummary,
   traseismSwitches,
+  switchWaves,
   type TraseismCoverage,
   type TraseismScope,
 } from "../api/client";
@@ -118,9 +119,7 @@ function ErrorState({
         {message ?? t("traseismLoadError")}
       </p>
       {onRetry ? (
-        <button
-          type="button"
-          onClick={onRetry}
+        <button type="button"onClick={onRetry}
           className={`btn mt-2 bg-slate-700 hover:bg-slate-600 ${FOCUS}`}
         >
           {t("traseismRetry")}
@@ -420,20 +419,16 @@ function SwitchLedger({
           <div className="flex flex-wrap items-center justify-between gap-2 mt-3 text-xs text-slate-400">
             <span>{t("traseismShowing", { from, to, total })}</span>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
+              <button type="button"onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
-                className={`btn bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed ${FOCUS}`}
+                className={`btn bg-slate-700 hover:bg-slate-600 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed ${FOCUS}`}
               >
                 {t("traseismPreviousPage")}
               </button>
               <span>{t("traseismPage", { page: page + 1, pages: totalPages })}</span>
-              <button
-                type="button"
-                onClick={() => setPage((p) => p + 1)}
+              <button type="button"onClick={() => setPage((p) => p + 1)}
                 disabled={(page + 1) * PAGE_SIZE >= total}
-                className={`btn bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed ${FOCUS}`}
+                className={`btn bg-slate-700 hover:bg-slate-600 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed ${FOCUS}`}
               >
                 {t("traseismNextPage")}
               </button>
@@ -488,9 +483,7 @@ function ScopesOverview({ rows }: { rows: TraseismScope[] }) {
         aria-sort={isSorted ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
         className="py-1 pr-3 font-medium"
       >
-        <button
-          type="button"
-          className={`flex items-center gap-1 rounded px-1 py-1 text-left hover:bg-slate-700/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 ${
+        <button type="button"className={`flex items-center gap-1 rounded px-1 py-1 text-left hover:bg-slate-700/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 ${
             isSorted ? "text-slate-100" : "text-slate-300"
           }`}
           onClick={() => {
@@ -587,6 +580,82 @@ function ScopesOverview({ rows }: { rows: TraseismScope[] }) {
     </div>
   );
 }
+
+/**
+ * Feature 11: switch waves — detected bursts of affiliation change.
+ * Read-only view of /analytics/switch-waves; filtered to the active scope.
+ */
+function SwitchWavesSection({
+  chamber,
+  legislature,
+}: {
+  chamber: string;
+  legislature: string;
+}) {
+  const { t } = useTranslation();
+  const waves = useQuery({
+    queryKey: ["switch-waves", chamber, legislature],
+    queryFn: () => switchWaves(chamber, legislature),
+  });
+
+  const rows = (waves.data ?? []).slice(0, 10);
+
+  return (
+    <section className="card p-4">
+      <h2 className="font-semibold">{t("waves.title", "Switch waves")}</h2>
+      <p className="text-sm text-slate-400 mt-1 mb-3">
+        {t(
+          "waves.desc",
+          "Periods where affiliation changes clustered (30-day windows, 3+ switches). Election and coalition triggers are annotated when the corpus records them.",
+        )}
+      </p>
+      {waves.isLoading ? (
+        <div className="text-slate-500 text-sm py-4">{t("loading")}</div>
+      ) : waves.isError ? (
+        <div className="text-red-400 text-sm py-4">
+          {t("waves.error", "Failed to load waves.")}
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="text-slate-500 text-sm py-4">
+          {t("waves.empty", "No waves detected for this scope.")}
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="text-left text-slate-400 border-b border-slate-700">
+                <th className="py-2 pr-4">{t("waves.col.period", "Period")}</th>
+                <th className="py-2 pr-4 text-right">
+                  {t("waves.col.count", "Switches")}
+                </th>
+                <th className="py-2 pr-4">{t("waves.col.trigger", "Trigger")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((w) => (
+                <tr key={w.id} className="border-b border-slate-700/50">
+                  <td className="py-2 pr-4 text-slate-300">
+                    {w.start_date ?? "?"} → {w.end_date ?? "?"}
+                  </td>
+                  <td className="py-2 pr-4 text-right">
+                    <span className="bg-amber-900/40 text-amber-300 px-2 py-0.5 rounded">
+                      {w.switch_count}
+                    </span>
+                  </td>
+                  <td className="py-2 pr-4 text-slate-400">
+                    {w.trigger_type ?? "—"}
+                    {w.trigger_event ? ` (${w.trigger_event})` : ""}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function Traseism() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -657,9 +726,7 @@ export function Traseism() {
               {t("traseismNotMotive")}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setAboutOpen(true)}
+          <button type="button"onClick={() => setAboutOpen(true)}
             className={`btn bg-slate-700 hover:bg-slate-600 shrink-0 ${FOCUS}`}
           >
             {t("traseismAboutButton")}
@@ -693,14 +760,11 @@ export function Traseism() {
               aria-labelledby="traseism-chamber-label"
             >
               {(["deputies", "senate"] as const).map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setScope({ chamber: c })}
+                <button type="button"key={c}onClick={() => setScope({ chamber: c })}
                   aria-pressed={chamber === c}
                   className={`btn ${
                     chamber === c
-                      ? "bg-sky-600 text-white"
+                      ? "bg-sky-700 text-white"
                       : "bg-slate-700 hover:bg-slate-600 text-slate-200"
                   } ${FOCUS}`}
                 >
@@ -816,6 +880,8 @@ export function Traseism() {
           ) : null}
 
           <SwitchLedger legislature={legislature} chamber={chamber} />
+
+          <SwitchWavesSection chamber={chamber} legislature={legislature} />
         </>
       )}
 

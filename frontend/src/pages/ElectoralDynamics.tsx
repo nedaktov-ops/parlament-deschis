@@ -37,7 +37,7 @@ export function ElectoralDynamics() {
     return (
       <div className="card p-4" role="alert">
         <p className="text-rose-200 text-sm">{t("electoralLoadError")}</p>
-        <button type="button" className="btn mt-3 bg-slate-700 hover:bg-slate-600" onClick={() => movements.refetch()}>
+        <button type="button"className="btn mt-3 bg-slate-700 hover:bg-slate-600" onClick={() => movements.refetch()}>
           {t("traseismRetry")}
         </button>
       </div>

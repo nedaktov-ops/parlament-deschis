@@ -25,6 +25,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, aliased
 
 from .db import Coverage, Event, KeyEvent, Membership, Organization, Person
+from .queries import is_group
 
 DAYS_PER_MONTH = 30.44
 
@@ -47,7 +48,7 @@ def _member_query(chamber: str | None, legislature: str | None):
     stmt = (
         select(func.count(func.distinct(Membership.person_id)))
         .join(Organization, Organization.id == Membership.org_id)
-        .where(Organization.classification == "group")
+        .where(is_group())
     )
     if chamber:
         stmt = stmt.where(Membership.chamber == chamber)
@@ -112,7 +113,7 @@ def traseism_summary(
             select(Membership.org_id)
             .join(Organization, Organization.id == Membership.org_id)
             .where(
-                Organization.classification == "group",
+                is_group(),
                 Membership.chamber == chamber,
                 Membership.legislature == legislature,
             )
@@ -265,7 +266,7 @@ def traseism_overview(session: Session) -> list[dict]:
     pairs = session.execute(
         select(Membership.chamber, Membership.legislature)
         .join(Organization, Organization.id == Membership.org_id)
-        .where(Organization.classification == "group")
+        .where(is_group())
         .distinct()
     ).all()
     rows = []
@@ -327,7 +328,7 @@ def _party_rows(session: Session, chamber: str | None, legislature: str | None):
         )
         .join(Organization, Organization.id == Membership.org_id)
         .outerjoin(party_org, party_org.id == Membership.on_behalf_of_id)
-        .where(Organization.classification == "group")
+        .where(is_group())
     )
     if chamber:
         stmt = stmt.where(Membership.chamber == chamber)

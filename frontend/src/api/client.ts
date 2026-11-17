@@ -80,6 +80,7 @@ export interface PersonDetail {
   match_status: string;
   identifiers: { scheme: string; identifier: string; legislature: string | null }[];
   memberships: Membership[];
+  committee_memberships?: Membership[];
   events: EventItem[];
   evidence: EvidenceItem[];
 }
@@ -247,7 +248,7 @@ export interface CrossChamberResponse {
 
 const BASE = "/api";
 
-async function get<T>(path: string): Promise<T> {
+export async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
   if (!res.ok) {
     let message = `API ${res.status}: ${path}`;
@@ -290,6 +291,7 @@ export const api = {
   partyTimeline: (shortName: string, from: string, to: string) =>
     get<PartyTimelineResponse>(`/party/${encodeURIComponent(shortName)}/timeline?from=${from}&to=${to}`),
   committees: (asOf: string) => get<CommitteeResponse[]>(`/committees?as_of=${asOf}`),
+  parties: () => get<{ status: string; data: PartyListEntry[] }>("/parties"),
   crossChamber: (asOf: string) =>
     get<CrossChamberResponse>(`/analytics/cross-chamber?as_of=${asOf}`),
   movements: (filters: MovementFilters | string = {}) => {
@@ -302,7 +304,10 @@ export const api = {
     const query = params.toString();
     return get<EventItem[]>(`/movements${query ? `?${query}` : ""}`);
   },
-  recentEvents: (limit = 50) => get<EventItem[]>(`/events/recent?limit=${limit}`),
+  recentEvents: (limit = 50, chamber?: string, legislature?: string) =>
+  get<EventItem[]>(
+    `/events/recent?limit=${limit}${chamber ? `&chamber=${chamber}` : ""}${legislature ? `&legislature=${legislature}` : ""}`
+  ),
   coverage: () => get<CoverageItem[]>("/coverage"),
   coverage_detailed: () => get<CoverageRow[]>("/coverage/detailed"),
   about: () => get<AboutResponse>("/about"),
@@ -459,4 +464,199 @@ export function traseismSwitches(
   return get<TraseismSwitchesResponse>(
     `/traseism/switches${qs ? `?${qs}` : ""}`,
   );
+}
+
+// --- Feature 1: Switch leaderboard ---------------------------------------
+
+export interface SwitchLeaderboardEntry {
+  person_id: string;
+  name: string;
+  switch_count: number;
+  first_switch: string | null;
+  last_switch: string | null;
+  parties: string[];
+  total_events: number;
+  tenure_years: number;
+  loyalty_score: number;
+}
+
+export interface SwitchLeaderboardResponse {
+  status: string;
+  data: SwitchLeaderboardEntry[];
+}
+
+/** Top party switchers, ranked by observed switch_group count. */
+export function switchLeaderboard(
+  limit = 20,
+  legislature?: string,
+  chamber?: string,
+): Promise<SwitchLeaderboardResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (legislature) params.set("legislature", legislature);
+  if (chamber) params.set("chamber", chamber);
+  return get<SwitchLeaderboardResponse>(
+    `/analytics/switch-leaderboard?${params.toString()}`,
+  );
+}
+
+// --- Feature 4: Demographics (age per party) ------------------------------
+
+export interface GenerationalShiftEntry {
+  party: string;
+  mps_with_birth_dates: number;
+  avg_age: number;
+  median_age: number;
+}
+
+export interface GenerationalShiftResponse {
+  status: string;
+  as_of: string;
+  data: GenerationalShiftEntry[];
+}
+
+/** Age summaries per party from dated group memberships. */
+export function generationalShift(
+  legislature?: string,
+  asOf?: string,
+): Promise<GenerationalShiftResponse> {
+  const params = new URLSearchParams();
+  if (legislature) params.set("legislature", legislature);
+  if (asOf) params.set("as_of", asOf);
+  const qs = params.toString();
+  return get<GenerationalShiftResponse>(
+    `/analytics/generational-shift${qs ? `?${qs}` : ""}`,
+  );
+}
+
+// --- Feature 2: Commitment Tracker (committee membership) -----------------
+
+export interface PartyListEntry {
+  id: string;
+  short_name: string;
+  name: string;
+  color: string | null;
+  total_members: number;
+  switches_in: number;
+}
+
+export interface CommitteeListItem {
+  id: string;
+  name: string;
+  chamber: string | null;
+  party: string | null;
+}
+
+export interface CommitteeMember {
+  person_id: string;
+  name: string;
+  role: string | null;
+  group: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  start_precision: string | null;
+  end_precision: string | null;
+  active: boolean;
+  source_url: string | null;
+}
+
+export interface CommitteeMembersResponse {
+  committee: {
+    id: string;
+    name: string;
+    chamber: string | null;
+    legislature: string | null;
+  };
+  as_of: string;
+  members: CommitteeMember[];
+  active_count: number;
+  total_count: number;
+}
+
+/** Committees with at least one active dated member. */
+export function committees(asOf?: string): Promise<CommitteeListItem[]> {
+  const qs = asOf ? `?as_of=${encodeURIComponent(asOf)}` : "";
+  return get<CommitteeListItem[]>(`/committees${qs}`);
+}
+
+/** Dated member ledger of one committee. */
+export function committeeMembers(
+  committeeId: string,
+  asOf?: string,
+): Promise<CommitteeMembersResponse> {
+  const qs = asOf ? `?as_of=${encodeURIComponent(asOf)}` : "";
+  return get<CommitteeMembersResponse>(
+    `/committees/${encodeURIComponent(committeeId)}/members${qs}`,
+  );
+}
+
+// --- Feature 5: Committee Control Index -----------------------------------
+
+export interface CommitteeControlParty {
+  party: string;
+  chairs: number;
+  share_pct: number;
+}
+
+export interface CommitteeControlChair {
+  committee_id: string;
+  committee: string;
+  chamber: string | null;
+  chair_person_id: string;
+  chair: string;
+  party: string;
+  chair_since: string | null;
+}
+
+export interface CommitteeControlData {
+  as_of: string;
+  total_committees: number;
+  parties: CommitteeControlParty[];
+  chairs: CommitteeControlChair[];
+}
+
+export interface CommitteeControlResponse {
+  status: string;
+  reason?: string;
+  data: CommitteeControlData;
+}
+
+/** Which party chairs which committees (dated, source-backed). */
+export function committeeControl(
+  legislature?: string,
+  asOf?: string,
+): Promise<CommitteeControlResponse> {
+  const params = new URLSearchParams();
+  if (legislature) params.set("legislature", legislature);
+  if (asOf) params.set("as_of", asOf);
+  const qs = params.toString();
+  return get<CommitteeControlResponse>(
+    `/analytics/committee-control${qs ? `?${qs}` : ""}`,
+  );
+}
+
+// --- Feature 11: Switch waves --------------------------------------------
+
+export interface SwitchWave {
+  id: string;
+  label: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  switch_count: number;
+  trigger_type: string | null;
+  trigger_event: string | null;
+  legislature: string | null;
+  chamber: string | null;
+  created_at: string | null;
+}
+
+/** Detected switch waves (bursts of affiliation change), newest first. */
+export function switchWaves(
+  chamber?: string,
+  legislature?: string,
+): Promise<SwitchWave[]> {
+  const params = new URLSearchParams();
+  if (chamber) params.set("chamber", chamber);
+  if (legislature) params.set("legislature", legislature);
+  const qs = params.toString();
+  return get<SwitchWave[]>(`/analytics/switch-waves${qs ? `?${qs}` : ""}`);
 }

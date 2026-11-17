@@ -13,6 +13,7 @@ from pipeline.db import (
     make_engine,
     make_session_factory,
 )
+from pipeline.queries import is_group
 
 
 @strawberry.type
@@ -137,7 +138,11 @@ class Query:
                 stmt = stmt.where(Person.canonical_name.ilike(f"%{q}%"))
             if chamber:
                 stmt = stmt.where(
-                    Person.id.in_(select(Membership.person_id).where(Membership.chamber == chamber))
+                    Person.id.in_(
+                        select(Membership.person_id)
+                        .join(Organization, Organization.id == Membership.org_id)
+                        .where(is_group(), Membership.chamber == chamber)
+                    )
                 )
             persons = session.scalars(stmt).all()
             return [
@@ -216,14 +221,20 @@ class Query:
         engine = make_engine()
         session = make_session_factory(engine)()
         try:
-            stmt = select(Membership).limit(limit)
+            # Group tenures only: committees are organisations too, and their
+            # memberships are a separate surface (see the /committees route).
+            stmt = (
+                select(Membership)
+                .join(Organization, Organization.id == Membership.org_id)
+                .where(is_group())
+            )
             if person_id:
                 stmt = stmt.where(Membership.person_id == person_id)
             if org_id:
                 stmt = stmt.where(Membership.org_id == org_id)
             if chamber:
                 stmt = stmt.where(Membership.chamber == chamber)
-            memberships = session.scalars(stmt).all()
+            memberships = session.scalars(stmt.limit(limit)).all()
             return [
                 MembershipType(
                     id=m.id,
@@ -356,7 +367,7 @@ class Query:
                     org = session.get(Organization, sw.to_org_id)
                     if org and org.classification == "party":
                         party_switches[sw.to_org_id][sw.person_id] += 1
-                    elif org and org.classification == "group":
+                    elif org and is_group(org):
                         # on_behalf_of_id is a Membership column, not an Organization one.
                         m = session.scalars(
                             select(Membership)
@@ -439,7 +450,10 @@ class Query:
             results = []
             for pid, name in persons:
                 chs = session.scalars(
-                    select(Membership.chamber).where(Membership.person_id == pid).distinct()
+                    select(Membership.chamber)
+                    .join(Organization, Organization.id == Membership.org_id)
+                    .where(is_group(), Membership.person_id == pid)
+                    .distinct()
                 ).all()
                 if len(chs) > 1:
                     results.append(
@@ -476,7 +490,11 @@ class Query:
                     stmt = stmt.where(
                         Person.id.in_(
                             select(Membership.person_id)
-                            .where(Membership.start_date <= leg_key.end_date)
+                            .join(Organization, Organization.id == Membership.org_id)
+                            .where(
+                                is_group(),
+                                Membership.start_date <= leg_key.end_date,
+                            )
                             .where(
                                 (Membership.end_date.is_(None))
                                 | (Membership.end_date >= leg_key.start_date)

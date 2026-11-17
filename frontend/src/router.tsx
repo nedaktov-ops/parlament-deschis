@@ -4,6 +4,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Search from "./components/Search";
+import SenateHistory from "./pages/SenateHistory";
 import { isISODate, localISODate } from "./utils/date";
 import "./i18n";
 import "./index.css";
@@ -16,6 +17,15 @@ const InstitutionalView = lazy(() => import("./pages/InstitutionalView").then(m 
 const LegislatureDetail = lazy(() => import("./pages/LegislatureDetail").then(m => ({ default: m.LegislatureDetail })));
 const Traseism = lazy(() => import("./pages/Traseism").then(m => ({ default: m.Traseism })));
 const CoverageView = lazy(() => import("./pages/CoverageView").then(m => ({ default: m.default })));
+const SwitchLeaderboard = lazy(() => import("./pages/SwitchLeaderboard").then(m => ({ default: m.default })));
+const Demographics = lazy(() => import("./pages/Demographics").then(m => ({ default: m.default })));
+const Committees = lazy(() => import("./pages/Committees").then(m => ({ default: m.default })));
+const PartyComparison = lazy(() => import("./pages/PartyComparison").then(m => ({ default: m.default })));
+const Coalitions = lazy(() => import("./pages/Coalitions").then(m => ({ default: m.default })));
+const Mps = lazy(() => import("./pages/Mps").then(m => ({ default: m.default })));
+const MpComparison = lazy(() => import("./pages/MpComparison").then(m => ({ default: m.default })));
+const Report = lazy(() => import("./pages/Report").then(m => ({ default: m.default })));
+const PartyTimeline = lazy(() => import("./pages/PartyTimeline").then(m => ({ default: m.default })));
 
 function validateDateSearch(search: Record<string, unknown>) {
   const candidate = search.date;
@@ -112,7 +122,7 @@ function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
       >
         <div className="sticky top-0 bg-panel/95 backdrop-blur border-b border-slate-700 px-5 py-4 flex items-center justify-between">
           <h2 id="about-title" className="text-lg font-semibold">{t("about")}</h2>
-          <button className="btn bg-slate-700 hover:bg-slate-600" onClick={onClose}>{t("close")}</button>
+          <button type="button"className="btn bg-slate-700 hover:bg-slate-600" onClick={onClose}>{t("close")}</button>
         </div>
         <div className="p-5 space-y-4 text-sm">
           <h3 className="font-semibold">{t("method")}</h3>
@@ -153,14 +163,12 @@ function RootLayout() {
               params: { id },
               search: { date: currentDate },
             })} />
-            <button
-              className="btn bg-slate-700 hover:bg-slate-600"
+            <button type="button"className="btn bg-slate-700 hover:bg-slate-600"
               onClick={() => setAboutOpen(true)}
             >
               {t("about")}
             </button>
-            <button
-              className="btn bg-slate-700 hover:bg-slate-600 uppercase"
+            <button type="button"className="btn bg-slate-700 hover:bg-slate-600 uppercase"
               onClick={() => i18n.changeLanguage(i18n.language === "ro" ? "en" : "ro")}
               aria-label={t("changeLanguage")}
             >
@@ -174,6 +182,30 @@ function RootLayout() {
           </NavLink>
           <NavLink to="/traseism" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("traseismShort")}
+          </NavLink>
+          <NavLink to="/leaderboard" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("nav.leaderboard", "Leaderboard")}
+          </NavLink>
+          <NavLink to="/demographics" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("nav.demographics", "Demographics")}
+          </NavLink>
+          <NavLink to="/committees" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("nav.committees", "Committees")}
+          </NavLink>
+          <NavLink to="/compare" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("nav.compare", "Compare")}
+          </NavLink>
+          <NavLink to="/coalitions" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("nav.coalitions", "Coalitions")}
+          </NavLink>
+          <NavLink to="/mps" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("nav.mps", "MPs")}
+          </NavLink>
+          <NavLink to="/report" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("nav.report", "Report")}
+          </NavLink>
+          <NavLink to="/party-timeline" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("nav.partyTimeline", "Timeline")}
           </NavLink>
           <NavLink to="/institutional" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("institutional")}
@@ -268,7 +300,88 @@ const coverageRoute = createRoute({
   validateSearch: validateDateSearch,
 });
 
+
+const senateHistoryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/senate-history",
+  component: () => <Suspense fallback={<Loading />}><SenateHistory /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
+const switchLeaderboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/leaderboard",
+  component: () => <Suspense fallback={<Loading />}><SwitchLeaderboard /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
+const demographicsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/demographics",
+  component: () => <Suspense fallback={<Loading />}><Demographics /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
+const committeesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/committees",
+  component: () => <Suspense fallback={<Loading />}><Committees /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
+const partyComparisonRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/compare",
+  component: () => <Suspense fallback={<Loading />}><PartyComparison /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
+const coalitionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/coalitions",
+  component: () => <Suspense fallback={<Loading />}><Coalitions /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
+const mpsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/mps",
+  component: () => <Suspense fallback={<Loading />}><Mps /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
+const mpComparisonRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/compare-mps",
+  component: () => <Suspense fallback={<Loading />}><MpComparison /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
+const reportRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/report",
+  component: () => <Suspense fallback={<Loading />}><Report /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
+const partyTimelineRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/party-timeline",
+  component: () => <Suspense fallback={<Loading />}><PartyTimeline /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
 const routeTree = rootRoute.addChildren([
+  senateHistoryRoute,
+  switchLeaderboardRoute,
+  demographicsRoute,
+  committeesRoute,
+  partyComparisonRoute,
+  coalitionsRoute,
+  mpsRoute,
+  mpComparisonRoute,
+  reportRoute,
+  partyTimelineRoute,
   indexRoute,
   electoralRoute,
   institutionalRoute,

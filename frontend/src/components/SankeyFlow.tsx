@@ -177,7 +177,7 @@ export default function SankeyFlow({
         <h2 className="font-semibold">{t("defections")}</h2>
         <div className="h-[320px] flex flex-col items-center justify-center gap-2 text-center">
           <p className="text-rose-200 text-sm">{t("traseismLoadError")}</p>
-          <button type="button" className="btn bg-slate-700 hover:bg-slate-600" onClick={() => summary.refetch()}>
+          <button type="button"className="btn bg-slate-700 hover:bg-slate-600" onClick={() => summary.refetch()}>
             {t("traseismRetry")}
           </button>
         </div>

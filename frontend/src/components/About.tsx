@@ -134,8 +134,7 @@ export default function About({ open, onClose }: { open: boolean; onClose: () =>
               {data?.description || t("subtitle")}
             </p>
           </div>
-          <button
-            ref={closeRef}
+          <button type="button"ref={closeRef}
             className="btn bg-slate-700 hover:bg-slate-600 shrink-0"
             onClick={onClose}
             aria-label={t("close")}

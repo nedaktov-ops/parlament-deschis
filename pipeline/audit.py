@@ -35,6 +35,7 @@ from .db import Event, Evidence, Mandate, Membership, Organization, Person
 from .normalize import name_sort_key, normalize_name
 from .parse.cdep_group import parse_group_ledger, parse_group_list
 from .parse.cdep_roster import parse_roster
+from .queries import is_group
 
 log = logging.getLogger("parlament.audit")
 
@@ -139,6 +140,10 @@ def check_mandate_coverage(session: Session) -> list[Finding]:
     unaffiliated in that scope (the source simply cannot date it); it is an
     error when the person has **no unaffiliated membership at all** in that
     scope - they should be in some group.
+
+    Only **group** tenures take part. A committee membership is a different
+    kind of organisation (``classification="committee"``) and can never cover
+    a parliamentary-group gap, even when its dates span the gap.
     """
     findings: list[Finding] = []
     mandates = list(session.scalars(select(Mandate)))
@@ -150,7 +155,14 @@ def check_mandate_coverage(session: Session) -> list[Finding]:
         by_person[m.person_id].append(m)
 
     memberships = list(
-        session.scalars(select(Membership).where(Membership.person_id.in_(list(by_person))))
+        session.scalars(
+            select(Membership)
+            .join(Organization, Organization.id == Membership.org_id)
+            .where(
+                is_group(),
+                Membership.person_id.in_(list(by_person)),
+            )
+        )
     )
     mem_by_person: dict[str, list[Membership]] = defaultdict(list)
     for m in memberships:
@@ -172,7 +184,10 @@ def check_mandate_coverage(session: Session) -> list[Finding]:
                 Membership.legislature,
             )
             .join(Organization, Organization.id == Membership.org_id)
-            .where(Organization.short_name == "NEAFILIATI")
+            .where(
+                is_group(),
+                Organization.short_name == "NEAFILIATI",
+            )
             .distinct()
         ).all()
     )
@@ -266,7 +281,11 @@ def check_mandate_coverage(session: Session) -> list[Finding]:
 
 
 def check_overlaps(session: Session) -> list[Finding]:
-    """A person cannot sit in two groups at the same time."""
+    """A person cannot sit in two *parliamentary groups* at the same time.
+
+    Committee memberships are excluded: sitting on two committees (or on a
+    committee while sitting in a group) is normal, not a contradiction.
+    """
     findings: list[Finding] = []
     rows = session.execute(
         select(
@@ -277,7 +296,9 @@ def check_overlaps(session: Session) -> list[Finding]:
             Membership.start_date,
             Membership.end_date,
             Membership.source_url,
-        ).where(Membership.start_date.isnot(None))
+        )
+        .join(Organization, Organization.id == Membership.org_id)
+        .where(is_group(), Membership.start_date.isnot(None))
     ).all()
     by_person: dict[tuple[str, str | None, str | None], list] = defaultdict(list)
     for r in rows:
@@ -337,7 +358,11 @@ def check_overlaps(session: Session) -> list[Finding]:
 
 
 def check_membership_evidence(session: Session) -> list[Finding]:
-    """Every membership must point at the official page it came from."""
+    """Every membership must point at the official page it came from.
+
+    Deliberately **not** filtered to groups: evidence is required for every
+    row in the corpus, committee memberships included.
+    """
     findings: list[Finding] = []
     missing = session.scalar(
         select(func.count()).select_from(Membership).where(Membership.source_url.is_(None))
@@ -414,7 +439,11 @@ def check_switch_events(session: Session) -> list[Finding]:
 
 
 def check_scope_totals(session: Session) -> list[Finding]:
-    """Report the size of each scope, so a drop is visible as a change."""
+    """Report the size of each scope, so a drop is visible as a change.
+
+    A scope is a chamber/legislature of *group* tenures; committee
+    memberships are not seats, so they are excluded.
+    """
     findings: list[Finding] = []
     rows = session.execute(
         select(
@@ -422,7 +451,10 @@ def check_scope_totals(session: Session) -> list[Finding]:
             Membership.legislature,
             func.count(func.distinct(Membership.person_id)),
             func.count(Membership.id),
-        ).group_by(Membership.chamber, Membership.legislature)
+        )
+        .join(Organization, Organization.id == Membership.org_id)
+        .where(is_group())
+        .group_by(Membership.chamber, Membership.legislature)
     ).all()
     for chamber, legislature, members, _memberships in rows:
         if members == 0:
@@ -510,7 +542,9 @@ def check_roster_reconciliation(session: Session) -> list[Finding]:
                 for n in session.scalars(
                     select(Person.canonical_name)
                     .join(Membership, Membership.person_id == Person.id)
+                    .join(Organization, Organization.id == Membership.org_id)
                     .where(
+                        is_group(),
                         Membership.chamber == chamber,
                         Membership.legislature == legislature,
                     )
@@ -576,7 +610,12 @@ def check_index_reconciliation(session: Session) -> list[Finding]:
     findings: list[Finding] = []
     cache = Path("data/cache/cdep")
     expected_scopes = set(
-        session.execute(select(Membership.chamber, Membership.legislature).distinct()).all()
+        session.execute(
+            select(Membership.chamber, Membership.legislature)
+            .join(Organization, Organization.id == Membership.org_id)
+            .where(is_group())
+            .distinct()
+        ).all()
     )
     cached_scopes: set[tuple[str, str]] = set()
     if cache.is_dir():
@@ -764,6 +803,10 @@ def check_interval_order(session: Session) -> list[Finding]:
     The OpenStates people dataset hit the same bug repeatedly: a role whose
     end date predates its own start date is nonsensical regardless of the
     jurisdiction, and it is always a data defect, never a real event.
+
+    Deliberately **not** grouped by classification: an inverted interval is a
+    defect in *every* tenure, including committee memberships, so this check
+    reads all tenures on purpose.
     """
     findings: list[Finding] = []
     rows = session.execute(
@@ -819,7 +862,7 @@ def check_missing_start(session: Session) -> list[Finding]:
         .join(Organization, Organization.id == Membership.org_id)
         .join(Person, Person.id == Membership.person_id)
         .where(
-            Organization.classification == "group",
+            is_group(),
             Membership.start_date.is_(None),
         )
     ).all()
@@ -867,7 +910,7 @@ def check_batched_dates(session: Session) -> list[Finding]:
         )
         .join(Organization, Organization.id == Membership.org_id)
         .where(
-            Organization.classification == "group",
+            is_group(),
             Membership.start_reason == "PUBLISHED",
         )
     )
@@ -929,7 +972,11 @@ def audit(session: Session) -> AuditReport:
 
 
 def scope_totals(session: Session) -> list[dict]:
-    """Per-scope counts: the table a human reads to spot a sudden drop."""
+    """Per-scope counts: the table a human reads to spot a sudden drop.
+
+    Group semantics: ``members`` and ``memberships`` count parliamentary-group
+    tenures only, so committee memberships cannot inflate them.
+    """
     rows = session.execute(
         select(
             Membership.chamber,
@@ -937,6 +984,8 @@ def scope_totals(session: Session) -> list[dict]:
             func.count(func.distinct(Membership.person_id)).label("members"),
             func.count(Membership.id).label("memberships"),
         )
+        .join(Organization, Organization.id == Membership.org_id)
+        .where(is_group())
         .group_by(Membership.chamber, Membership.legislature)
         .order_by(Membership.legislature, Membership.chamber)
     ).all()

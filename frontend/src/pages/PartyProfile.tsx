@@ -42,7 +42,7 @@ export function PartyProfile() {
     return (
       <div className="card p-4" role="alert">
         <p className="text-rose-200 text-sm py-4">{t("partyLoadError")}</p>
-        <button type="button" className="btn bg-slate-700 hover:bg-slate-600" onClick={() => party.refetch()}>
+        <button type="button"className="btn bg-slate-700 hover:bg-slate-600" onClick={() => party.refetch()}>
           {t("traseismRetry")}
         </button>
       </div>
@@ -96,7 +96,7 @@ export function PartyProfile() {
         ) : movements.isError ? (
           <div role="alert" className="text-rose-200 text-sm py-4">
             {t("electoralLoadError")}
-            <button type="button" className="ml-3 underline" onClick={() => movements.refetch()}>
+            <button type="button"className="ml-3 underline" onClick={() => movements.refetch()}>
               {t("traseismRetry")}
             </button>
           </div>
@@ -105,8 +105,7 @@ export function PartyProfile() {
         ) : (
           <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
             {movements.data?.map((m) => (
-              <button
-                key={m.id}
+              <button type="button"key={m.id}
                 onClick={() => m.person && setPersonId(m.person.id)}
                 className="w-full text-left bg-slate-800/40 hover:bg-slate-800 rounded-md p-2 transition-colors"
               >

@@ -50,8 +50,7 @@ export default function TimeSlider({
   return (
     <div className="card p-4">
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <button
-          className="btn bg-slate-700 hover:bg-slate-600 min-h-11 sm:min-h-0"
+        <button type="button"className="btn bg-slate-700 hover:bg-slate-600 min-h-11 sm:min-h-0"
           onClick={() => setPlaying((p) => !p)}
           aria-pressed={playing}
         >

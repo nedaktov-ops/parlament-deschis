@@ -24,6 +24,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .db import Event, Membership, Organization, Person
+from .queries import is_group
 
 log = logging.getLogger("parlament.events")
 
@@ -37,7 +38,7 @@ def _group_memberships(session: Session, chamber: str | None) -> list[Membership
     stmt = (
         select(Membership)
         .join(Organization, Organization.id == Membership.org_id)
-        .where(Organization.classification == "group")
+        .where(is_group())
     )
     if chamber:
         stmt = stmt.where(Membership.chamber == chamber)
@@ -297,7 +298,7 @@ def _party_memberships(session: Session, chamber: str | None) -> list[Membership
     stmt = (
         select(Membership)
         .join(Organization, Organization.id == Membership.org_id)
-        .where(Organization.classification == "group")
+        .where(is_group())
         .where(Membership.on_behalf_of_id.isnot(None))
     )
     if chamber:

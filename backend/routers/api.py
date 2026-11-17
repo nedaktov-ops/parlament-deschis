@@ -13,6 +13,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from backend import queries
+from backend.cache import cached as cache_result
+from backend.cache import invalidate as invalidate_result_cache
 from backend.config import APP_VERSION, DATASET_METADATA_PATH
 from backend.deps import get_db
 from pipeline.analytics import derive_all_switch_waves, derive_switch_waves
@@ -121,6 +123,7 @@ def timeline(
 
 
 @router.get("/persons")
+@cache_result("persons")
 def persons(
     q: str | None = None,
     chamber: str | None = Query(None, pattern="^(deputies|senate)$"),
@@ -128,6 +131,107 @@ def persons(
     db: Session = Depends(get_db),
 ):
     return queries.search_persons(db, q, chamber, limit)
+
+
+@router.get("/mps")
+@cache_result("mps")
+def mps_cards(
+    q: str | None = Query(None, max_length=200),
+    limit: int = Query(60, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    sort: str = Query("name", pattern="^(name|age|switches|committees)$"),
+    db: Session = Depends(get_db),
+):
+    """MP biography cards (Feature 8): person + party + switches + committees.
+
+    Each row is one person with the aggregates a voter scans for: current
+    party group, observed switch count, committee tenures and age from the
+    recorded birth date. Read-only over existing tables; persons without a
+    birth date show age as null rather than a guess.
+    """
+    from sqlalchemy import func, select
+
+    from pipeline.db import Event, Membership, Organization, Person
+
+    base = select(Person.id, Person.canonical_name, Person.birth_date)
+    if q:
+        base = base.where(Person.normalized_name.like(f"%{q.lower()}%"))
+
+    # Aggregates over the whole corpus, grouped by person.
+    switches = (
+        select(Event.person_id, func.count(Event.id).label("n"))
+        .where(Event.type == "switch_group")
+        .group_by(Event.person_id)
+        .subquery()
+    )
+    committees = (
+        select(Membership.person_id, func.count(func.distinct(Membership.org_id)).label("n"))
+        .join(Organization, Organization.id == Membership.org_id)
+        .where(Organization.classification == "committee")
+        .group_by(Membership.person_id)
+        .subquery()
+    )
+    # Most recent party affiliation: latest group membership carrying a party.
+    # ROW_NUMBER dedupes to one row per person so the outer join cannot
+    # multiply biography cards.
+    latest_party = (
+        select(
+            Membership.person_id,
+            Organization.short_name.label("party"),
+            func.row_number()
+            .over(
+                partition_by=Membership.person_id,
+                order_by=func.coalesce(Membership.start_date, date(1900, 1, 1)).desc(),
+            )
+            .label("rn"),
+        )
+        .join(Organization, Organization.id == Membership.on_behalf_of_id)
+        .where(Organization.classification == "party")
+        .subquery()
+    )
+
+    stmt = (
+        base.add_columns(
+            func.coalesce(switches.c.n, 0).label("switches"),
+            func.coalesce(committees.c.n, 0).label("committees"),
+            latest_party.c.party,
+        )
+        .outerjoin(switches, switches.c.person_id == Person.id)
+        .outerjoin(committees, committees.c.person_id == Person.id)
+        .outerjoin(latest_party, (latest_party.c.person_id == Person.id) & (latest_party.c.rn == 1))
+    )
+    if sort == "switches":
+        stmt = stmt.order_by(func.coalesce(switches.c.n, 0).desc(), Person.canonical_name)
+    elif sort == "committees":
+        stmt = stmt.order_by(func.coalesce(committees.c.n, 0).desc(), Person.canonical_name)
+    elif sort == "age":
+        stmt = stmt.order_by(Person.birth_date.asc().nullslast(), Person.canonical_name)
+    else:
+        stmt = stmt.order_by(Person.canonical_name)
+    stmt = stmt.offset(offset).limit(limit)
+
+    today = date.today()
+    cards = []
+    for person_id, name, birth_date, n_switches, n_committees, party in db.execute(stmt):
+        age = None
+        if birth_date:
+            age = (
+                today.year
+                - birth_date.year
+                - ((today.month, today.day) < (birth_date.month, birth_date.day))
+            )
+        cards.append(
+            {
+                "id": person_id,
+                "name": name,
+                "birth_date": birth_date.isoformat() if birth_date else None,
+                "age": age,
+                "party": party,
+                "switches": n_switches,
+                "committees": n_committees,
+            }
+        )
+    return {"status": "ok", "data": cards, "offset": offset, "limit": limit}
 
 
 @router.get("/persons/{person_id}/history")
@@ -139,6 +243,7 @@ def person_history(person_id: str, db: Annotated[Session, Depends(get_db)]):
 
 
 @router.get("/persons/{person_id}")
+@cache_result("person")
 def person(person_id: str, db: Session = Depends(get_db)):
     data = queries.get_person(db, person_id)
     if data is None:
@@ -177,6 +282,7 @@ def coverage_detailed(db: Session = Depends(get_db)):
 
 
 @router.get("/committees")
+@cache_result("committees")
 def committees(as_of: str | None = None, db: Session = Depends(get_db)):
     """Committee list with active dated memberships, when committee data exists.
 
@@ -207,6 +313,73 @@ def committees(as_of: str | None = None, db: Session = Depends(get_db)):
         .order_by(Organization.name)
     ).all()
     return [{"id": o.id, "name": o.name, "chamber": o.chamber, "party": None} for o in rows]
+
+
+@router.get("/committees/{committee_id}/members")
+@cache_result("committee-members")
+def committee_members(
+    committee_id: str,
+    as_of: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """Dated member ledger of one committee: current and former members.
+
+    Every row carries the member's name, party group at entry, role and the
+    observed start/end dates from the official cdep.ro ledger.
+    """
+    from sqlalchemy import select
+
+    from pipeline.db import Membership, Organization, Person
+
+    committee = db.get(Organization, committee_id)
+    if committee is None or committee.classification != "committee":
+        raise HTTPException(status_code=404, detail="committee not found")
+
+    reference_date = _parse_date(as_of, date.today())
+    stmt = (
+        select(Membership, Person.canonical_name)
+        .join(Person, Person.id == Membership.person_id)
+        .where(Membership.org_id == committee_id)
+        .order_by(
+            # Active members first, then by name.
+            (Membership.end_date.is_(None)).desc(),
+            Person.canonical_name,
+        )
+    )
+    rows = db.execute(stmt).all()
+
+    members = []
+    for m, name in rows:
+        is_active = (m.start_date is None or m.start_date <= reference_date) and (
+            m.end_date is None or m.end_date >= reference_date
+        )
+        members.append(
+            {
+                "person_id": m.person_id,
+                "name": name,
+                "role": m.role,
+                "group": m.group_acronym_at_event,
+                "start_date": m.start_date.isoformat() if m.start_date else None,
+                "end_date": m.end_date.isoformat() if m.end_date else None,
+                "start_precision": m.start_precision,
+                "end_precision": m.end_precision,
+                "active": is_active,
+                "source_url": m.source_url,
+            }
+        )
+
+    return {
+        "committee": {
+            "id": committee.id,
+            "name": committee.name,
+            "chamber": committee.chamber,
+            "legislature": committee.legislature,
+        },
+        "as_of": reference_date.isoformat(),
+        "members": members,
+        "active_count": sum(1 for m in members if m["active"]),
+        "total_count": len(members),
+    }
 
 
 @router.get("/evidence/{evidence_id}")
@@ -264,6 +437,73 @@ def about(db: Annotated[Session, Depends(get_db)]):
     }
 
 
+@router.get("/parties")
+@cache_result("parties")
+def parties_list(db: Session = Depends(get_db)):
+    """All parties with size and switch-flow stats, for comparison UI.
+
+    Size = distinct persons with a group membership on behalf of the party;
+    flows count observed switch_group events whose destination group maps to
+    the party. Read-only over existing tables.
+    """
+    from sqlalchemy import func, select
+
+    from pipeline.db import Event, Membership, Organization
+
+    party_rows = db.execute(
+        select(
+            Organization.id,
+            Organization.short_name,
+            Organization.name,
+            Organization.color,
+            func.count(func.distinct(Membership.person_id)).label("total_members"),
+        )
+        .select_from(Organization)
+        .outerjoin(
+            Membership,
+            (Membership.on_behalf_of_id == Organization.id)
+            & (Membership.chamber.in_(["deputies", "senate"])),
+        )
+        .where(Organization.classification == "party")
+        .group_by(Organization.id)
+        .order_by(func.count(func.distinct(Membership.person_id)).desc())
+    ).all()
+
+    # One grouped query instead of one per party (was37 serial queries —
+    # measured260 ms serial, the endpoint's whole cost).
+    switch_counts = dict(
+        db.execute(
+            select(Organization.short_name, func.count(Event.id))
+            .join(Event, Event.to_org_id == Organization.id)
+            .where(
+                Event.type == "switch_group",
+                Organization.classification == "group",
+            )
+            .group_by(Organization.short_name)
+        ).all()
+    )
+
+    result = []
+    for org_id, short_name, name, color, total_members in party_rows:
+        # Switches in: observed switch_group events whose destination GROUP
+        # carries this party's acronym. Groups and parties are separate org
+        # rows sharing the short_name (several PSD groups + one PSD party),
+        # so match on the acronym, not the id — the grouped query above
+        # already aggregates every group sharing the acronym.
+        switches_in = switch_counts.get(short_name, 0)
+        result.append(
+            {
+                "id": org_id,
+                "short_name": short_name,
+                "name": name,
+                "color": color,
+                "total_members": total_members or 0,
+                "switches_in": switches_in,
+            }
+        )
+    return {"status": "ok", "data": result}
+
+
 @router.get("/party/{short_name}")
 def party_profile(
     short_name: str,
@@ -312,6 +552,7 @@ def admin_poll(
     except Exception as exc:  # noqa: BLE001 - report upstream failure as 502
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     invalidate_traseism_overview_cache()
+    invalidate_result_cache()
     return {"status": "ok", "legislature": legislature, "results": results}
 
 
@@ -402,6 +643,8 @@ def analytics_waves_recompute(
     db.execute(delete(SwitchWave))
     count = derive_all_switch_waves(db)
     db.commit()
+    # Waves changed — drop cached analytics so the next GET is fresh.
+    invalidate_result_cache()
     return {"status": "ok", "created": count}
 
 
@@ -411,6 +654,7 @@ def analytics_waves_recompute_get_not_allowed():
 
 
 @router.get("/analytics/switch-waves")
+@cache_result("switch-waves")
 def get_switch_waves(
     chamber: str | None = Query(None, pattern="^(deputies|senate)$"),
     legislature: str | None = Query(None, pattern=r"^\d{4}$"),
@@ -482,7 +726,35 @@ def get_cross_chamber(
     }
 
 
+@router.get("/analytics/committee-control")
+@cache_result("committee-control")
+def get_committee_control(
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    as_of: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """Which party chairs which committees (source-backed, dated)."""
+    from pipeline.analytics import derive_committee_control
+
+    try:
+        result = derive_committee_control(
+            db,
+            legislature=legislature,
+            as_of=_parse_date(as_of, date.today()) if as_of else None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if result["total_committees"] == 0:
+        return {
+            "status": "unavailable",
+            "reason": "No dated committee chair rows in the corpus yet.",
+            "data": result,
+        }
+    return {"status": "ok", "data": result}
+
+
 @router.get("/analytics/generational-shift")
+@cache_result("generational-shift")
 def get_generational_shift(
     legislature: str | None = Query(None, pattern=r"^\d{4}$"),
     as_of: str | None = None,
@@ -505,6 +777,73 @@ def get_generational_shift(
 # --- Traseism statistics ---------------------------------------------------
 # The public view of party/group switching. Every number here is a count of
 # OBSERVED movement taken from the chambers' own dated group ledgers.
+
+
+@router.get("/analytics/party-timeline")
+@cache_result("party-timeline")
+def get_party_timeline_analytics(
+    db: Session = Depends(get_db),
+):
+    """Observed presence span of every party in parliament (Feature 10).
+
+    One row per party: the first and last dated join (``membership.start_date``
+    on behalf of the party) plus its declared founding date when the corpus
+    records one. This is an OBSERVED SPAN, not a merger/split graph — the
+    corpus carries 0 predecessor/successor links, so succession between rows
+    (e.g. PDSR ending then PSD starting) is shown, never asserted.
+    """
+    from sqlalchemy import func, select
+
+    from pipeline.db import Membership, Organization
+
+    rows = db.execute(
+        select(
+            Organization.short_name,
+            Organization.name,
+            Organization.founding_date,
+            func.min(Membership.start_date).label("first_join"),
+            func.max(Membership.start_date).label("last_join"),
+            func.count(Membership.id).label("dated_joins"),
+        )
+        .join(Membership, Membership.on_behalf_of_id == Organization.id)
+        .where(
+            Organization.classification == "party",
+            Membership.start_date.is_not(None),
+        )
+        .group_by(Organization.id)
+        .order_by(func.min(Membership.start_date))
+    ).all()
+
+    data = [
+        {
+            "party": short_name,
+            "name": name,
+            "founding_date": founding.isoformat() if founding else None,
+            "first_join": first.isoformat() if first else None,
+            "last_join": last.isoformat() if last else None,
+            "dated_joins": dated_joins,
+        }
+        for short_name, name, founding, first, last, dated_joins in rows
+    ]
+    return {
+        "status": "ok",
+        "data": data,
+        "gaps": {
+            "predecessor_links": 0,
+            "successor_links": 0,
+            "dissolution_dates": db.scalar(
+                select(func.count(Organization.id)).where(
+                    Organization.classification == "party",
+                    Organization.dissolution_date.is_not(None),
+                )
+            )
+            or 0,
+            "note": (
+                "Merger/split succession is not machine-declared in this "
+                "corpus; spans show observed presence only."
+            ),
+        },
+    }
 
 
 @router.get("/traseism/overview")
@@ -554,6 +893,129 @@ def traseism_switches(
         limit=limit,
         offset=offset,
     )
+
+
+@router.get("/analytics/switch-leaderboard")
+@cache_result("switch-leaderboard")
+def switch_leaderboard(
+    limit: int = Query(20, ge=1, le=100),
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    chamber: str | None = Query(None, pattern=r"^(deputies|senate)$"),
+    db: Session = Depends(get_db),
+):
+    """Top party switchers: one row per person, ranked by switch count.
+
+    Every count is an observed switch_group event from the chambers' own
+    dated group ledgers. Rows carry the person id so the UI can link to
+    the deep-dive page.
+    """
+    from sqlalchemy import func, select
+
+    from pipeline.db import Event, Organization, Person
+
+    stmt = (
+        select(
+            Person.id,
+            Person.canonical_name,
+            func.count(Event.id).label("switch_count"),
+            func.min(Event.event_date).label("first_switch"),
+            func.max(Event.event_date).label("last_switch"),
+        )
+        .join(Event, Event.person_id == Person.id)
+        .where(Event.type == "switch_group")
+        .group_by(Person.id, Person.canonical_name)
+        .order_by(func.count(Event.id).desc(), Person.canonical_name)
+        .limit(limit)
+    )
+    if legislature:
+        stmt = stmt.where(Event.legislature == legislature)
+    if chamber:
+        stmt = stmt.where(Event.chamber == chamber)
+
+    rows = db.execute(stmt).all()
+
+    # Batch the loyalty ingredients for the whole page in 3 grouped queries
+    # instead of 3 queries per row (was 60+ round-trips at limit=20).
+    top_ids = [r[0] for r in rows]
+    parties_by_person: dict[str, list[str]] = {pid: [] for pid in top_ids}
+    totals_by_person: dict[str, int] = {}
+    span_by_person: dict[str, tuple] = {}
+    if top_ids:
+        # Per-person destination parties, ordered by count desc within the
+        # person (the trailing count is consumed by the ORDER BY only).
+        for pid, short_name, _n in db.execute(
+            select(
+                Event.person_id,
+                Organization.short_name,
+                func.count(Event.id),
+            )
+            .join(Organization, Organization.id == Event.to_org_id)
+            .where(
+                Event.person_id.in_(top_ids),
+                Event.type == "switch_group",
+                Organization.short_name.is_not(None),
+            )
+            .group_by(Event.person_id, Organization.short_name)
+            .order_by(Event.person_id, func.count(Event.id).desc())
+        ):
+            parties_by_person.setdefault(pid, []).append(short_name)
+        totals_by_person = dict(
+            db.execute(
+                select(Event.person_id, func.count(Event.id))
+                .where(Event.person_id.in_(top_ids))
+                .group_by(Event.person_id)
+            ).all()
+        )
+        # 3-column rows: (person_id, min, max) — dict() needs pairs, so
+        # fold manually.
+        span_by_person = {
+            pid: (first, last)
+            for pid, first, last in db.execute(
+                select(
+                    Event.person_id,
+                    func.min(Event.event_date),
+                    func.max(Event.event_date),
+                )
+                .where(
+                    Event.person_id.in_(top_ids),
+                    Event.event_date.is_not(None),
+                )
+                .group_by(Event.person_id)
+            ).all()
+        }
+
+    # Loyalty score (Feature 10):
+    #   volatility = (switch_group_count / total_events) * tenure_weight
+    #   loyalty    = 100 * (1 - volatility), clipped to [0, 100]
+    # tenure_weight scales short careers down (a 6-month MP with 1 switch
+    # is noisier than a 10-year MP with the same ratio): min(1, years/4).
+    leaderboard = []
+    for person_id, name, count, first_switch, last_switch in rows:
+        total_events = totals_by_person.get(person_id, 0)
+        span = span_by_person.get(person_id)
+        tenure_years = 0.0
+        if span and span[0] and span[1]:
+            tenure_years = max((span[1] - span[0]).days / 365.25, 0.0)
+        tenure_weight = min(1.0, tenure_years / 4.0)
+        switch_ratio = (count / total_events) if total_events else 0.0
+        volatility = switch_ratio * tenure_weight
+        loyalty = round(max(0.0, min(100.0, 100.0 * (1.0 - volatility))), 1)
+
+        leaderboard.append(
+            {
+                "person_id": person_id,
+                "name": name,
+                "switch_count": count,
+                "first_switch": first_switch.isoformat() if first_switch else None,
+                "last_switch": last_switch.isoformat() if last_switch else None,
+                "parties": parties_by_person.get(person_id, []),
+                "total_events": total_events,
+                "tenure_years": round(tenure_years, 1),
+                "loyalty_score": loyalty,
+            }
+        )
+
+    return {"status": "ok", "data": leaderboard}
 
 
 @router.get("/export/popolo")
