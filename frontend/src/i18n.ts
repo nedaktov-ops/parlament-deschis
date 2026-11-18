@@ -117,6 +117,7 @@ const resources = {
       methodBody:
         "Afișăm doar fapte, fiecare cu data și sursa oficială citată. Nu inventăm date: unde sursele lipsesc, acoperirea este marcată ca parțială sau indisponibilă.",
       methodConfidenceNote: "Niveluri de încredere folosite în aplicație:",
+      methodAttribution: "Parlament Deschis — metodologie",
       coverageTable: "Tabel de acoperire",
       chamber: "Cameră",
       completeness: "Grad de acoperire",
@@ -588,6 +589,7 @@ const resources = {
       methodBody:
         "We show facts only, each with its date and the official source cited. We never invent data: where sources are missing, coverage is marked as partial or unavailable.",
       methodConfidenceNote: "Confidence levels used across the app:",
+      methodAttribution: "Parlament Deschis — methodology",
       coverageTable: "Coverage table",
       chamber: "Chamber",
       completeness: "Completeness",
