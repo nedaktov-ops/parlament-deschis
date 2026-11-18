@@ -121,6 +121,23 @@ export interface CoverageRow extends CoverageItem {
   last_refresh: string | null;
 }
 
+export interface DashboardStats {
+  persons: number;
+  memberships: number;
+  switches: number;
+  committees: number;
+  legislatures: number;
+  parties: number;
+  cross_chamber: number;
+  coverage_score: number;
+  computed_at: string;
+}
+
+export interface DashboardStatsResponse {
+  status: string;
+  data: DashboardStats;
+}
+
 export interface MetaResponse {
   legislatures: Record<string, { label: string; start: string | null; end: string | null }>;
   groups: OrgBrief[];
@@ -312,6 +329,8 @@ export const api = {
   coverage_detailed: () => get<CoverageRow[]>("/coverage/detailed"),
   about: () => get<AboutResponse>("/about"),
   health: () => get<HealthResponse>("/health"),
+  dashboardStats: (asOf?: string) =>
+    get<DashboardStatsResponse>(asOf ? `/dashboard/stats?as_of=${asOf}` : "/dashboard/stats"),
 };
 
 function withScope(path: string, chamber?: string, legislature?: string): string {
@@ -647,6 +666,14 @@ export interface SwitchWave {
   legislature: string | null;
   chamber: string | null;
   created_at: string | null;
+}
+
+export interface GenerationalShiftEntry {
+  party: string;
+  mps_with_birth_dates: number;
+  avg_age: number;
+  median_age: number;
+  average_age?: number;
 }
 
 /** Detected switch waves (bursts of affiliation change), newest first. */
