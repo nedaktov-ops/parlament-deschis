@@ -184,8 +184,8 @@ export function LiveDashboard() {
       </section>
 
       {/* Section 2: Bento grid — main visualizations (TimelineChart + chambers) */}
-      <section className="wrap space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <section className="wrap space-y-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4 md:gap-6">
           {/* Large tile — TimelineChart, most important visualization */}
           <TimelineChartTile
             from={min}
@@ -200,14 +200,14 @@ export function LiveDashboard() {
       </section>
 
       {/* Section 3: Bento grid — live feed and time controls */}
-      <section className="wrap space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Medium tile — LiveFeed */}
-          <div className="md:col-span-2 card p-4 flex flex-col h-full">
+      <section className="wrap space-y-6 pb-8">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 md:gap-6">
+          {/* Wide tile — LiveFeed */}
+          <div className="md:col-span-2 lg:col-span-2 card p-4 flex flex-col">
             <LiveFeed onSelect={openPerson} legislature={selectedLegislature} />
           </div>
-          {/* Medium tile — TimeSlider */}
-          <div className="md:col-span-2 card p-4 flex flex-col h-full">
+          {/* Narrow tile — TimeSlider */}
+          <div className="lg:col-span-2 card p-4 flex flex-col">
             <TimeSlider value={clamped} min={min} max={TODAY} onChange={changeDate} ticks={ticks} />
           </div>
         </div>
@@ -226,7 +226,7 @@ function TimelineChartTile({
   groups: OrgBrief[] | undefined;
 }) {
   return (
-    <div className="md:col-span-2 card p-4 flex flex-col h-full">
+    <div className="md:col-span-2 card p-4 flex flex-col">
       <Suspense fallback={<div className="card p-4 h-64 animate-pulse bg-slate-800/50 rounded-xl" aria-busy="true" aria-label="Loading…" />}>
         <TimelineChart from={from} to={to} groups={groups} />
       </Suspense>
@@ -251,7 +251,7 @@ function ChamberViewTile({
   });
 
   return (
-    <div className="md:col-span-1 card p-4 flex flex-col h-full">
+    <div className="md:col-span-1 card p-4 flex flex-col">
       <ChamberView chamber={chamber} asOf={asOf} onSelect={onSelect} />
       {data.data && data.data.total > 0 && (
         <InfoStat
