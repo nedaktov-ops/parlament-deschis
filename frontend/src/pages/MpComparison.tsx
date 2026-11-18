@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
 import { get } from "../api/client";
+import HeroGraphic from "../components/HeroGraphic";
+import InfoStat from "../components/InfoStat";
 import { localISODate } from "../utils/date";
 
 interface MpCard {
@@ -136,16 +138,47 @@ export default function MpComparison() {
   const maxCommittees = Math.max(...chosen.map((c) => c.committees), 0);
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-100 mb-2">
-        {t("mpc.title", "MP Comparison")}
-      </h1>
-      <p className="text-slate-400 mb-6">
-        {t(
-          "mpc.intro",
-          "Compare two or three MPs side by side: party, age, observed switches and committee seats. Every figure comes from the dated parliamentary ledgers.",
-        )}
-      </p>
+    <div className="wrap space-y-6">
+      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center gap-8">
+            <div className="flex-1 space-y-4">
+              <h1 className="text-3xl font-bold tracking-tight">{t("mpc.title", "MP Comparison")}</h1>
+              <p className="text-sm text-slate-300 mt-2">
+                {t("mpc.intro")}
+              </p>
+            </div>
+            <div className="w-full md:w-auto max-w-[260px]">
+              <HeroGraphic variant="people" className="mx-auto" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+            <InfoStat
+              label={t("mpcTotalMps", "Total MPs")}
+              value={poolList.length}
+              accent="sky"
+            />
+            <InfoStat
+              label={t("mpcComparisonSlots", "Comparison slots")}
+              value="3"
+              accent="emerald"
+            />
+            <InfoStat
+              label={t("mpcSelectedMps", "Selected MPs")}
+              value={chosen.length}
+              accent="amber"
+            />
+          </div>
+          <div className="mt-8 flex items-center gap-4" data-moment>
+            <span className="text-5xl font-black block tracking-tight">
+              {poolList.length}
+            </span>
+            <span className="text-sm text-slate-400">
+              {t("mpcTotalMpsLabel", "members of parliament in corpus")}
+            </span>
+          </div>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         {[0, 1, 2].map((i) => (
