@@ -530,7 +530,7 @@ function ScopesOverview({ rows }: { rows: TraseismScope[] }) {
             const metric = (value: string) =>
               key === "none" ? (
                 <>
-                  <span className="sr-only">{t("none")}</span>
+                  <span className="sr-only">{t("coverageNoData")}</span>
                   <span aria-hidden="true">—</span>
                 </>
               ) : (
