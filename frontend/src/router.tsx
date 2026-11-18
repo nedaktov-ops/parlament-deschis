@@ -4,6 +4,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Search from "./components/Search";
+import Footer from "./components/Footer";
 import SenateHistory from "./pages/SenateHistory";
 import { isISODate, localISODate } from "./utils/date";
 import "./i18n";
@@ -201,7 +202,7 @@ function RootLayout() {
   }, [location.pathname, i18n.language, t]);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-2 focus:rounded-md focus:bg-sky-700 focus:text-white">
         {t("skipToContent", "Skip to content")}
       </a>
@@ -281,9 +282,10 @@ function RootLayout() {
         <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-ink to-transparent" />
         </div>
       </header>
-      <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto px-4 py-5">
+      <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto px-4 py-5 flex-1">
         <Outlet />
       </main>
+      <Footer />
       <AboutModal open={aboutOpen} onClose={closeAbout} />
     </div>
   );
