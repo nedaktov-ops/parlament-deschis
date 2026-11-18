@@ -1,9 +1,9 @@
 # Frontend Improvement Strategy — UX/UI Deep Audit → 10x
 
 **Status:** active reference (Phase F). Every change made after `2026-11-18` must be checked against this document before and after implementation.
-**Source of work:** user directive (2026-11-18) — "take a deep hard look at the front-end… screenshot everything, click on all the buttons, check all the ux and UI elements and figure out what is missing, not working, incomplete, forgotten, built incompletely or incorrectly… 10x improve it."
-**Web-standard source:** Chrome `modern-web-guidance` skill (retrieved this session; version `2026_11_09-5bcc021b` via `npx -y modern-web-guidance@latest`), applied to all UI/CSS/client-side JS work.
-**Prior context:** `docs/REMEDIATION-STRATEGY.md` (§1–§8, Phase 2.5) — this strategy layers a *frontend deep-audit → improvement* effort on top; do not contradict prior remediation decisions without recording why.
+**Source of work:** user directive — deep-hard look at the frontend; screenshot everything; click all buttons; check all UX/UI; find what's missing/broken/incomplete; 10x improve it.
+**Web-standard source:** Chrome `modern-web-guidance` skill (version `2026_11_09-5bcc021b`, retrieved via `npx -y modern-web-guidance@latest`), applied to all UI/CSS/client-side JS work.
+**Prior context:** `docs/REMEDIATION-STRATEGY.md` (§1–§8, Phase 2.5) — frontend bug fixes already merged (PR #33: TimeSlider play loop, scroll-container a11y, electoral redirect). This strategy now covers *visual/UX improvement* beyond bug fixes.
 
 ---
 
@@ -12,39 +12,55 @@
 1. **Evidence before edits.** Every finding needs code path + screenshot/interaction evidence. No fixing on vibes.
 2. **Deep audit before repair.** Screenshot every route, click every button, probe every state. Findings come from the audit, not from taste.
 3. **Smarter alternative before code.** Prefer design-system tokens, existing components, content fixes, removal, or config over new code.
-4. **Modern web first.** All UI work follows retrieved `modern-web-guidance` guides (accessibility, responsive-table, dialog, persistent-toast, etc.).
+4. **Modern web first.** All UI work follows retrieved `modern-web-guidance` guides.
 5. **Non-destructive.** Fixes target UI only; no behaviour regressions without a rollback path.
 6. **Honesty.** Document known gaps; never hide broken states.
 
-## 2. Phase plan and fleet recipes
+## 2. What's already done (bug fixes, merged PR #33)
+- TimeSlider play loop: was stuck at max, now loops continuously; `aria-pressed` toggles correctly
+- Scroll containers keyboard-focusable: party-timeline, coverage, institutional, timeline-chart
+- Electoral redirect URL encoding: `legislature=2024` unquoted
+- i18n: 0 missing keys, RO/EN parity confirmed
+- All 18 routes: 0 JS errors, 0 axe violations
 
-### F1 — Deep frontend audit (research only)
-| Sub-agent | Exclusive ownership | Recipe focus | Output gate |
-|---|---|---|---|
-| F1-A | `frontend/src/**` + dev-server Playwright runs | Visual/UX screenshots of all routes (18), responsive (375/768/1280), states (loading/empty/error), console errors, axe | Findings list w/ evidence |
-| F1-B | `frontend/src/i18n.ts` + routed pages | Translation completeness (RO/EN), missing keys, hardcoded strings, locale switching correctness | Key-diff vs usage |
+## 3. What remains for genuine 10x improvement (visual/UX)
 
-### F2 — Repair (implementation)
-| Sub-agent | Exclusive ownership | Findings it fixes |
+| Area | What to look for | Evidence source |
 |---|---|---|
-| F2-A | pages + components (visual/responsive/a11y fixes) | layout, spacing, overflow, focus, states |
-| F2-B | i18n + copy/content | missing translations, honest copy |
+| Visual hierarchy | Spacing, typography scale, color contrast, card/grouping consistency | Screenshot audit + code review |
+| Empty states | Pages with no data — do they say something helpful? | Route-by-route click-through |
+| Loading states | Suspense fallbacks, query loading — are they visible and useful? | Network-slow simulation + code |
+| Error states | Does every fetch have a retry path? Is it visible? | Error simulation + code |
+| Mobile UX | Touch targets, readable text, no horizontal scroll | 375px viewport audit |
+| Focus management | Visible focus rings, logical tab order, dialog focus trap | Keyboard-only navigation |
+| Translations | Copy quality, missing context, RO/EN parity | i18n.ts vs page usage |
+| Interactions | Button states (hover/active/disabled), form feedback | Click-through every button |
+
+## 4. Phase plan and fleet recipes
+
+### F1 — Deep visual/UX audit (research only)
+Screenshots of all routes at 3 viewports, keyboard-only navigation, copy review.
+
+### F2 — Repair/improve (implementation)
+Fix visual hierarchy, empty/loading/error states, mobile issues, focus management, copy.
 
 ### F3 — Verify
 - `cd frontend && npx tsc -b && npm run build`
 - `python3 scripts/ui_validate.py <base>` (18 routes, 0 JS errors, 0 axe)
-- prod re-scan after deploy.
+- Keyboard-only navigation check
+- Visual diff against pre-fix screenshots
 
-## 3. Decision rules
-- If a finding is a **design/aesthetic** improvement with no accessibility or correctness cost → fix via tokens/components.
-- If a finding is **behavioural/UX** but risky → document as residual, don't half-fix.
+## 5. Decision rules
+- Visual improvements must keep the existing color palette (slate/slate-800 dark theme) — no redesign, just polish.
+- No new dependencies unless a modern-web-guidance guide requires one.
+- Accessibility violations must be fixed; aesthetic preferences are optional.
 
-## 4. Rollback
-- Per-checkpoint commits; UI fixes revert via `git revert <sha>`.
+## 6. Rollback
+- Per-checkpoint commits; `git revert <sha>`.
 - Keep pre-fix screenshots for visual diff.
 
-## 5. Acceptance
-- Deep audit complete with evidence; fixes implemented only for audited findings; gates green; prod UI scan pass.
+## 7. Acceptance
+- Deep audit complete with evidence; improvements implemented only for audited findings; gates green; prod UI scan pass.
 
 ---
 
