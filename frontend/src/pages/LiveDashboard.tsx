@@ -107,16 +107,22 @@ export function LiveDashboard() {
         ) : (
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="text-slate-300">{t("coverageNote")}:</span>
-            <span className="bg-slate-800 rounded px-2 py-0.5 text-slate-200">
-              {currentCoverage?.legislature ?? selectedLegislature ?? t("currentTerm")}
-            </span>
-            <span
-              className={`rounded px-2 py-0.5 ${completenessClass(
-                currentCoverage?.completeness ?? "none",
-              )}`}
-            >
-              {t(currentCoverage?.completeness ?? "none")}
-            </span>
+            {currentCoverage ? (
+              <>
+                <span className="bg-slate-800 rounded px-2 py-0.5 text-slate-200">
+                  {currentCoverage.legislature ?? selectedLegislature ?? t("currentTerm")}
+                </span>
+                <span
+                  className={`rounded px-2 py-0.5 ${completenessClass(
+                    currentCoverage.completeness,
+                  )}`}
+                >
+                  {t(currentCoverage.completeness)}
+                </span>
+              </>
+            ) : (
+              <span className="text-slate-400">{t("coverageNoData")}</span>
+            )}
           </div>
         )}
 

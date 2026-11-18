@@ -85,7 +85,7 @@ export default function TimeSlider({
               return (
                 <span
                   key={tk.label}
-                  className="absolute text-[11px] text-slate-300 -translate-x-1/2 whitespace-nowrap"
+                  className="absolute text-xs text-slate-300 -translate-x-1/2 whitespace-nowrap"
                   style={{ left: `${pct}%` }}
                 >
                   {tk.label}
