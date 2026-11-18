@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
 import { get } from "../api/client";
+import HeroGraphic from "../components/HeroGraphic";
+import InfoStat from "../components/InfoStat";
 import { localISODate } from "../utils/date";
 
 interface MpCard {
@@ -62,27 +64,52 @@ export default function Mps() {
   const canNext = rows.length === PAGE_SIZE;
 
   return (
-    <div className="p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-100 mb-2">
-            {t("mps.title", "MP Biography Cards")}
-          </h1>
-          <p className="text-slate-400 mb-6">
-            {t(
-              "mps.intro",
-              "Browse every person in the corpus with their party, age, observed switches and committee seats. Ages come from recorded birth dates — cards with no birth date show age as unknown, never a guess.",
-            )}
-          </p>
+    <div className="wrap space-y-6">
+      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center gap-8">
+            <div className="flex-1 space-y-4">
+              <h1 className="text-3xl font-bold tracking-tight">{t("mps.title", "MP Biography Cards")}</h1>
+              <p className="text-sm text-slate-300 mt-2">
+                {t("mps.intro")}
+              </p>
+            </div>
+            <div className="w-full md:w-auto max-w-[260px]">
+              <HeroGraphic variant="people" className="mx-auto" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+            <InfoStat
+              label={t("mpsTotalMps", "Total MPs")}
+              value={rows.length}
+              accent="sky"
+            />
+            <InfoStat
+              label={t("mpsWithParty", "With party")}
+              value={rows.filter((m) => m.party).length}
+              accent="emerald"
+            />
+            <InfoStat
+              label={t("mpsWithCommittees", "With committees")}
+              value={rows.filter((m) => m.committees > 0).length}
+              accent="amber"
+            />
+            <InfoStat
+              label={t("mpsTotalSwitches", "Total switches")}
+              value={rows.reduce((sum, m) => sum + m.switches, 0)}
+              accent="rose"
+            />
+          </div>
+          <div className="mt-8 flex items-center gap-4" data-moment>
+            <span className="text-5xl font-black block tracking-tight">
+              {rows.length}
+            </span>
+            <span className="text-sm text-slate-400">
+              {t("mpsTotalMpsLabel", "members of parliament in corpus")}
+            </span>
+          </div>
         </div>
-        <Link
-          to="/compare-mps"
-          search={{ date: localISODate() }}
-          className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
-        >
-          {t("mps.compareLink", "Compare MPs →")}
-        </Link>
-      </div>
+      </section>
 
       <form
         onSubmit={(e) => {
