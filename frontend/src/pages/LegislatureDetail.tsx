@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import HeroGraphic from "../components/HeroGraphic";
+import InfoStat from "../components/InfoStat";
 import { localISODate } from "../utils/date";
 
 const TimelineChart = lazy(() => import("../components/TimelineChart"));
@@ -48,29 +50,58 @@ export function LegislatureDetail() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="card p-4">
-        <h1 className="text-2xl font-bold">{t("legislature")} {year}</h1>
-        <p className="text-sm text-slate-400 mt-1">
-          {t("period")}: {start} → {leg?.end ?? t("present")}
-        </p>
-        <label htmlFor="legislature-as-of" className="block text-xs text-slate-300 mt-3 mb-1">
-          {t("asOf")}
-        </label>
-        <input
-          id="legislature-as-of"
-          type="date"
-          min={start}
-          max={end}
-          value={selectedDate}
-          onChange={(event) => {
-            if (event.target.value) {
-              navigate({ search: { date: event.target.value }, replace: true });
-            }
-          }}
-          className="bg-slate-800 border border-slate-600 rounded-md px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
-        />
-      </div>
+    <div className="wrap space-y-6">
+      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center gap-8">
+            <div className="flex-1 space-y-4">
+              <h1 className="text-3xl font-bold tracking-tight">
+                {t("legislature")} {year}
+              </h1>
+              <p className="text-sm text-slate-300 mt-2">
+                {t("period")}: {start} → {leg?.end ?? t("present")}
+              </p>
+            </div>
+            <div className="w-full md:w-auto max-w-[260px]">
+              <HeroGraphic variant="wave" className="mx-auto" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+            <InfoStat
+              label={t("legislatureStatMembers", "Members")}
+              value={chamber.data?.total ?? "--"}
+              accent="sky"
+            />
+            <InfoStat
+              label={t("legislatureStatGroups", "Groups")}
+              value={chamber.data?.groups?.length ?? "--"}
+              accent="emerald"
+            />
+            <InfoStat
+              label={t("legislatureStatSwitches", "Switches")}
+              value={movements.data?.filter((e) => e.type === "switch_group").length ?? "--"}
+              accent="amber"
+            />
+            <InfoStat
+              label={t("legislatureStatYears", "Years")}
+              value={
+                leg?.start && leg?.end
+                  ? `${new Date(leg.end).getFullYear() - new Date(leg.start).getFullYear() + 1}`
+                  : "--"
+              }
+              accent="rose"
+            />
+          </div>
+          <div className="mt-8 flex items-center gap-4" data-moment>
+            <span className="text-5xl font-black block tracking-tight">
+              {chamber.data?.total ?? "--"}
+            </span>
+            <span className="text-sm text-slate-400">
+              {t("legislatureStatMembersLabel", "members in legislature")}
+            </span>
+          </div>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="card p-4">
