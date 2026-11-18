@@ -40,6 +40,52 @@ h1, h2, h3, h4, h5, h6 {
   @apply bg-panel rounded-xl border border-slate-700/60 shadow-lg;
 }
 
+/* De-facto page wrap: constrains content width, centers it, and applies
+   responsive horizontal padding so left/right content edges align across
+   every route (design-taste-frontend Rule 4). */
+.wrap {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* Hover micro-animations (design-taste-frontend Rule 5 + modern-web-guidance natural-interactions):
+   - Linked card lifts 2px on hover (hover:-translate-y-0.5 ≈ 2px)
+   - Buttons: hover shadow + active scale 0.97 (press)
+   - Links: hover underline draws
+   - Table rows: hover background
+   All animations use compositor properties (transform, box-shadow, opacity)
+   and respect prefers-reduced-motion (global rule at line 75). */
+.card-hover {
+  @apply transition-transform duration-200 ease-out;
+}
+.card-hover:hover {
+  @apply -translate-y-0.5 shadow-md;
+}
+
+.btn-hover {
+  @apply transition-all duration-150 ease-out;
+}
+.btn-hover:hover {
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+}
+.btn-hover:active {
+  scale: 0.97;
+}
+
+.link-hover {
+  @apply transition-all duration-150 ease-out;
+}
+.link-hover:hover {
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+
+.row-hover {
+  @apply transition-colors duration-150 ease-out;
+}
+.row-hover:hover {
+  background-color: rgb(51 65 85 / 0.5); /* slate-700/50 */
+}
+
 .btn {
   @apply px-3 py-1.5 rounded-md text-sm font-medium transition-colors;
 }
@@ -80,6 +126,21 @@ h1, h2, h3, h4, h5, h6 {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Hero entrance — plays once on load, compositor-only (opacity + transform). */
+[data-enter] {
+  animation: enter 700ms ease-out both;
+}
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

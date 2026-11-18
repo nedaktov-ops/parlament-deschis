@@ -129,8 +129,11 @@ export default function Report() {
         : "text-slate-500";
 
   return (
-    <div className="p-6 print:p-0">
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-6 print:mb-3">
+    <div className="wrap py-6 print:p-0">
+      <div
+        className="min-h-screen flex flex-wrap items-start justify-between gap-3 mb-6 print:mb-3"
+        data-enter
+      >
         <div>
           <h1 className="text-2xl font-bold text-slate-100 print:text-slate-900">
             {t("report.title", "Transparency Report")}
@@ -145,6 +148,16 @@ export default function Report() {
             <p className="text-slate-500 print:text-slate-600 text-xs mt-1">
               {t("report.generated", "Generated")}{" "}
               {new Date(d.generated_at).toLocaleString(i18n.language)}
+            </p>
+          )}
+          {d && (
+            <p className="mt-4 text-slate-200" data-moment>
+              <span className="text-4xl font-bold block tracking-tight">
+                {d.totals.persons.toLocaleString()}
+              </span>
+              <span className="text-sm text-slate-400 mt-1">
+                {t("report.deputiesCount", "deputies in the corpus")}
+              </span>
             </p>
           )}
         </div>
@@ -242,207 +255,213 @@ export default function Report() {
 
       {d && (
         <>
-          <section className="mb-6">
-            <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
-              {t("report.corpus", "Corpus at a glance")}
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              <Stat
-                label={t("report.persons", "Persons")}
-                value={d.totals.persons}
-                max={statMax}
-              />
-              <Stat
-                label={t("report.memberships", "Memberships")}
-                value={d.totals.memberships}
-                max={statMax}
-              />
-              <Stat
-                label={t("report.events", "Events")}
-                value={d.totals.events}
-                max={statMax}
-              />
-              <Stat
-                label={t("report.switches", "Party switches")}
-                value={d.totals.switches}
-                max={statMax}
-              />
-              <Stat
-                label={t("report.committees", "Committees")}
-                value={d.totals.committees}
-                max={statMax}
-              />
-              <Stat
-                label={t("report.birthDates", "Birth dates")}
-                value={`${d.totals.persons_with_birth_date} / ${d.totals.persons}`}
-                max={statMax}
-                barValue={d.totals.persons_with_birth_date}
-              />
-            </div>
-          </section>
+          <div className="bg-slate-800/30 rounded-xl p-4 mb-6 print:bg-transparent print:p-0">
+            <section className="mb-4">
+              <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
+                {t("report.corpus", "Corpus at a glance")}
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <Stat
+                  label={t("report.persons", "Persons")}
+                  value={d.totals.persons}
+                  max={statMax}
+                />
+                <Stat
+                  label={t("report.memberships", "Memberships")}
+                  value={d.totals.memberships}
+                  max={statMax}
+                />
+                <Stat
+                  label={t("report.events", "Events")}
+                  value={d.totals.events}
+                  max={statMax}
+                />
+                <Stat
+                  label={t("report.switches", "Party switches")}
+                  value={d.totals.switches}
+                  max={statMax}
+                />
+                <Stat
+                  label={t("report.committees", "Committees")}
+                  value={d.totals.committees}
+                  max={statMax}
+                />
+                <Stat
+                  label={t("report.birthDates", "Birth dates")}
+                  value={`${d.totals.persons_with_birth_date} / ${d.totals.persons}`}
+                  max={statMax}
+                  barValue={d.totals.persons_with_birth_date}
+                />
+              </div>
+            </section>
 
-          <section className="mb-6">
-            <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
-              {t("report.topSwitchers", "Top party switchers")}
-            </h2>
-            <div
-              className="overflow-x-auto"
-              tabIndex={0}
-              role="region"
-              aria-label={t("report.topSwitchers", "Top party switchers")}
-            >
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="text-left text-slate-400 print:text-slate-600 border-b border-slate-700 print:border-slate-300">
-                    <th scope="col" className="py-1 pr-3">{t("report.col.mp", "MP")}</th>
-                    <th scope="col" className="py-1 pr-3 text-right">
-                      {t("report.col.switches", "Switches")}
-                    </th>
-                    <th scope="col" className="py-1 pr-3 text-right">
-                      {t("report.col.loyalty", "Loyalty")}
-                    </th>
-                    <th scope="col" className="py-1 pr-3">{t("report.col.period", "Period")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {d.top_switchers.map((s) => (
-                    <tr
-                      key={s.person_id}
-                      className="border-b border-slate-700/40 print:border-slate-200"
-                    >
-                      <th scope="row" className="py-1 pr-3 text-slate-200 print:text-slate-900 font-normal text-left">
-                        {s.name}
+            <section className="mb-0">
+              <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
+                {t("report.topSwitchers", "Top party switchers")}
+              </h2>
+              <div
+                className="overflow-x-auto"
+                tabIndex={0}
+                role="region"
+                aria-label={t("report.topSwitchers", "Top party switchers")}
+              >
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-slate-400 print:text-slate-600 border-b border-slate-700 print:border-slate-300">
+                      <th scope="col" className="py-1 pr-3">{t("report.col.mp", "MP")}</th>
+                      <th scope="col" className="py-1 pr-3 text-right">
+                        {t("report.col.switches", "Switches")}
                       </th>
-                      <td className="py-1 pr-3 text-right text-slate-300 print:text-slate-700">
-                        {s.switches}
-                      </td>
-                      <td className="py-1 pr-3 text-right text-slate-300 print:text-slate-700">
-                        {s.loyalty_score}
-                      </td>
-                      <td className="py-1 pr-3 text-slate-400 print:text-slate-600 text-xs">
-                        {s.first_switch ?? "—"} → {s.last_switch ?? "—"}
-                      </td>
+                      <th scope="col" className="py-1 pr-3 text-right">
+                        {t("report.col.loyalty", "Loyalty")}
+                      </th>
+                      <th scope="col" className="py-1 pr-3">{t("report.col.period", "Period")}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section className="mb-6">
-            <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
-              {t("report.control", "Committee control")}
-            </h2>
-            <div className="flex flex-wrap gap-3">
-              {d.committee_control.parties.map((p) => (
-                <span
-                  key={p.party}
-                  className="bg-slate-800 print:bg-slate-100 print:border print:border-slate-300 rounded px-3 py-1.5 text-sm text-slate-200 print:text-slate-900"
-                >
-                  {p.party}: {p.chairs}{" "}
-                  <span className="text-slate-400 print:text-slate-600">
-                    ({p.share_pct}%)
-                  </span>
-                </span>
-              ))}
-              <span className="text-slate-500 print:text-slate-600 text-sm self-center">
-                {t("report.ofCommittees", "of {{n}} committees", {
-                  n: d.committee_control.total_committees,
-                })}
-              </span>
-            </div>
-          </section>
-
-          <section className="mb-6">
-            <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
-              {t("report.waves", "Largest switch waves")}
-            </h2>
-            <ul className="text-sm space-y-1">
-              {d.switch_waves.slice(0, 6).map((w, i) => (
-                <li
-                  key={`${w.start_date}-${i}`}
-                  className="text-slate-300 print:text-slate-700"
-                >
-                  <span className="text-slate-500 print:text-slate-600 font-mono text-xs">
-                    {w.start_date} → {w.end_date}
-                  </span>{" "}
-                  — {w.switch_count}{" "}
-                  {t("report.switchesUnit", "switches")}
-                  {w.trigger_event ? ` · ${w.trigger_event}` : ""}
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="mb-6">
-            <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
-              {t("report.ages", "Average age by party")}
-            </h2>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-              {d.party_ages.slice(0, 12).map((a) => (
-                <span
-                  key={a.party}
-                  className="text-slate-300 print:text-slate-700"
-                >
-                  {a.party}:{" "}
-                  <span className="font-semibold">{a.avg_age}</span>{" "}
-                  <span className="text-slate-500 print:text-slate-600 text-xs">
-                    (n={a.mps_with_birth_dates})
-                  </span>
-                </span>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
-              {t("report.coverage", "Data coverage")}
-            </h2>
-            <div
-              className="overflow-x-auto"
-              tabIndex={0}
-              role="region"
-              aria-label={t("report.coverage", "Data coverage")}
-            >
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="text-left text-slate-400 print:text-slate-600 border-b border-slate-700 print:border-slate-300">
-                    <th scope="col" className="py-1 pr-3">
-                      {t("report.col.chamber", "Chamber")}
-                    </th>
-                    <th scope="col" className="py-1 pr-3">
-                      {t("report.col.legislature", "Legislature")}
-                    </th>
-                    <th scope="col" className="py-1 pr-3">
-                      {t("report.col.completeness", "Completeness")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {d.coverage.map((c) => (
-                    <tr
-                      key={`${c.chamber}-${c.legislature}`}
-                      className="border-b border-slate-700/40 print:border-slate-200"
-                    >
-                      <th scope="row" className="py-1 pr-3 text-slate-300 print:text-slate-700 font-normal text-left">
-                        {c.chamber}
-                      </th>
-                      <td className="py-1 pr-3 text-slate-300 print:text-slate-700">
-                        {c.legislature ?? "—"}
-                      </td>
-                      <td
-                        className={`py-1 pr-3 font-medium ${completenessColor(
-                          c.completeness,
-                        )}`}
+                  </thead>
+                  <tbody>
+                    {d.top_switchers.map((s) => (
+                      <tr
+                        key={s.person_id}
+                        className="border-b border-slate-700/40 print:border-slate-200"
                       >
-                        {c.completeness}
-                      </td>
+                        <th scope="row" className="py-1 pr-3 text-slate-200 print:text-slate-900 font-normal text-left">
+                          {s.name}
+                        </th>
+                        <td className="py-1 pr-3 text-right text-slate-300 print:text-slate-700">
+                          {s.switches}
+                        </td>
+                        <td className="py-1 pr-3 text-right text-slate-300 print:text-slate-700">
+                          {s.loyalty_score}
+                        </td>
+                        <td className="py-1 pr-3 text-slate-400 print:text-slate-600 text-xs">
+                          {s.first_switch ?? "—"} → {s.last_switch ?? "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <div className="bg-slate-800/30 rounded-xl p-4 mb-6 print:bg-transparent print:p-0">
+            <section className="mb-4">
+              <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
+                {t("report.control", "Committee control")}
+              </h2>
+              <div className="flex flex-wrap gap-3">
+                {d.committee_control.parties.map((p) => (
+                  <span
+                    key={p.party}
+                    className="bg-slate-800 print:bg-slate-100 print:border print:border-slate-300 rounded px-3 py-1.5 text-sm text-slate-200 print:text-slate-900"
+                  >
+                    {p.party}: {p.chairs}{" "}
+                    <span className="text-slate-400 print:text-slate-600">
+                      ({p.share_pct}%)
+                    </span>
+                  </span>
+                ))}
+                <span className="text-slate-500 print:text-slate-600 text-sm self-center">
+                  {t("report.ofCommittees", "of {{n}} committees", {
+                    n: d.committee_control.total_committees,
+                  })}
+                </span>
+              </div>
+            </section>
+
+            <section className="mb-0">
+              <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
+                {t("report.waves", "Largest switch waves")}
+              </h2>
+              <ul className="text-sm space-y-1">
+                {d.switch_waves.slice(0, 6).map((w, i) => (
+                  <li
+                    key={`${w.start_date}-${i}`}
+                    className="text-slate-300 print:text-slate-700"
+                  >
+                    <span className="text-slate-500 print:text-slate-600 font-mono text-xs">
+                      {w.start_date} → {w.end_date}
+                    </span>{" "}
+                    — {w.switch_count}{" "}
+                    {t("report.switchesUnit", "switches")}
+                    {w.trigger_event ? ` · ${w.trigger_event}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </div>
+
+          <div className="bg-slate-800/30 rounded-xl p-4 mb-6 print:bg-transparent print:p-0">
+            <section className="mb-4">
+              <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
+                {t("report.ages", "Average age by party")}
+              </h2>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                {d.party_ages.slice(0, 12).map((a) => (
+                  <span
+                    key={a.party}
+                    className="text-slate-300 print:text-slate-700"
+                  >
+                    {a.party}:{" "}
+                    <span className="font-semibold">{a.avg_age}</span>{" "}
+                    <span className="text-slate-500 print:text-slate-600 text-xs">
+                      (n={a.mps_with_birth_dates})
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </section>
+
+            <section className="mb-0">
+              <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
+                {t("report.coverage", "Data coverage")}
+              </h2>
+              <div
+                className="overflow-x-auto"
+                tabIndex={0}
+                role="region"
+                aria-label={t("report.coverage", "Data coverage")}
+              >
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-slate-400 print:text-slate-600 border-b border-slate-700 print:border-slate-300">
+                      <th scope="col" className="py-1 pr-3">
+                        {t("report.col.chamber", "Chamber")}
+                      </th>
+                      <th scope="col" className="py-1 pr-3">
+                        {t("report.col.legislature", "Legislature")}
+                      </th>
+                      <th scope="col" className="py-1 pr-3">
+                        {t("report.col.completeness", "Completeness")}
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+                  </thead>
+                  <tbody>
+                    {d.coverage.map((c) => (
+                      <tr
+                        key={`${c.chamber}-${c.legislature}`}
+                        className="border-b border-slate-700/40 print:border-slate-200"
+                      >
+                        <th scope="row" className="py-1 pr-3 text-slate-300 print:text-slate-700 font-normal text-left">
+                          {c.chamber}
+                        </th>
+                        <td className="py-1 pr-3 text-slate-300 print:text-slate-700">
+                          {c.legislature ?? "—"}
+                        </td>
+                        <td
+                          className={`py-1 pr-3 font-medium ${completenessColor(
+                            c.completeness,
+                          )}`}
+                        >
+                          {c.completeness}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
 
           <p className="mt-6 text-xs text-slate-500 print:text-slate-600">
             {t("report.footer")}
