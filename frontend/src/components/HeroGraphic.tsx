@@ -4,7 +4,8 @@ export interface HeroGraphicProps {
     | "switches"
     | "committee"
     | "people"
-    | "wave";
+    | "wave"
+    | "report";
   className?: string;
 }
 
@@ -45,6 +46,12 @@ const VARIANT_CONFIG: Record<
     title: "Switch Waves",
     desc: "Bursts of affiliation change over time",
     primary: "rose-400",
+    secondary: "slate-500",
+  },
+  report: {
+    title: "Transparency Report",
+    desc: "One-page summary of parliament data for journalists and citizens",
+    primary: "sky-400",
     secondary: "slate-500",
   },
 };
@@ -149,9 +156,55 @@ export default function HeroGraphic({
             <circle cx="60" cy="60" r="3" fill="currentColor" />
           </>
         )}
+        {variant === "report" && (
+          <>
+            {/* Document / scroll icon */}
+            <rect
+              x="60"
+              y="40"
+              width="80"
+              height="120"
+              rx="4"
+              fill="currentColor"
+              opacity={0.1}
+            />
+            <rect
+              x="60"
+              y="40"
+              width="80"
+              height="120"
+              rx="4"
+              stroke="currentColor"
+              strokeWidth="2"
+              fill="none"
+            />
+            <path
+              d="M70 70 L130 70"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              opacity={0.6}
+            />
+            <path
+              d="M70 90 L120 90"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              opacity={0.5}
+            />
+            <path
+              d="M70 110 L100 110"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              opacity={0.4}
+            />
+            <rect x="90" y="130" width="20" height="10" fill="currentColor" opacity={0.3} />
+          </>
+        )}
       </svg>
       <div className="flex flex-col items-center gap-1">
-        <h3 className="text-sm font-semibold text-slate-200">{cfg.title}</h3>
+        <div className="text-sm font-semibold text-slate-200">{cfg.title}</div>
         <p className="text-xs text-slate-400">{cfg.desc}</p>
       </div>
     </div>
