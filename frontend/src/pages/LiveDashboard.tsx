@@ -6,6 +6,8 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import ChamberView from "../components/ChamberView";
 import LiveFeed from "../components/LiveFeed";
 import TimeSlider from "../components/TimeSlider";
+import HeroGraphic from "../components/HeroGraphic";
+import InfoStat from "../components/InfoStat";
 import { localISODate } from "../utils/date";
 
 // Lazy-load TimelineChart (bundles ECharts ~220 KB) so it doesn't block initial paint
@@ -64,6 +66,8 @@ export function LiveDashboard() {
     );
   }, [meta.data, clamped]);
 
+  const totals = (meta.data as { totals?: number[] } | undefined)?.totals;
+
   const changeDate = (iso: string) => {
     navigate({ search: { date: iso }, replace: true });
   };
@@ -86,65 +90,96 @@ export function LiveDashboard() {
     <div className="wrap space-y-6">
       {/* Section 1: Hero — fills the first screen alone */}
       <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
-        <div className="max-w-3xl">
-          <h1 className="text-2xl font-bold">{t("overview")}</h1>
-          <p className="text-sm text-slate-400 mt-1">{t("dashboardIntro")}</p>
-          {meta.isError && (
-            <div className="text-rose-200 text-sm mt-4" role="alert">
-              {t("metaLoadError")}
-              <button type="button"className="ml-3 underline" onClick={() => meta.refetch()}>
-                {t("traseismRetry")}
-              </button>
-            </div>
-          )}
-          {coverage.isError && (
-            <div className="text-rose-200 text-sm mt-4" role="alert">
-              {t("coverageLoadError")}
-              <button type="button"className="ml-3 underline" onClick={() => coverage.refetch()}>
-                {t("traseismRetry")}
-              </button>
-            </div>
-          )}
-          {!meta.isError && !coverage.isError && (
-            <div className="flex flex-wrap items-center gap-2 text-xs mt-4">
-              <span className="text-slate-300">{t("coverageNote")}:</span>
-              {currentCoverage ? (
-                <>
-                  <span className="bg-slate-800 rounded px-2 py-0.5 text-slate-200">
-                    {currentCoverage.legislature ?? selectedLegislature ?? t("currentTerm")}
-                  </span>
-                  <span
-                    className={`rounded px-2 py-0.5 ${completenessClass(
-                      currentCoverage.completeness,
-                    )}`}
-                  >
-                    {t(currentCoverage.completeness)}
-                  </span>
-                </>
-              ) : (
-                <div className="flex items-center gap-2 px-2 py-1 rounded bg-slate-800/50 border border-slate-700/50">
-                  <span className="text-slate-400 text-xs">{t("coverageNoData")}</span>
-                  <button
-                    type="button"
-                    className="text-xs underline text-sky-400 hover:text-sky-300"
-                    onClick={() => coverage.refetch()}
-                  >
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center gap-8">
+            <div className="flex-1 space-y-4">
+              <h1 className="text-3xl font-bold tracking-tight">{t("overview")}</h1>
+              <p className="text-sm text-slate-400">{t("dashboardIntro")}</p>
+              {meta.isError && (
+                <div className="text-rose-200 text-sm mt-4" role="alert">
+                  {t("metaLoadError")}
+                  <button type="button" className="ml-3 underline" onClick={() => meta.refetch()}>
                     {t("traseismRetry")}
                   </button>
                 </div>
               )}
+              {coverage.isError && (
+                <div className="text-rose-200 text-sm mt-4" role="alert">
+                  {t("coverageLoadError")}
+                  <button type="button" className="ml-3 underline" onClick={() => coverage.refetch()}>
+                    {t("traseismRetry")}
+                  </button>
+                </div>
+              )}
+              {!meta.isError && !coverage.isError && (
+                <div className="flex flex-wrap items-center gap-2 text-xs mt-4">
+                  <span className="text-slate-300">{t("coverageNote")}:</span>
+                  {currentCoverage ? (
+                    <>
+                      <span className="bg-slate-800 rounded px-2 py-0.5 text-slate-200">
+                        {currentCoverage.legislature ?? selectedLegislature ?? t("currentTerm")}
+                      </span>
+                      <span
+                        className={`rounded px-2 py-0.5 ${completenessClass(
+                          currentCoverage.completeness,
+                        )}`}
+                      >
+                        {t(currentCoverage.completeness)}
+                      </span>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2 px-2 py-1 rounded bg-slate-800/50 border border-slate-700/50">
+                      <span className="text-slate-400 text-xs">{t("coverageNoData")}</span>
+                      <button
+                        type="button"
+                        className="text-xs underline text-sky-400 hover:text-sky-300"
+                        onClick={() => coverage.refetch()}
+                      >
+                        {t("traseismRetry")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {!meta.isError && meta.data && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                  <InfoStat
+                    label={t("dashboardStatPersons", "Members of Parliament")}
+                    value={totals?.[0] ?? "--"}
+                    accent="sky"
+                  />
+                  <InfoStat
+                    label={t("dashboardStatMemberships", "Memberships")}
+                    value={totals?.[1] ?? "--"}
+                    accent="emerald"
+                  />
+                  <InfoStat
+                    label={t("dashboardStatSwitches", "Switches")}
+                    value={totals?.[2] ?? "--"}
+                    accent="amber"
+                  />
+                  <InfoStat
+                    label={t("dashboardStatCommittees", "Committees")}
+                    value={totals?.[3] ?? "--"}
+                    accent="rose"
+                  />
+                </div>
+              )}
+            </div>
+            <div className="w-full md:w-auto max-w-[260px]">
+              <HeroGraphic variant="overview" className="mx-auto" />
+            </div>
+          </div>
+          {meta.data && (
+            <div className="mt-8 flex items-center gap-4" data-moment>
+              <span className="text-5xl font-black block tracking-tight">
+                {Object.keys(meta.data.legislatures).length}
+              </span>
+              <span className="text-sm text-slate-400">
+                {t("dashboardLegislatures", "legislatures in the corpus")}
+              </span>
             </div>
           )}
-            {meta.data && (
-              <p className="mt-6 text-slate-200" data-moment>
-                <span className="text-4xl font-bold block tracking-tight">
-                  {Object.keys(meta.data.legislatures).length}
-                </span>
-                <span className="text-sm text-slate-400 mt-1">
-                  {t("dashboardLegislatures", "legislatures in the corpus")}
-                </span>
-              </p>
-            )}
         </div>
       </section>
 
@@ -168,11 +203,11 @@ export function LiveDashboard() {
       <section className="wrap space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Medium tile — LiveFeed */}
-          <div className="md:col-span-2 card p-4 flex flex-col h-full">
+          <div className="md:col-span-2 card p-4 flex flex-col">
             <LiveFeed onSelect={openPerson} legislature={selectedLegislature} />
           </div>
           {/* Medium tile — TimeSlider */}
-          <div className="md:col-span-2 card p-4 flex flex-col h-full">
+          <div className="md:col-span-2 card p-4 flex flex-col">
             <TimeSlider value={clamped} min={min} max={TODAY} onChange={changeDate} ticks={ticks} />
           </div>
         </div>
@@ -191,7 +226,7 @@ function TimelineChartTile({
   groups: OrgBrief[] | undefined;
 }) {
   return (
-    <div className="md:col-span-2 card p-4 flex flex-col h-full">
+    <div className="md:col-span-2 card p-4 flex flex-col">
       <Suspense fallback={<div className="card p-4 h-64 animate-pulse bg-slate-800/50 rounded-xl" aria-busy="true" aria-label="Loading…" />}>
         <TimelineChart from={from} to={to} groups={groups} />
       </Suspense>
@@ -208,9 +243,24 @@ function ChamberViewTile({
   asOf: string;
   onSelect: (id: string) => void;
 }) {
+  const { t } = useTranslation();
+  // React Query deduplicates by key with the fetch already issued by ChamberView.
+  const data = useQuery({
+    queryKey: ["chamber", chamber, asOf],
+    queryFn: () => api.chamber(chamber, asOf),
+  });
+
   return (
-    <div className="md:col-span-1 card p-4 flex flex-col h-full">
+    <div className="md:col-span-1 card p-4 flex flex-col">
       <ChamberView chamber={chamber} asOf={asOf} onSelect={onSelect} />
+      {data.data && data.data.total > 0 && (
+        <InfoStat
+          label={t("dashboardStatSeats", "seats")}
+          value={data.data.total}
+          accent="sky"
+          showBar={false}
+        />
+      )}
     </div>
   );
 }

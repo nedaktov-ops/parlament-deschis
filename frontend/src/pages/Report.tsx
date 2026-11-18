@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { get } from "../api/client";
+import HeroGraphic from "../components/HeroGraphic";
+import { InfoStat } from "../components/InfoStat";
+import { Sparkline, ProgressRing } from "../components/DataViz";
 
 interface ReportTopSwitcher {
   person_id: string;
@@ -60,46 +63,6 @@ function fetchReport(): Promise<TransparencyReport> {
   return get<TransparencyReport>("/export/report");
 }
 
-function Stat({
-  label,
-  value,
-  max,
-  barValue,
-}: {
-  label: string;
-  value: number | string;
-  max: number;
-  barValue?: number;
-}) {
-  const numeric = typeof value === "number" ? value : barValue ?? 0;
-  const width = max > 0 ? Math.min(100, Math.max(0, (numeric / max) * 100)) : 0;
-  return (
-    <div
-      className="bg-slate-800 rounded-xl border border-slate-700/50 border-t-2 border-t-sky-400 p-4 shadow-sm print:bg-slate-100 print:border print:border-slate-300 print:border-t-2 print:border-t-slate-600 print:shadow-none transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg print:hover:translate-y-0"
-    >
-      <div className="flex items-end justify-between gap-2 mb-2">
-        <span className="text-xs font-medium text-slate-400 print:text-slate-600 tracking-wide uppercase">
-          {label}
-        </span>
-        <span className="text-2xl font-bold text-slate-100 print:text-slate-900 leading-none">
-          {typeof value === "number" ? value.toLocaleString() : value}
-        </span>
-      </div>
-      {max > 0 && (
-        <div
-          className="h-1.5 w-full rounded-full bg-slate-700/40 overflow-hidden print:hidden"
-          aria-hidden="true"
-        >
-          <div
-            className="h-full bg-sky-400/70 origin-left transition-all duration-300"
-            style={{ width: `${width}%` }}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function Report() {
   const { t, i18n } = useTranslation();
 
@@ -128,6 +91,16 @@ export default function Report() {
         ? "text-amber-600 print:text-amber-700"
         : "text-slate-500";
 
+  const completenessValue = (c: string): number =>
+    c === "full" ? 100 : c === "partial" ? 60 : 0;
+
+  const completenessRingColor = (c: string): string =>
+    c === "full"
+      ? "stroke-emerald-400"
+      : c === "partial"
+        ? "stroke-amber-400"
+        : "stroke-slate-400";
+
   return (
     <div className="wrap py-6 print:p-0">
       <div
@@ -135,7 +108,7 @@ export default function Report() {
         data-enter
       >
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 print:text-slate-900">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-100 print:text-slate-900">
             {t("report.title", "Transparency Report")}
           </h1>
           <p className="text-slate-400 print:text-slate-600 text-sm mt-1">
@@ -152,7 +125,7 @@ export default function Report() {
           )}
           {d && (
             <p className="mt-4 text-slate-200" data-moment>
-              <span className="text-4xl font-bold block tracking-tight">
+              <span className="text-5xl font-black block tracking-tight">
                 {d.totals.persons.toLocaleString()}
               </span>
               <span className="text-sm text-slate-400 mt-1">
@@ -177,6 +150,7 @@ export default function Report() {
             {t("report.download", "Download JSON")}
           </a>
         </div>
+        <HeroGraphic variant="report" className="print:hidden" />
       </div>
 
       {report.isLoading && (
@@ -261,32 +235,32 @@ export default function Report() {
                 {t("report.corpus", "Corpus at a glance")}
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                <Stat
+                <InfoStat
                   label={t("report.persons", "Persons")}
                   value={d.totals.persons}
                   max={statMax}
                 />
-                <Stat
+                <InfoStat
                   label={t("report.memberships", "Memberships")}
                   value={d.totals.memberships}
                   max={statMax}
                 />
-                <Stat
+                <InfoStat
                   label={t("report.events", "Events")}
                   value={d.totals.events}
                   max={statMax}
                 />
-                <Stat
+                <InfoStat
                   label={t("report.switches", "Party switches")}
                   value={d.totals.switches}
                   max={statMax}
                 />
-                <Stat
+                <InfoStat
                   label={t("report.committees", "Committees")}
                   value={d.totals.committees}
                   max={statMax}
                 />
-                <Stat
+                <InfoStat
                   label={t("report.birthDates", "Birth dates")}
                   value={`${d.totals.persons_with_birth_date} / ${d.totals.persons}`}
                   max={statMax}
@@ -351,15 +325,13 @@ export default function Report() {
               </h2>
               <div className="flex flex-wrap gap-3">
                 {d.committee_control.parties.map((p) => (
-                  <span
+                  <InfoStat
                     key={p.party}
-                    className="bg-slate-800 print:bg-slate-100 print:border print:border-slate-300 rounded px-3 py-1.5 text-sm text-slate-200 print:text-slate-900"
-                  >
-                    {p.party}: {p.chairs}{" "}
-                    <span className="text-slate-400 print:text-slate-600">
-                      ({p.share_pct}%)
-                    </span>
-                  </span>
+                    label={p.party}
+                    value={p.chairs}
+                    max={100}
+                    barValue={p.share_pct}
+                  />
                 ))}
                 <span className="text-slate-500 print:text-slate-600 text-sm self-center">
                   {t("report.ofCommittees", "of {{n}} committees", {
@@ -373,6 +345,14 @@ export default function Report() {
               <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
                 {t("report.waves", "Largest switch waves")}
               </h2>
+              {d.switch_waves.length > 0 && (
+                <div className="mt-3 h-10 w-64">
+                  <Sparkline
+                    data={d.switch_waves.slice(0, 6).map((w) => w.switch_count)}
+                    height={36}
+                  />
+                </div>
+              )}
               <ul className="text-sm space-y-1">
                 {d.switch_waves.slice(0, 6).map((w, i) => (
                   <li
@@ -410,6 +390,14 @@ export default function Report() {
                   </span>
                 ))}
               </div>
+              {d.party_ages.length > 0 && (
+                <div className="mt-3 h-10 w-64">
+                  <Sparkline
+                    data={d.party_ages.slice(0, 12).map((a) => a.avg_age)}
+                    height={36}
+                  />
+                </div>
+              )}
             </section>
 
             <section className="mb-0">
@@ -448,12 +436,22 @@ export default function Report() {
                         <td className="py-1 pr-3 text-slate-300 print:text-slate-700">
                           {c.legislature ?? "—"}
                         </td>
-                        <td
-                          className={`py-1 pr-3 font-medium ${completenessColor(
-                            c.completeness,
-                          )}`}
-                        >
-                          {c.completeness}
+                        <td className="py-1 pr-3">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`font-medium text-xs text-nowrap ${completenessColor(
+                                c.completeness,
+                              )}`}
+                            >
+                              {c.completeness}
+                            </span>
+                            <ProgressRing
+                              value={completenessValue(c.completeness)}
+                              max={100}
+                              size={22}
+                              color={completenessRingColor(c.completeness)}
+                            />
+                          </div>
                         </td>
                       </tr>
                     ))}

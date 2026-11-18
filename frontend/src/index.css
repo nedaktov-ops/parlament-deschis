@@ -14,6 +14,18 @@
      old unscoped override measured 2.08:1 on white). Re-measure if the
      palette changes. */
   --color-muted: #a8b5c7;
+
+  /* H1-A — design tokens (FRONTEND-UX-10X-STRATEGY §3, §5 H1-A).
+     Palette: slate/slate-800/slate-100/sky-400 base; no violet/lavender.
+     WCAG AA: accent colors ≥ 4.5:1 on slate-900 for text, ≥ 3:1 for UI. */
+  --color-accent: #38bdf8;
+  --color-accent-hover: #22d3ee;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #fb7185;
+  --color-info: #64748b;
+  --bg-hero: rgba(15, 23, 42, 0.8);
+  --bg-surface: rgba(30, 41, 59, 0.5);
 }
 
 body {
@@ -142,6 +154,46 @@ h1, h2, h3, h4, h5, h6 {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* H1-A — hero CSS utility classes (FRONTEND-UX-10X-STRATEGY §5 H1-A).
+   All animations compositor-only (transform, opacity); respects
+   prefers-reduced-motion (global rule at line 121-130). */
+
+.hero-gradient {
+  background: linear-gradient(135deg, #0f172a 0%, rgba(30, 41, 59, 0.8) 100%);
+}
+
+.stat-card {
+  @apply rounded-xl border border-slate-700/50 p-4 shadow-sm;
+  border-top-width: 2px;
+  border-top-color: #38bdf8;
+}
+
+.info-graphic {
+  @apply border border-slate-700/50 rounded-xl p-4;
+  background-color: rgba(30, 41, 59, 0.3);
+}
+
+.hero-section {
+  @apply min-h-screen flex flex-col justify-center py-8;
+}
+
+.data-bar {
+  @apply h-1.5 w-full rounded-full bg-slate-700/40 overflow-hidden;
+}
+
+.data-bar-fill {
+  @apply h-full rounded-full;
+  background-color: rgba(56, 189, 248, 0.7);
+}
+
+.sparkline {
+  @apply h-12 w-full;
+}
+
+.moment-badge {
+  @apply text-xs font-medium text-slate-400 tracking-wide uppercase;
 }
 
 ::-webkit-scrollbar {

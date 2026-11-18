@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { switchWaves, type SwitchWave } from "../api/client";
+import HeroGraphic from "../components/HeroGraphic";
+import InfoStat from "../components/InfoStat";
+import { Sparkline } from "../components/DataViz";
 
 interface NamedEvent {
   date: string;
@@ -50,25 +53,88 @@ export default function Coalitions() {
   });
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-100 mb-2">
-        {t("coalitions.title", "Coalition Stability")}
-      </h1>
-      <p className="text-slate-400 mb-6">
-        {t(
-          "coalitions.intro",
-          "Government formations, coalition breakups and party congresses that coincide with detected switch waves. Each event is a burst of affiliation change the corpus links to a named political moment.",
-        )}
-      </p>
-
-      {waves.isLoading && (
-        <div className="text-slate-500">{t("loading", "Loading…")}</div>
-      )}
-      {waves.isError && (
-        <div className="text-red-400">
-          {t("coalitions.loadError", "Failed to load wave data.")}
+    <div className="wrap space-y-6">
+      {/* Section 1: Hero — fills the first screen alone (H2-G recipe). */}
+      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center gap-8">
+            <div className="flex-1 space-y-4">
+              <h1 className="text-3xl font-bold tracking-tight text-slate-100">
+                {t("coalitions.title", "Coalition Stability")}
+              </h1>
+              <p className="text-sm text-slate-400">
+                {t(
+                  "coalitions.intro",
+                  "Government formations, coalition breakups and party congresses that coincide with detected switch waves. Each event is a burst of affiliation change the corpus links to a named political moment.",
+                )}
+              </p>
+              {waves.isLoading && (
+                <div className="text-slate-500" role="status" aria-live="polite">
+                  {t("loading", "Loading…")}
+                </div>
+              )}
+              {waves.isError && (
+                <div className="text-rose-400" role="alert">
+                  {t("coalitions.loadError", "Failed to load wave data.")}
+                </div>
+              )}
+              {!waves.isLoading && !waves.isError && (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+                  <InfoStat
+                    label={t("coalitions.statWaves", "Total waves")}
+                    value={all.length}
+                    accent="sky"
+                  />
+                  <InfoStat
+                    label={t("coalitions.statFormations", "Formations")}
+                    value={formations.length}
+                    accent="emerald"
+                  />
+                  <InfoStat
+                    label={t("coalitions.statBreakups", "Breakups")}
+                    value={breakups.length}
+                    accent="amber"
+                  />
+                  <InfoStat
+                    label={t("coalitions.statCongresses", "Congresses")}
+                    value={congresses.length}
+                    accent="rose"
+                  />
+                </div>
+              )}
+            </div>
+            <div className="w-full md:w-auto max-w-[260px]">
+              <HeroGraphic variant="wave" className="mx-auto" />
+            </div>
+          </div>
+          {!waves.isLoading && !waves.isError && (
+            <>
+              <div className="mt-8 flex items-center gap-4" data-moment>
+                <span className="text-5xl font-black block tracking-tight text-slate-100">
+                  {all.length}
+                </span>
+                <span className="text-sm text-slate-400">
+                  {t("coalitions.wavesInCorpus", "switch waves in the corpus")}
+                </span>
+              </div>
+              {all.length > 0 && (
+                <div className="mt-6">
+                  <p className="text-xs text-slate-500 mb-2">
+                    {t(
+                      "coalitions.waveTimeline",
+                      "Wave timeline — switches per detected wave",
+                    )}
+                  </p>
+                  <Sparkline
+                    data={all.map((w) => w.switch_count ?? 0)}
+                    color="stroke-sky-400"
+                  />
+                </div>
+              )}
+            </>
+          )}
         </div>
-      )}
+      </section>
 
       {/* Coalition breakups with observed prior formation span */}
       <section className="mb-8">

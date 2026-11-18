@@ -2,6 +2,9 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
+import HeroGraphic from "../components/HeroGraphic";
+import InfoStat from "../components/InfoStat";
+import { ProgressRing } from "../components/DataViz";
 
 function completenessClass(value: string): string {
   if (value === "full") return "bg-emerald-900/50 text-emerald-300";
@@ -48,6 +51,20 @@ export default function CoverageView() {
     };
   }, [rows]);
 
+  const chamberCount = useMemo(() => new Set(rows.map((r) => r.chamber)).size, [rows]);
+  const legislatureCount = useMemo(
+    () => new Set(rows.map((r) => r.legislature).filter(Boolean)).size,
+    [rows],
+  );
+  const fullCount = rows.filter((r) => r.completeness === "full").length;
+  const partialCount = rows.filter((r) => r.completeness === "partial").length;
+  const fullPct = rows.length > 0 ? (fullCount / rows.length) * 100 : 0;
+  const partialPct = rows.length > 0 ? (partialCount / rows.length) * 100 : 0;
+  const overallPct =
+    totals.totalMemberships > 0
+      ? (totals.datedMemberships / totals.totalMemberships) * 100
+      : 0;
+
   if (coverage.isLoading) {
     return (
       <div className="card p-4">
@@ -70,146 +87,170 @@ export default function CoverageView() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="card p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold">{t("coverageTitle")}</h1>
-        </div>
-        <p className="text-sm text-slate-400 mb-4">
-          {t("coverageDesc")}
-        </p>
+    <div className="wrap space-y-6">
+      {/* Section 1: Hero — fills the first screen alone */}
+      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center gap-8">
+            <div className="flex-1 space-y-4">
+              <h1 className="text-3xl font-bold tracking-tight">{t("coverageTitle")}</h1>
+              <p className="text-sm text-slate-400">{t("coverageDesc")}</p>
 
-        {/* Summary cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <div className="bg-slate-800/50 rounded p-3">
-            <div className="text-slate-500 text-xs">{t("totalMemberships")}</div>
-            <div className="text-2xl font-bold text-slate-100">
-              {totals.totalMemberships.toLocaleString()}
-            </div>
-          </div>
-          <div className="bg-slate-800/50 rounded p-3">
-            <div className="text-slate-500 text-xs">{t("datedMemberships")}</div>
-            <div className="text-2xl font-bold text-emerald-300">
-              {fmtPct(
-                totals.totalMemberships > 0
-                  ? (totals.datedMemberships / totals.totalMemberships) * 100
-                  : null,
-              )}
-            </div>
-          </div>
-          <div className="bg-slate-800/50 rounded p-3">
-            <div className="text-slate-500 text-xs">{t("totalSwitchesLabel")}</div>
-            <div className="text-2xl font-bold text-slate-100">
-              {totals.totalSwitches.toLocaleString()}
-            </div>
-          </div>
-          <div className="bg-slate-800/50 rounded p-3">
-            <div className="text-slate-500 text-xs">{t("sourcedSwitches")}</div>
-            <div className="text-2xl font-bold text-emerald-300">
-              {fmtPct(
-                totals.totalSwitches > 0
-                  ? (totals.sourcedSwitches / totals.totalSwitches) * 100
-                  : null,
-              )}
-            </div>
-          </div>
-        </div>
+              {/* InfoStat cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+                <InfoStat
+                  label={t("coverageStatChambers", "Chambers")}
+                  value={chamberCount}
+                  accent="sky"
+                />
+                <InfoStat
+                  label={t("coverageStatLegislatures", "Legislatures")}
+                  value={legislatureCount}
+                  accent="emerald"
+                />
+                <InfoStat
+                  label={t("coverageStatFullCoverage", "Full coverage")}
+                  value={fullPct}
+                  max={100}
+                  accent="emerald"
+                />
+                <InfoStat
+                  label={t("coverageStatPartialCoverage", "Partial coverage")}
+                  value={partialPct}
+                  max={100}
+                  accent="amber"
+                />
+              </div>
 
-        {/* Per-scope table */}
-        <div
-          className="overflow-x-auto"
-          tabIndex={0}
-          role="region"
-          aria-label={t("coverageTableCaption")}
-        >
-          <table className="w-full text-xs border-collapse">
-            <caption className="sr-only">{t("coverageTableCaption")}</caption>
-            <thead>
-              <tr className="text-left text-slate-500">
-                <th scope="col" className="py-1 pr-3 font-medium">
-                  {t("chamber")}
-                </th>
-                <th scope="col" className="py-1 pr-3 font-medium">
-                  {t("legislature")}
-                </th>
-                <th scope="col" className="py-1 pr-3 font-medium">
-                  {t("period")}
-                </th>
-                <th scope="col" className="py-1 pr-3 font-medium">
-                  {t("completeness")}
-                </th>
-                <th scope="col" className="py-1 pr-3 font-medium text-right">
-                  {t("persons")}
-                </th>
-                <th scope="col" className="py-1 pr-3 font-medium text-right">
-                  {t("datedPct")}
-                </th>
-                <th scope="col" className="py-1 pr-3 font-medium text-right">
-                  {t("sourcedPct")}
-                </th>
-                <th scope="col" className="py-1 pr-3 font-medium text-right">
-                  {t("sourcedSwitchesPct")}
-                </th>
-                <th scope="col" className="py-1 pr-3 font-medium text-right">
-                  {t("lastRefresh")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => {
-                const key = row.completeness;
-                return (
-                  <tr
-                    key={`${row.chamber}-${row.legislature}`}
-                    className="border-t border-slate-700/60 align-top"
-                  >
-                    <td className="py-1.5 pr-3 text-slate-200">
-                      {row.chamber === "deputies" ? t("deputies") : t("senate")}
-                    </td>
-                    <td className="py-1.5 pr-3 font-mono text-slate-300">
-                      {row.legislature ?? "—"}
-                    </td>
-                    <td className="py-1.5 pr-3 font-mono text-slate-300">
-                      {fmtDate(row.period_start)} →{" "}
-                      {fmtDate(row.period_end)}
-                    </td>
-                    <td className="py-1.5">
-                      <span
-                        className={`rounded px-2 py-0.5 ${completenessClass(key)}`}
-                      >
-                        {t(key)}
-                      </span>
-                    </td>
-                    <td className="py-1.5 pr-3 font-mono text-slate-300 text-right">
-                      {row.persons.toLocaleString()}
-                    </td>
-                    <td className="py-1.5 pr-3 font-mono text-slate-300 text-right">
-                      {fmtPct(row.dated_pct)}
-                    </td>
-                    <td className="py-1.5 pr-3 font-mono text-slate-300 text-right">
-                      {fmtPct(row.sourced_pct)}
-                    </td>
-                    <td className="py-1.5 pr-3 font-mono text-slate-300 text-right">
-                      {fmtPct(row.sourced_switches_pct)}
-                    </td>
-                    <td className="py-1.5 pr-3 font-mono text-slate-300 text-right">
-                      {fmtDate(row.last_refresh)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+              {/* Progress ring — overall coverage */}
+              <div className="mt-6 flex items-center gap-4">
+                <ProgressRing value={overallPct} size={56} />
+                <div>
+                  <div className="text-sm font-bold text-slate-100">
+                    {overallPct.toFixed(0)}%
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {t("coverageOverallLabel", "Overall coverage")}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="w-full md:w-auto max-w-[260px]">
+              <HeroGraphic variant="overview" className="mx-auto" />
+            </div>
+          </div>
 
-        <div className="mt-3 text-xs text-slate-500">
-          {t("coverageNoteText", {
-            datedPct: t("datedPctShort"),
-            sourcedPct: t("sourcedPctShort"),
-            sourcedSwitchesPct: t("sourcedSwitchesPctShort"),
-          })}
+          {/* Dealt moment — total coverage entries */}
+          <div className="mt-8 flex items-center gap-4" data-moment>
+            <span className="text-5xl font-black block tracking-tight">
+              {rows.length}
+            </span>
+            <span className="text-sm text-slate-400">
+              {t("coverageStatEntries", "coverage entries")}
+            </span>
+          </div>
         </div>
-      </div>
+      </section>
+
+      {/* Section 2: Coverage table (existing) */}
+      <section className="wrap space-y-4">
+        <div className="card p-4">
+          {/* Per-scope table */}
+          <div
+            className="overflow-x-auto"
+            tabIndex={0}
+            role="region"
+            aria-label={t("coverageTableCaption")}
+          >
+            <table className="w-full text-xs border-collapse">
+              <caption className="sr-only">{t("coverageTableCaption")}</caption>
+              <thead>
+                <tr className="text-left text-slate-500">
+                  <th scope="col" className="py-1 pr-3 font-medium">
+                    {t("chamber")}
+                  </th>
+                  <th scope="col" className="py-1 pr-3 font-medium">
+                    {t("legislature")}
+                  </th>
+                  <th scope="col" className="py-1 pr-3 font-medium">
+                    {t("period")}
+                  </th>
+                  <th scope="col" className="py-1 pr-3 font-medium">
+                    {t("completeness")}
+                  </th>
+                  <th scope="col" className="py-1 pr-3 font-medium text-right">
+                    {t("persons")}
+                  </th>
+                  <th scope="col" className="py-1 pr-3 font-medium text-right">
+                    {t("datedPct")}
+                  </th>
+                  <th scope="col" className="py-1 pr-3 font-medium text-right">
+                    {t("sourcedPct")}
+                  </th>
+                  <th scope="col" className="py-1 pr-3 font-medium text-right">
+                    {t("sourcedSwitchesPct")}
+                  </th>
+                  <th scope="col" className="py-1 pr-3 font-medium text-right">
+                    {t("lastRefresh")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => {
+                  const key = row.completeness;
+                  return (
+                    <tr
+                      key={`${row.chamber}-${row.legislature}`}
+                      className="border-t border-slate-700/60 align-top"
+                    >
+                      <td className="py-1.5 pr-3 text-slate-200">
+                        {row.chamber === "deputies" ? t("deputies") : t("senate")}
+                      </td>
+                      <td className="py-1.5 pr-3 font-mono text-slate-300">
+                        {row.legislature ?? "—"}
+                      </td>
+                      <td className="py-1.5 pr-3 font-mono text-slate-300">
+                        {fmtDate(row.period_start)} →{" "}
+                        {fmtDate(row.period_end)}
+                      </td>
+                      <td className="py-1.5">
+                        <span
+                          className={`rounded px-2 py-0.5 ${completenessClass(key)}`}
+                        >
+                          {t(key)}
+                        </span>
+                      </td>
+                      <td className="py-1.5 pr-3 font-mono text-slate-300 text-right">
+                        {row.persons.toLocaleString()}
+                      </td>
+                      <td className="py-1.5 pr-3 font-mono text-slate-300 text-right">
+                        {fmtPct(row.dated_pct)}
+                      </td>
+                      <td className="py-1.5 pr-3 font-mono text-slate-300 text-right">
+                        {fmtPct(row.sourced_pct)}
+                      </td>
+                      <td className="py-1.5 pr-3 font-mono text-slate-300 text-right">
+                        {fmtPct(row.sourced_switches_pct)}
+                      </td>
+                      <td className="py-1.5 pr-3 font-mono text-slate-300 text-right">
+                        {fmtDate(row.last_refresh)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-3 text-xs text-slate-500">
+            {t("coverageNoteText", {
+              datedPct: t("datedPctShort"),
+              sourcedPct: t("sourcedPctShort"),
+              sourcedSwitchesPct: t("sourcedSwitchesPctShort"),
+            })}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

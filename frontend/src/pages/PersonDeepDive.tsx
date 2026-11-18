@@ -1,9 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { api, type EventItem } from "../api/client";
 import { useParams } from "@tanstack/react-router";
 import MembershipGantt from "../components/MembershipGantt";
 import CitationPopover from "../components/CitationPopover";
+import HeroGraphic from "../components/HeroGraphic";
+import InfoStat from "../components/InfoStat";
+import { Sparkline } from "../components/DataViz";
 
 function typeColor(type: string): string {
   switch (type) {
@@ -59,12 +63,98 @@ export function PersonDeepDive() {
     );
   }
 
+  const totalEvents = p.events.length;
+  const switches = p.events.filter(
+    (e) => e.type === "switch_group" || e.type === "switch_party",
+  ).length;
+  const chambersCovered = new Set(
+    p.events.map((e) => e.chamber).filter(Boolean),
+  ).size;
+  const legislaturesCovered = new Set(
+    p.events.map((e) => e.legislature).filter(Boolean),
+  ).size;
+
+  const sparklineData = useMemo(() => {
+    const counts = new Map<string, number>();
+    let first: string | null = null;
+    let last: string | null = null;
+    for (const e of p.events) {
+      if (!e.event_date) continue;
+      const d = e.event_date.slice(0, 10);
+      counts.set(d, (counts.get(d) ?? 0) + 1);
+      if (first === null || d < first) first = d;
+      if (last === null || d > last) last = d;
+    }
+    if (!first || !last) return [];
+    const out: number[] = [];
+    let cur = first;
+    while (cur <= last) {
+      out.push(counts.get(cur) ?? 0);
+      const [y, m, day] = cur.split("-").map(Number);
+      const nd = new Date(Date.UTC(y, m - 1, day));
+      nd.setUTCDate(nd.getUTCDate() + 1);
+      cur = nd.toISOString().slice(0, 10);
+    }
+    return out;
+  }, [p.events]);
+
   return (
-    <div className="space-y-4">
+    <div className="wrap space-y-6">
+      {/* Section 1: Hero — MP biography graphic, fills the first screen alone */}
+      <section className="hero-section" data-enter>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center gap-8">
+            <div className="flex-1 space-y-4">
+              <h1 className="text-3xl font-bold tracking-tight">{p.name}</h1>
+              <p className="text-sm text-slate-400">{t("personDeepDive.subtitle")}</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                <InfoStat
+                  label={t("personStatEvents")}
+                  value={totalEvents}
+                  accent="sky"
+                />
+                <InfoStat
+                  label={t("personStatSwitches")}
+                  value={switches}
+                  accent="amber"
+                />
+                <InfoStat
+                  label={t("personStatChambers")}
+                  value={chambersCovered}
+                  accent="emerald"
+                />
+                <InfoStat
+                  label={t("personStatLegislatures")}
+                  value={legislaturesCovered}
+                  accent="rose"
+                />
+              </div>
+              {sparklineData.length > 0 && (
+                <div className="mt-4 flex items-center gap-2">
+                  <span className="text-xs text-slate-500">
+                    {t("personStatEventsTimeline")}
+                  </span>
+                  <Sparkline data={sparklineData} height={36} color="stroke-sky-400" />
+                </div>
+              )}
+              <div className="mt-6 flex items-center gap-4" data-moment>
+                <span className="text-5xl font-black block tracking-tight">
+                  {totalEvents}
+                </span>
+                <span className="text-sm text-slate-400">{t("personDeepDive.moment")}</span>
+              </div>
+            </div>
+            <div className="w-full md:w-auto max-w-[260px]">
+              <HeroGraphic variant="people" className="mx-auto" />
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div className="card p-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold">{p.name}</h1>
+            <h2 className="text-2xl font-bold">{p.name}</h2>
             <p className="text-sm text-slate-400">
               {p.birth_date && `${t("born")} ${p.birth_date}`}
               {p.wikidata_qid && (

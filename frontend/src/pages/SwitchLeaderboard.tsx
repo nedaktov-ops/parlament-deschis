@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
 import { switchLeaderboard, type SwitchLeaderboardEntry } from "../api/client";
 import { localISODate } from "../utils/date";
+import HeroGraphic from "../components/HeroGraphic";
+import InfoStat from "../components/InfoStat";
 
 const LEGISLATURES = [
   "1990",
@@ -35,49 +37,84 @@ export default function SwitchLeaderboard() {
 
   const rows = leaderboard.data?.data ?? [];
 
+  const totalSwitches = rows.reduce((sum, row) => sum + row.switch_count, 0);
+  const uniqueSwitchers = rows.length;
+  const topSwitcherCount = rows.length > 0 ? rows[0].switch_count : 0;
+
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-100 mb-2">
-        {t("leaderboard.title", "Party Switching Leaderboard")}
-      </h1>
-      <p className="text-slate-400 mb-6">
-        {t(
-          "leaderboard.intro",
-          "MPs ranked by the number of observed party/group switches. Every count comes from the chambers' own dated group ledgers.",
-        )}
-      </p>
-
-      <div className="flex gap-4 mb-6 flex-wrap">
-        <label className="flex flex-col gap-1 text-sm text-slate-400">
-          {t("leaderboard.filter.legislature", "Legislature")}
-          <select
-            value={legislature}
-            onChange={(e) => setLegislature(e.target.value)}
-            className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200"
-          >
-            <option value="">{t("leaderboard.filter.all", "All")}</option>
-            {LEGISLATURES.map((leg) => (
-              <option key={leg} value={leg}>
-                {leg}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm text-slate-400">
-          {t("leaderboard.filter.limit", "Show top")}
-          <select
-            value={limit}
-            onChange={(e) => setLimit(Number(e.target.value))}
-            className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200"
-          >
-            {[10, 20, 50, 100].map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      {/* Hero section — H2-D: min-h-screen, data-enter, HeroGraphic, dealt moment */}
+      <section className="min-h-screen mb-8" data-enter>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col lg:flex-row lg:items-start gap-8">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-4">
+                <HeroGraphic variant="switches" className="w-10 h-10" />
+                <h1 className="text-3xl font-bold tracking-tight text-slate-100">
+                  {t("leaderboard.title", "Party Switching Leaderboard")}
+                </h1>
+              </div>
+              <p className="text-slate-400 text-lg mb-6">
+                {t(
+                  "leaderboard.intro",
+                  "MPs ranked by the number of observed party/group switches. Every count comes from the chambers' own dated group ledgers.",
+                )}
+              </p>
+              {/* Dealt moment: InfoStat cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <InfoStat
+                  label={t("leaderboard.stat.total_switches", "Total switches")}
+                  value={totalSwitches}
+                  accent="amber"
+                />
+                <InfoStat
+                  label={t("leaderboard.stat.unique_switchers", "Unique switchers")}
+                  value={uniqueSwitchers}
+                  accent="sky"
+                />
+                <InfoStat
+                  label={t("leaderboard.stat.top_switcher", "Top switcher")}
+                  value={topSwitcherCount}
+                  accent="sky"
+                />
+              </div>
+            </div>
+            <div className="w-full lg:w-72 shrink-0">
+              <div className="flex gap-4 flex-wrap">
+                <label className="flex flex-col gap-1 text-sm text-slate-400">
+                  {t("leaderboard.filter.legislature", "Legislature")}
+                  <select
+                    value={legislature}
+                    onChange={(e) => setLegislature(e.target.value)}
+                    className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200"
+                  >
+                    <option value="">{t("leaderboard.filter.all", "All")}</option>
+                    {LEGISLATURES.map((leg) => (
+                      <option key={leg} value={leg}>
+                        {leg}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-slate-400">
+                  {t("leaderboard.filter.limit", "Show top")}
+                  <select
+                    value={limit}
+                    onChange={(e) => setLimit(Number(e.target.value))}
+                    className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200"
+                  >
+                    {[10, 20, 50, 100].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {legislature && (
         <p role="note" className="mb-4 text-amber-300 text-sm">
