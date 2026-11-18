@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { generationalShift, type GenerationalShiftEntry } from "../api/client";
+import HeroGraphic from "../components/HeroGraphic";
+import InfoStat from "../components/InfoStat";
+import { Sparkline, ProgressRing } from "../components/DataViz";
 
 const LEGISLATURES = [
   "1990",
@@ -36,19 +39,96 @@ export default function Demographics() {
   const maxAge = ages.length > 0 ? Math.max(...ages) : 0;
   const span = maxAge - minAge || 1;
 
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-100 mb-2">
-        {t("demographics.title", "Demographics: Age per Party")}
-      </h1>
-      <p className="text-slate-400 mb-6">
-        {t(
-          "demographics.intro",
-          "Average and median age of MPs per party, computed from birth dates in the chambers' committee ledgers.",
-        )}
-        {asOf ? ` (${t("demographics.asOf", "as of")} ${asOf})` : ""}
-      </p>
+  // Headline stats for the hero info-graphic cards.
+  const totalMPs = birthDated;
+  const avgAge =
+    rows.length > 0
+      ? Math.round((rows.reduce((s, r) => s + r.avg_age, 0) / rows.length) * 10) /
+        10
+      : 0;
+  const medianAges = rows.map((r) => r.median_age).sort((a, b) => a - b);
+  const medianAge =
+    medianAges.length > 0
+      ? medianAges.length % 2 === 1
+        ? medianAges[Math.floor(medianAges.length / 2)]
+        : (medianAges[medianAges.length / 2 - 1] +
+            medianAges[medianAges.length / 2]) /
+          2
+      : 0;
+  const partiesWithData = rows.filter((r) => r.mps_with_birth_dates > 0).length;
+  const coveragePct =
+    rows.length > 0 ? Math.round((partiesWithData / rows.length) * 100) : 0;
 
+  return (
+    <div className="wrap space-y-6">
+      {/* Hero section — fills the first screen alone */}
+      <section className="hero-section" data-enter>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center gap-8">
+            <div className="flex-1 space-y-4">
+              <h1 className="text-3xl font-bold tracking-tight text-slate-100">
+                {t("demographics.title", "Demographics: Age per Party")}
+              </h1>
+              <p className="text-sm text-slate-400">
+                {t(
+                  "demographics.intro",
+                  "Average and median age of MPs per party, computed from birth dates in the chambers' committee ledgers.",
+                )}
+                {asOf ? ` (${t("demographics.asOf", "as of")} ${asOf})` : ""}
+              </p>
+              {/* Dealt moment: headline figure for the page. */}
+              <div className="mt-4 flex items-center gap-4" data-moment>
+                <span className="text-5xl font-black block tracking-tight text-slate-200">
+                  {totalMPs.toLocaleString()}
+                </span>
+                <span className="text-sm text-slate-400">
+                  {t("demographics.moment.totalMPs", "members with birth dates")}
+                </span>
+              </div>
+              {/* InfoStat cards — key metrics at a glance. */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                <InfoStat
+                  label={t("demographics.stat.totalMPs", "Total MPs")}
+                  value={totalMPs}
+                  accent="sky"
+                />
+                <InfoStat
+                  label={t("demographics.stat.avgAge", "Average age")}
+                  value={avgAge}
+                  accent="emerald"
+                />
+                <InfoStat
+                  label={t("demographics.stat.medianAge", "Median age")}
+                  value={medianAge}
+                  accent="amber"
+                />
+                <InfoStat
+                  label={t("demographics.stat.legislatures", "Legislatures covered")}
+                  value={LEGISLATURES.length}
+                  accent="rose"
+                />
+              </div>
+              {/* Age distribution sparkline (when data is available). */}
+              {rows.length > 0 && (
+                <div className="mt-6 flex flex-col gap-1">
+                  <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">
+                    {t("demographics.sparkline.label", "Age distribution by party")}
+                  </span>
+                  <Sparkline data={ages} height={40} color="stroke-sky-400" />
+                </div>
+              )}
+            </div>
+            <div className="w-full md:w-auto max-w-[260px] flex flex-col items-center gap-4">
+              <HeroGraphic variant="people" className="mx-auto" />
+              {rows.length > 0 && (
+                <ProgressRing value={coveragePct} size={56} color="stroke-emerald-400" />
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Legislature selector (unchanged). */}
       <div className="mb-6">
         <label className="flex flex-col gap-1 text-sm text-slate-400 max-w-xs">
           {t("demographics.filter.legislature", "Legislature")}
