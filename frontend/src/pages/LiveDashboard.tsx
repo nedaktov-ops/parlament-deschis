@@ -87,7 +87,7 @@ export function LiveDashboard() {
       {/* Section 1: Hero — fills the first screen alone */}
       <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
         <div className="max-w-3xl">
-          <h2 className="text-2xl font-bold">{t("overview")}</h2>
+          <h1 className="text-2xl font-bold">{t("overview")}</h1>
           <p className="text-sm text-slate-400 mt-1">{t("dashboardIntro")}</p>
           {meta.isError && (
             <div className="text-rose-200 text-sm mt-4" role="alert">
