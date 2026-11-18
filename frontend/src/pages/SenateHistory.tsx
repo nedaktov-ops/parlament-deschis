@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
+import HeroGraphic from "../components/HeroGraphic";
+import InfoStat from "../components/InfoStat";
 
 interface CoverageRow {
   chamber: string;
@@ -44,18 +46,57 @@ export default function SenateHistory() {
   const allRows = rows.filter((r) => r.chamber === "senate");
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-100 mb-4">
-        {t("senate.history", "Senate Historical Coverage")}
-      </h1>
-
-      <div className="mb-6">
-        <p className="text-slate-300 mb-2">
-          {t(
-            "senate.history.intro",
-            "This page documents what Senate data exists in our dataset and what gaps remain."
-          )}
-        </p>
+    <div className="wrap space-y-6">
+      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center gap-8">
+            <div className="flex-1 space-y-4">
+              <h1 className="text-3xl font-bold tracking-tight">
+                {t("senate.history", "Senate Historical Coverage")}
+              </h1>
+              <p className="text-sm text-slate-300 mt-2">
+                {t("senate.history.intro")}
+              </p>
+            </div>
+            <div className="w-full md:w-auto max-w-[260px]">
+              <HeroGraphic variant="people" className="mx-auto" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+            <InfoStat
+              label={t("senateStatMembers", "Senate Members")}
+              value={coverage.data?.reduce((acc, r) => acc + r.persons, 0) ?? "--"}
+              accent="sky"
+            />
+            <InfoStat
+              label={t("senateStatChambers", "Chambers")}
+              value="1"
+              accent="emerald"
+            />
+            <InfoStat
+              label={t("senateStatLegislatures", "Legislatures")}
+              value={new Set(rows.map((r) => r.legislature)).size}
+              accent="amber"
+            />
+            <InfoStat
+              label={t("senateStatCoverage", "Full Coverage %")}
+              value={
+                rows.filter((r) => r.completeness === "full").length
+              }
+              accent="rose"
+              showBar={false}
+            />
+          </div>
+          <div className="mt-8 flex items-center gap-4" data-moment>
+            <span className="text-5xl font-black block tracking-tight">
+              {coverage.data?.reduce((acc, r) => acc + r.persons, 0) ?? "--"}
+            </span>
+            <span className="text-sm text-slate-400">
+              {t("senateStatMembersLabel", "senate members in corpus")}
+            </span>
+          </div>
+        </div>
+      </section>
         <div className="bg-slate-800/50 rounded p-4 mb-4">
           <h2 className="text-lg font-semibold text-slate-200 mb-2">
             {t("senate.history.gaps", "Known Gaps")}
@@ -80,7 +121,6 @@ export default function SenateHistory() {
               )}
             </li>
           </ul>
-        </div>
       </div>
 
       <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("senate.history", "Senate Historical Coverage")}>
