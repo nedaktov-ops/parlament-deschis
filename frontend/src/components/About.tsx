@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, type CoverageItem } from "../api/client";
@@ -59,10 +59,47 @@ function renderValue(value: unknown): string {
   return String(value);
 }
 
+function AccordionItem({
+  title,
+  children,
+  open,
+  onToggle,
+}: {
+  title: string;
+  children: React.ReactNode;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="bg-slate-800/30 rounded-lg border border-slate-700/50 overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-700/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 transition-colors"
+      >
+        <span className="text-sm font-medium text-slate-200">{title}</span>
+        <span className={`text-slate-500 ${open ? "rotate-180" : ""}`}>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </span>
+      </button>
+      {open && (
+        <div className="px-4 pb-3 border-t border-slate-700/40">{children}</div>
+      )}
+    </div>
+  );
+}
+
 export default function About({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [coverageOpen, setCoverageOpen] = useState(false);
+  const [licensesOpen, setLicensesOpen] = useState(false);
+  const [freshnessOpen, setFreshnessOpen] = useState(false);
 
   const about = useQuery({
     queryKey: ["about"],
@@ -172,9 +209,17 @@ export default function About({ open, onClose }: { open: boolean; onClose: () =>
           </div>
         )}
 
-        <section>
-          <h3 className="text-sm font-semibold text-slate-300 mb-2">{t("method")}</h3>
-          <p className="text-sm text-slate-400 leading-relaxed">{t("methodBody")}</p>
+        {/* Featured testimonial — method (ts-4 pattern: single featured quote with attribution) */}
+        <section className="relative bg-slate-800/40 rounded-xl p-6 sm:p-8 border border-slate-700/40">
+          <span className="absolute top-4 left-4 text-4xl text-slate-600/50 select-none">“</span>
+          <h3 className="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
+            <span className="text-sky-400">❝</span>
+            {t("method")}
+          </h3>
+          <p className="text-sm text-slate-200 leading-relaxed">
+            {t("methodBody")}
+          </p>
+          <p className="text-xs text-slate-500 mt-3 font-medium">— {t("methodAttribution", "Parlament Deschis methodology")}</p>
           <p className="text-xs text-slate-500 mt-2">{t("methodConfidenceNote")}</p>
           <div className="flex flex-wrap gap-1.5 mt-1.5">
             {CONFIDENCE_LEVELS.map((level) => (
@@ -188,8 +233,8 @@ export default function About({ open, onClose }: { open: boolean; onClose: () =>
           </div>
         </section>
 
-        <section>
-          <h3 className="text-sm font-semibold text-slate-300 mb-2">{t("sources")}</h3>
+        {/* Accordion — sources */}
+        <AccordionItem title={t("sources")} open={sourcesOpen} onToggle={() => setSourcesOpen(!sourcesOpen)}>
           {(data?.sources?.length ?? 0) === 0 ? (
             <div className="text-sm text-slate-500">
               {about.isLoading ? t("loading") : t("noSources")}
@@ -213,16 +258,16 @@ export default function About({ open, onClose }: { open: boolean; onClose: () =>
               ))}
             </ul>
           )}
-        </section>
+        </AccordionItem>
 
-        <section>
-          <h3 className="text-sm font-semibold text-slate-300 mb-2">{t("coverageTable")}</h3>
+        {/* Accordion — coverage */}
+        <AccordionItem title={t("coverageTable")} open={coverageOpen} onToggle={() => setCoverageOpen(!coverageOpen)}>
           {coverageRows.length === 0 ? (
             <div className="text-sm text-slate-500">
               {about.isLoading || coverage.isLoading ? t("loading") : t("noData")}
             </div>
           ) : (
-            <table className="w-full text-xs border-collapse">
+            <table className="w-full text-xs border-collapse mt-2">
               <thead>
                 <tr className="text-left text-slate-500">
                   <th scope="col" className="py-1 pr-2 font-medium">{t("chamber")}</th>
@@ -250,11 +295,11 @@ export default function About({ open, onClose }: { open: boolean; onClose: () =>
               </tbody>
             </table>
           )}
-        </section>
+        </AccordionItem>
 
-        <section>
-          <h3 className="text-sm font-semibold text-slate-300 mb-2">{t("licenses")}</h3>
-          <ul className="space-y-1.5 text-sm">
+        {/* Accordion — licenses */}
+        <AccordionItem title={t("licenses")} open={licensesOpen} onToggle={() => setLicensesOpen(!licensesOpen)}>
+          <ul className="space-y-1.5 text-sm mt-2">
             <li>
               <span className="text-slate-400">{t("codeLicense")}:</span>{" "}
               <a
@@ -278,16 +323,16 @@ export default function About({ open, onClose }: { open: boolean; onClose: () =>
               </a>
             </li>
           </ul>
-        </section>
+        </AccordionItem>
 
-        <section>
-          <h3 className="text-sm font-semibold text-slate-300 mb-2">{t("dataFreshness")}</h3>
+        {/* Accordion — data freshness */}
+        <AccordionItem title={t("dataFreshness")} open={freshnessOpen} onToggle={() => setFreshnessOpen(!freshnessOpen)}>
           {freshness.length === 0 ? (
-            <div className="text-sm text-slate-500">
+            <div className="text-sm text-slate-500 mt-2">
               {about.isLoading ? t("loading") : t("freshnessUnavailable")}
             </div>
           ) : (
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 mt-2">
               {freshness.map(([key, value]) => (
                 <div
                   key={key}
@@ -303,7 +348,7 @@ export default function About({ open, onClose }: { open: boolean; onClose: () =>
               ))}
             </div>
           )}
-        </section>
+        </AccordionItem>
 
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 border-t border-slate-700/60 pt-3">
           <span>

@@ -1,7 +1,7 @@
 import { Suspense, lazy, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { api } from "../api/client";
+import { api, type OrgBrief } from "../api/client";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import ChamberView from "../components/ChamberView";
 import LiveFeed from "../components/LiveFeed";
@@ -83,63 +83,116 @@ export function LiveDashboard() {
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-bold">{t("overview")}</h2>
-        <p className="text-sm text-slate-400 mt-1">{t("dashboardIntro")}</p>
-      </div>
-      <div className="space-y-4">
-        {meta.isError && (
-          <div className="text-rose-200 text-sm" role="alert">
-            {t("metaLoadError")}
-            <button type="button"className="ml-3 underline" onClick={() => meta.refetch()}>
-              {t("traseismRetry")}
-            </button>
-          </div>
-        )}
-        {coverage.isError ? (
-          <div className="text-rose-200 text-sm" role="alert">
-            {t("coverageLoadError")}
-            <button type="button"className="ml-3 underline" onClick={() => coverage.refetch()}>
-              {t("traseismRetry")}
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-slate-300">{t("coverageNote")}:</span>
-            {currentCoverage ? (
-              <>
-                <span className="bg-slate-800 rounded px-2 py-0.5 text-slate-200">
-                  {currentCoverage.legislature ?? selectedLegislature ?? t("currentTerm")}
-                </span>
-                <span
-                  className={`rounded px-2 py-0.5 ${completenessClass(
-                    currentCoverage.completeness,
-                  )}`}
-                >
-                  {t(currentCoverage.completeness)}
-                </span>
-              </>
-            ) : (
-              <span className="text-slate-400">{t("coverageNoData")}</span>
-            )}
-          </div>
-        )}
+    <div className="space-y-6">
+      {/* Section 1: Hero — fills the first screen alone */}
+      <section className="min-h-[70vh] flex flex-col justify-center py-8">
+        <div className="max-w-3xl">
+          <h2 className="text-2xl font-bold">{t("overview")}</h2>
+          <p className="text-sm text-slate-400 mt-1">{t("dashboardIntro")}</p>
+          {meta.isError && (
+            <div className="text-rose-200 text-sm mt-4" role="alert">
+              {t("metaLoadError")}
+              <button type="button"className="ml-3 underline" onClick={() => meta.refetch()}>
+                {t("traseismRetry")}
+              </button>
+            </div>
+          )}
+          {coverage.isError && (
+            <div className="text-rose-200 text-sm mt-4" role="alert">
+              {t("coverageLoadError")}
+              <button type="button"className="ml-3 underline" onClick={() => coverage.refetch()}>
+                {t("traseismRetry")}
+              </button>
+            </div>
+          )}
+          {!meta.isError && !coverage.isError && (
+            <div className="flex flex-wrap items-center gap-2 text-xs mt-4">
+              <span className="text-slate-300">{t("coverageNote")}:</span>
+              {currentCoverage ? (
+                <>
+                  <span className="bg-slate-800 rounded px-2 py-0.5 text-slate-200">
+                    {currentCoverage.legislature ?? selectedLegislature ?? t("currentTerm")}
+                  </span>
+                  <span
+                    className={`rounded px-2 py-0.5 ${completenessClass(
+                      currentCoverage.completeness,
+                    )}`}
+                  >
+                    {t(currentCoverage.completeness)}
+                  </span>
+                </>
+              ) : (
+                <div className="flex items-center gap-2 px-2 py-1 rounded bg-slate-800/50 border border-slate-700/50">
+                  <span className="text-slate-400 text-xs">{t("coverageNoData")}</span>
+                  <button
+                    type="button"
+                    className="text-xs underline text-sky-400 hover:text-sky-300"
+                    onClick={() => coverage.refetch()}
+                  >
+                    {t("traseismRetry")}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
 
-        <TimeSlider value={clamped} min={min} max={TODAY} onChange={changeDate} ticks={ticks} />
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <ChamberView chamber="deputies" asOf={clamped} onSelect={openPerson} />
-          <ChamberView chamber="senate" asOf={clamped} onSelect={openPerson} />
+      {/* Section 2: Bento grid — asymmetric tiles, important features larger */}
+      <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Large tile — TimelineChart, most important visualization */}
+        <TimelineChartTile
+          from={min}
+          to={clamped}
+          groups={meta.data?.groups}
+        />
+        {/* Medium tile — deputies chamber */}
+        <ChamberViewTile chamber="deputies" asOf={clamped} onSelect={openPerson} />
+        {/* Medium tile — senate chamber */}
+        <ChamberViewTile chamber="senate" asOf={clamped} onSelect={openPerson} />
+        {/* Small tile — LiveFeed */}
+        <div className="md:col-span-1 card p-4 flex flex-col h-full">
           <LiveFeed onSelect={openPerson} legislature={selectedLegislature} />
         </div>
-      </div>
+        {/* Small tile — TimeSlider */}
+        <div className="md:col-span-1 card p-4 flex flex-col h-full">
+          <TimeSlider value={clamped} min={min} max={TODAY} onChange={changeDate} ticks={ticks} />
+        </div>
+      </section>
+    </div>
+  );
+}
 
-      <div className="grid grid-cols-1 gap-4">
-        <Suspense fallback={<div className="card p-4 h-64 animate-pulse bg-slate-800/50 rounded-xl" aria-busy="true" aria-label={t("loading")} />}>
-          <TimelineChart from={min} to={clamped} groups={meta.data?.groups} />
-        </Suspense>
-      </div>
+function TimelineChartTile({
+  from,
+  to,
+  groups,
+}: {
+  from: string;
+  to: string;
+  groups: OrgBrief[] | undefined;
+}) {
+  return (
+    <div className="md:col-span-2 card p-4 flex flex-col h-full">
+      <Suspense fallback={<div className="card p-4 h-64 animate-pulse bg-slate-800/50 rounded-xl" aria-busy="true" aria-label="Loading…" />}>
+        <TimelineChart from={from} to={to} groups={groups} />
+      </Suspense>
+    </div>
+  );
+}
+
+function ChamberViewTile({
+  chamber,
+  asOf,
+  onSelect,
+}: {
+  chamber: "deputies" | "senate";
+  asOf: string;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div className="md:col-span-1 card p-4 flex flex-col h-full">
+      <ChamberView chamber={chamber} asOf={asOf} onSelect={onSelect} />
     </div>
   );
 }

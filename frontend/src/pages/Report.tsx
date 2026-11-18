@@ -60,15 +60,42 @@ function fetchReport(): Promise<TransparencyReport> {
   return get<TransparencyReport>("/export/report");
 }
 
-function Stat({ label, value }: { label: string; value: number | string }) {
+function Stat({
+  label,
+  value,
+  max,
+  barValue,
+}: {
+  label: string;
+  value: number | string;
+  max: number;
+  barValue?: number;
+}) {
+  const numeric = typeof value === "number" ? value : barValue ?? 0;
+  const width = max > 0 ? Math.min(100, Math.max(0, (numeric / max) * 100)) : 0;
   return (
-    <div className="bg-slate-800 rounded p-3 print:bg-slate-100 print:border print:border-slate-300">
-      <div className="text-xs text-slate-400 print:text-slate-600">
-        {label}
+    <div
+      className="bg-slate-800 rounded-xl border border-slate-700/50 border-t-2 border-t-sky-400 p-4 shadow-sm print:bg-slate-100 print:border print:border-slate-300 print:border-t-2 print:border-t-slate-600 print:shadow-none transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg print:hover:translate-y-0"
+    >
+      <div className="flex items-end justify-between gap-2 mb-2">
+        <span className="text-xs font-medium text-slate-400 print:text-slate-600 tracking-wide uppercase">
+          {label}
+        </span>
+        <span className="text-2xl font-bold text-slate-100 print:text-slate-900 leading-none">
+          {typeof value === "number" ? value.toLocaleString() : value}
+        </span>
       </div>
-      <div className="text-xl font-bold text-slate-100 print:text-slate-900">
-        {typeof value === "number" ? value.toLocaleString() : value}
-      </div>
+      {max > 0 && (
+        <div
+          className="h-1.5 w-full rounded-full bg-slate-700/40 overflow-hidden print:hidden"
+          aria-hidden="true"
+        >
+          <div
+            className="h-full bg-sky-400/70 origin-left transition-all duration-300"
+            style={{ width: `${width}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -82,6 +109,17 @@ export default function Report() {
   });
 
   const d = report.data;
+
+  const statMax = d
+    ? Math.max(
+        d.totals.persons,
+        d.totals.memberships,
+        d.totals.events,
+        d.totals.switches,
+        d.totals.committees,
+        d.totals.persons_with_birth_date,
+      )
+    : 0;
 
   const completenessColor = (c: string): string =>
     c === "full"
@@ -129,11 +167,76 @@ export default function Report() {
       </div>
 
       {report.isLoading && (
-        <div className="text-slate-500">{t("loading", "Loading…")}</div>
+        <div
+          role="status"
+          aria-label={t("report.loadingTitle", "Loading report…")}
+          className="flex flex-col items-center justify-center gap-3 py-12 text-slate-400"
+        >
+          <svg
+            className="w-12 h-12 text-sky-400"
+            aria-hidden="true"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            ></path>
+          </svg>
+          <h2 className="font-semibold text-slate-200">
+            {t("report.loadingTitle", "Loading report…")}
+          </h2>
+          <p className="text-sm text-slate-500 text-center max-w-xs">
+            {t(
+              "report.loadingDesc",
+              "Compiling the transparency corpus. This may take a moment.",
+            )}
+          </p>
+          <button
+            type="button"
+            onClick={() => report.refetch()}
+            className="mt-3 bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+          >
+            {t("report.refresh", "Refresh")}
+          </button>
+        </div>
       )}
       {report.isError && (
-        <div className="text-red-400">
-          {t("report.loadError", "Failed to load the report.")}
+        <div
+          role="alert"
+          aria-label={t("report.errorTitle", "Failed to load report")}
+          className="flex flex-col items-center justify-center gap-3 py-12 text-slate-400"
+        >
+          <svg
+            className="w-12 h-12 text-red-400"
+            aria-hidden="true"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            ></path>
+          </svg>
+          <h2 className="font-semibold text-slate-200">
+            {t("report.errorTitle", "Failed to load report")}
+          </h2>
+          <p className="text-sm text-slate-500 text-center max-w-xs">
+            {t("report.errorDesc", "We couldn't load the transparency report.")}
+          </p>
+          <button
+            type="button"
+            onClick={() => report.refetch()}
+            className="mt-3 bg-sky-700 hover:bg-sky-800 text-white px-4 py-2 rounded text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+          >
+            {t("report.retry", "Retry")}
+          </button>
         </div>
       )}
 
@@ -147,23 +250,33 @@ export default function Report() {
               <Stat
                 label={t("report.persons", "Persons")}
                 value={d.totals.persons}
+                max={statMax}
               />
               <Stat
                 label={t("report.memberships", "Memberships")}
                 value={d.totals.memberships}
+                max={statMax}
               />
-              <Stat label={t("report.events", "Events")} value={d.totals.events} />
+              <Stat
+                label={t("report.events", "Events")}
+                value={d.totals.events}
+                max={statMax}
+              />
               <Stat
                 label={t("report.switches", "Party switches")}
                 value={d.totals.switches}
+                max={statMax}
               />
               <Stat
                 label={t("report.committees", "Committees")}
                 value={d.totals.committees}
+                max={statMax}
               />
               <Stat
                 label={t("report.birthDates", "Birth dates")}
                 value={`${d.totals.persons_with_birth_date} / ${d.totals.persons}`}
+                max={statMax}
+                barValue={d.totals.persons_with_birth_date}
               />
             </div>
           </section>
