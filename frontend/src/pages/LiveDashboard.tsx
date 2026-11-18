@@ -184,8 +184,8 @@ export function LiveDashboard() {
       </section>
 
       {/* Section 2: Bento grid — main visualizations (TimelineChart + chambers) */}
-      <section className="wrap space-y-6">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4 md:gap-6">
+      <section className="wrap space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Large tile — TimelineChart, most important visualization */}
           <TimelineChartTile
             from={min}
@@ -200,14 +200,14 @@ export function LiveDashboard() {
       </section>
 
       {/* Section 3: Bento grid — live feed and time controls */}
-      <section className="wrap space-y-6 pb-8">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 md:gap-6">
-          {/* Wide tile — LiveFeed */}
-          <div className="md:col-span-2 lg:col-span-2 card p-4 flex flex-col">
+      <section className="wrap space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Medium tile — LiveFeed */}
+          <div className="md:col-span-2 card p-4 flex flex-col h-full">
             <LiveFeed onSelect={openPerson} legislature={selectedLegislature} />
           </div>
-          {/* Narrow tile — TimeSlider */}
-          <div className="lg:col-span-2 card p-4 flex flex-col">
+          {/* Medium tile — TimeSlider */}
+          <div className="md:col-span-2 card p-4 flex flex-col h-full">
             <TimeSlider value={clamped} min={min} max={TODAY} onChange={changeDate} ticks={ticks} />
           </div>
         </div>
