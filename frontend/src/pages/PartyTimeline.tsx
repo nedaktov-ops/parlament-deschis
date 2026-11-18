@@ -1,6 +1,10 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { get } from "../api/client";
+import HeroGraphic from "../components/HeroGraphic";
+import InfoStat from "../components/InfoStat";
+import { Sparkline } from "../components/DataViz";
 
 interface PartySpan {
   party: string;
@@ -52,17 +56,99 @@ export default function PartyTimeline() {
   // Derive the dated-join total from the rows already fetched by this page.
   const datedJoins = rows.reduce((sum, p) => sum + p.dated_joins, 0);
 
+  // Distinct first-join years observed across parties (legislature proxy).
+  const legislaturesCovered = new Set(
+    rows.map((p) => yearOf(p.first_join)).filter((y): y is number => y !== null),
+  ).size;
+
+  // Total declared gap events (predecessor + successor links + dissolution dates).
+  const gapsCount = gaps
+    ? gaps.predecessor_links + gaps.successor_links + gaps.dissolution_dates
+    : 0;
+
+  // Party count observed per year across the full span (sparkline source).
+  const sparklineData = useMemo(() => {
+    if (rows.length === 0) return [];
+    const years = Array.from(
+      { length: MAX_YEAR - MIN_YEAR + 1 },
+      (_, i) => MIN_YEAR + i,
+    );
+    return years.map((y) =>
+      rows.filter((p) => {
+        const start = yearOf(p.first_join);
+        const end = yearOf(p.last_join) ?? MAX_YEAR;
+        return start !== null && start <= y && y <= end;
+      }).length,
+    );
+  }, [rows]);
+
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-100 mb-2">
-        {t("ptimeline.title", "Party Timeline")}
-      </h1>
-      <p className="text-slate-400 mb-6">
-        {t(
-          "ptimeline.intro",
-          "When each party is observed in parliament: first and last dated join on behalf of the party. Bars show observed presence in the record — not official founding or dissolution dates.",
-        )}
-      </p>
+      {/* H2-O Hero section — fills the first screen alone */}
+      <section className="hero-section" data-enter>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center gap-8">
+            <div className="flex-1 space-y-4">
+              <h1 className="text-3xl font-bold tracking-tight">
+                {t("ptimeline.title", "Party Timeline")}
+              </h1>
+              <p className="text-sm text-slate-400">
+                {t(
+                  "ptimeline.intro",
+                  "When each party is observed in parliament: first and last dated join on behalf of the party. Bars show observed presence in the record — not official founding or dissolution dates.",
+                )}
+              </p>
+              <div
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6"
+              >
+                <InfoStat
+                  label={t("ptimeline.statParties", "Total parties")}
+                  value={rows.length}
+                  accent="sky"
+                />
+                <InfoStat
+                  label={t("ptimeline.statSwitches", "Total switches")}
+                  value={datedJoins}
+                  accent="emerald"
+                />
+                <InfoStat
+                  label={
+                    t("ptimeline.statLegislatures", "Legislatures covered")
+                  }
+                  value={legislaturesCovered}
+                  accent="amber"
+                />
+                <InfoStat
+                  label={t("ptimeline.statGaps", "Gap events")}
+                  value={gapsCount}
+                  accent="rose"
+                  showBar={false}
+                />
+              </div>
+              <div className="mt-8 flex items-center gap-4" data-moment>
+                <span className="text-5xl font-black block tracking-tight">
+                  {rows.length}
+                </span>
+                <span className="text-sm text-slate-400">
+                  {t("ptimeline.parties", "parties in the corpus")}
+                </span>
+              </div>
+            </div>
+            <div className="w-full md:w-auto max-w-[260px]">
+              <HeroGraphic variant="wave" className="mx-auto" />
+              {sparklineData.length > 0 && (
+                <div className="mt-6 sparkline">
+                  <Sparkline
+                    data={sparklineData}
+                    height={40}
+                    color="stroke-sky-400"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {gaps && (
         <div
