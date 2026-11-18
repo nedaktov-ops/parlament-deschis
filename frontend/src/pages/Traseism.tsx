@@ -13,6 +13,8 @@ import {
 } from "../api/client";
 import About from "../components/About";
 import SankeyFlow from "../components/SankeyFlow";
+import HeroGraphic from "../components/HeroGraphic";
+import InfoStat from "../components/InfoStat";
 
 /** In-repo methodology document (docs/METHODOLOGY.md). */
 const METHODOLOGY_URL =
@@ -716,34 +718,52 @@ export function Traseism() {
   };
 
   return (
-    <div className="wrap space-y-4">
-      <section className="card p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="max-w-3xl">
-            <h1 className="text-2xl font-bold">{t("traseismTitle")}</h1>
-            <p className="text-sm text-slate-300 mt-2">
-              {t("traseismHeadline")}
-            </p>
-            <p className="text-sm text-slate-400 mt-1">{t("traseismIntro")}</p>
-            <p className="text-sm text-slate-200 mt-2 font-medium">
-              {t("traseismNotMotive")}
-            </p>
+    <div className="wrap space-y-6">
+      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center gap-8">
+            <div className="flex-1 space-y-4">
+              <h1 className="text-3xl font-bold tracking-tight">{t("traseismTitle")}</h1>
+              <p className="text-sm text-slate-300 mt-2">{t("traseismHeadline")}</p>
+              <p className="text-sm text-slate-400 mt-1">{t("traseismIntro")}</p>
+              <p className="text-sm text-slate-200 mt-2 font-medium">
+                {t("traseismNotMotive")}
+              </p>
+            </div>
+            <div className="w-full md:w-auto max-w-[260px]">
+              <HeroGraphic variant="switches" className="mx-auto" />
+            </div>
           </div>
-          <button type="button"onClick={() => setAboutOpen(true)}
-            className={`btn bg-slate-700 hover:bg-slate-600 shrink-0 ${FOCUS}`}
-          >
-            {t("traseismAboutButton")}
-          </button>
-        </div>
-        <div className="mt-4 text-sm">
-          <a
-            href={METHODOLOGY_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`text-sky-400 hover:text-sky-300 hover:underline ${FOCUS}`}
-          >
-            {t("traseismMethodologyLink")} ↗
-          </a>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+            <InfoStat
+              label={t("traseismSwitchesCount")}
+              value={scope?.switches ?? "--"}
+              accent="amber"
+            />
+            <InfoStat
+              label={t("traseismSwitchersCount")}
+              value={scope?.switchers ?? "--"}
+              accent="sky"
+            />
+            <InfoStat
+              label={t("traseismSwitchRate")}
+              value={fmtPercent(scope?.switch_rate)}
+              accent="rose"
+            />
+            <InfoStat
+              label={t("traseismPer100")}
+              value={fmtDecimal(scope?.switches_per_100_members)}
+              accent="emerald"
+            />
+          </div>
+          <div className="mt-8 flex items-center gap-4" data-moment>
+            <span className="text-5xl font-black block tracking-tight">
+              {scope?.switches ?? "--"}
+            </span>
+            <span className="text-sm text-slate-400">
+              {t("traseismTotalSwitches", "total switches in corpus")}
+            </span>
+          </div>
         </div>
       </section>
 
