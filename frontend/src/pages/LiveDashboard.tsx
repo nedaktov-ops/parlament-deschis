@@ -203,11 +203,11 @@ export function LiveDashboard() {
       <section className="wrap space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Medium tile — LiveFeed */}
-          <div className="md:col-span-2 card p-4 flex flex-col h-full">
+          <div className="md:col-span-2 card p-4 flex flex-col">
             <LiveFeed onSelect={openPerson} legislature={selectedLegislature} />
           </div>
           {/* Medium tile — TimeSlider */}
-          <div className="md:col-span-2 card p-4 flex flex-col h-full">
+          <div className="md:col-span-2 card p-4 flex flex-col">
             <TimeSlider value={clamped} min={min} max={TODAY} onChange={changeDate} ticks={ticks} />
           </div>
         </div>
