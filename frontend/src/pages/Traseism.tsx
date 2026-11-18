@@ -716,7 +716,7 @@ export function Traseism() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="wrap space-y-4">
       <section className="card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="max-w-3xl">
