@@ -20,7 +20,7 @@ export default function ChamberView({
   });
 
   return (
-    <div className="card p-4 flex flex-col">
+    <div className="card card-hover p-4 flex flex-col">
       <div className="flex items-center justify-between mb-2">
         <h2 className="font-semibold">{t(chamber)}</h2>
         {data.data && (

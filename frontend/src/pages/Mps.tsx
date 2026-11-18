@@ -141,7 +141,7 @@ export default function Mps() {
         {rows.map((m) => (
           <div
             key={m.id}
-            className="bg-slate-800 rounded-lg p-4 hover:bg-slate-750/60 transition-colors"
+            className="card-hover bg-slate-800 rounded-lg p-4 hover:bg-slate-750/60 transition-colors"
           >
             <Link
               to="/person/$id"

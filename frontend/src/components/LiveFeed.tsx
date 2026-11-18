@@ -161,13 +161,13 @@ export default function LiveFeed({
             <span className="text-amber-300 text-xs font-semibold">
               {t("switchAlerts.title", "New party switches detected")}
             </span>
-            <button
-              type="button"
-              onClick={() => setAlertsMuted(true)}
-              className="text-amber-400/80 hover:text-amber-200 text-xs underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
-            >
-              {t("switchAlerts.dismiss", "dismiss")}
-            </button>
+              <button
+                type="button"
+                onClick={() => setAlertsMuted(true)}
+                className="btn-hover text-amber-400/80 hover:text-amber-200 text-xs underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
+              >
+                {t("switchAlerts.dismiss", "dismiss")}
+              </button>
           </div>
           <ul className="space-y-1">
             {switchAlerts.map((e) => (
@@ -202,10 +202,10 @@ export default function LiveFeed({
           if (chamber && e.chamber !== chamber) return false;
           return true;
         })?.map((e) => (
-          <button type="button"key={e.id}
+          <button type="button" key={e.id}
             onClick={() => e.person && onSelect(e.person.id)}
             disabled={!e.person}
-            className="w-full text-left bg-slate-800/40 hover:bg-slate-800 disabled:cursor-default disabled:hover:bg-slate-800/40 rounded-md p-2 transition-colors"
+            className="btn-hover w-full text-left bg-slate-800/40 hover:bg-slate-800 disabled:cursor-default disabled:hover:bg-slate-800/40 rounded-md p-2 transition-colors"
           >
             <div className="flex items-center gap-2 text-xs">
               <span className={`font-semibold ${typeColor(e.type)}`}>{typeLabel(e.type)}</span>

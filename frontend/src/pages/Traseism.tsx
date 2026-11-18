@@ -203,7 +203,7 @@ function MatrixTable({ scope }: { scope: TraseismScope }) {
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row} className="border-t border-slate-700/60">
+            <tr key={row} className="border-t border-slate-700/60 row-hover">
               <th scope="row" className="py-1.5 pr-3 text-left font-medium text-slate-200">
                 {row}
               </th>
@@ -266,7 +266,7 @@ function PartyNetTable({ scope }: { scope: TraseismScope }) {
             return (
               <tr
                 key={row.party}
-                className="border-t border-slate-700/60 align-top"
+                className="border-t border-slate-700/60 align-top row-hover"
               >
                 <th scope="row" className="py-1.5 pr-3 text-left font-medium text-slate-200">
                   {row.party}
@@ -368,7 +368,7 @@ function SwitchLedger({
                 {rows.map((row, index) => (
                   <tr
                     key={`${row.person_id}-${row.date ?? "nd"}-${index}`}
-                    className="border-t border-slate-700/60 align-top"
+                    className="border-t border-slate-700/60 align-top row-hover"
                   >
                     <td className="py-1.5 pr-3 text-slate-200">{row.name}</td>
                     <td className="py-1.5 pr-3 text-slate-300">
@@ -539,7 +539,7 @@ function ScopesOverview({ rows }: { rows: TraseismScope[] }) {
             return (
               <tr
                 key={`${row.chamber}-${row.legislature}`}
-                className="border-t border-slate-700/60 align-top"
+                className="border-t border-slate-700/60 align-top row-hover"
               >
                 <td className="py-1.5 pr-3 text-slate-200">
                   {chamberLabel(row.chamber, t)}
@@ -636,7 +636,7 @@ function SwitchWavesSection({
             </thead>
             <tbody>
               {rows.map((w) => (
-                <tr key={w.id} className="border-b border-slate-700/50">
+                <tr key={w.id} className="border-b border-slate-700/50 row-hover">
                   <th scope="row" className="py-2 pr-4 text-slate-300 font-normal text-left">
                     {w.start_date ?? "?"} → {w.end_date ?? "?"}
                   </th>
