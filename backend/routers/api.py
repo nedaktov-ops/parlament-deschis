@@ -904,6 +904,98 @@ def get_party_timeline_analytics(
     }
 
 
+@router.get("/dashboard/stats")
+def dashboard_stats(
+    as_of: str | None = Query(None, description="Reference date (ISO format)"),
+    db: Session = Depends(get_db),
+):
+    """Aggregated dashboard statistics for the main overview page.
+
+    Returns pre-computed metrics to avoid multiple API calls and enable
+    fast dashboard rendering.
+    """
+    from datetime import UTC, date, datetime
+
+    from sqlalchemy import func, or_, select
+
+    from pipeline.db import Committee, Coverage, Event, KeyEvent, Membership, Organization, Person
+
+    # Parse date
+    ref_date = None
+    if as_of:
+        try:
+            ref_date = datetime.strptime(as_of, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+
+    # Get total persons (all tracked persons)
+    total_persons = db.scalar(select(func.count(Person.id))) or 0
+
+    # Get total memberships (active on reference date or all if no date)
+    if ref_date:
+        total_memberships = (
+            db.scalar(
+                select(func.count(Membership.id)).where(
+                    Membership.start_date <= ref_date,
+                    or_(Membership.end_date.is_(None), Membership.end_date >= ref_date),
+                    Membership.chamber.in_(["deputies", "senate"]),
+                )
+            )
+            or 0
+        )
+    else:
+        total_memberships = db.scalar(select(func.count(Membership.id))) or 0
+
+    # Get total switch events
+    total_switches = (
+        db.scalar(
+            select(func.count(Event.id)).where(Event.type.in_(["switch_group", "switch_party"]))
+        )
+        or 0
+    )
+
+    # Get total committees
+    total_committees = db.scalar(select(func.count(Committee.id))) or 0
+
+    # Get legislature count
+    legislature_count = (
+        db.scalar(select(func.count(KeyEvent.id)).where(KeyEvent.type == "legislature")) or 0
+    )
+
+    # Get party count
+    party_count = (
+        db.scalar(select(func.count(Organization.id)).where(Organization.classification == "party"))
+        or 0
+    )
+
+    # Get cross-chamber count (persons in both chambers)
+    cross_chamber_persons = queries.get_cross_chamber_careers(db, ref_date or date.today())
+    cross_chamber_count = len(cross_chamber_persons)
+
+    # Get coverage completeness score
+    coverage_scores = db.scalars(select(Coverage.completeness)).all()
+    if coverage_scores:
+        full_count = sum(1 for s in coverage_scores if s == "full")
+        completeness_score = round((full_count / len(coverage_scores)) * 100)
+    else:
+        completeness_score = 0
+
+    return {
+        "status": "ok",
+        "data": {
+            "persons": total_persons,
+            "memberships": total_memberships,
+            "switches": total_switches,
+            "committees": total_committees,
+            "legislatures": legislature_count,
+            "parties": party_count,
+            "cross_chamber": cross_chamber_count,
+            "coverage_score": completeness_score,
+            "computed_at": datetime.now(UTC).isoformat(),
+        },
+    }
+
+
 @router.get("/traseism/overview")
 def traseism_overview(db: Session = Depends(get_db)):
     """One row per chamber and legislature: members, switches, switchers, rate."""
