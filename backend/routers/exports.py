@@ -50,21 +50,14 @@ def export_popolo(
     )
 
 
-@router.get("/report")
 @cache_result("export-report")
-def export_report(
-    db: Annotated[Session, Depends(get_db)],
-):
-    """Whole-corpus transparency report as structured JSON (Feature 6).
+def _build_report_payload(db: Session) -> dict:
+    """Compute the whole-corpus report as a plain, cacheable data dict.
 
-    Every block (corpus totals, coverage, top switchers with loyalty,
-    committee chair control, switch waves and party ages) aggregates over the
-    entire pinned dataset. This endpoint intentionally accepts no
-    ``chamber`` / ``legislature`` scope: the underlying helpers are not
-    uniformly scope-able (``get_coverage_detailed`` takes only a session), so
-    echoing a scope here would advertise a filter that is never applied. For
-    filtered figures use the analytics endpoints; this download is the
-    unfiltered snapshot that backs the print view.
+    Only data that is immutable for the lifetime of the process is cached
+    here — no timestamps and, critically, no ``fastapi.Response`` object.
+    The per-request ``generated_at`` stamp and the ``JSONResponse`` wrapper
+    are built fresh by :func:`export_report` on every call.
     """
     from sqlalchemy import func, select
 
@@ -143,29 +136,52 @@ def export_report(
     except ValueError:
         control = {"total_committees": 0, "parties": [], "chairs": []}
 
+    return {
+        "report": "parlament-deschis transparency report",
+        "scope": "all",
+        "totals": totals,
+        "coverage": queries.get_coverage_detailed(db),
+        "top_switchers": top_switchers,
+        "committee_control": control,
+        "switch_waves": [
+            {
+                "start_date": w.start_date.isoformat() if w.start_date else None,
+                "end_date": w.end_date.isoformat() if w.end_date else None,
+                "switch_count": w.switch_count,
+                "trigger_type": w.trigger_type,
+                "trigger_event": w.trigger_event,
+                "chamber": w.chamber,
+                "legislature": w.legislature,
+            }
+            for w in waves
+        ],
+        "party_ages": ages,
+    }
+
+
+@router.get("/report")
+def export_report(
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Whole-corpus transparency report as structured JSON (Feature 6).
+
+    Every block (corpus totals, coverage, top switchers with loyalty,
+    committee chair control, switch waves and party ages) aggregates over the
+    entire pinned dataset. This endpoint intentionally accepts no
+    ``chamber`` / ``legislature`` scope: the underlying helpers are not
+    uniformly scope-able (``get_coverage_detailed`` takes only a session), so
+    echoing a scope here would advertise a filter that is never applied. For
+    filtered figures use the analytics endpoints; this download is the
+    unfiltered snapshot that backs the print view.
+
+    The expensive data snapshot is cached as a plain dict; the
+    ``generated_at`` stamp and the response wrapper are rebuilt on every
+    request so consecutive downloads never share a stale timestamp.
+    """
+    payload = _build_report_payload(db)
+    content = {**payload, "generated_at": datetime.now(UTC).isoformat()}
     return JSONResponse(
-        content={
-            "report": "parlament-deschis transparency report",
-            "generated_at": datetime.now(UTC).isoformat(),
-            "scope": "all",
-            "totals": totals,
-            "coverage": queries.get_coverage_detailed(db),
-            "top_switchers": top_switchers,
-            "committee_control": control,
-            "switch_waves": [
-                {
-                    "start_date": w.start_date.isoformat() if w.start_date else None,
-                    "end_date": w.end_date.isoformat() if w.end_date else None,
-                    "switch_count": w.switch_count,
-                    "trigger_type": w.trigger_type,
-                    "trigger_event": w.trigger_event,
-                    "chamber": w.chamber,
-                    "legislature": w.legislature,
-                }
-                for w in waves
-            ],
-            "party_ages": ages,
-        },
+        content=content,
         media_type="application/json; charset=utf-8",
         headers=_attachment("transparency-report.json"),
     )

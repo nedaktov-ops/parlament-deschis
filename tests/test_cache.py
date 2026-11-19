@@ -70,3 +70,39 @@ def test_cached_keeps_ttl_semantics(monkeypatch):
     clock.t += cache.TTL_SECONDS + 1
     assert fn() == 2  # expired -> recompute
     assert calls["n"] == 2
+
+
+def test_invalidate_all_clears_both_caches(monkeypatch):
+    """``invalidate_all()`` clears the result cache AND the traseism cache.
+
+    This is the contract W2-A wires into ``start_poller(on_cycle=...)``: after
+    a poll cycle recomputes the data, BOTH caches must be empty so the next
+    request observes the new data.
+    """
+    import backend.routers.api as api_router
+
+    cache.invalidate()
+    clock = _Clock(1000.0)
+    monkeypatch.setattr(cache, "time", clock)
+
+    # Seed the result cache.
+    calls = {"n": 0}
+
+    def compute():
+        calls["n"] += 1
+        return calls["n"]
+
+    fn = cache.cached("invalidate-all-unit")(compute)
+    assert fn() == 1
+    assert fn() == 1  # served from the result cache
+    assert calls["n"] == 1
+
+    # Seed the traseism overview cache with a sentinel value.
+    api_router._traseism_overview_cache = ["stale"]
+
+    cache.invalidate_all()
+
+    assert api_router._traseism_overview_cache is None
+    # Result cache was cleared too -> the next call recomputes.
+    assert fn() == 2
+    assert calls["n"] == 2

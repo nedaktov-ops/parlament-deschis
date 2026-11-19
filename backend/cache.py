@@ -85,3 +85,26 @@ def invalidate() -> None:
     with _lock:
         _generation += 1
         _store.clear()
+
+
+# The result-cache invalidator is imported into ``backend.routers.api`` under
+# this name. Expose it here too so the invalidation contract reads uniformly.
+invalidate_result_cache = invalidate
+
+
+def invalidate_all() -> None:
+    """Drop every cached value in every cache (the poller's ``on_cycle`` hook).
+
+    Two independent caches exist at runtime: this module's result cache and
+    the traseism overview cache owned by ``backend.routers.api``. Clearing only
+    one leaves the other stale after a recompute, so this single entry point
+    calls both invalidators. W2-A wires it into ``start_poller(on_cycle=...)``.
+
+    The import of the traseism invalidator is deliberately local: ``api.py``
+    imports from this module at load time, so a top-level import would be
+    circular.
+    """
+    from backend.routers.api import invalidate_traseism_overview_cache
+
+    invalidate_result_cache()
+    invalidate_traseism_overview_cache()

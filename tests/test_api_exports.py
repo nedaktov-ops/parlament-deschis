@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import time
 from datetime import date
 from types import SimpleNamespace
 
 import pytest
+from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
+import backend.cache as cache
 from backend.deps import get_db
 from backend.main import create_app
 from pipeline.db import (
@@ -152,6 +155,36 @@ def test_memberships_csv_headers_and_content(api):
     assert api.ids.person in text
     assert "official_ledger" in text
     assert "https://www.cdep.ro/example" in text
+
+
+def test_report_has_fresh_timestamp_and_never_caches_response(api):
+    """Consecutive report downloads carry different ``generated_at`` values.
+
+    The expensive aggregation is cached as a plain dict, but the timestamp and
+    the ``JSONResponse`` wrapper must be rebuilt per request — a cached
+    Response object would freeze ``generated_at`` for the whole TTL window.
+    """
+    cache.invalidate()
+    r1 = api.client.get("/api/export/report")
+    time.sleep(0.002)  # guarantee distinct microsecond stamps
+    r2 = api.client.get("/api/export/report")
+
+    assert r1.status_code == 200
+    assert r2.status_code == 200
+    assert r1.headers["content-disposition"] == 'attachment; filename="transparency-report.json"'
+    g1 = r1.json()["generated_at"]
+    g2 = r2.json()["generated_at"]
+    assert g1 != g2
+    assert r1.json()["scope"] == "all"
+    assert r2.json()["totals"] == r1.json()["totals"]
+
+    cached = [
+        value for key, (_ts, value) in cache._store.items() if key.startswith("export-report:")
+    ]
+    assert cached, "report data should be cached as plain data"
+    assert isinstance(cached[0], dict)
+    assert not isinstance(cached[0], JSONResponse)
+    assert "generated_at" not in cached[0]
 
 
 def test_unknown_dataset_is_404(api):
