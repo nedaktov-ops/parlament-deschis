@@ -22,7 +22,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # --- stage 2: the API and the pipeline -------------------------------------
-FROM python:3.12-slim AS backend
+FROM python:3.15-slim AS backend
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
@@ -70,7 +70,7 @@ RUN python scripts/download_dataset.py \
     && rm /tmp/source.db
 
 # --- stage 4: runtime ------------------------------------------------------
-FROM python:3.12-slim AS runtime
+FROM python:3.15-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH" \
