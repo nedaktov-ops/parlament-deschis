@@ -1972,6 +1972,23 @@
         }
       }
     },
+    "/api/metrics": {
+      "get": {
+        "summary": "Metrics",
+        "description": "Return Prometheus-formatted metrics.",
+        "operationId": "metrics_api_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/graphql": {
       "get": {
         "summary": "Handle Http Get",

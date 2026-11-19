@@ -22,6 +22,7 @@ from backend.graphql.schema import schema
 from backend.routers.api import invalidate_traseism_overview_cache
 from backend.routers.api import router as api_router
 from backend.routers.exports import router as exports_router
+from backend.routers.metrics import router as metrics_router
 from pipeline.poller import start_poller
 
 log = logging.getLogger("parlament.api")
@@ -178,6 +179,7 @@ def create_app() -> FastAPI:
     app.add_middleware(SecurityHeadersMiddleware)
     app.include_router(api_router)
     app.include_router(exports_router)
+    app.include_router(metrics_router)
 
     # GraphQL endpoint. GraphiQL is a supported Strawberry flag (graphql_ide):
     # turn it off on hosted production (Render/Vercel) or via the explicit flag.
