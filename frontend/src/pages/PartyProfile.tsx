@@ -33,6 +33,27 @@ export function PartyProfile() {
     enabled: !!shortName,
   });
 
+  // All hooks must be declared before any early return (React #310).
+  // Both memos depend only on movements.data, so they are safe to compute
+  // before the party loading/error guards below.
+  const chambersCovered = useMemo(() => {
+    const chambers = new Set<string>();
+    for (const m of movements.data ?? []) {
+      if (m.chamber) chambers.add(m.chamber);
+    }
+    return chambers.size;
+  }, [movements.data]);
+
+  const switchTimeline = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const m of movements.data ?? []) {
+      counts.set(m.event_date, (counts.get(m.event_date) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, c]) => c);
+  }, [movements.data]);
+
   if (party.isLoading) {
     return (
       <div className="card p-4">
@@ -55,24 +76,6 @@ export function PartyProfile() {
   const p = party.data;
 
   const totalSwitches = (p.switches_in ?? 0) + (p.switches_out ?? 0);
-
-  const chambersCovered = useMemo(() => {
-    const chambers = new Set<string>();
-    for (const m of movements.data ?? []) {
-      if (m.chamber) chambers.add(m.chamber);
-    }
-    return chambers.size;
-  }, [movements.data]);
-
-  const switchTimeline = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const m of movements.data ?? []) {
-      counts.set(m.event_date, (counts.get(m.event_date) ?? 0) + 1);
-    }
-    return [...counts.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([, c]) => c);
-  }, [movements.data]);
 
   const hasSwitchTimeline = switchTimeline.length > 0;
 

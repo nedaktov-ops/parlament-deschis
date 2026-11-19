@@ -43,6 +43,34 @@ export function PersonDeepDive() {
     i18n.language === "en" ? e.summary_en || e.summary_ro : e.summary_ro || e.summary_en;
 
   const p = person.data;
+  const personEvents = p?.events;
+
+  // All hooks must be declared before any early return (React #310).
+  // `personEvents` may be undefined while loading/on error; optional chaining
+  // inside the memo keeps the hook unconditional and safe.
+  const sparklineData = useMemo(() => {
+    const counts = new Map<string, number>();
+    let first: string | null = null;
+    let last: string | null = null;
+    for (const e of personEvents ?? []) {
+      if (!e.event_date) continue;
+      const d = e.event_date.slice(0, 10);
+      counts.set(d, (counts.get(d) ?? 0) + 1);
+      if (first === null || d < first) first = d;
+      if (last === null || d > last) last = d;
+    }
+    if (!first || !last) return [];
+    const out: number[] = [];
+    let cur = first;
+    while (cur <= last) {
+      out.push(counts.get(cur) ?? 0);
+      const [y, m, day] = cur.split("-").map(Number);
+      const nd = new Date(Date.UTC(y, m - 1, day));
+      nd.setUTCDate(nd.getUTCDate() + 1);
+      cur = nd.toISOString().slice(0, 10);
+    }
+    return out;
+  }, [personEvents]);
 
   if (person.isLoading) {
     return (
@@ -73,30 +101,6 @@ export function PersonDeepDive() {
   const legislaturesCovered = new Set(
     p.events.map((e) => e.legislature).filter(Boolean),
   ).size;
-
-  const sparklineData = useMemo(() => {
-    const counts = new Map<string, number>();
-    let first: string | null = null;
-    let last: string | null = null;
-    for (const e of p.events) {
-      if (!e.event_date) continue;
-      const d = e.event_date.slice(0, 10);
-      counts.set(d, (counts.get(d) ?? 0) + 1);
-      if (first === null || d < first) first = d;
-      if (last === null || d > last) last = d;
-    }
-    if (!first || !last) return [];
-    const out: number[] = [];
-    let cur = first;
-    while (cur <= last) {
-      out.push(counts.get(cur) ?? 0);
-      const [y, m, day] = cur.split("-").map(Number);
-      const nd = new Date(Date.UTC(y, m - 1, day));
-      nd.setUTCDate(nd.getUTCDate() + 1);
-      cur = nd.toISOString().slice(0, 10);
-    }
-    return out;
-  }, [p.events]);
 
   return (
     <div className="wrap space-y-6">

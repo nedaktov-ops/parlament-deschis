@@ -34,6 +34,12 @@ export default function CrossChamberFlow({
     };
   }, [data]);
 
+  const topMembers = useMemo(() => {
+    return [...data]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .slice(0, 5);
+  }, [data]);
+
   if (!data?.length) {
     return (
       <div className="w-full bg-slate-800/30 rounded-xl p-4 overflow-hidden">
@@ -44,12 +50,6 @@ export default function CrossChamberFlow({
       </div>
     );
   }
-
-  const topMembers = useMemo(() => {
-    return [...data]
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .slice(0, 5);
-  }, [data]);
 
   // Flow percentages
   const deputiesPct = stats.total > 0 ? (stats.deputies / stats.total) * 100 : 0;
