@@ -1,3 +1,4 @@
+import sqlite3
 from datetime import date
 
 import pytest
@@ -9,6 +10,8 @@ from pipeline.db import (
     SCHEMA_VERSION,
     Base,
     Event,
+    Evidence,
+    Mandate,
     Membership,
     Organization,
     Person,
@@ -16,6 +19,7 @@ from pipeline.db import (
     ensure_schema,
     make_engine,
 )
+from scripts.prepare_db import prepare
 
 
 def test_legacy_cross_chamber_group_duplicates_are_merged(tmp_path):
@@ -126,9 +130,12 @@ def test_legacy_merge_gated_by_user_version(tmp_path):
     engine = _seed_legacy_group(tmp_path, "gated")
     # A shipped/read-only DB is already stamped: the destructive merge must
     # not run even though the legacy duplicate rows are still present.
+    # With fail-fast index creation, those duplicates also abort the schema
+    # step instead of being logged and ignored.
     with engine.begin() as conn:
         conn.exec_driver_sql(f"PRAGMA user_version = {SCHEMA_VERSION}")
-    ensure_schema(engine)
+    with pytest.raises(IntegrityError):
+        ensure_schema(engine)
 
     with Session(engine) as session:
         groups = list(
@@ -151,6 +158,7 @@ def test_support_indexes_exist_on_fresh_database(tmp_path):
             for row in conn.exec_driver_sql("SELECT name FROM sqlite_master WHERE type='index'")
         }
     for expected in (
+        "uq_stint",
         "ux_membership_closed_stint",
         "ix_membership_on_behalf_of",
         "ix_event_from_org_id",
@@ -204,7 +212,8 @@ def test_closed_stint_partial_unique_index(tmp_path):
         session.commit()
 
 
-def test_ensure_schema_tolerates_legacy_duplicate_closed_stints(tmp_path):
+def test_ensure_schema_fails_fast_on_legacy_duplicate_closed_stints(tmp_path):
+    """A duplicate that blocks an index aborts startup; it is not swallowed."""
     engine = make_engine(tmp_path / "residual.db")
     Base.metadata.create_all(engine)
     with Session(engine) as session:
@@ -225,8 +234,101 @@ def test_ensure_schema_tolerates_legacy_duplicate_closed_stints(tmp_path):
         session.add_all((Membership(**common), Membership(**common)))
         session.commit()
 
-    # The partial unique index cannot be created on these legacy duplicates;
-    # ensure_schema must report it and continue without deleting either row.
-    ensure_schema(engine)
+    # Both indexes are absent on this legacy DB, so the duplicates insert.
+    # ensure_schema must now raise rather than log a warning and leave the
+    # shipped DB without ux_membership_closed_stint.
+    with pytest.raises(IntegrityError, match="uq_stint"):
+        ensure_schema(engine)
     with Session(engine) as session:
-        assert len(list(session.scalars(select(Membership)))) == 2
+        assert len(list(session.scalars(select(Membership)))) == 2  # no silent deletion
+
+
+def test_uq_stint_still_rejects_duplicates_without_the_partial_index(tmp_path):
+    """COALESCE(post_id,'') makes uq_stint work on its own (post_id is NULL)."""
+    engine = make_engine(tmp_path / "uq.db")
+    Base.metadata.create_all(engine)
+    ensure_schema(engine)
+    # Isolate uq_stint: remove the partial index that also covers this case.
+    with engine.begin() as conn:
+        conn.exec_driver_sql("DROP INDEX ux_membership_closed_stint")
+
+    with Session(engine) as session:
+        session.add_all(
+            (
+                Organization(id="g", classification="group", name="G", normalized_name="g"),
+                Person(id="p", canonical_name="P", normalized_name="p"),
+            )
+        )
+        session.flush()
+        common = dict(
+            person_id="p",
+            org_id="g",
+            chamber="deputies",
+            legislature="2020",
+            start_date=date(2020, 1, 1),
+            end_date=date(2020, 6, 1),
+        )
+        session.add(Membership(**common))
+        session.commit()
+        session.add(Membership(**common))
+        with pytest.raises(IntegrityError, match="uq_stint"):
+            session.commit()
+        session.rollback()
+
+
+def test_prepare_dedupes_memberships_and_bakes_unique_indexes(tmp_path):
+    """Prepared DB: 0 duplicate groups, indexes present, DELETE + integrity ok."""
+    source = tmp_path / "source.db"
+    target = tmp_path / "prepared.db"
+    engine = make_engine(source)
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        session.add_all(
+            (
+                Organization(id="g", classification="group", name="G", normalized_name="g"),
+                Person(id="p", canonical_name="P", normalized_name="p"),
+                Mandate(id="m", person_id="p", chamber="deputies", legislature="2020"),
+                Event(id="e", type="join"),
+            )
+        )
+        session.flush()
+        common = dict(
+            person_id="p",
+            org_id="g",
+            chamber="deputies",
+            legislature="2020",
+            start_date=date(2020, 1, 1),
+            end_date=date(2020, 6, 1),
+        )
+        session.add_all((Membership(id="m1", **common), Membership(id="m2", **common)))
+        session.flush()
+        session.add_all(
+            (
+                Evidence(id="ev", membership_id="m1", type="profile"),
+                Evidence(id="ev2", membership_id="m2", type="profile"),
+            )
+        )
+        session.commit()
+    engine.dispose()
+
+    prepare(source, target)
+
+    with sqlite3.connect(target) as conn:
+        dup_groups = conn.execute(
+            "SELECT count(*) FROM (SELECT org_id, person_id, chamber, legislature, "
+            "start_date, end_date, count(*) n FROM membership GROUP BY org_id, person_id, "
+            "chamber, legislature, start_date, end_date HAVING n > 1)"
+        ).fetchone()[0]
+        assert dup_groups == 0
+        assert conn.execute("SELECT count(*) FROM membership").fetchone()[0] == 1
+        # Provenance from the discarded duplicate is repointed, not deleted.
+        assert conn.execute("SELECT count(*) FROM evidence").fetchone()[0] == 2
+        assert conn.execute("SELECT DISTINCT membership_id FROM evidence").fetchall() == [("m1",)]
+        names = {
+            row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")
+        }
+        assert {"uq_stint", "ux_membership_closed_stint"} <= names
+        assert conn.execute("PRAGMA journal_mode").fetchone()[0].lower() == "delete"
+        assert conn.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+        assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION

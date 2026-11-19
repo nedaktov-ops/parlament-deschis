@@ -261,8 +261,10 @@ class Membership(Base):
     org: Mapped[Organization] = relationship(foreign_keys=[org_id])
     party: Mapped[Organization | None] = relationship(foreign_keys=[on_behalf_of_id])
 
+    # ``uq_stint`` is declared as an expression index in ``_PARTIAL_INDEXES``
+    # below, not as a UNIQUE constraint here: a plain constraint containing
+    # post_id is inert because post_id is NULL on every shipped row.
     __table_args__ = (
-        UniqueConstraint("org_id", "person_id", "post_id", "end_date", name="uq_stint"),
         Index("ix_membership_person_end", "person_id", "end_date"),
         Index("ix_membership_org_end", "org_id", "end_date"),
     )
@@ -499,11 +501,20 @@ _PARTIAL_INDEXES: tuple[str, ...] = (
     "ON person_identifier(scheme, identifier) WHERE legislature IS NULL",
     "CREATE UNIQUE INDEX IF NOT EXISTS ux_org_name "
     "ON organization(classification, normalized_name) WHERE founding_date IS NULL",
-    # uq_stint includes post_id, which is NULL on every shipped row, so SQLite
-    # treats each key as distinct and duplicate CLOSED stints slip through.
-    # This partial unique index closes that hole for future rows. It cannot be
-    # created on databases that already contain the legacy duplicates; that is
-    # reported (not deleted/merged) by ensure_schema's best-effort handling.
+    # The old ``uq_stint`` UNIQUE (org_id, person_id, post_id, end_date) never
+    # fired: post_id is NULL on all 7358 shipped rows and SQLite treats NULL
+    # as distinct. Re-express that intent as an expression index so NULL
+    # post_id (and the other optional scope columns) participate in
+    # uniqueness. The key mirrors the 6-column identity used to build the
+    # corpus, so exact-duplicate stints are now rejected on write.
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_stint "
+    "ON membership(org_id, person_id, COALESCE(post_id, ''), COALESCE(chamber, ''), "
+    "COALESCE(legislature, ''), COALESCE(end_date, ''), COALESCE(start_date, ''))",
+    # uq_stint includes post_id, which was NULL on every shipped row, so the
+    # old constraint treated each key as distinct and duplicate CLOSED stints
+    # slipped through. This partial index closes that hole for future rows.
+    # It cannot be created on a database that still contains the legacy
+    # duplicates: ensure_schema now FAILS FAST instead of swallowing it.
     "CREATE UNIQUE INDEX IF NOT EXISTS ux_membership_closed_stint "
     "ON membership(org_id, person_id, COALESCE(post_id, ''), COALESCE(chamber, ''), "
     "COALESCE(legislature, ''), end_date, COALESCE(start_date, '')) WHERE end_date IS NOT NULL",
@@ -518,12 +529,6 @@ _PARTIAL_INDEXES: tuple[str, ...] = (
     "CREATE INDEX IF NOT EXISTS ix_event_from_org_id ON event(from_org_id)",
     "CREATE INDEX IF NOT EXISTS ix_event_to_org_id ON event(to_org_id)",
 )
-
-
-def _index_name(ddl: str) -> str:
-    """Pull the index name out of a CREATE INDEX statement for log messages."""
-    marker = "INDEX IF NOT EXISTS "
-    return ddl.split(marker, 1)[1].split()[0] if marker in ddl else ddl.split()[2]
 
 
 def _merge_legacy_cross_chamber_groups(conn) -> None:
@@ -614,10 +619,12 @@ def _merge_legacy_cross_chamber_groups(conn) -> None:
 def ensure_schema(engine) -> None:
     """Bring an existing SQLite file up to the current schema.
 
-    Safe to call repeatedly: columns are added only when missing, and an
-    index that cannot be created (because a legacy database still contains
-    duplicates) is reported instead of aborting startup. The one-off,
-    destructive data merge runs at most once, gated by ``user_version``.
+    Safe to call repeatedly: columns are added only when missing and indexes
+    are created with IF NOT EXISTS. An index that cannot be created (because
+    a legacy database still contains duplicates) is a hard error: it is never
+    swallowed into a startup warning, because that silently shipped databases
+    without ``ux_membership_closed_stint``. The one-off, destructive data
+    merge runs at most once, gated by ``user_version``.
     """
     with engine.begin() as conn:
         version = conn.exec_driver_sql("PRAGMA user_version").scalar()
@@ -645,11 +652,11 @@ def ensure_schema(engine) -> None:
         if needs_migration:
             _merge_legacy_cross_chamber_groups(conn)
 
+        # Fail fast. A duplicate that blocks one of these indexes is a data
+        # defect, not a condition to log and ignore: the old try/except left
+        # the shipped DB without ux_membership_closed_stint on every launch.
         for ddl in _PARTIAL_INDEXES:
-            try:
-                conn.exec_driver_sql(ddl)
-            except Exception as exc:  # noqa: BLE001 - legacy duplicate data
-                log.warning("could not create index %s: %s", _index_name(ddl), exc)
+            conn.exec_driver_sql(ddl)
 
         # Mark the migration done only after every step succeeded.
         if needs_migration:

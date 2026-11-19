@@ -7,6 +7,8 @@ files: a WAL database cannot even be opened on a read-only filesystem.
 This script rewrites the working database into a clean, verified copy:
 
 * ``VACUUM INTO`` rewrites it into one file with no free pages;
+* exact-duplicate membership stints are collapsed before shipping, so the
+  fail-fast unique indexes can be created on the prepared copy;
 * ``journal_mode=DELETE`` removes the WAL side-cars;
 * ``PRAGMA integrity_check`` proves the copy is structurally sound;
 * ``PRAGMA foreign_key_check`` proves referential integrity, on both the
@@ -28,7 +30,75 @@ import sys
 import tempfile
 from pathlib import Path
 
-from pipeline.db import SCHEMA_VERSION
+from pipeline.db import _PARTIAL_INDEXES, SCHEMA_VERSION
+
+# The identity of a membership stint in the shipped corpus. SQLite's
+# ``PARTITION BY`` treats NULLs as equal, so this also covers the optional
+# columns.
+_STINT_KEY_COLUMNS = ("org_id", "person_id", "chamber", "legislature", "start_date", "end_date")
+
+# Columns each declared partial index needs. Used to keep preparation working
+# on the minimal synthetic databases in tests/test_prepare_db.py, which have
+# none of the corpus tables' real columns.
+_INDEX_REQUIRED_COLUMNS = {
+    "membership": {
+        "org_id",
+        "person_id",
+        "post_id",
+        "chamber",
+        "legislature",
+        "start_date",
+        "end_date",
+        "on_behalf_of_id",
+    },
+    "organization": {"classification", "normalized_name", "founding_date"},
+    "person_identifier": {"scheme", "identifier", "legislature"},
+    "event": {"from_org_id", "to_org_id"},
+}
+
+
+def _table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
+    return {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+
+
+def _dedupe_memberships(conn: sqlite3.Connection) -> int:
+    """Collapse exact-duplicate stints on the copy being prepared.
+
+    Keeps the lowest ``id`` of each group so the operation is deterministic
+    and reversible. Evidence rows pointing at a removed duplicate are
+    repointed at the survivor (every duplicate pair in the shipped corpus
+    carries one evidence row each), so no provenance is lost and no foreign
+    key is orphaned. Returns the number of rows removed.
+    """
+    if not set(_STINT_KEY_COLUMNS).issubset(_table_columns(conn, "membership")):
+        return 0
+    group_by = ", ".join(_STINT_KEY_COLUMNS)
+    pairs = conn.execute(
+        f"SELECT id, MIN(id) OVER (PARTITION BY {group_by}) FROM membership"
+    ).fetchall()
+    remap = [(keep, duplicate) for duplicate, keep in pairs if duplicate != keep]
+    if not remap:
+        return 0
+
+    if "membership_id" in _table_columns(conn, "evidence"):
+        conn.executemany("UPDATE evidence SET membership_id = ? WHERE membership_id = ?", remap)
+    conn.executemany("DELETE FROM membership WHERE id = ?", [(dup,) for _, dup in remap])
+    return len(remap)
+
+
+def _create_partial_indexes(conn: sqlite3.Connection) -> None:
+    """Create the schema's partial indexes on the prepared copy, fail-fast.
+
+    The corpus DB shipped with 9 duplicate closed stints, which made
+    ``ux_membership_closed_stint`` impossible to create; dedupe above removes
+    them so this can now succeed. Any remaining conflict aborts preparation
+    instead of being logged and ignored.
+    """
+    columns = {table: _table_columns(conn, table) for table in _INDEX_REQUIRED_COLUMNS}
+    if any(not needed <= columns[table] for table, needed in _INDEX_REQUIRED_COLUMNS.items()):
+        return  # minimal synthetic database, not a corpus DB
+    for ddl in _PARTIAL_INDEXES:
+        conn.execute(ddl)
 
 
 def _check_foreign_keys(conn: sqlite3.Connection, label: str) -> None:
@@ -82,6 +152,7 @@ def prepare(source: Path, target: Path) -> None:
     finally:
         conn.close()
 
+    removed = 0
     with tempfile.TemporaryDirectory(prefix=f".{target.name}.", dir=target.parent) as temp_dir:
         temporary_target = Path(temp_dir) / target.name
         source_conn = sqlite3.connect(source)
@@ -92,6 +163,10 @@ def prepare(source: Path, target: Path) -> None:
 
         out = sqlite3.connect(temporary_target)
         try:
+            removed = _dedupe_memberships(out)
+            out.commit()
+            _create_partial_indexes(out)
+            out.commit()
             out.execute("PRAGMA journal_mode=DELETE")
             status = out.execute("PRAGMA integrity_check").fetchone()[0]
             if status != "ok":
@@ -114,7 +189,7 @@ def prepare(source: Path, target: Path) -> None:
     size = target.stat().st_size
     print(
         f"prepared {target} ({size / 1024:.0f} KiB, {len(tables)} tables, "
-        f"{rows} schema rows, journal_mode=DELETE)"
+        f"{rows} schema rows, journal_mode=DELETE, deduped_memberships={removed})"
     )
 
 
