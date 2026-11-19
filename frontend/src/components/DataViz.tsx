@@ -4,6 +4,26 @@ export interface SparklineProps {
   color?: string;
 }
 
+/** Build the SVG polyline `points` string. Exported for the no-NaN unit test. */
+export function sparklinePoints(data: number[]): string {
+  if (data.length === 0) return "";
+
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  // A single sample makes `data.length - 1 === 0`; clamping the denominator
+  // to >= 1 prevents 0/0 -> NaN (which produced `<polyline points="NaN,100">`).
+  const denominator = Math.max(1, data.length - 1);
+
+  return data
+    .map((v, i) => {
+      const x = (i / denominator) * 100;
+      const y = 100 - ((v - min) / range) * 100;
+      return `${x},${y}`;
+    })
+    .join(" ");
+}
+
 export function Sparkline({
   data,
   height = 40,
@@ -11,17 +31,7 @@ export function Sparkline({
 }: SparklineProps) {
   if (data.length === 0) return null;
 
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-
-  const points = data
-    .map((v, i) => {
-      const x = (i / (data.length - 1)) * 100;
-      const y = 100 - ((v - min) / range) * 100;
-      return `${x},${y}`;
-    })
-    .join(" ");
+  const points = sparklinePoints(data);
 
   return (
     <svg

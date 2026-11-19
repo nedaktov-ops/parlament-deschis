@@ -86,8 +86,16 @@ export default function SwitchTimeline({
           style={{ left: 0, right: 0 }}
         />
         
-        {/* Legislature markers */}
-        {timelineData.legs.map(leg => {
+        {/* SVG graphics must live under an <svg> so React creates them in the
+            SVG namespace. Without it React renders <g>/<line>/<text>/<rect>
+            as unrecognized HTML custom elements (console.error). */}
+        <svg
+          className="absolute inset-0 h-full w-full overflow-visible"
+          viewBox={`0 0 ${WIDTH} ${height}`}
+          preserveAspectRatio="none"
+        >
+          {/* Legislature markers */}
+          {timelineData.legs.map(leg => {
           const legDate = leg.start ? new Date(leg.start).getTime() : null;
           if (!legDate) return null;
           
@@ -145,6 +153,7 @@ export default function SwitchTimeline({
             </g>
           );
         })}
+        </svg>
       </div>
       
       <div className="mt-2 flex justify-between text-xs">
