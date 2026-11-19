@@ -313,6 +313,9 @@ Each `Organization` with `classification="party"` may have:
 - `successor_party_id`: the party that followed it (successor).
 
 Both are nullable foreign keys to `organization.id`, creating a directed graph.
+**Current status (verified 2026-11-19 by a read-only count on the shipped
+database): both columns hold 0 non-null values.** Sections 9.2–9.3 describe the
+intended data model, not ingested genealogy data; this is a declared gap.
 
 ### 9.2 Genealogy rules
 
@@ -335,14 +338,21 @@ Wikidata QIDs are recorded for cross-referencing but do not establish genealogy.
 
 ### 9.4 Querying genealogy
 
-The GraphQL API exposes `previous_party_id` and `successor_party_id` on `PartyType`. A recursive query can traverse the full lineage:
+**The GraphQL API does not expose party genealogy.** Live introspection of
+`PartyType` on 2026-11-19 returned only `id`, `name`, `shortName`,
+`classification`, `color`, `wikidataQid`, `foundingDate`, `dissolutionDate` and
+`chamber`. Selecting `previous` or `successor` fails with `Cannot query field
+'previous' on type 'PartyType'`. Party genealogy is a declared data gap, not a
+queryable feature. The supported party query is:
 
 ```graphql
 query {
-  party(shortName: "PSD") {
+  parties(classification: "party", limit: 5) {
     shortName
-    previous { shortName previous { shortName } }
-    successor { shortName successor { shortName } }
+    name
+    wikidataQid
+    foundingDate
+    dissolutionDate
   }
 }
 ```
@@ -452,8 +462,6 @@ type PartyType {
   foundingDate: Date
   dissolutionDate: Date
   chamber: String
-  previous: PartyType
-  successor: PartyType
 }
 
 type SwitchWaveType {

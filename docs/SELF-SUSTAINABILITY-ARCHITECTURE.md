@@ -109,13 +109,14 @@ version is a release tag, not the word `latest`.
    Docker layer and makes the downloaded database reproducible. The build
    should record the selected tag in the image and expose it in health
    metadata.
-6. **Deploy and verify.** The marker update is committed to the connected
-   repository so Render's Git integration rebuilds the service. After deploy,
-   a bounded verification step checks `/api/health`, confirms the reported
-   dataset tag matches the release, and exercises a representative data API
-   route. If Render does not deploy the automation-generated commit in the
-   existing configuration, use a Render Deploy Hook from the workflow after
-   the marker commit; store its URL only as a GitHub Actions secret.
+6. **Deploy and verify (as implemented).** The marker update is committed with
+   `GITHUB_TOKEN`, which starts **neither CI nor Render's connected Git
+   deployment**. The data workflow therefore triggers Render explicitly through
+   its API (`POST /v1/services/{id}/deploys`, failing loudly on a non-2xx), then
+   polls `/api/health` until `dataset.release_tag` matches the release and a
+   representative data route responds. This is what `.github/workflows/data.yml`
+   does today; the earlier "the marker commit makes Render rebuild" description
+   was a design intent, not the shipped behaviour.
 7. **Retain a recovery window.** Preserve validated releases for rollback.
    This implementation does not automatically delete releases: pruning would
    remove recovery history and should be governed by a separately reviewed

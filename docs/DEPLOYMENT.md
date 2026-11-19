@@ -45,26 +45,17 @@ gh variable list -R nedaktov-ops/parlament-deschis
 1. Open a PR. CI runs `test`, `audit`, and `docker`; Vercel publishes a preview.
 2. Merge to `main`.
 3. CI runs again on the merge commit.
-4. Vercel builds only when `frontend/**` or `vercel.json` changed.
+4. Vercel builds the production deployment from `frontend/dist` on each deploy;
+   `vercel.json` sets `"ignoreCommand": ""`, so **no build is skipped** based on
+   changed paths.
 5. Render waits for GitHub checks, then deploys when they pass.
 6. `Deploy verify` runs after CI succeeds on `main` and proves the result
    against the public contract.
 7. The daily `Data` workflow validates a new corpus, publishes a release,
-   updates `data/latest-release.txt`, and waits up to 30 minutes for Render to
-   serve the new tag. Its marker push triggers CI, which triggers
-   `Deploy verify`.
-
-### Vercel build skipping
-
-`vercel.json` contains:
-
-```json
-"ignoreCommand": "git rev-parse HEAD^ >/dev/null 2>&1 && git diff --quiet HEAD^ HEAD -- frontend vercel.json"
-```
-
-Exit `0` skips the build; exit `1` builds. A backend-only or docs-only push
-therefore leaves the last good frontend deployment serving. The stable domain
-still returns the SPA, and `Deploy verify` accepts a skipped build.
+   updates `data/latest-release.txt`, then triggers Render **explicitly through
+   its API** and waits up to 30 minutes for the new tag. Its marker push uses
+   `GITHUB_TOKEN` and therefore starts **neither CI nor Render's Git
+   deployment**, so it does not itself trigger `Deploy verify`.
 
 ### Render deploy gating
 
@@ -104,9 +95,9 @@ gh workflow run platform-status.yml \
 
 ### Deploy verify (automatic)
 
-Triggered by `CI` completing successfully on `main`. It waits for the Render
-deploy matching the commit to become live, tolerates an intentionally skipped
-Vercel build, then checks:
+Triggered by `CI` completing successfully on `main` (a `workflow_run` trigger),
+or manually with `workflow_dispatch`. It waits for the Render deploy matching
+the commit to become live, then checks:
 
 - `/` returns the SPA shell;
 - `/api/health` through the Vercel rewrite exposes the pinned release;
@@ -196,8 +187,9 @@ Use the workflow first so the action is logged in GitHub.
 - `autoDeployTrigger: checksPass` is declared in `render.yaml`; whether it is
   applied depends on the service being Blueprint-managed. Confirm with
   `Platform status`.
-- `ignoreCommand` applies to Git deployments, not to `vercel deploy` from a
-  laptop.
+- `vercel.json` sets `"ignoreCommand": ""` — an empty command, so there is no
+  path-based build skipping to rely on (the former documented `git diff`
+  command is not present in the repository).
 - `Deploy verify` requires a Render deploy for the commit. If Render auto-deploy
   is set to `off`, verification fails until a deploy is triggered manually.
 - Free-tier cold starts make verification take minutes; the workflow allows 45.

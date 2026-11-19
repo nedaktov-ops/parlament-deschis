@@ -21,7 +21,7 @@
 - Scroll containers keyboard-focusable: party-timeline, coverage, institutional, timeline-chart
 - Electoral redirect URL encoding: `legislature=2024` unquoted
 - i18n: 0 missing keys, RO/EN parity confirmed
-- All 18 routes: 0 JS errors, 0 axe violations
+- UI validation: **currently FAILING** against production (re-run 2026-11-19). 3 of 18 routes — `/`, `/party/PSD`, `/person/cb5ca84e-7bba-4d0b-bea8-91b81aa8eb53` — log `Minified React error #310` and 2 moderate axe findings each. This is tracked as P0-1/P0-2 in `docs/REMEDIATION-STRATEGY.md`; the earlier "passing" claim was stale.
 
 ## 3. What remains for genuine 10x improvement (visual/UX)
 
@@ -46,7 +46,7 @@ Fix visual hierarchy, empty/loading/error states, mobile issues, focus managemen
 
 ### F3 — Verify
 - `cd frontend && npx tsc -b && npm run build`
-- `python3 scripts/ui_validate.py <base>` (18 routes, 0 JS errors, 0 axe)
+- `python3 scripts/ui_validate.py <base>` — target: 18 routes with no console errors and no axe violations. As of 2026-11-19 the production run FAILS on 3 routes (see §2); do not report a pass until P0-1/P0-2 land and the command is re-run.
 - Keyboard-only navigation check
 - Visual diff against pre-fix screenshots
 

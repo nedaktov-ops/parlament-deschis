@@ -22,9 +22,10 @@ scheduled publish cannot be the only route. The service must also be
 fail-closed: if collection or the strict audit fails, users keep getting the
 previous release rather than partial data.
 
-The current shipped release is `data-20261117-T060923` (commit `7bda52b`),
-carrying 3,388 persons / 7,358 memberships, 26 committees and 142 switch
-waves.
+The current shipped release is the tag pinned in `data/latest-release.txt`
+(read that file for the exact tag and provenance); at the time this ADR was
+written it carried 3,388 persons / 7,358 memberships, 26 committee
+organisations and 142 switch waves.
 
 ## Decision
 
@@ -34,14 +35,15 @@ with a dedicated commit:
 1. Build and audit the corpus locally (or via `workflow_dispatch` recovery
    path), including the strict audit gate; prepare the shippable database with
    `scripts/prepare_db.py`.
-2. Publish an immutable tag (`data-<timestamp>`, e.g.
-   `data-20261117-T060923`) with `parlament.db`, `manifest.jsonl` (every page
-   and its SHA-256) and `audit-report.json`.
+2. Publish an immutable tag (`data-<run-id>-<attempt>`) with `parlament.db`,
+   `manifest.jsonl` (every page and its SHA-256) and `audit-report.json`.
 3. Write the tag into `data/latest-release.txt` and commit it. The Docker build
    downloads that exact asset and verifies its SHA-256 before preparing the
    read-only database.
-4. The pin commit triggers the connected Render deploy; deploy verification
-   checks that `/api/health` reports the expected `dataset.release_tag`.
+4. The pin commit does **not** start CI or Render's Git deployment (it is pushed
+   with `GITHUB_TOKEN`). The data workflow triggers Render explicitly through its
+   API, then deploy verification checks that `/api/health` reports the expected
+   `dataset.release_tag` (see `.github/workflows/data.yml`).
 5. Rollback is `git revert` of the pin commit — the previous release asset and
    tag remain available. No data is rewritten in place.
 

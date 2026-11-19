@@ -2,7 +2,10 @@
 
 Base URL: `/api`
 
-All endpoints return JSON. Errors follow RFC 7807 (`application/problem+json`).
+All endpoints return JSON. Errors are plain FastAPI-style JSON:
+`content-type: application/json` with a `{"detail": "..."}` body. They are **not**
+RFC 7807 / `application/problem+json` (verified with a live 404 on 2026-11-19:
+`{"detail":"not found"}`). See [Error responses](#error-responses).
 
 ---
 
@@ -154,12 +157,18 @@ are counted once per party. For a legislature, ages are measured at its end
 ```
 
 Committee data is now part of the corpus (release pinned in
-`data/latest-release.txt`): `GET /api/committees` lists committees with active
-dated memberships (26 in the current release), `GET /api/committees/{committee_id}/members`
-returns a committee's dated member ledger, and `GET /api/analytics/committee-control`
-derives per-party chair counts from dated `role='presedinte'` rows. Bureau data
-is not separately ingested. This section formerly documented an empty list
-pending ingest; that limitation no longer applies.
+`data/latest-release.txt`). Three live counts measure different things and must
+not be confused (all verified by GET on 2026-11-19):
+
+| Endpoint / field | Value | What it counts |
+|---|---:|---|
+| `GET /api/dashboard/stats` → `data.committees` | 26 | **All** `organization` rows with `classification='committee'` in the corpus |
+| `GET /api/committees` | 23 | Committees with active dated memberships (the array length) |
+| `GET /api/analytics/committee-control` → `data.total_committees` | 9 | Committees with a dated `role='presedinte'` chair (5 parties) |
+
+`GET /api/committees/{committee_id}/members` returns a committee's dated member
+ledger. Bureau data is not separately ingested. This section formerly documented
+an empty list pending ingest; that limitation no longer applies.
 
 ---
 
@@ -189,8 +198,10 @@ Example queries:
     shortName
     name
     color
-    previous { shortName }
-    successor { shortName }
+    wikidataQid
+    foundingDate
+    dissolutionDate
+    chamber
   }
 }
 
@@ -227,17 +238,40 @@ CSV exports: `persons`, `organizations`, `posts`, `memberships`, `events`.
 
 ---
 
-## Error Responses
+## Additional live endpoints
 
-All errors follow RFC 7807:
+These paths are served by the API but were missing from earlier versions of this
+reference. All are present in the live `/openapi.json` (40 paths, checked
+2026-11-19):
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/dashboard/stats` | Dashboard counts (see the committee-count table above); `computed_at` is regenerated per request |
+| `GET /api/health/live` | Liveness probe |
+| `GET /api/health/ready` | Database-readiness probe (also the Render healthcheck path) |
+| `GET /api/mps` | MP biography cards, filterable/sortable (including by `committees`) |
+| `GET /api/parties` | Party list used by the UI |
+| `GET /api/traseism/overview` | Traseism overview (`party`, `by_party`, `matrix`, `timing`) |
+| `GET /api/traseism/summary` | Per-scope traseism summary |
+| `GET /api/traseism/switches` | Dated switch events with filters |
+| `GET /api/analytics/party-timeline` | Party group-size timeline |
+| `GET /api/analytics/switch-leaderboard` | MPs ranked by switch count |
+| `GET /api/export/report` | Aggregated transparency report |
+
+## Error responses
+
+All errors use plain FastAPI `HTTPException` JSON with
+`content-type: application/json`. A live 404 returns:
+
 ```json
-{
-  "type": "https://example.com/probs/validation-error",
-  "title": "Invalid date",
-  "status": 422,
-  "detail": "invalid date: not-a-date",
-  "instance": "/api/chamber"
-}
+{"detail":"not found"}
 ```
 
-Common codes: `400` (bad request), `401` (unauthorized), `404` (not found), `422` (validation), `500` (server error), `503` (admin disabled).
+Validation and authorization errors share that shape — for example
+`{"detail":"invalid date: not-a-date"}` (422) and
+`{"detail":"invalid admin token"}` (401). There is no `type`, `title`, `status`
+or `instance` wrapper, and no `application/problem+json` content type.
+
+Codes observed in the live API / source: `401` (unauthorized), `404` (not
+found), `405` (wrong method on a write route), `422` (validation), `502`
+(upstream poll failed), `503` (admin disabled).

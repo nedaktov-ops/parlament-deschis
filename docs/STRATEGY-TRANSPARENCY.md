@@ -3,6 +3,16 @@
 
 *Last updated: 2026-11-17*
 
+> **Current-state banner (2026-11-19).** This is the original 15-feature
+> strategy, retained as a historical record. Several "PASS", "Pending: none"
+> and unverified-source claims below were true when written but are **not** true
+> of the shipped service. Live corrections: production UI validation currently
+> **FAILS** on 3 of 18 routes with React #310 (P0-1/P0-2); `uv run pytest -q` is
+> 259 passed; no third-party current-MP API integration exists or is planned;
+> the release tag is
+> pinned in `data/latest-release.txt`. Numbers below are historical unless the
+> text explicitly says "live" with a 2026-11-19 check.
+
 ## Executive Summary
 
 This strategy delivers **15 transparency features** enabling voters to draw meaningful conclusions about Romanian parliamentary politics — **without** collecting every possible data point. The project has solid infrastructure (pipeline, DB, API, frontend) but its core mission was failing: users couldn't draw useful conclusions.
@@ -13,7 +23,6 @@ This strategy delivers **15 transparency features** enabling voters to draw mean
 - 3113/3388 persons have birth_date (92%) — from cdep.ro committee ledgers 1990-2024
 - 1217 switch_group events — our pipeline, proven
 - 1217 switch events across 11 legislatures — proven data
-- 469 current MPs from 281.ro API — CC-BY 4.0, party + county + chamber
 - Committee data: fixed parsers, 28/28 tests pass for committee list/ledger
 - Senate historical: explicitly documented gaps, no fake data
 
@@ -33,7 +42,6 @@ This strategy delivers **15 transparency features** enabling voters to draw mean
 | Memberships | 7358 | `membership` table |
 | Committees (2024) | 26 | `cdep_committee.py` parsers fixed (28/28 tests) |
 | Committees (1990) | 18 | `cdep_committee.py` parsers fixed (28/28 tests) |
-| Current MPs (281.ro API) | 469 | JSON API, CC-BY 4.0 |
 | Senate historical (1990-2024) | Coverage table exists | `coverage` table, group ledger counts |
 | Senate historical (pre-1990) | Outside scope | Different regime |
 | Senate historical (2024 only) | 134 GUIDs | `senat.py` two-step POST flow live-proven |
@@ -87,10 +95,8 @@ This strategy delivers **15 transparency features** enabling voters to draw mean
 | Source | What We Get | License | Effort | Sustainability |
 |--------|-------------|---------|--------|----------------|
 | **cdep.ro committee ledgers** | Committee membership 1990-2024 | Public HTML | 1 day (parsers fixed) | High (our scraper) |
-| **281.ro API** | Current MPs: party, county, chamber | CC-BY 4.0 | 1 day (API client) | High (open source) |
 | **Wikidata** | QIDs, birth dates, photos, party history | CC0 | 2 days (cache completion) | Very High (Wikimedia endowment) |
 | **Our pipeline** | Events, mandates, memberships | Our DB | 0 days (already working) | High |
-| **281.ro methodology** | How data is collected | Open source algorithms | — | High (community-maintained) |
 
 **Key insight**: We're not introducing new data sources — we're completing the data model that already exists and building question-driven UI on top.
 
@@ -423,16 +429,22 @@ def run_load_test():
 | **UI** | Component removal/restoration | 10-15 minutes | Feature doesn't match user needs |
 | **Deploy** | Feature flag off / rollback deployment | 10-20 minutes | Production issue, critical bug |
 
-### Validation Before Merge (MANDATORY) — ✅ all five passed 2026-11-17
+### Validation Before Merge (MANDATORY) — recorded 2026-11-17; gates 2 and 5 are RED today
+
+The results below were captured on 2026-11-17. Re-running the same commands on
+2026-11-19 showed that gates 2 (UI) and 5 (accessibility) have regressed in the
+shipped production build; see the inline corrections and `docs/DASHBOARD-VERIFICATION.md`.
 
 1. **SQL validation** — PASS. Counted from `data/parlament-real.db` (API-serving DB):
    `person` 3388, `membership` 7358, `event` 7429, `organization` 120,
    `switch_wave` 142, `switch_group` events 1217. Every feature query executed
    through `/api/export/report` returned 200 with non-empty blocks.
-2. **UI validation** — PASS. `python3 scripts/ui_validate.py` (Playwright +
-   Chromium): **18 routes rendered, 0 JS errors** (no `console.error`, no
-   uncaught `pageerror`). Covers every feature route plus the dynamic
-   `/person/:id`, `/party/:shortName`, `/legislature/:year`.
+2. **UI validation — currently FAILING (re-run 2026-11-19).**
+   `python3 scripts/ui_validate.py https://parlament-deschis.vercel.app` renders
+   18 routes but reports `UI VALIDATION FAIL`: 3 routes (`/`, `/party/PSD`,
+   `/person/cb5ca84e-7bba-4d0b-bea8-91b81aa8eb53`) each log one `console.error`
+   with `Minified React error #310`. The 2026-11-17 "PASS" result is stale;
+   P0-1/P0-2 track the fix.
 3. **Data validation** — PASS. Historical baseline 3381 persons / 6623 memberships changed
    **intentionally** with Feature 2 (cdep.ro committee ingestion: 26 committees,
    735 memberships, 7 persons) → current 3388 / 7358. Events unchanged at 7429.
@@ -443,8 +455,11 @@ def run_load_test():
    900 requests, 0 errors**. Before the fix: p95 5262 ms (15 req/s). The N+1 in
    `/api/parties` and per-row queries in the leaderboard were batched, and a
    TTL result cache was added with invalidation on admin writes.
-5. **Accessibility** — PASS. axe-core 4.10.2 injected on every route in the
-   UI validation run: **0 violations** across all 18 routes. Fixed 5 classes
+5. **Accessibility — currently not clean (re-run 2026-11-19).** The 2026-11-17
+   run was PASS; today's UI-validation run reports 2 moderate axe findings
+   (`landmark-one-main`, `page-has-heading-one`) on each of the 3 routes that
+   crash with React #310, while the other 15 routes are clean. The five classes
+   of findings fixed at the time were real:
    of findings: `bg-sky-600` buttons (4.09:1 → `bg-sky-700`, 5.86:1),
    inherited `text-slate-400` on pagination buttons (4.03:1 → `text-slate-300`,
    6.99:1), zero-switch badges on `/mps` (55 nodes, same fix), party-coloured
@@ -455,27 +470,33 @@ def run_load_test():
 ### Final check-in — 2026-11-17
 
 - **Completed**: all 15 features from the tables above, each in its own commit.
-- **Pending**: none. (Party merger/split succession is a declared data gap —
-  0 predecessor/successor rows, 0 dissolution dates — delivered as the honest
-  observed-span timeline on `/party-timeline`, not a fabricated graph.)
+- **Pending (as of 2026-11-19)**: party merger/split succession is still a
+  declared data gap — 0 predecessor/successor links, 0 dissolution dates — and
+  the 3 production routes crashing with React #310 are tracked as P0-1/P0-2.
+  The original "Pending: none" line was contradictory; succession was never
+  delivered as an ingested feature, only as the honest observed-span timeline
+  on `/party-timeline`.
 - **Blockers**: none. The Data workflow's GitHub runner could not reach
   cdep.ro (`ConnectTimeout` on `leg=1990`), so its rebuild failed twice;
   the source was reachable from the dev host. Recovery: a shippable DB was
   prepared locally from the already-verified enriched corpus and published
-  as release `data-20261117-T060923` (release notes record provenance).
-- **Production release (verified live, not assumed)**: pinned marker
-  `data-20261117-T060923`; `/api/health` reports 3388 persons / 7358 memberships;
+  as the release recorded in the 2026-11-17 release notes (the current tag is
+  pinned in `data/latest-release.txt`).
+- **Production release (verified live 2026-11-19)**: pinned marker is in
+  `data/latest-release.txt`; `/api/health` reports 3388 persons / 7358 memberships;
   `/api/committees` 23, `/api/analytics/switch-waves` 142,
-  `/api/analytics/committee-control` 26 committees / 8 parties,
-  `/api/export/report` totals match the local DB. Before this release those
+  `/api/analytics/committee-control` 9 committees / 5 parties (live GET),
+  `/api/export/report` totals match the local DB. Before that release those
   endpoints returned **0** — the first pinned dataset predated committee
   ingestion and wave derivation. The root cause was fixed in `build-corpus`
   (committee ingest + wave derivation, strict completeness gates), so every
   future workflow-built release carries the data automatically.
-- **Data validated**: 199 pytest tests pass; `ruff check pipeline backend
-  scripts tests` clean; `npm run build` passes; 50-user load test p95 332 ms;
-  production UI scan 18 routes / 0 JS errors / 0 axe violations; strict audit
-  on the shippable release DB: 275 known errors, 0 new.
+- **Data validated**: 259 pytest tests pass (re-run 2026-11-19);
+  `ruff check pipeline backend scripts tests` clean; `npm run build` passes;
+  50-user load test p95 332 ms (2026-11-17 result); production UI scan currently
+  FAILS on 3 of 18 routes with React #310 and 2 moderate axe findings each
+  (re-run 2026-11-19); strict audit on the shippable release DB: 275 known
+  errors, 0 new.
 - **Rollbacks**: no data rollback needed (all ingestion backed up and audited).
   If a deployment regresses, revert the pin commit to restore the previous
   release; code rollback = `git revert <commit>`; committee data =
@@ -527,7 +548,7 @@ I'm now deploying subagents to execute all 15 features. Each subagent works inde
 
 **Gates (final, post-merge on `main` @ `53c3ece`)**:
 - ruff clean · pytest **259 passed** · YAML valid · LiveFeed guard **PASS** · tsc clean · build OK
-- **Production UI scan: 18 routes / 0 JS errors / 0 axe violations** · prod API `/api/health` ok · release pin `data-20261117-T060923` unchanged
+- **Production UI scan: FAILS on 3 of 18 routes (React #310; re-run 2026-11-19)** · prod API `/api/health` ok · release pin in `data/latest-release.txt` unchanged
 - Post-merge CI on `main`: **success** (audit, test, evidence-guards, docker)
 
 **Not done in Phase 2 (by design, follow-ups)**: no data churn / no new dataset release (P3-D DB values); Dockerfile in-build download auth; frontend unit-test framework.

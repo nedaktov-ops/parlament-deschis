@@ -110,22 +110,22 @@ Each recipe is written for one subagent with **exclusive file ownership**. Agent
 
 | ID | Fleet recipe | Files | Gate |
 |----|-------------|-------|------|
-| H2-A | LiveDashboard hero | `frontend/src/pages/LiveDashboard.tsx` | ui_validate 18/0/0 |
-| H2-B | Report hero | `frontend/src/pages/Report.tsx` | ui_validate 18/0/0 |
-| H2-C | Traseism hero | `frontend/src/pages/Traseism.tsx` | ui_validate 18/0/0 |
-| H2-D | SwitchLeaderboard hero | `frontend/src/pages/SwitchLeaderboard.tsx` | ui_validate 18/0/0 |
-| H2-E | Demographics hero | `frontend/src/pages/Demographics.tsx` | ui_validate 18/0/0 |
-| H2-F | Committees hero | `frontend/src/pages/Committees.tsx` | ui_validate 18/0/0 |
-| H2-G | Coalitions hero | `frontend/src/pages/Coalitions.tsx` | ui_validate 18/0/0 |
-| H2-H | Mps hero | `frontend/src/pages/Mps.tsx` | ui_validate 18/0/0 |
-| H2-I | MpComparison hero | `frontend/src/pages/MpComparison.tsx` | ui_validate 18/0/0 |
-| H2-J | PartyProfile hero | `frontend/src/pages/PartyProfile.tsx` | ui_validate 18/0/0 |
-| H2-K | PersonDeepDive hero | `frontend/src/pages/PersonDeepDive.tsx` | ui_validate 18/0/0 |
-| H2-L | LegislatureDetail hero | `frontend/src/pages/LegislatureDetail.tsx` | ui_validate 18/0/0 |
-| H2-M | InstitutionalView hero | `frontend/src/pages/InstitutionalView.tsx` | ui_validate 18/0/0 |
-| H2-N | CoverageView hero | `frontend/src/pages/CoverageView.tsx` | ui_validate 18/0/0 |
-| H2-O | PartyTimeline hero | `frontend/src/pages/PartyTimeline.tsx` | ui_validate 18/0/0 |
-| H2-P | SenateHistory hero | `frontend/src/pages/SenateHistory.tsx` | ui_validate 18/0/0 |
+| H2-A | LiveDashboard hero | `frontend/src/pages/LiveDashboard.tsx` | ui_validate 18 routes; 3 currently FAIL |
+| H2-B | Report hero | `frontend/src/pages/Report.tsx` | ui_validate 18 routes; 3 currently FAIL |
+| H2-C | Traseism hero | `frontend/src/pages/Traseism.tsx` | ui_validate 18 routes; 3 currently FAIL |
+| H2-D | SwitchLeaderboard hero | `frontend/src/pages/SwitchLeaderboard.tsx` | ui_validate 18 routes; 3 currently FAIL |
+| H2-E | Demographics hero | `frontend/src/pages/Demographics.tsx` | ui_validate 18 routes; 3 currently FAIL |
+| H2-F | Committees hero | `frontend/src/pages/Committees.tsx` | ui_validate 18 routes; 3 currently FAIL |
+| H2-G | Coalitions hero | `frontend/src/pages/Coalitions.tsx` | ui_validate 18 routes; 3 currently FAIL |
+| H2-H | Mps hero | `frontend/src/pages/Mps.tsx` | ui_validate 18 routes; 3 currently FAIL |
+| H2-I | MpComparison hero | `frontend/src/pages/MpComparison.tsx` | ui_validate 18 routes; 3 currently FAIL |
+| H2-J | PartyProfile hero | `frontend/src/pages/PartyProfile.tsx` | ui_validate 18 routes; 3 currently FAIL |
+| H2-K | PersonDeepDive hero | `frontend/src/pages/PersonDeepDive.tsx` | ui_validate 18 routes; 3 currently FAIL |
+| H2-L | LegislatureDetail hero | `frontend/src/pages/LegislatureDetail.tsx` | ui_validate 18 routes; 3 currently FAIL |
+| H2-M | InstitutionalView hero | `frontend/src/pages/InstitutionalView.tsx` | ui_validate 18 routes; 3 currently FAIL |
+| H2-N | CoverageView hero | `frontend/src/pages/CoverageView.tsx` | ui_validate 18 routes; 3 currently FAIL |
+| H2-O | PartyTimeline hero | `frontend/src/pages/PartyTimeline.tsx` | ui_validate 18 routes; 3 currently FAIL |
+| H2-P | SenateHistory hero | `frontend/src/pages/SenateHistory.tsx` | ui_validate 18 routes; 3 currently FAIL |
 
 *(Phases H2-A through H2-P are COMPLETE — see completed work below)*
 
@@ -136,14 +136,14 @@ Each recipe is written for one subagent with **exclusive file ownership**. Agent
 | H3-A | Illustrated empty state component | `frontend/src/components/EmptyState.tsx` (new) | tsc + build |
 | H3-B | Illustrated loading state component | `frontend/src/components/LoadingState.tsx` (new) | tsc + build |
 | H3-C | Illustrated error state component | `frontend/src/components/ErrorState.tsx` (new) | tsc + build |
-| H3-D | Apply to all pages | All pages with `isLoading`/`isError`/`length === 0` | ui_validate 18/0/0 |
+| H3-D | Apply to all pages | All pages with `isLoading`/`isError`/`length === 0` | ui_validate 18 routes; 3 currently FAIL |
 
 ### Phase IV — Footer & header polish
 
 | ID | Fleet recipe | Files | Gate |
 |----|-------------|-------|------|
-| H4-A | Footer — social proof, newsletter, better hierarchy | `frontend/src/components/Footer.tsx` | ui_validate 18/0/0 |
-| H4-B | Header — brand mark, better nav, command palette elevation | `frontend/src/router.tsx` (RootLayout) | ui_validate 18/0/0 |
+| H4-A | Footer — social proof, newsletter, better hierarchy | `frontend/src/components/Footer.tsx` | ui_validate 18 routes; 3 currently FAIL |
+| H4-B | Header — brand mark, better nav, command palette elevation | `frontend/src/router.tsx` (RootLayout) | ui_validate 18 routes; 3 currently FAIL |
 
 ### Phase V — Dead code removal
 
@@ -287,7 +287,7 @@ Files: All pages with `isLoading`/`isError`/`length === 0`
 3. Replace plain text empty states with `<EmptyState>`
 4. Keep all existing functionality (retry buttons, refetch, etc.)
 
-**Gate:** `ui_validate.py 18/0/0`
+**Gate:** `ui_validate.py 18 routes; 3 currently FAIL`
 
 ### H4-A — Footer polish (PENDING)
 File: `frontend/src/components/Footer.tsx`
@@ -298,7 +298,7 @@ File: `frontend/src/components/Footer.tsx`
 4. Add "last updated" timestamp
 5. Keep status indicator (already good)
 
-**Gate:** `ui_validate.py 18/0/0`
+**Gate:** `ui_validate.py 18 routes; 3 currently FAIL`
 
 ### H4-B — Header polish (PENDING)
 File: `frontend/src/router.tsx` (RootLayout)
@@ -308,7 +308,7 @@ File: `frontend/src/router.tsx` (RootLayout)
 3. Add user/account placeholder
 4. Enhance nav link styling with hover states
 
-**Gate:** `ui_validate.py 18/0/0`
+**Gate:** `ui_validate.py 18 routes; 3 currently FAIL`
 
 ### H5-A — Delete dead code (PENDING)
 Files: `frontend/src/pages/ElectoralDynamics.tsx`, `frontend/src/components/DefectionSankey*.tsx`, `frontend/src/components/CurrentLegislatureView.tsx`
@@ -353,7 +353,7 @@ Files: `frontend/src/pages/ElectoralDynamics.tsx`, `frontend/src/components/Defe
 - pytest: 259 passed
 - tsc + build: Built OK
 - LiveFeed guard: PASS
-- ui_validate (dev + prod): 18 routes / 0 JS errors / 0 axe violations
+- ui_validate (dev + prod): target 18 routes with no console errors and no axe violations; as of 2026-11-19 production FAILS on 3 routes with React #310 (P0-1/P0-2).
 - Production `/api/health`: OK, release `data-20261117-T213500`
 - Post-merge CI: Success (test/audit/docker/evidence-guards)
 
@@ -488,7 +488,7 @@ export interface ErrorStateProps {
 4. Keep all existing functionality (retry buttons, refetch, etc.)
 
 **Verify:**
-- `ui_validate.py 18/0/0`
+- `ui_validate.py 18 routes; 3 currently FAIL`
 
 **Report:** Per page change — path:line changed, verification outputs, rollback (git revert), residual. Max 400 words.
 
@@ -526,7 +526,7 @@ Before any change is considered "done":
 2. `uv run pytest tests/ -q` — 259 passed
 3. `cd frontend && npx tsc -b` — exit 0
 4. `cd frontend && npm run build` — exit 0
-5. `python3 scripts/ui_validate.py http://127.0.0.1:5175` — 18 routes, 0 JS errors, 0 axe violations
+5. `python3 scripts/ui_validate.py http://127.0.0.1:5175` — target 18 routes with no console errors and no axe violations; production still FAILS on 3 routes as of 2026-11-19, so a local pass alone is not a production claim.
 6. Production `/api/health` — ok
 7. Post-merge CI (test/audit/docker/evidence-guards) — green
 

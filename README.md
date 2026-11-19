@@ -30,7 +30,7 @@ The denominator is **members at risk**: distinct people who held a group seat in
 
 ## Data: real, source-cited, with known limitations
 
-- **3,388 persons**, **7,358 memberships** (100% carry source URL + SHA-256 evidence), **7,429 events**, **1,217 switches** across all 20 scopes. Counts are from the release pinned in `data/latest-release.txt` (currently `data-20261117-T060923`).
+- **3,388 persons**, **7,358 memberships** (100% carry source URL + SHA-256 evidence), **7,429 events**, **1,217 switches** across all 20 scopes. Counts are from the release pinned in `data/latest-release.txt`; read that file for the current tag — do not hard-code a tag in documentation.
 - Primary source: `cdep.ro` — group ledgers (`structura2015.gp`) publish dated membership intervals ("Membru din" / "până în"); MP profiles (`structura2015.mp`) link every mandate a person ever held (`idm` is per-mandate, so identity is resolved via the mandate graph, never by name).
 - The group index **omits** groups that no longer exist (e.g. the 2016–2020 Deputies ALDE group). The collector probes the id space to find them: **15 hidden groups across 10 scopes**.
 - The alphabetical roster (`structura2015.de?par=A`) is a second view of the same data; the three views are reconciled against each other (group page vs. index count vs. roster). **141 of 143 groups reconcile exactly**; the 2 exceptions are documented source inconsistencies.
@@ -89,8 +89,10 @@ the read-only database. The data workflow revalidates current-legislature
 pages daily and historical pages every 30 days by default; HTTP validators
 avoid redownloading unchanged pages. New releases are published only after
 source collection, database integrity, and strict audit gates pass. Updating
-the pinned release marker triggers Render's connected Git deployment, which
-is then checked against the expected release tag. The API reports liveness at
+the pinned release marker does **not** by itself start CI or Render's Git
+deployment: the push uses `GITHUB_TOKEN` (which starts neither), so the data
+workflow triggers Render explicitly through its API and then verifies the
+expected `dataset.release_tag` (see `.github/workflows/data.yml`). The API reports liveness at
 `/api/health/live`, database readiness at `/api/health/ready`, and dataset
 identity/publication metadata at `/api/health`.
 

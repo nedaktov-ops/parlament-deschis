@@ -294,7 +294,7 @@ Raw API Data → Transformation Hooks → Visualization Components → Interacti
 - [x] `tsc --noEmit` passes ✓
 - [x] `npm run build` succeeds ✓
 - [ ] `npm test` passes
-- [ ] `ui_validate.py` shows 0 JS errors, 0 axe violations across 18 routes
+- [ ] `python3 scripts/ui_validate.py <base>` shows 18 routes with no console errors and no axe violations. As of 2026-11-19 this check FAILS in production on 3 routes (`/`, `/party/PSD`, `/person/cb5ca84e-…`, React #310), so the box stays unticked until P0-1/P0-2 land and the command is re-run.
 
 **Checkpoint 6**: All quality gates pass
 

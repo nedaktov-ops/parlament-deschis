@@ -11,8 +11,10 @@ The findings below are the 2026-11-13 baseline. Two of them are now **resolved**
 as current defects:
 
 - §2.5 "derive_committee_control is a stub returning `0`" — **resolved**: `pipeline/analytics.py::derive_committee_control`
-  now derives per-party chair counts from dated `role='presedinte'` committee memberships (26 chair rows,
-  26 committees in the shipped release `data-20261117-T060923`).
+  now derives per-party chair counts from dated `role='presedinte'` committee memberships. A live GET of
+  `/api/analytics/committee-control` on 2026-11-19 returned 9 chairs across 9 committees and 5 parties;
+  `/api/dashboard/stats` separately counts 26 committee organisations in the corpus. The current release
+  tag is pinned in `data/latest-release.txt` (read that file; do not hard-code it in docs).
 - §3 "`GET /api/committees` returns `[]`" — **resolved**: the route now returns committees with active
   dated memberships; `/api/analytics/committee-control` is served and the corpus holds 142 switch waves.
 

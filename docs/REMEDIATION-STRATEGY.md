@@ -82,10 +82,10 @@ Each recipe below is written for one subagent with **exclusive file ownership**.
 ## 5. Global acceptance gates (every phase)
 
 1. `uv run ruff check pipeline backend scripts tests` — clean.
-2. `uv run pytest tests/ -q` — no new failures; baseline currently 199 passed.
+2. `uv run pytest -q` — no new failures; latest integration-tree run 2026-11-19: 259 passed.
 3. `npm run build` — passes (tsc + vite).
-4. `python3 scripts/ui_validate.py http://127.0.0.1:5174` — 18 routes, 0 JS errors, 0 axe violations, for any frontend change.
-5. PR CI (`test`, `audit`, `docker`) green; squash-merge; production health + endpoints still serving pinned release `data-20261117-T060923` until a data change is explicitly approved.
+4. `python3 scripts/ui_validate.py http://127.0.0.1:5174` — target: 18 routes with no console errors and no axe violations, for any frontend change. As of 2026-11-19 the production run FAILS on 3 routes (React #310), so this gate is RED until P0-1/P0-2 land.
+5. PR CI (`test`, `audit`, `docker`) green; squash-merge; production health + endpoints still serving the release pinned in `data/latest-release.txt` until a data change is explicitly approved.
 6. Every commit message states: finding ID, root cause, evidence, gate output, rollback (revert hash).
 
 ## 6. Rollback matrix
@@ -129,7 +129,7 @@ Re-verified on merged `main` (`1f4df92`) on 2026-11-17, not assumed. Each item b
 - **No guessed hashes/secrets:** action SHAs and new credentials are only introduced with a resolvable source.
 
 ### Phase 2 acceptance
-All §5 global gates stay mandatory; additionally: 0 dead-module imports, 0 missing i18n keys (`/tmp/i18n-extract.mjs`), `ui_validate.py` 18/18, PR CI `test`+`audit`+`docker` green, production health unchanged until an explicit data release.
+All §5 global gates stay mandatory; additionally: 0 dead-module imports, 0 missing i18n keys (`/tmp/i18n-extract.mjs`), `ui_validate.py` 18/18 is the target but is RED today (3 routes fail with React #310), PR CI `test`+`audit`+`docker` green, production health unchanged until an explicit data release.
 
 ### Phase 2.5 — Fresh dataset release (P3-D propagation) — delivered 2026-11-17
 
@@ -147,3 +147,19 @@ All §5 global gates stay mandatory; additionally: 0 dead-module imports, 0 miss
 **Gates:** strict audit exit 0 · prepare verified · prod health ok on new release · prod endpoints serving new data (committees, waves, events).
 
 **Residual:** scheduled/automated data refresh remains best-effort pending `cdp.ro` availability; recovery path = local rebuild + publish (as executed).
+
+---
+
+## 9. Known residuals — false source comments (documentation-only pass)
+
+The documentation-truthfulness pass (P0-6) does not own code files, so the two
+verifiably false comments below are recorded here for their code owners instead
+of being silently left in place. Both were read directly on 2026-11-19.
+
+| Location | False text | Verified truth | Owner |
+|---|---|---|---|
+| `pipeline/cli.py:611-614` | "verified on the 2026-11-17 release: `/api/committees = 0`, `/api/analytics/switch-waves = 0`" | Live 2026-11-19: `/api/committees` returns 23 entries; `/api/analytics/switch-waves` returns 142. Zeroes were true only of the *first* release. | P0-3 |
+| `backend/routers/api.py:337-341` (docstring of `committees()`) | "Committee tenures are not ingested yet, so the current corpus returns an empty list" | Live 2026-11-19: the route returns 23 committees with active dated memberships. | Lead at integration (no Wave 1 owner) |
+
+No code was modified by P0-6. Re-check these comments after the owning parts
+land; remove them from this table only when the source has been corrected.

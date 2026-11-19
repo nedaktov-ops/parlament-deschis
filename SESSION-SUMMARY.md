@@ -1,6 +1,6 @@
 # Session Summary — Data Completeness Recovery
 
-> **Current-state banner (2026-11-17).** This summary records the 2026-11-16 session; its counts, release tag and "declared gaps" are historical, not the shipped state. The release pinned today in `data/latest-release.txt` is `data-20261117-T060923` with **3,388 persons / 7,358 memberships**, **26 committees** and **142 switch waves**; committee list and control endpoints are now served. Lines marked "as of 2026-11-16" below are preserved as original evidence.
+> **Current-state banner (2026-11-17).** This summary records the 2026-11-16 session; its counts, release tag and "declared gaps" are historical, not the shipped state. The release pinned today in `data/latest-release.txt` (read that file for the exact tag) has **3,388 persons / 7,358 memberships**, **26 committee organisations** and **142 switch waves**; committee list and control endpoints are now served. Lines marked "as of 2026-11-16" below are preserved as original evidence.
 
 **Date:** 2026-11-16  
 **Branch:** `fix/data-completeness-recovery`  
@@ -45,9 +45,9 @@
 
 ## Test Results
 
-- **193 passed**, 3 expected failures (Senate source tests encoding old broken behavior)
+- **259 passed**, 0 expected failures in the latest `uv run pytest -q` run; the three Senate source tests that once encoded the old broken behavior were subsequently fixed (they are counted as passing today).
 - `ruff check`: clean on all 14 touched code files
-- Production *(as of 2026-11-16)*: `/api/health` → `status: ok`, persons 3381, memberships 6623, release `data-20261115-T203142`, asset SHA-256 `a4b0476c...` ✅ *(current release: 3,388 / 7,358, `data-20261117-T060923` — see banner)*
+- Production *(as of 2026-11-16)*: `/api/health` → `status: ok`, persons 3381, memberships 6623, release `data-20261115-T203142`, asset SHA-256 `a4b0476c...` ✅ *(current release: 3,388 / 7,358; read `data/latest-release.txt` for the exact tag)*
 
 ## Declared Gaps (honest)
 
@@ -58,6 +58,6 @@
 
 ## Production Status
 
-- Pinned to `data-20261115-T203142` *(as of 2026-11-16; current pin `data-20261117-T060923` — see banner)*; Render live, Vercel unchanged (no frontend change)
-- No data degradation; audit gate green (273 known errors, 0 new errors on re-ingest)
+- Pinned to `data-20261115-T203142` *(as of 2026-11-16; current pin is in `data/latest-release.txt`)*; Render live, Vercel unchanged (no frontend change)
+- No data degradation; audit gate green (275 known errors, 0 new errors on re-ingest)
 - All quality checks pass

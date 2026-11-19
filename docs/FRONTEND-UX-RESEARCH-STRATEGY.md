@@ -36,7 +36,7 @@
 
 ### G3 — Verify
 - `cd frontend && npx tsc -b && npm run build`
-- `python3 scripts/ui_validate.py <base>` (18 routes, 0 JS errors, 0 axe)
+- `python3 scripts/ui_validate.py <base>` — target: 18 routes with no console errors and no axe violations. As of 2026-11-19 the production run FAILS on 3 routes (React #310); see `docs/FRONTEND-IMPROVEMENT-STRATEGY.md`.
 - Cross-reference every recommended change against `docs/FRONTEND-IMPROVEMENT-STRATEGY.md`
 
 ## 3. G1 findings summary (evidence from fleet)

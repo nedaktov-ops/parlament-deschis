@@ -1,6 +1,6 @@
 # 10x Sprint Specification — Detailed Acceptance Criteria
 
-> **Current-state banner (2026-11-17).** This is the original sprint specification, retained as a historical record; its figures are as observed at the time, not the shipped state. The release pinned in `data/latest-release.txt` (`data-20261117-T060923`) carries **3,388 persons / 7,358 memberships**, **3,113/3,388 persons with a birth date** (92%), **26 committees** and **142 switch waves**. Senate historical *discovery* was later fixed (128 GUIDs for 1990, 134 for 2024); ingest is deferred on identity/name-overlap risk, not source unavailability — see `docs/DATA-COMPLETENESS-RECOVERY.md`. Party-genealogy columns exist but hold **0 links** (declared gap below). Active work is tracked in `docs/REMEDIATION-STRATEGY.md`.
+> **Current-state banner (2026-11-17).** This is the original sprint specification, retained as a historical record; its figures are as observed at the time, not the shipped state. The release pinned in `data/latest-release.txt` (read that file for the exact tag) carries **3,388 persons / 7,358 memberships**, **3,113/3,388 persons with a birth date** (92%), **26 committees** and **142 switch waves**. Senate historical *discovery* was later fixed (128 GUIDs for 1990, 134 for 2024); ingest is deferred on identity/name-overlap risk, not source unavailability — see `docs/DATA-COMPLETENESS-RECOVERY.md`. Party-genealogy columns exist but hold **0 links** (declared gap below). Active work is tracked in `docs/REMEDIATION-STRATEGY.md`.
 
 **Branch Strategy:**
 - `main` — production-ready

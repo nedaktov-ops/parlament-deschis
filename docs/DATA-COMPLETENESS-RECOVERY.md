@@ -1,6 +1,6 @@
 # Data Completeness Recovery — Action Plan
 
-> **Current-state banner (2026-11-17).** This is the historical recovery plan, captured 2026-11-15/16. Its release tag, counts, "in progress" status and evidence rows are as-of-that-date records, not the shipped state. The release pinned today in `data/latest-release.txt` is `data-20261117-T060923` (3,388 persons / 7,358 memberships, 26 committees, 142 switch waves). The E1 baseline counts below are explicitly historical evidence. Do not read this plan as current status.
+> **Current-state banner (2026-11-17).** This is the historical recovery plan, captured 2026-11-15/16. Its release tag, counts, "in progress" status and evidence rows are as-of-that-date records, not the shipped state. The release pinned today in `data/latest-release.txt` (read that file for the exact tag) has 3,388 persons / 7,358 memberships, 26 committee organisations and 142 switch waves. The E1 baseline counts below are explicitly historical evidence. Do not read this plan as current status.
 
 Status (as of 2026-11-15/16): **in progress**. Production was pinned to `data-20261115-T203142`.
 No data release was to be published by this plan until every gate below was green and the
@@ -58,7 +58,7 @@ plan is based on live-source evidence, not assumptions.
   proven safe. A copy-DB impact report is required first.
 - **D4 — No publish until parity.** The release is only published after parser
   tests, the audit gate, an API parity report on a copy DB, and checksum
-  verification. Production stayed on `data-20261115-T203142` until then *(historical; current pin is `data-20261117-T060923` — see banner)*.
+  verification. Production stayed on `data-20261115-T203142` until then *(historical; the current pin is in `data/latest-release.txt`)*.
 
 ## 4. Work breakdown (subagent recipes)
 

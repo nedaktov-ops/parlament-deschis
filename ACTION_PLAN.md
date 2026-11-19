@@ -1,5 +1,13 @@
 # Action Plan — Parlament Deschis Statistical UX/UI Improvement
 
+> **Current-state banner (2026-11-19).** This is the original improvement plan,
+> retained as a historical record. The phase statuses, rollback points and test
+> count below are as observed at the time, **not** the shipped state. Today's
+> live numbers are in `docs/DASHBOARD-VERIFICATION.md`, the release tag is pinned
+> in `data/latest-release.txt`, and active remediation is tracked in
+> `docs/REMEDIATION-STRATEGY.md`. Do not read a `PENDING`/`IN PROGRESS` label below
+> as a current open task.
+
 **Strategy (approved):** Fix data contract → add d3-sankey flow → coverage page → comparison/denominator.
 **No new pages.** Each existing page keeps one coherent job.
 **No guesswork.** Every change tested against live API.
@@ -61,7 +69,7 @@
 
 ## Test requirements (gate before any change lands)
 
-- `cd /home/nedaktov/parlament-deschis && .venv/bin/python -m pytest tests/ -q` → 125 passed (baseline)
+- `uv run pytest -q` → **259 passed** (re-run 2026-11-19 in the integration tree with the gitignored data cache present; a clean checkout without that cache collects fewer data-dependent tests). The earlier baseline figure was correct only for the date it was written.
 - `cd /home/nedaktov/parlament-deschis && .venv/bin/python -m pipeline.cli --db data/parlament-real.db audit-corpus` → 0 errors
 - Live API curl on each changed endpoint returns real, non-empty data
 
