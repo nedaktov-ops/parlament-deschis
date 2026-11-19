@@ -914,9 +914,11 @@ def dashboard_stats(
     Returns pre-computed metrics to avoid multiple API calls and enable
     fast dashboard rendering.
     """
-    from datetime import datetime, date
-    from sqlalchemy import func, select
-    from pipeline.db import Person, Membership, Event, Organization, Committee, Coverage, KeyEvent
+    from datetime import UTC, date, datetime
+
+    from sqlalchemy import func, or_, select
+
+    from pipeline.db import Committee, Coverage, Event, KeyEvent, Membership, Organization, Person
 
     # Parse date
     ref_date = None
@@ -967,7 +969,7 @@ def dashboard_stats(
     )
 
     # Get cross-chamber count (persons in both chambers)
-    cross_chamber_persons = get_cross_chamber_career(db, ref_date or date.today())
+    cross_chamber_persons = queries.get_cross_chamber_careers(db, ref_date or date.today())
     cross_chamber_count = len(cross_chamber_persons)
 
     # Get coverage completeness score
