@@ -7,12 +7,11 @@ import HeroGraphic from "../components/HeroGraphic";
 import DashboardCard from "../components/DashboardCard";
 import PartyListTable from "../components/PartyListTable";
 import PartyNetwork from "../components/PartyNetwork";
-import AgeDistributionRadial from "../components/AgeDistributionRadial";
 import SwitchTimeline, { SwitchWaveData } from "../components/SwitchTimeline";
 import CommitteeControl from "../components/CommitteeControl";
 import CrossChamberFlow from "../components/CrossChamberFlow";
 import DataQualityGauge from "../components/DataQualityGauge";
-import { committeeControl, generationalShift, switchWaves } from "../api/client";
+import { committeeControl, switchWaves } from "../api/client";
 import { localISODate } from "../utils/date";
 
 const TODAY = localISODate();
@@ -29,7 +28,6 @@ export function LiveDashboard() {
   const switchWavesQuery = useQuery({ queryKey: ["switch-waves"], queryFn: () => switchWaves() });
   const committeeControlQuery = useQuery({ queryKey: ["committee-control", asOf], queryFn: () => committeeControl(undefined, asOf) });
   const crossChamberQuery = useQuery({ queryKey: ["cross-chamber", asOf], queryFn: () => api.crossChamber(asOf) });
-  const generationalShiftQuery = useQuery({ queryKey: ["generational-shift", asOf], queryFn: () => generationalShift(undefined, asOf) });
   const coverageDetailed = useQuery({ queryKey: ["coverage-detailed"], queryFn: api.coverage_detailed });
 
   const { min } = useMemo(() => {
@@ -50,7 +48,6 @@ export function LiveDashboard() {
   const waves = switchWavesQuery.data ?? [];
   const committeeData = committeeControlQuery.data?.data;
   const crossChamberData = crossChamberQuery.data?.data ?? [];
-  const ageCohorts = generationalShiftQuery.data?.data ?? [];
 
   const openParty = (shortName: string) => {
     navigate({
@@ -67,23 +64,6 @@ export function LiveDashboard() {
       search: { date: clamped },
     });
   };
-
-  // Convert age cohorts to visualization format
-  const ageVisualizationData = useMemo(() => {
-    if (!ageCohorts.length) return [];
-    
-    return ageCohorts.map(c => ({
-      label: `${c.avg_age}-${c.avg_age + 10}`,
-      minAge: c.avg_age,
-      maxAge: c.avg_age + 10,
-      count: c.mps_with_birth_dates,
-      avgAge: c.average_age ?? c.avg_age ?? 0,
-    }));
-  }, [ageCohorts]);
-
-  const totalAge = useMemo(() => {
-    return ageCohorts.reduce((sum: number, c: { avg_age: number; mps_with_birth_dates: number }) => sum + (c.avg_age * c.mps_with_birth_dates), 0);
-  }, [ageCohorts]);
 
   // Convert waves to the visualization component format
   const waveData: SwitchWaveData[] = waves.map(w => ({
@@ -202,20 +182,16 @@ export function LiveDashboard() {
       <section className="px-4 pb-8" data-enter>
         <div className="max-w-7xl mx-auto">
           <h2 className="text-2xl font-bold text-slate-100 mb-6">{t("deepDiveViews", "Deep Dive Views")}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <PartyNetwork
               parties={parties.slice(0, 10)}
               edges={[]}
               onNodeClick={openParty}
             />
-            <AgeDistributionRadial
-              cohorts={ageVisualizationData}
-              totalAge={totalAge}
-            />
             <SwitchTimeline
               waves={waveData}
               legislatures={meta.data?.legislatures ?? {}}
-              onWaveClick={(wave: SwitchWaveData) => wave.switch_count > 0 && wave.label && openParty(wave.label)}
+              onWaveClick={() => navigate({ to: "/traseism", search: { date: clamped, chamber: "deputies", legislature: undefined } })}
             />
             <CrossChamberFlow
               data={crossChamberData}
