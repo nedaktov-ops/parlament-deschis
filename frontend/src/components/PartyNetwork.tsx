@@ -18,7 +18,7 @@ interface SwitchEdge {
 export interface PartyNetworkProps {
   parties: PartyNode[];
   edges: SwitchEdge[];
-  onNodeClick?: (partyId: string) => void;
+  onNodeClick?: (partyShortName: string) => void;
 }
 
 export default function PartyNetwork({
@@ -55,7 +55,7 @@ export default function PartyNetwork({
               <g
                 key={node.id}
                 className="cursor-pointer"
-                onClick={() => onNodeClick?.(node.id)}
+                onClick={() => onNodeClick?.(node.short_name || node.id)}
               >
                 <circle
                   cx={node.x}

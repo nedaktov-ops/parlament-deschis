@@ -52,10 +52,10 @@ export function LiveDashboard() {
   const crossChamberData = crossChamberQuery.data?.data ?? [];
   const ageCohorts = generationalShiftQuery.data?.data ?? [];
 
-  const openParty = (partyId: string) => {
+  const openParty = (shortName: string) => {
     navigate({
       to: "/party/$shortName",
-      params: { shortName: partyId },
+      params: { shortName },
       search: { date: clamped },
     });
   };
