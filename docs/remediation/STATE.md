@@ -13,8 +13,20 @@
 | 1 | P0 critical fixes | VERIFIED — 7/7 parts `APPROVE_INTEGRATE`; integrated gate green (C-2 residuals fixed in Wave 3) |
 | 2 | P1 correctness/security | **VERIFIED — 5/5 parts `APPROVE_INTEGRATE`; integrated gate green** |
 | 3 | Looks + accessibility | **VERIFIED — 0 residuals** — all 5 axe C-2 fixed via W3-C2 commit |
-| 4 | Modernization | PENDING |
+| 4 | Modernization | **STRATEGY** — Wave-4-STRATEGY.md created with action plans, checkpoints, and risks. Recipes pending stakeholder review. |
 | 5 | Fresh forensic re-verification | **READY** — Wave 1-4 complete, can run forensic check |
+
+---
+
+## Wave 4 Documentation (pending work)
+
+| Document | Purpose | Status |
+|---|---|---|
+| WAVE-4-STRATEGY.md | Full action plan with risk assessment | CREATED |
+| WAVE-4-RECIPES.md | Sub-agent recipes for each task | CREATED |
+| WAVE-4-SUPERVISOR.md | Validation protocol for modernization work | CREATED |
+
+**Next step:** Stakeholder review of WAVE-4-STRATEGY.md, then begin with R-D0.1 (React 19 audit).
 
 ## Part ledger
 
@@ -34,6 +46,24 @@ order 1→7 with **zero conflicts** into `/tmp/opencode/wt-INTEGRATE` (branch
 `/home/nedaktov/parlament-deschis` was edited by the Supervisor; only this `STATE.md`.
 
 ---
+
+
+
+---
+
+## Wave 4 Progress (2026-11-19)
+
+### Phase 1: Dependency Upgrades
+| Task | Status | Commit |
+|---|---|---|
+| R-D0.1 React 19 Compatibility Audit | ✅ COMPLETE | dd463d1 |
+| R-D0.2 React 19 Upgrade | ⏳ PENDING | - |
+| R-D0.3 Vite Upgrade | ⏳ PENDING | - |
+
+### Next Steps
+- Review custom hooks for `use` restrictions
+- Begin R-D0.2 (React 19 upgrade)
+- Create recipes for remaining phases (D-2, D-4)
 
 ## Backup integrity (STEP 2 — raw output)
 
