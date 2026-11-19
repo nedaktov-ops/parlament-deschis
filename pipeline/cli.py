@@ -393,15 +393,34 @@ def cmd_audit_corpus(args) -> int:
 
     error_fingerprints = Counter(finding_fingerprint(finding) for finding in report.errors)
     new_errors = error_fingerprints - baseline
-    unevaluated_checks = {
-        finding.check for finding in report.findings if finding.context.get("not_evaluated") is True
-    }
+    unevaluated_findings = [
+        finding for finding in report.findings if finding.context.get("not_evaluated") is True
+    ]
+    unevaluated_checks = {finding.check for finding in unevaluated_findings}
     unevaluated_baseline = Counter(
         finding_fingerprint(Finding(**finding))
         for finding in baseline_findings
         if finding["check"] in unevaluated_checks
     )
     resolved_baseline_findings = (baseline - unevaluated_baseline) - error_fingerprints
+
+    # A check can be unevaluated for two very different reasons. An absent
+    # source-page cache is an environmental limitation the reviewed baseline
+    # explicitly tolerates (see test_cli.py). A source that is EMPTY in the
+    # database (e.g. every mandate deleted) is data loss: the check silently
+    # stopped covering the corpus and the gate must fail. Only the latter is
+    # promoted to a gate failure; both keep their "not evaluated" count above.
+    data_loss_checks = {
+        finding.check
+        for finding in unevaluated_findings
+        if finding.context.get("reason") not in ("cache_missing",)
+        and "missing_scopes" not in finding.context
+    }
+    lost_baseline_findings = Counter(
+        finding_fingerprint(Finding(**finding))
+        for finding in baseline_findings
+        if finding["check"] in data_loss_checks
+    )
 
     print("corpus audit")
     print("-" * 62)
@@ -433,8 +452,37 @@ def cmd_audit_corpus(args) -> int:
             f"{sum(resolved_baseline_findings.values())} resolved baseline findings, "
             f"{sum(unevaluated_baseline.values())} baseline findings not evaluated"
         )
-    if args.strict and sum(new_errors.values()):
-        return 1
+    if args.strict:
+        failures: list[str] = []
+        new_count = sum(new_errors.values())
+        if new_count:
+            failures.append(f"{new_count} new error(s) not present in the baseline")
+        resolved_count = sum(resolved_baseline_findings.values())
+        if resolved_count:
+            # A reviewed baseline error that silently disappears is not an
+            # improvement: it usually means a check stopped covering the data
+            # (an emptied table, a skipped source). Name the affected checks so
+            # the failure is actionable instead of a bare exit code.
+            resolved_checks = sorted(
+                {
+                    finding["check"]
+                    for finding in baseline_findings
+                    if finding_fingerprint(Finding(**finding)) in resolved_baseline_findings
+                }
+            )
+            failures.append(
+                f"{resolved_count} reviewed baseline finding(s) no longer reproduced "
+                f"in check(s): {', '.join(resolved_checks)}"
+            )
+        lost_count = sum(lost_baseline_findings.values())
+        if lost_count:
+            failures.append(
+                f"{lost_count} reviewed baseline finding(s) were not evaluated because "
+                f"a source was empty in check(s): {', '.join(sorted(data_loss_checks))}"
+            )
+        if failures:
+            print("STRICT AUDIT FAILED: " + "; ".join(failures))
+            return 1
     return 0
 
 
@@ -610,8 +658,8 @@ def cmd_build_corpus(args) -> int:
 
     # Features 2 / 11: committees and switch waves are part of the shippable
     # corpus. The API serves a PINNED release database, so anything not built
-    # here stays empty in production — verified on the 2026-11-17 release:
-    # /api/committees = 0, /api/analytics/switch-waves = 0.
+    # here stays stale in that release. Verified on the 2026-11-17 release:
+    # /api/committees = 23, /api/analytics/switch-waves = 142 (both non-empty).
     session = make_session_factory(engine)()
     try:
         if not args.skip_committees and current_legislature:

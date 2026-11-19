@@ -1,15 +1,21 @@
+import json
 from datetime import date
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
+from sqlalchemy import text
 
 from pipeline.audit import (
     Finding,
     audit,
     check_index_reconciliation,
+    check_mandate_coverage,
+    check_roster_reconciliation,
     finding_fingerprint,
     scope_totals,
 )
+from pipeline.cli import cmd_audit_corpus
 from pipeline.db import (
     Event,
     Evidence,
@@ -306,3 +312,164 @@ def test_scope_totals_count_distinct_people_and_switch_events(session, monkeypat
             "switches": 1,
         }
     ]
+
+
+# --- P0-3: strict audit gate must be symmetric -------------------------------
+# A reviewed baseline error that silently disappears (data loss, a skipped
+# source) must fail --strict just as loudly as a brand-new error. These tests
+# use tiny synthetic databases so they never touch data/*.db or the real cache.
+
+
+def _write_baseline(path: Path, findings: list[Finding]) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "error_findings": len(findings),
+                "findings": [finding.as_dict() for finding in findings],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _run_gate(db_path: Path, baseline: Path | None, *, strict: bool = True) -> int:
+    return cmd_audit_corpus(
+        SimpleNamespace(
+            db=str(db_path),
+            baseline=str(baseline) if baseline is not None else None,
+            strict=strict,
+            json=None,
+        )
+    )
+
+
+def test_skipped_checks_are_reported_as_not_evaluated(session, monkeypatch, tmp_path):
+    """The two silent early returns now emit explicit not-evaluated findings."""
+    coverage = check_mandate_coverage(session)  # no mandates seeded
+    assert len(coverage) == 1
+    assert coverage[0].context["not_evaluated"] is True
+    assert coverage[0].context["reason"] == "no_mandates"
+
+    monkeypatch.chdir(tmp_path)  # no data/cache/cdep
+    roster = check_roster_reconciliation(session)
+    assert len(roster) == 1
+    assert roster[0].context["not_evaluated"] is True
+    assert roster[0].context["reason"] == "cache_missing"
+
+
+def test_strict_gate_passes_when_baseline_matches(session, tmp_path, monkeypatch):
+    """Intact data + a fully reproduced baseline -> EXIT 0 (no false positive)."""
+    monkeypatch.chdir(tmp_path)
+    db_path = Path(session.get_bind().url.database)
+    psd = _organization(session, "PSD")
+    alice = _person(session, "Alice Ionescu")
+    _mandate(session, alice, start=date(2024, 1, 1), end=date(2024, 12, 31))
+    _membership(
+        session, alice, psd, start=date(2024, 1, 1), end=date(2024, 12, 31), source_url=None
+    )
+    session.commit()
+
+    errors = audit(session).errors
+    assert len(errors) == 1 and errors[0].check == "evidence"
+    baseline = tmp_path / "baseline.json"
+    _write_baseline(baseline, errors)
+
+    assert _run_gate(db_path, baseline, strict=True) == 0
+
+
+def test_strict_gate_fails_when_a_baseline_finding_resolves(session, tmp_path, monkeypatch, capsys):
+    """A reviewed error that disappears is a FAIL, naming the affected check."""
+    monkeypatch.chdir(tmp_path)
+    db_path = Path(session.get_bind().url.database)
+    psd = _organization(session, "PSD")
+    alice = _person(session, "Alice Ionescu")
+    _mandate(session, alice, start=date(2024, 1, 1), end=date(2024, 12, 31))
+    membership = _membership(
+        session, alice, psd, start=date(2024, 1, 1), end=date(2024, 12, 31), source_url=None
+    )
+    session.commit()
+
+    baseline = tmp_path / "baseline.json"
+    _write_baseline(baseline, audit(session).errors)
+
+    # Remove the defect that produced the reviewed finding.
+    membership.source_url = "https://www.cdep.ro/ords/pls/parlam/structura2015.gp?idg=8"
+    session.commit()
+
+    exit_code = _run_gate(db_path, baseline, strict=True)
+    out = capsys.readouterr().out
+    assert exit_code == 1
+    assert "STRICT AUDIT FAILED" in out
+    assert "evidence" in out
+
+
+def test_strict_gate_fails_when_all_mandates_deleted(tmp_path, monkeypatch, capsys):
+    """The regression for the proven defect: DELETE FROM mandate must not pass."""
+    monkeypatch.chdir(tmp_path)
+    db_path = tmp_path / "deleted.db"
+    init_db(make_engine(db_path))
+    seed = make_session_factory(make_engine(db_path))()
+    bob = _person(seed, "Bob Popescu")
+    _mandate(seed, bob, start=date(2024, 1, 1), end=date(2024, 12, 31))  # no membership
+    seed.commit()
+
+    errors = audit(seed).errors
+    assert len(errors) == 1 and errors[0].check == "mandate_coverage"
+    baseline = tmp_path / "baseline.json"
+    _write_baseline(baseline, errors)
+    seed.close()
+
+    # Sanity: the matching baseline passes on the intact scratch DB.
+    assert _run_gate(db_path, baseline, strict=True) == 0
+
+    # Destructive step runs only on this tmp copy, never on data/*.db.
+    writer = make_session_factory(make_engine(db_path))()
+    writer.execute(text("DELETE FROM mandate"))
+    writer.commit()
+    writer.close()
+
+    exit_code = _run_gate(db_path, baseline, strict=True)
+    out = capsys.readouterr().out
+    assert exit_code == 1
+    assert "STRICT AUDIT FAILED" in out
+    assert "mandate_coverage" in out
+    assert "not evaluated" in out.lower()
+
+
+def test_strict_gate_still_fails_on_new_errors(session, tmp_path, monkeypatch, capsys):
+    """The original gate behaviour is preserved, not weakened."""
+    monkeypatch.chdir(tmp_path)
+    db_path = Path(session.get_bind().url.database)
+    psd = _organization(session, "PSD")
+    alice = _person(session, "Alice Ionescu")
+    _mandate(session, alice, start=date(2024, 1, 1), end=date(2024, 12, 31))
+    _membership(
+        session, alice, psd, start=date(2024, 1, 1), end=date(2024, 12, 31), source_url=None
+    )
+    session.commit()
+
+    empty_baseline = tmp_path / "empty.json"
+    _write_baseline(empty_baseline, [])
+
+    assert _run_gate(db_path, empty_baseline, strict=True) == 1
+    assert "new error" in capsys.readouterr().out
+
+
+def test_non_strict_gate_never_fails(session, tmp_path, monkeypatch):
+    """Without --strict the command stays a pure report."""
+    monkeypatch.chdir(tmp_path)
+    db_path = Path(session.get_bind().url.database)
+    psd = _organization(session, "PSD")
+    alice = _person(session, "Alice Ionescu")
+    _mandate(session, alice, start=date(2024, 1, 1), end=date(2024, 12, 31))
+    _membership(
+        session, alice, psd, start=date(2024, 1, 1), end=date(2024, 12, 31), source_url=None
+    )
+    session.commit()
+
+    empty_baseline = tmp_path / "empty.json"
+    _write_baseline(empty_baseline, [])
+
+    assert _run_gate(db_path, empty_baseline, strict=False) == 0

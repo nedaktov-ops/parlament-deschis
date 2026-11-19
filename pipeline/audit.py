@@ -148,6 +148,21 @@ def check_mandate_coverage(session: Session) -> list[Finding]:
     findings: list[Finding] = []
     mandates = list(session.scalars(select(Mandate)))
     if not mandates:
+        # An empty mandate table is not "no gaps": it means the authoritative
+        # source for this check is gone, so coverage cannot be judged at all.
+        # Report that explicitly so the strict gate can tell a skipped check
+        # from a clean one instead of silently passing total data loss.
+        findings.append(
+            Finding(
+                check="mandate_coverage",
+                severity="warning",
+                detail=(
+                    "no mandates in the corpus: mandate coverage was not evaluated "
+                    "because the mandate source is empty"
+                ),
+                context={"not_evaluated": True, "reason": "no_mandates"},
+            )
+        )
         return findings
 
     by_person: dict[str, list[Mandate]] = defaultdict(list)
@@ -495,6 +510,19 @@ def check_roster_reconciliation(session: Session) -> list[Finding]:
     findings: list[Finding] = []
     cache = Path("data/cache/cdep")
     if not cache.exists():
+        # Without the on-disk roster archive this check cannot compare the two
+        # published views. Silently returning made a missing cache indistinguish-
+        # able from a clean reconciliation; emit an explicit not-evaluated finding.
+        findings.append(
+            Finding(
+                check="roster_reconciliation",
+                severity="warning",
+                detail=(
+                    "source roster cache is unavailable: roster reconciliation was not evaluated"
+                ),
+                context={"not_evaluated": True, "reason": "cache_missing"},
+            )
+        )
         return findings
 
     for chamber_dir in sorted(cache.iterdir()):
@@ -626,7 +654,8 @@ def check_index_reconciliation(session: Session) -> list[Finding]:
                 if (leg_dir / "list.html").is_file():
                     cached_scopes.add((chamber_dir.name, leg_dir.name))
     missing_scopes = sorted(expected_scopes - cached_scopes)
-    if missing_scopes:
+    cache_missing = not cache.is_dir()
+    if missing_scopes or cache_missing:
         findings.append(
             Finding(
                 check="index_reconciliation",
@@ -634,6 +663,7 @@ def check_index_reconciliation(session: Session) -> list[Finding]:
                 detail=(
                     f"source group indexes are unavailable for {len(missing_scopes)} "
                     "chamber/legislature scopes; those reconciliations were not evaluated"
+                    + (" (the source cache directory is missing)" if cache_missing else "")
                 ),
                 context={
                     "not_evaluated": True,
