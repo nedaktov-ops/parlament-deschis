@@ -1,7 +1,9 @@
 #!/bin/bash
 # Dashboard Verification Script
-# Run after staging deployment to verify all visualizations work
-
+# Run after staging deployment to verify all visualizations work.
+#
+# All sizes and counts below are MEASURED from the built artifacts at run time.
+# No bundle hash, bundle size, component count or pass status is hardcoded.
 set -e
 
 echo "=== DASHBOARD VERIFICATION SCRIPT ==="
@@ -21,7 +23,6 @@ STAGING_URL="${STAGING_URL:-$BASE_URL}"
 echo "1. Checking build artifacts..."
 echo "--------------------------------"
 
-# Check if build exists
 if [ -f "frontend/dist/index.html" ]; then
 	echo -e "${GREEN}✓ Build exists${NC}"
 else
@@ -29,7 +30,6 @@ else
 	exit 1
 fi
 
-# Check TypeScript compilation
 echo ""
 echo "2. Checking TypeScript compilation..."
 echo "--------------------------------"
@@ -41,38 +41,62 @@ else
 	exit 1
 fi
 
-# Check bundle sizes
 echo ""
-echo "3. Checking bundle sizes..."
+echo "3. Checking bundle sizes (measured from dist/assets)..."
 echo "--------------------------------"
-LIVE_DASHBOARD=$(du -k dist/assets/LiveDashboard-Dh0NPS6p.js 2>/dev/null | cut -f1 || echo "0")
-if [ "$LIVE_DASHBOARD" -lt 50 ]; then
-	echo -e "${GREEN}✓ LiveDashboard bundle optimized: ${LIVE_DASHBOARD}KB${NC}"
+# Resolve the real LiveDashboard asset name; no hardcoded hash is allowed.
+ld_file=""
+for f in dist/assets/LiveDashboard-*.js; do
+	if [ -f "$f" ]; then
+		ld_file="$f"
+		break
+	fi
+done
+if [ -n "$ld_file" ]; then
+	ld_kb=$(du -k "$ld_file" | cut -f1)
+	echo -e "${GREEN}✓ LiveDashboard bundle measured: $(basename "$ld_file") — ${ld_kb}KB${NC}"
 else
-	echo -e "${YELLOW}! LiveDashboard bundle could be optimized: ${LIVE_DASHBOARD}KB${NC}"
+	echo -e "${YELLOW}! LiveDashboard bundle: not found (measured 0 matching files in dist/assets/LiveDashboard-*.js)${NC}"
 fi
+echo "   Measured JS assets present in dist/assets:"
+assets_seen=0
+for f in dist/assets/*.js; do
+	if [ -f "$f" ]; then
+		assets_seen=$((assets_seen + 1))
+		printf '     %s : %sKB\n' "$(basename "$f")" "$(du -k "$f" | cut -f1)"
+	fi
+done
+echo "   Measured JS asset count: ${assets_seen}"
 
-# Check for required components
 echo ""
 echo "4. Checking component exports..."
 echo "--------------------------------"
 REQUIRED_COMPONENTS="DashboardCard PartyListTable PartyNetwork AgeDistributionRadial SwitchTimeline CommitteeControl CrossChamberFlow DataQualityGauge"
+present=0
+missing=0
 for component in $REQUIRED_COMPONENTS; do
 	if [ -f "src/components/${component}.tsx" ]; then
+		present=$((present + 1))
 		echo -e "${GREEN}✓ ${component}.tsx exists${NC}"
 	else
+		missing=$((missing + 1))
 		echo -e "${RED}✗ ${component}.tsx missing${NC}"
 	fi
 done
+echo "   Measured components: ${present} present, ${missing} missing"
+if [ "$missing" -gt 0 ]; then
+	echo -e "${RED}✗ Required components are missing - verification FAILED${NC}"
+	exit 1
+fi
 
-# Check API endpoint
 echo ""
 echo "5. Checking API endpoint definition..."
 echo "--------------------------------"
-if grep -q "dashboard/stats" backend/routers/api.py; then
+if grep -q "dashboard/stats" ../backend/routers/api.py; then
 	echo -e "${GREEN}✓ /api/dashboard/stats endpoint defined${NC}"
 else
 	echo -e "${RED}✗ /api/dashboard/stats endpoint not found${NC}"
+	exit 1
 fi
 
 cd ..
@@ -80,19 +104,18 @@ cd ..
 echo ""
 echo "=== VERIFICATION COMPLETE ==="
 echo ""
-echo "Next steps:"
-echo "1. Deploy to staging: git push origin main:staging"
+echo "Next steps (manual, no automatic deploy/push):"
+echo "1. Deploy through Vercel Git integration / Render checksPass"
 echo "2. Run accessibility test: python scripts/ui_validate.py"
 echo "3. Run Lighthouse: lighthouse ${STAGING_URL}"
 echo "4. Manual browser testing of all visualizations"
 
-# Summary
 echo ""
-echo "Summary:"
+echo "Summary (measured):"
 echo "-------"
-echo "TypeScript: ✓ Pass"
-echo "Build: ✓ Pass"
-echo "Components: ✓ All 10 components present"
-echo "API: ✓ Endpoint defined"
+echo "TypeScript: ✓ Pass (tsc --noEmit)"
+echo "Build: ✓ Pass (frontend/dist/index.html present)"
+echo "Components: ✓ ${present} present / ${missing} missing"
+echo "API endpoint: ✓ defined"
 echo ""
-echo "Ready for staging deployment! 🚀"
+echo "All measured checks passed. 🚀"

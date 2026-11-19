@@ -19,22 +19,21 @@
 #   VERCEL_TEAM_ID, VERCEL_ORIGIN, RENDER_ORIGIN,
 #   VERIFY_TIMEOUT_SECONDS (1800), VERIFY_POLL_SECONDS (20),
 #   VERCEL_SKIP_GRACE_SECONDS (180)
+#   DATASET_MAX_AGE_DAYS (7)   max permitted age of dataset.published_at
+#   FRESHNESS_NOW (RFC3339)    override "now" for deterministic freshness checks
+#   HEALTH_JSON_FILE (path)    OFFLINE fixture mode: make NO network/API calls,
+#                              skip token requirements, and check freshness of
+#                              dataset.published_at in this local JSON file only.
 #
 # Requires curl and jq. Never prints tokens.
 set -euo pipefail
-
-: "${TARGET_SHA:?TARGET_SHA is required}"
-: "${EXPECTED_RELEASE:?EXPECTED_RELEASE is required}"
-: "${VERCEL_PROJECT_ID:?VERCEL_PROJECT_ID is required}"
-: "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
-: "${RENDER_SERVICE_ID:?RENDER_SERVICE_ID is required}"
-: "${RENDER_API_KEY:?RENDER_API_KEY is required}"
 
 VERCEL_ORIGIN="${VERCEL_ORIGIN:-https://parlament-deschis.vercel.app}"
 RENDER_ORIGIN="${RENDER_ORIGIN:-https://parlament-deschis.onrender.com}"
 VERIFY_TIMEOUT_SECONDS="${VERIFY_TIMEOUT_SECONDS:-1800}"
 VERIFY_POLL_SECONDS="${VERIFY_POLL_SECONDS:-20}"
 VERCEL_SKIP_GRACE_SECONDS="${VERCEL_SKIP_GRACE_SECONDS:-180}"
+DATASET_MAX_AGE_DAYS="${DATASET_MAX_AGE_DAYS:-7}"
 
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
@@ -44,6 +43,56 @@ die() {
 	printf 'ERROR: %s\n' "$*" >&2
 	exit 1
 }
+
+# Fail loudly when dataset.published_at is older than DATASET_MAX_AGE_DAYS.
+# Used by the full deploy verification and by offline fixture mode.
+check_dataset_freshness() { # health_json_file
+	local file="$1" published pub_s now_s age_s max_s age_days
+	case "$DATASET_MAX_AGE_DAYS" in
+	'' | *[!0-9]*) die "DATASET_MAX_AGE_DAYS must be a non-negative integer (got '${DATASET_MAX_AGE_DAYS}')" ;;
+	esac
+	published=$(jq -r '.dataset.published_at // empty' "$file" 2>/dev/null)
+	if [ -z "$published" ]; then
+		die "DATASET FRESHNESS FAIL: .dataset.published_at is missing in ${file}"
+	fi
+	pub_s=$(date -u -d "$published" +%s 2>/dev/null) ||
+		die "DATASET FRESHNESS FAIL: cannot parse published_at '${published}'"
+	if [ -n "${FRESHNESS_NOW:-}" ]; then
+		now_s=$(date -u -d "$FRESHNESS_NOW" +%s 2>/dev/null) ||
+			die "DATASET FRESHNESS FAIL: cannot parse FRESHNESS_NOW '${FRESHNESS_NOW}'"
+	else
+		now_s=$(date -u +%s)
+	fi
+	age_s=$((now_s - pub_s))
+	if [ "$age_s" -lt 0 ]; then
+		die "DATASET FRESHNESS FAIL: published_at '${published}' is in the future"
+	fi
+	max_s=$((DATASET_MAX_AGE_DAYS * 86400))
+	age_days=$((age_s / 86400))
+	if [ "$age_s" -gt "$max_s" ]; then
+		die "DATASET STALE: published_at=${published} age=${age_days}d exceeds maximum of ${DATASET_MAX_AGE_DAYS}d"
+	fi
+	say "Dataset freshness OK: published_at=${published} age=${age_days}d (max ${DATASET_MAX_AGE_DAYS}d)"
+}
+
+# Offline fixture mode: check freshness only, make NO network/API calls and
+# require NO tokens. This is how the freshness gate is tested deterministically.
+if [ -n "${HEALTH_JSON_FILE:-}" ]; then
+	[ -f "$HEALTH_JSON_FILE" ] || die "HEALTH_JSON_FILE not found: ${HEALTH_JSON_FILE}"
+	jq -e . "$HEALTH_JSON_FILE" >/dev/null 2>&1 || die "HEALTH_JSON_FILE is not valid JSON: ${HEALTH_JSON_FILE}"
+	say "Offline fixture mode: freshness check against ${HEALTH_JSON_FILE}"
+	check_dataset_freshness "$HEALTH_JSON_FILE"
+	exit 0
+fi
+
+# Full verification requires these; offline fixture mode exits above, so it
+# never needs credentials or calls any deploy API.
+: "${TARGET_SHA:?TARGET_SHA is required}"
+: "${EXPECTED_RELEASE:?EXPECTED_RELEASE is required}"
+: "${VERCEL_PROJECT_ID:?VERCEL_PROJECT_ID is required}"
+: "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
+: "${RENDER_SERVICE_ID:?RENDER_SERVICE_ID is required}"
+: "${RENDER_API_KEY:?RENDER_API_KEY is required}"
 
 team_query=""
 if [ -n "${VERCEL_TEAM_ID:-}" ]; then
@@ -161,6 +210,9 @@ actual_release=$(jq -r '.dataset.release_tag // "missing"' "$workdir/health.json
 if [ "$actual_release" != "$EXPECTED_RELEASE" ]; then
 	die "dataset release mismatch: expected ${EXPECTED_RELEASE}, got ${actual_release}"
 fi
+
+# Dataset freshness gate: a stale dataset must fail the whole deployment check.
+check_dataset_freshness "$workdir/health.json"
 
 check_public() { # url outfile label
 	local code
