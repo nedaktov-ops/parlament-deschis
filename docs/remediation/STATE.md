@@ -12,9 +12,9 @@
 | 0 | Backups + strategy + recipes | DONE — tag, branch, 152 MB snapshot, checksum verified |
 | 1 | P0 critical fixes | VERIFIED — 7/7 parts `APPROVE_INTEGRATE`; integrated gate green (C-2 residuals fixed in Wave 3) |
 | 2 | P1 correctness/security | **VERIFIED — 5/5 parts `APPROVE_INTEGRATE`; integrated gate green** |
-| 3 | Looks + accessibility | **VERIFIED — 0 residuals** — all 5 axe C-2 fixed |
+| 3 | Looks + accessibility | **VERIFIED — 0 residuals** — all 5 axe C-2 fixed via W3-C2 commit |
 | 4 | Modernization | PENDING |
-| 5 | Fresh forensic re-verification | PENDING |
+| 5 | Fresh forensic re-verification | **READY** — Wave 1-4 complete, can run forensic check |
 
 ## Part ledger
 
