@@ -7,7 +7,7 @@ polling stays off (no lifespan context), so nothing hits the network.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -281,6 +281,53 @@ def test_timeline_include_switches(api):
     body = response.json()
     assert "switches" in body
     assert isinstance(body["switches"], list)
+
+
+def test_timeline_uses_exclusive_end_boundary(api):
+    """The one-sweep rewrite must keep the half-open [start, end) semantics:
+    a tenure ending on 2024-12-01 is gone and its successor starting that day
+    is counted, with no double-count."""
+    response = api.client.get(
+        "/api/timeline",
+        params={"chamber": "deputies", "from": "2024-12-01", "to": "2024-12-01", "step_days": 1},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["dates"] == ["2024-12-01"]
+    assert body["groups"] == {"PNL": [1]}
+
+
+def test_timeline_rejects_oversized_bucket_count(api):
+    """The old full-range step_days=1 request produced 2,515 date points with
+    no cap; it must now be a fast 422 instead of an unbounded response."""
+    response = api.client.get(
+        "/api/timeline",
+        params={"from": "2020-01-01", "to": "2026-11-19", "step_days": 1},
+    )
+    assert response.status_code == 422
+    assert "date buckets" in response.json()["detail"]
+
+
+def test_timeline_bucket_cap_boundary(api):
+    """Exactly 400 buckets is allowed; 401 is refused."""
+    start = date(2024, 1, 1)
+    end_400 = start + timedelta(days=399)  # 400 sampled dates at step_days=1
+    ok = api.client.get(
+        "/api/timeline",
+        params={"from": start.isoformat(), "to": end_400.isoformat(), "step_days": 1},
+    )
+    assert ok.status_code == 200
+    assert len(ok.json()["dates"]) == 400
+
+    too_many = api.client.get(
+        "/api/timeline",
+        params={
+            "from": start.isoformat(),
+            "to": (end_400 + timedelta(days=1)).isoformat(),
+            "step_days": 1,
+        },
+    )
+    assert too_many.status_code == 422
 
 
 def test_cache_control_isolates_health_and_writes(api):
@@ -603,6 +650,102 @@ def test_committees_endpoint_returns_empty_list(api):
     response = api.client.get("/api/committees", params={"as_of": "2025-01-01"})
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_chamber_and_committees_agree_on_exact_end_date(api):
+    """Half-open [start, end) must be uniform: a membership whose end_date is
+    the as_of date is not active on that date in *either* view. The old code
+    used `end_date >= as_of` in the committee endpoints (inclusive) while the
+    chamber used `end_date > as_of` (exclusive), so the two disagreed."""
+    session = api.factory()
+    person = Person(
+        canonical_name="Boundary Person",
+        normalized_name="boundary person",
+        sort_key="boundary person",
+    )
+    group = Organization(
+        classification="group",
+        name="Grupul B",
+        short_name="B",
+        normalized_name="grupul b",
+        chamber="deputies",
+        legislature="2023",
+    )
+    committee = Organization(
+        classification="committee",
+        name="Comisia B",
+        short_name="CB",
+        normalized_name="comisia b",
+        chamber="deputies",
+        legislature="2023",
+    )
+    session.add_all([person, group, committee])
+    session.flush()
+    end = date(2023, 12, 31)
+    session.add_all(
+        [
+            Membership(
+                person_id=person.id,
+                org_id=group.id,
+                chamber="deputies",
+                legislature="2023",
+                role="member",
+                start_date=date(2023, 1, 1),
+                end_date=end,
+            ),
+            Membership(
+                person_id=person.id,
+                org_id=committee.id,
+                chamber="deputies",
+                legislature="2023",
+                role="member",
+                start_date=date(2023, 1, 1),
+                end_date=end,
+            ),
+        ]
+    )
+    session.add(
+        KeyEvent(
+            type="legislature",
+            chamber="deputies",
+            label="2023",
+            start_date=date(2023, 1, 1),
+            end_date=None,
+        )
+    )
+    session.commit()
+    committee_id = committee.id
+    session.close()
+
+    # Control: before the boundary both tenures are active and both views agree.
+    before = "2023-06-01"
+    assert (
+        api.client.get("/api/chamber", params={"chamber": "deputies", "as_of": before}).json()[
+            "total"
+        ]
+        == 1
+    )
+    assert (
+        api.client.get(f"/api/committees/{committee_id}/members", params={"as_of": before}).json()[
+            "active_count"
+        ]
+        == 1
+    )
+
+    # On the exact end date both views must exclude the ending tenure.
+    on_end = end.isoformat()
+    chamber_total = api.client.get(
+        "/api/chamber", params={"chamber": "deputies", "as_of": on_end}
+    ).json()["total"]
+    committee_active = api.client.get(
+        f"/api/committees/{committee_id}/members", params={"as_of": on_end}
+    ).json()["active_count"]
+    listed = api.client.get("/api/committees", params={"as_of": on_end}).json()
+
+    assert chamber_total == 0
+    assert committee_active == 0
+    assert all(c["id"] != committee_id for c in listed)
+    assert chamber_total == committee_active  # the boundary probe: views agree
 
 
 def test_cross_chamber_uses_date_scoped_mandates(api):
@@ -1120,3 +1263,14 @@ def test_recent_events_honours_chamber_and_legislature(api):
         "/api/events/recent", params={"chamber": "deputies", "legislature": "2024"}
     ).json()
     assert combined == []
+
+
+def test_dashboard_stats_rejects_invalid_as_of(api):
+    """An invalid ``as_of`` must be a loud 422, not a silent fall back to
+    all-time data (the old code swallowed the parse error and returned 200)."""
+    bad = api.client.get("/api/dashboard/stats", params={"as_of": "garbage"})
+    assert bad.status_code == 422
+
+    good = api.client.get("/api/dashboard/stats", params={"as_of": "2025-01-01"})
+    assert good.status_code == 200
+    assert good.json()["status"] == "ok"

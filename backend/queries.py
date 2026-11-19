@@ -188,7 +188,8 @@ def get_timeline(
             or_(Membership.end_date.is_(None), Membership.end_date > start),
         )
     ).all()
-    m_tuples = [
+    # (start, end, legislature, group); a None end means "still open".
+    memberships = [
         (m_start, m_end, m_leg, short_name or name)
         for m_start, m_end, m_leg, short_name, name in membership_rows
     ]
@@ -204,8 +205,36 @@ def get_timeline(
     ).all()
     rev_legislatures = list(reversed(legislatures))
 
+    # ONE sweep over the sampled dates: increment a group's count when a
+    # membership's start is reached, decrement it when its (exclusive) end is
+    # reached. This is O(memberships + dates) instead of the old
+    # O(memberships * dates) nested loop that made step_days=1 over several
+    # years take seconds.
+    from collections import Counter, defaultdict
+
+    active_by_leg: dict[str | None, Counter[str]] = defaultdict(Counter)
+    active_all: Counter[str] = Counter()
+    additions = sorted(memberships, key=lambda m: m[0])
+    removals = sorted((m for m in memberships if m[1] is not None), key=lambda m: m[1])
+    add_i = rem_i = 0
     counts_by_date: list[dict[str, int]] = []
     for day in dates:
+        while add_i < len(additions) and additions[add_i][0] <= day:
+            _, _, leg, group = additions[add_i]
+            active_by_leg[leg][group] += 1
+            active_all[group] += 1
+            add_i += 1
+        while rem_i < len(removals) and removals[rem_i][1] <= day:
+            _, _, leg, group = removals[rem_i]
+            bucket = active_by_leg[leg]
+            bucket[group] -= 1
+            if bucket[group] <= 0:
+                del bucket[group]
+            active_all[group] -= 1
+            if active_all[group] <= 0:
+                del active_all[group]
+            rem_i += 1
+
         active_legislature = next(
             (
                 label
@@ -214,15 +243,8 @@ def get_timeline(
             ),
             None,
         )
-        counts: dict[str, int] = {}
-        for m_start, m_end, m_leg, group in m_tuples:
-            if (
-                m_start <= day
-                and (m_end is None or m_end > day)
-                and (active_legislature is None or m_leg == active_legislature)
-            ):
-                counts[group] = counts.get(group, 0) + 1
-        counts_by_date.append(counts)
+        counts = active_all if active_legislature is None else active_by_leg.get(active_legislature)
+        counts_by_date.append(dict(counts) if counts else {})
 
     group_names = sorted({name for counts in counts_by_date for name in counts})
     series = {name: [counts.get(name, 0) for counts in counts_by_date] for name in group_names}

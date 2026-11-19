@@ -9,7 +9,7 @@ import threading
 from datetime import UTC, date, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from backend import queries
@@ -27,6 +27,11 @@ from pipeline.export import (
 from pipeline.poller import run_poll_cycle, source_health
 
 router = APIRouter(prefix="/api")
+
+# A timeline response carries one data point per sampled date. Without a cap a
+# request like ``?from=2020-01-01&to=2026-11-19&step_days=1`` produced 2,515
+# points (and an unbounded Python loop); refuse anything larger than this.
+MAX_TIMELINE_BUCKETS = 400
 
 # ---------------------------------------------------------------------------
 # In-memory cache for the traseism overview. The DB is read-only at runtime
@@ -76,14 +81,24 @@ def _parse_date(s: str | None, default: date) -> date:
         raise HTTPException(status_code=422, detail=f"invalid date: {s}") from exc
 
 
-def _require_admin_token(token: str | None, operation: str = "admin operations") -> None:
-    """Fail-closed token check with a small in-process per-token lockout.
+def _require_admin_token(
+    token: str | None,
+    operation: str = "admin operations",
+    request: Request | None = None,
+) -> None:
+    """Fail-closed token check with an in-process, IP-keyed lockout.
 
-    State is held on the function object so the helper owns it (no module
-    globals, no new dependencies). Only a saltless SHA-256 fingerprint of the
-    guess is retained — raw secret values are never stored or logged. There is
-    no request object in this helper's scope, so the key is per-token rather
-    than per-IP; see the P4-D report for that residual.
+    Failures are keyed by the client host (``request.client.host``) so N
+    distinct wrong guesses from one address accumulate toward the lockout. A
+    single global counter is kept as a backstop against guesses spread across
+    many addresses. The candidate token is compared with
+    ``secrets.compare_digest`` and no configured token keeps the endpoint
+    disabled (503, fail-closed).
+
+    ``request`` is optional for backwards compatibility with direct callers of
+    this helper (e.g. unit tests): when it is omitted the legacy per-token
+    fingerprint key is used. All real endpoints pass the Request, so the
+    production path is always IP-keyed.
     """
     import hashlib
     import logging
@@ -91,12 +106,18 @@ def _require_admin_token(token: str | None, operation: str = "admin operations")
 
     state = getattr(_require_admin_token, "_auth_state", None)
     if state is None:
-        state = {"lock": threading.Lock(), "failures": {}}
+        state = {
+            "lock": threading.Lock(),
+            "failures": {},
+            "global_failures": [],
+        }
         _require_admin_token._auth_state = state
     lock = state["lock"]
     failures: dict[str, list[float]] = state["failures"]
+    global_failures: list[float] = state["global_failures"]
     window_s = 60.0
     max_failures = 5
+    global_max_failures = 50
     log = logging.getLogger("parlament.api")
 
     expected = os.environ.get("PARLAMENT_ADMIN_TOKEN", "")
@@ -106,16 +127,27 @@ def _require_admin_token(token: str | None, operation: str = "admin operations")
             detail=f"{operation} disabled (set PARLAMENT_ADMIN_TOKEN)",
         )
 
-    fingerprint = hashlib.sha256((token or "").encode("utf-8")).hexdigest()[:16]
+    if request is not None:
+        client = getattr(request, "client", None)
+        host = getattr(client, "host", None) or "unknown"
+        key = f"ip:{host}"
+    else:
+        # Legacy compat: direct helpers have no Request; keep the old
+        # per-token fingerprint so those callers retain their semantics.
+        key = "tok:" + hashlib.sha256((token or "").encode("utf-8")).hexdigest()[:16]
+
     with lock:
         now = time.monotonic()
-        recent = [t for t in failures.get(fingerprint, ()) if now - t < window_s]
-        if len(recent) >= max_failures:
+        recent = [t for t in failures.get(key, ()) if now - t < window_s]
+        recent_global = [t for t in global_failures if now - t < window_s]
+        global_failures[:] = recent_global
+        if len(recent) >= max_failures or len(recent_global) >= global_max_failures:
             log.warning(
-                "admin auth lockout: operation=%s fingerprint=%s failures=%d",
+                "admin auth lockout: operation=%s key=%s failures=%d global=%d",
                 operation,
-                fingerprint,
+                key,
                 len(recent),
+                len(recent_global),
             )
             raise HTTPException(
                 status_code=429, detail="too many failed admin attempts; try again later"
@@ -124,15 +156,17 @@ def _require_admin_token(token: str | None, operation: str = "admin operations")
         # TypeError that str inputs with non-ASCII characters would trigger.
         if not token or not secrets.compare_digest(token.encode("utf-8"), expected.encode("utf-8")):
             recent.append(now)
-            failures[fingerprint] = recent
+            failures[key] = recent
+            recent_global.append(now)
+            global_failures[:] = recent_global
             log.warning(
-                "admin auth failure: operation=%s fingerprint=%s failures=%d",
+                "admin auth failure: operation=%s key=%s failures=%d",
                 operation,
-                fingerprint,
+                key,
                 len(recent),
             )
             raise HTTPException(status_code=401, detail="invalid admin token")
-        failures.pop(fingerprint, None)
+        failures.pop(key, None)
 
 
 @router.get("/meta")
@@ -151,6 +185,7 @@ def chamber(
 
 
 @router.get("/timeline")
+@cache_result("timeline")
 def timeline(
     chamber: str = Query("deputies", pattern="^(deputies|senate)$"),
     start: str | None = Query(None, alias="from"),
@@ -164,6 +199,22 @@ def timeline(
     e = _parse_date(end, today)
     if e < s:
         raise HTTPException(status_code=422, detail="to must be >= from")
+    # Keep the response bounded before doing any work. ``get_timeline`` samples
+    # ``start, start+step, ..., end`` — count those points arithmetically so an
+    # oversized range is rejected without materialising it first.
+    span = (e - s).days
+    buckets = span // step_days + 1
+    if span % step_days:
+        buckets += 1
+    if buckets > MAX_TIMELINE_BUCKETS:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"timeline range produces {buckets} date buckets; "
+                f"maximum is {MAX_TIMELINE_BUCKETS} "
+                "(increase step_days or narrow the range)"
+            ),
+        )
     return queries.get_timeline(db, chamber, s, e, step_days, include_switches=include_switches)
 
 
@@ -350,7 +401,7 @@ def committees(as_of: str | None = None, db: Session = Depends(get_db)):
             Membership.org_id == Organization.id,
             Membership.start_date.is_not(None),
             Membership.start_date <= reference_date,
-            or_(Membership.end_date.is_(None), Membership.end_date >= reference_date),
+            or_(Membership.end_date.is_(None), Membership.end_date > reference_date),
         )
         .exists()
     )
@@ -401,7 +452,7 @@ def committee_members(
     members = []
     for m, name in rows:
         is_active = (m.start_date is None or m.start_date <= reference_date) and (
-            m.end_date is None or m.end_date >= reference_date
+            m.end_date is None or m.end_date > reference_date
         )
         members.append(
             {
@@ -591,12 +642,13 @@ def party_timeline(
 
 @router.post("/admin/poll")
 def admin_poll(
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     legislature: str = Query("2024", pattern=r"^\d{4}$"),
     x_admin_token: Annotated[str | None, Header()] = None,
 ):
     """Run one poll cycle synchronously. Token-guarded; disabled by default."""
-    _require_admin_token(x_admin_token, "admin polling")
+    _require_admin_token(x_admin_token, "admin polling", request=request)
     try:
         results = run_poll_cycle(db, legislature)
     except Exception:  # noqa: BLE001 - upstream failure is reported generically
@@ -657,6 +709,7 @@ def _dataset_metadata() -> dict:
 
 @router.post("/analytics/waves")
 def analytics_waves(
+    request: Request,
     chamber: str | None = Query(None, pattern="^(deputies|senate)$"),
     legislature: str | None = Query(None, pattern=r"^\d{4}$"),
     window_days: int = Query(30, ge=1, le=180),
@@ -665,7 +718,7 @@ def analytics_waves(
     db: Session = Depends(get_db),
 ):
     """Detect and persist party switch waves in the given scope."""
-    _require_admin_token(x_admin_token)
+    _require_admin_token(x_admin_token, request=request)
     count = derive_switch_waves(
         db,
         chamber=chamber,
@@ -689,11 +742,12 @@ def analytics_waves_get_not_allowed():
 
 @router.post("/analytics/waves/recompute")
 def analytics_waves_recompute(
+    request: Request,
     x_admin_token: Annotated[str | None, Header()] = None,
     db: Session = Depends(get_db),
 ):
     """Delete and rebuild switch waves from the current event ledger."""
-    _require_admin_token(x_admin_token)
+    _require_admin_token(x_admin_token, request=request)
     from sqlalchemy import delete
 
     from pipeline.db import SwitchWave
@@ -920,13 +974,9 @@ def dashboard_stats(
 
     from pipeline.db import Coverage, Event, KeyEvent, Membership, Organization, Person
 
-    # Parse date
-    ref_date = None
-    if as_of:
-        try:
-            ref_date = datetime.strptime(as_of, "%Y-%m-%d").date()
-        except ValueError:
-            pass
+    # Parse the date uniformly with the shared helper. An invalid ``as_of``
+    # must be a loud 422, never a silent fall back to all-time data.
+    ref_date = _parse_date(as_of, date.today()) if as_of else None
 
     # Get total persons (all tracked persons)
     total_persons = db.scalar(select(func.count(Person.id))) or 0
