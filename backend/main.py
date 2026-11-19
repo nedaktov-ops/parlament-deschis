@@ -72,9 +72,7 @@ class CacheControlMiddleware(BaseHTTPMiddleware):
 # ---------------------------------------------------------------------------
 _SECURITY_HEADERS = {
     "Content-Security-Policy-Report-Only": (
-        "default-src 'self'; base-uri 'self'; object-src 'none'; "
-        "script-src 'self'; style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data:; font-src 'self' data:; connect-src 'self'"
+        "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
     ),
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
