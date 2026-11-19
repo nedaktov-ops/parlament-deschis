@@ -83,7 +83,7 @@ export default function CrossChamberFlow({
         {/* Both indicator */}
         {stats.total > 0 && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-xs font-bold text-slate-200">
+            <span className="text-xs font-bold text-slate-100">
               {stats.both} in both
             </span>
           </div>
@@ -110,7 +110,7 @@ export default function CrossChamberFlow({
       {topMembers.length > 0 && (
         <div className="mt-3 pt-2 border-t border-slate-700/30">
           <div className="text-xs text-slate-400 mb-2">Cross-chamber MPs</div>
-          <div className="space-y-1 max-h-32 overflow-y-auto">
+          <div className="space-y-1 max-h-32 overflow-y-auto" tabIndex={0} aria-label="List of MPs serving in both chambers">
             {topMembers.map((member) => (
               <div
                 key={member.person_id}

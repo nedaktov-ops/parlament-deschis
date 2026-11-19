@@ -52,7 +52,7 @@ export default function PartyListTable({
         </span>
       </div>
       
-      <div className="space-y-1 max-h-64 overflow-y-auto">
+      <div className="space-y-1 max-h-64 overflow-y-auto" tabIndex={0} aria-label="List of parties by member count">
         {sortedParties.map((party, index) => {
           const percentage = totalMembers > 0 ? (party.total_members / totalMembers) * 100 : 0;
           const rankColor = index === 0 ? "text-amber-400" : index === 1 ? "text-slate-300" : index === 2 ? "text-rose-400" : "text-slate-400";

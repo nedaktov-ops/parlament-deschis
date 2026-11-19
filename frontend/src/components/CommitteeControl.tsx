@@ -133,7 +133,7 @@ export default function CommitteeControl({
             <summary className="cursor-pointer text-sky-400 hover:underline">
               View all chairs ({chairs.length})
             </summary>
-            <ul className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+            <ul className="mt-2 space-y-1 max-h-32 overflow-y-auto" tabIndex={0} aria-label="List of all chairs in committees">
               {chairs.slice(0, 10).map(chair => (
                 <li key={chair.committee_id} className="flex justify-between">
                   <span className="text-slate-300">{chair.committee}</span>

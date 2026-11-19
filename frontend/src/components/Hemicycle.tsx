@@ -130,7 +130,7 @@ export default function Hemicycle({
         <summary className="cursor-pointer text-sky-300 hover:text-sky-200">
           {t("hemicycleMemberList", { count: total })}
         </summary>
-        <div className="mt-2 max-h-64 overflow-y-auto space-y-3">
+        <div className="mt-2 max-h-64 overflow-y-auto space-y-3" tabIndex={0} aria-label="List of all MPs in this hemicycle group">
           {groups.map((group) => (
             <section key={group.short_name}>
               <h3 className="font-semibold text-slate-200">
