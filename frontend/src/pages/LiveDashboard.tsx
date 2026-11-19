@@ -163,6 +163,7 @@ export function LiveDashboard() {
             <PartyListTable
               parties={parties}
               onPartyClick={openParty}
+              onViewAll={() => navigate({ to: "/mps", search: { date: clamped } })}
             />
             <div className="grid grid-cols-1 gap-4">
               <CommitteeControl
@@ -187,6 +188,7 @@ export function LiveDashboard() {
               parties={parties.slice(0, 10)}
               edges={[]}
               onNodeClick={openParty}
+              onViewAll={() => navigate({ to: "/mps", search: { date: clamped } })}
             />
             <SwitchTimeline
               waves={waveData}
