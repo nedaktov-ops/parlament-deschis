@@ -14,7 +14,7 @@
 | 2 | P1 correctness/security | **VERIFIED — 5/5 parts `APPROVE_INTEGRATE`; integrated gate green** |
 | 3 | Looks + accessibility | **VERIFIED — 0 residuals** — all 5 axe C-2 fixed via W3-C2 commit |
 | 4 | Modernization | **STRATEGY** — Wave-4-STRATEGY.md created with action plans, checkpoints, and risks. Recipes pending stakeholder review. |
-| 5 | Fresh forensic re-verification | **READY** — Wave 1-4 complete, can run forensic check |
+| 5 | Fresh forensic re-verification | **VERIFIED** — forensic check passed, all gates green |
 
 ---
 
