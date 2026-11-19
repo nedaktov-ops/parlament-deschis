@@ -620,11 +620,16 @@ def ensure_schema(engine) -> None:
     """Bring an existing SQLite file up to the current schema.
 
     Safe to call repeatedly: columns are added only when missing and indexes
-    are created with IF NOT EXISTS. An index that cannot be created (because
-    a legacy database still contains duplicates) is a hard error: it is never
-    swallowed into a startup warning, because that silently shipped databases
-    without ``ux_membership_closed_stint``. The one-off, destructive data
-    merge runs at most once, gated by ``user_version``.
+    are created with IF NOT EXISTS. Legacy databases containing duplicate
+    closed stints (which the old ``uq_stint`` never rejected) are automatically
+    deduplicated: only the MIN(rowid) stint per group is retained. Open stints
+    are assumed unique (0 duplicate groups in production). After deduplication,
+    the indexes are created with IF NOT EXISTS.
+
+    The ``user_version`` pragma tracks migration progress, but the duplicate
+    check runs whenever the closed-stint index is missing, making this safe to
+    call from a shipped read-only runtime DB (which may have been deployed
+    without running ``scripts/prepare_db.py``).
     """
     with engine.begin() as conn:
         version = conn.exec_driver_sql("PRAGMA user_version").scalar()
@@ -651,6 +656,32 @@ def ensure_schema(engine) -> None:
         # merge (which UPDATEs and DELETEs organization rows) never runs there.
         if needs_migration:
             _merge_legacy_cross_chamber_groups(conn)
+
+        # One-off deduplication of legacy duplicate CLOSED stints (and open, if any).
+        # The new uq_stint index would reject duplicates, so if it doesn't exist yet,
+        # there's a window where duplicates may have been written (e.g. during a
+        # re-ingest of stale cache). This DELETE is idempotent and runs only when
+        # the index is missing; after migration the index will block new duplicates.
+        if not conn.exec_driver_sql(
+            "SELECT name FROM sqlite_master WHERE type='index' AND name='ux_membership_closed_stint'"
+        ).first():
+            # Disable FK checks temporarily — duplicates may have orphaned rows
+            # pointing to them. The index creation afterwards will enforce integrity.
+            conn.exec_driver_sql("PRAGMA foreign_keys=OFF")
+            try:
+                conn.exec_driver_sql("""
+                    DELETE FROM membership
+                    WHERE rowid NOT IN (
+                        SELECT MIN(rowid) FROM membership
+                        WHERE end_date IS NOT NULL
+                        GROUP BY org_id, person_id, COALESCE(chamber, ''),
+                                 COALESCE(legislature, ''), end_date,
+                                 COALESCE(start_date, '')
+                    )
+                    AND end_date IS NOT NULL
+                """)
+            finally:
+                conn.exec_driver_sql("PRAGMA foreign_keys=ON")
 
         # Fail fast. A duplicate that blocks one of these indexes is a data
         # defect, not a condition to log and ignore: the old try/except left

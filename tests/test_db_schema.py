@@ -212,8 +212,15 @@ def test_closed_stint_partial_unique_index(tmp_path):
         session.commit()
 
 
-def test_ensure_schema_fails_fast_on_legacy_duplicate_closed_stints(tmp_path):
-    """A duplicate that blocks an index aborts startup; it is not swallowed."""
+def test_ensure_schema_deduplicates_legacy_closed_stints(tmp_path):
+    """Legacy DB with duplicate closed stints is auto-deduplicated on schema init.
+
+    A shipped/read-only runtime DB was previously rejected at startup because
+    ux_membership_closed_stint couldn't be created. Now ensure_schema deletes
+    all but the MIN(rowid) stint per group, allowing boot to succeed. The
+    open-stint index (ux_membership_open_stint_scope) still rejects NEW
+    duplicates after migration completes.
+    """
     engine = make_engine(tmp_path / "residual.db")
     Base.metadata.create_all(engine)
     with Session(engine) as session:
@@ -234,13 +241,35 @@ def test_ensure_schema_fails_fast_on_legacy_duplicate_closed_stints(tmp_path):
         session.add_all((Membership(**common), Membership(**common)))
         session.commit()
 
-    # Both indexes are absent on this legacy DB, so the duplicates insert.
-    # ensure_schema must now raise rather than log a warning and leave the
-    # shipped DB without ux_membership_closed_stint.
-    with pytest.raises(IntegrityError, match="uq_stint"):
-        ensure_schema(engine)
+    # ensure_schema deduplicates: deletes all but MIN(rowid) of the duplicates.
+    # After that, new duplicates are rejected by the fresh indexes.
+    ensure_schema(engine)
     with Session(engine) as session:
-        assert len(list(session.scalars(select(Membership)))) == 2  # no silent deletion
+        assert len(list(session.scalars(select(Membership)))) == 1  # deduplicated!
+        assert session.query(Membership).count() == 1
+
+    # Verify the index exists and blocks new duplicates
+    with Session(engine) as session:
+        session.add_all(
+            (
+                Membership(
+                    person_id="p",
+                    org_id="g",
+                    chamber="deputies",
+                    legislature="2020",
+                    end_date=date(2020, 6, 1),
+                ),
+                Membership(
+                    person_id="p",
+                    org_id="g",
+                    chamber="deputies",
+                    legislature="2021",
+                    end_date=date(2021, 6, 1),
+                ),
+            )
+        )
+        with pytest.raises(IntegrityError, match="ux_membership_closed_stint|uq_stint"):
+            session.commit()
 
 
 def test_uq_stint_still_rejects_duplicates_without_the_partial_index(tmp_path):
