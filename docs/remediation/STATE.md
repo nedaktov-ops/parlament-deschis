@@ -57,8 +57,8 @@ order 1→7 with **zero conflicts** into `/tmp/opencode/wt-INTEGRATE` (branch
 | Task | Status | Commit |
 |---|---|---|
 | R-D0.1 React 19 Compatibility Audit | ✅ COMPLETE | dd463d1 |
-| R-D0.2 React 19 Upgrade | ⏳ PENDING | - |
-| R-D0.3 Vite Upgrade | ⏳ PENDING | - |
+| R-D0.2 React 19 Upgrade | ✅ COMPLETE | 23b5b81 |
+| R-D0.3 Vite 6 Upgrade | ✅ COMPLETE | 1d72d06 |
 
 ### Next Steps
 - Review custom hooks for `use` restrictions
