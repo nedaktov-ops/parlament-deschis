@@ -11,7 +11,7 @@ interface PartyNode {
 
 export interface PartyListTableProps {
   parties: PartyNode[];
-  onPartyClick?: (partyId: string) => void;
+  onPartyClick?: (partyShortName: string) => void;
   maxRows?: number;
 }
 
@@ -58,7 +58,7 @@ export default function PartyListTable({
           return (
             <div
               key={party.id}
-              onClick={() => onPartyClick?.(party.id)}
+              onClick={() => onPartyClick?.(party.short_name || party.id)}
               className="group flex items-center gap-3 p-2 rounded-lg hover:bg-slate-700/30 cursor-pointer transition-all"
             >
               <div className="flex items-center gap-2 w-12">
