@@ -113,6 +113,36 @@ resolves to the baseline commit and the snapshot checksum still matches.
 
 ---
 
+## 3b. Wave 2 ownership (REVISED — authoritative; supersedes §6 where they conflict)
+
+The original §6 table assigned `backend/routers/api.py`, `backend/queries.py`,
+`backend/main.py` and `vercel.json` to several parts each. That breaks rule §0.5
+(one owner per file) and would create cherry-pick conflicts. The eight P1 findings
+are therefore regrouped into **five disjoint agents**:
+
+| Agent | Absorbs | Owns (and may only edit) |
+|---|---|---|
+| `W2-A` GraphQL + app wiring | P1-1, P1-6(poller/headers part), P1-7(FastAPI headers part) | `backend/graphql/schema.py`, `backend/main.py`, `pipeline/poller.py`, `backend/deps.py`, `tests/test_security_hardening.py`, new `tests/test_graphql_convergence.py` |
+| `W2-B` REST API hardening | P1-3, P1-4, P1-5 | `backend/routers/api.py`, `backend/queries.py`, `tests/test_api.py`, `tests/test_analytics_transparency.py`, new `tests/test_admin_lockout.py` |
+| `W2-C` DB dedup | P1-2 | `scripts/prepare_db.py`, `pipeline/db.py`, `tests/test_db_schema.py` |
+| `W2-D` Cache freshness | P1-6(exports/cache part) | `backend/routers/exports.py`, `backend/cache.py`, `tests/test_cache.py`, `tests/test_api_exports.py` |
+| `W2-E` Edge/platform config | P1-7(vercel/render part), P1-8 | `vercel.json`, `render.yaml`, `Dockerfile`, `.github/workflows/*.yml` |
+
+**Interface contracts between agents (no direct file sharing):**
+- `W2-D` adds `invalidate_all()` to `backend/cache.py`; `W2-A` wires it into
+  `backend/main.py`'s `start_poller(on_cycle=...)`.
+- `W2-A` adds `SecurityHeadersMiddleware` in `backend/main.py`; `W2-E` adds the
+  matching headers in `vercel.json`. Both layers must agree.
+- `W2-A` adds the `/graphql` rewrite requirement; `W2-E` writes it into `vercel.json`.
+- `W2-B` keeps `_require_admin_token` signature change inside `api.py` and tests it
+  in a NEW file (`tests/test_admin_lockout.py`), leaving `test_security_hardening.py`
+  to `W2-A` so the existing GraphQL monkeypatch test keeps working.
+
+**Base for Wave 2:** current integrated `main` (`c7cdbe0`), tagged
+`pre-wave2-2026-11-19`, branch `remediation/wave2-base`. All W2 worktrees branch from it.
+
+---
+
 ## 4. Master wave plan
 
 | Wave | Parts | Theme | Gate to advance |

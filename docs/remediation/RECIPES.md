@@ -172,16 +172,62 @@ cannot be run, report `NOT PROVEN` — never claim PASS.
 
 ---
 
-## Wave 2 recipes (summary; expand when the wave starts)
+## Wave 2 recipes (REVISION 2 — authoritative; replaces the P1-* summary)
 
-- **R-P1-1 GraphQL convergence:** Senior Python/GraphQL engineer. Own `backend/graphql/schema.py`, `backend/main.py`, `tests/test_graphql*.py`. Done: `generationalShift` non-empty via `on_behalf_of_id`; `crossChamber` delegates to `queries.get_cross_chamber_careers`; `context_getter` injects `get_db`; one engine in `lifespan`; SQL per field < 20; live REST==GraphQL; add `/graphql` rewrite to `vercel.json` (coordinate with P1-7).
-- **R-P1-2 DB dedup:** own `scripts/prepare_db.py`, `pipeline/db.py`, `tests/test_db_schema.py`. Done: 0 duplicates, index present, fail-fast DDL, no startup warning.
-- **R-P1-3 Timeline:** own `backend/queries.py`, `backend/routers/api.py`, `tests/test_api.py`. Done: bucket cap + `@cache_result` + single sweep; full-range request < 0.5 s or 422.
-- **R-P1-4 Admin lockout:** own `backend/routers/api.py`, `tests/test_security_hardening.py`. Done: IP-keyed, N distinct guesses → 429.
-- **R-P1-5 Dates:** own `backend/routers/api.py`, `backend/queries.py`, tests. Done: `_parse_date` everywhere; half-open intervals; boundary probe equal.
-- **R-P1-6 Caches:** own `backend/routers/exports.py`, `backend/main.py`, `pipeline/poller.py`, `backend/cache.py`, tests. Done: fresh `generated_at`, both caches invalidated.
-- **R-P1-7 Headers:** own `vercel.json`, `backend/main.py`, `render.yaml`. Done: live `curl -I` shows CSP (report-only), nosniff, XFO, Referrer-Policy; HSTS on Render path.
-- **R-P1-8 Supply chain:** own `Dockerfile`, all workflow `uses:` lines, `vercel.json`. Done: SHA pins, `--locked`, immutable asset cache.
+See `STRATEGY.md §3b` for the revised disjoint ownership map. Universal template §0 applies.
+
+### R-W2-A — GraphQL convergence + app wiring
+**Role:** Senior Python/GraphQL/FastAPI engineer.
+**Owns:** `backend/graphql/schema.py`, `backend/main.py`, `pipeline/poller.py`, `backend/deps.py`, `tests/test_security_hardening.py`, new `tests/test_graphql_convergence.py`.
+**Do not touch:** `api.py`, `queries.py`, `exports.py`, `cache.py`, `vercel.json`, `Dockerfile`, workflows.
+
+Proven defects: `generationalShift` filters `Membership.org_id` to party instead of `on_behalf_of_id` → always `[]`; `crossChamber` = 233 vs REST 39; resolvers call `make_engine()` per field (2 engines/request, never disposed, ignores `get_db`); N+1 with 3,389 SQL statements; poller invalidates only one cache; no security headers on FastAPI; `/graphql` missing from no-store middleware.
+
+1. Preserve a compatible `make_engine` symbol so the existing monkeypatch test in `test_security_hardening.py` keeps working, but resolvers must use `info.context["db"]` from `GraphQLRouter(schema, context_getter=...)`.
+2. Create ONE engine at app/lifespan scope from the same `DB_PATH` as `backend/config.py`; dispose on shutdown; `context_getter` yields one session per request via a `get_db`-compatible factory.
+3. `generationalShift`: join on `Membership.on_behalf_of_id`, dedupe `(person_id, party)`; `crossChamber`: delegate to `queries.get_cross_chamber_careers(session, as_of)` or identical Mandate-based logic; batch with GROUP BY so SQL per field < 20.
+4. `main.py`: wire `on_cycle=invalidate_all()` (contract from W2-D) into `start_poller`; add `SecurityHeadersMiddleware` (CSP Report-Only, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`) matching W2-E's `vercel.json`; widen no-store path match to include `/graphql`.
+5. Tests: GraphQL non-empty; REST==GraphQL cross-chamber; SQL statements < 20; one engine/request; headers present; both caches invalidated.
+
+**Checkpoints:** `POST /graphql {generationalShift}` non-empty (live Render + local TestClient); `crossChamber count == REST count (39)`; engine creations == 1; SQL statements < 20; `curl -sS -D - <local>/api/health` shows all security headers; pytest green; ruff clean.
+**Rollback:** `git checkout pre-wave2-2026-11-19 -- backend/graphql/schema.py backend/main.py pipeline/poller.py backend/deps.py tests/test_security_hardening.py` and delete new test file.
+
+### R-W2-B — REST API hardening (timeline + admin lockout + dates)
+**Role:** Senior FastAPI/security engineer.
+**Owns:** `backend/routers/api.py`, `backend/queries.py`, `tests/test_api.py`, `tests/test_analytics_transparency.py`, new `tests/test_admin_lockout.py`.
+**Do not touch:** `main.py`, `graphql/`, `exports.py`, `cache.py`, `deps.py`, `poller.py`, docs, workflows.
+
+1. `/api/timeline`: cap date buckets (~400) with 422; add `@cache_result("timeline")`; rewrite `get_timeline` to one sweep into per-day buckets. Full-range `step_days=1` must drop from 5.8 s to < 0.5 s OR return 422.
+2. `_require_admin_token`: pass `Request`, key failures on client host with a global counter backstop, keep `secrets.compare_digest`, keep 503 fail-closed. Prove N distinct wrong guesses from one IP → 429.
+3. Uniform date parsing: `_parse_date`/annotated date everywhere; `/api/dashboard/stats?as_of=garbage` → 422; half-open interval `[start, end)` (`end_date > as_of`) in `api.py:353,404` and `queries.py:769`. Boundary probe: chamber and committees agree on end date.
+
+**Checkpoints:** full-range timeline < 0.5 s or 422; `?as_of=garbage` → 422; boundary probe equal; 10 distinct guesses → 429; pytest + ruff green.
+**Rollback:** `git checkout pre-wave2-2026-11-19 -- backend/routers/api.py backend/queries.py tests/test_api.py tests/test_analytics_transparency.py`.
+
+### R-W2-C — DB dedup and fail-fast index
+**Role:** Senior data engineer. **Owns:** `scripts/prepare_db.py`, `pipeline/db.py`, `tests/test_db_schema.py`.
+1. Deduplicate the 9 legacy closed-stint duplicates in `prepare_db.py` on `(org_id, person_id, chamber, legislature, start_date, end_date)`.
+2. Create `ux_membership_closed_stint` FAIL-FAST (no silent `try/except` swallow); express `uq_stint` via `COALESCE(post_id,'')` partial index.
+3. Assert dup count = 0, index present, `journal_mode=DELETE`, `integrity_check=ok`.
+**Checkpoints:** on a `/tmp` copy → dup_groups 0, index present, no startup warning; counts 3388/7358/5273 unchanged; **never modify `data/parlament.db` itself**.
+**Rollback:** `git checkout pre-wave2-2026-11-19 -- scripts/prepare_db.py pipeline/db.py tests/test_db_schema.py`.
+
+### R-W2-D — Cache freshness
+**Role:** Senior backend performance engineer. **Owns:** `backend/routers/exports.py`, `backend/cache.py`, `tests/test_cache.py`, `tests/test_api_exports.py`.
+1. `/api/export/report`: remove `@cache_result` OR cache only the plain data dict and build a fresh `JSONResponse` (fresh `generated_at`) per request.
+2. Add `invalidate_all()` to `backend/cache.py` calling both invalidators — contract W2-A wires into the poller.
+3. Never cache mutable `Response` objects.
+**Checkpoints:** two `GET /api/export/report` → different `generated_at`; cached value is dict not `JSONResponse`; `invalidate_all()` clears both; pytest + ruff green.
+**Rollback:** `git checkout pre-wave2-2026-11-19 -- backend/routers/exports.py backend/cache.py tests/test_cache.py tests/test_api_exports.py`.
+
+### R-W2-E — Edge/platform config
+**Role:** Senior platform/security engineer. **Owns:** `vercel.json`, `render.yaml`, `Dockerfile`, `.github/workflows/*.yml`.
+1. `vercel.json`: `/graphql` rewrite to Render origin BEFORE catch-all; security headers for `/(.*)` matching W2-A's middleware (nosniff, XFO, Referrer-Policy, Permissions-Policy, CSP Report-Only); restore immutable asset caching for `/assets/(.*)`; keep `no-store` on `/api/*`.
+2. `Dockerfile`: `--locked` on both `uv sync` lines; pin uv version.
+3. Workflows: SHA-pin all 8 floating `uses:` (7 in `data.yml`, 1 in `deploy-verify.yml`) via `git ls-remote`; leave `ci.yml` untouched.
+4. **No deploy / no live POST.** Live header verification requires owner-approved deployment → mark `config-verified, live-pending-deploy`.
+**Checkpoints:** `/graphql` rewrite present in jq; immutable asset cache present; `grep -rn '@v[0-9]' .github/workflows/` → 0; both `uv sync` lines have `--locked`; JSON/YAML valid; `git diff --check` clean.
+**Rollback:** `git checkout pre-wave2-2026-11-19 -- vercel.json render.yaml Dockerfile .github/workflows/`.
 
 ## Wave 3 recipes (summary)
 
