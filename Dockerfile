@@ -29,12 +29,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_LINK_MODE=copy \
     PATH="/app/.venv/bin:$PATH"
 
-RUN pip install --no-cache-dir uv
+# Pin uv to the exact version used by CI and local development so that
+# `uv sync --locked` resolves the same lockfile revision everywhere.
+RUN pip install --no-cache-dir uv==0.13.1
 WORKDIR /app
 
 # Dependencies first, so a code change does not reinstall them.
+# --locked fails loudly if uv.lock and pyproject.toml ever drift apart.
 COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --no-dev --no-install-project
+RUN uv sync --locked --no-dev --no-install-project
 
 COPY backend/ ./backend/
 COPY pipeline/ ./pipeline/
@@ -42,7 +45,7 @@ COPY scripts/ ./scripts/
 COPY data/reference/ ./data/reference/
 COPY --from=frontend /app/dist ./frontend/dist
 
-RUN uv sync --no-dev
+RUN uv sync --locked --no-dev
 
 # --- stage 3: the database -------------------------------------------------
 # The build must fail loudly when the database is missing: an image without
