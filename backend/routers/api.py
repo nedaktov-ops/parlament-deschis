@@ -918,7 +918,7 @@ def dashboard_stats(
 
     from sqlalchemy import func, or_, select
 
-    from pipeline.db import Committee, Coverage, Event, KeyEvent, Membership, Organization, Person
+    from pipeline.db import Coverage, Event, KeyEvent, Membership, Organization, Person
 
     # Parse date
     ref_date = None
@@ -955,7 +955,12 @@ def dashboard_stats(
     )
 
     # Get total committees
-    total_committees = db.scalar(select(func.count(Committee.id))) or 0
+    total_committees = (
+        db.scalar(
+            select(func.count(Organization.id)).where(Organization.classification == "committee")
+        )
+        or 0
+    )
 
     # Get legislature count
     legislature_count = (
