@@ -18,8 +18,8 @@
     "d3-scale-chromatic": "^3.1.1",
     "echarts": "^5.5.1",
     "i18next": "^23.12.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "react-i18next": "^15.0.0"
   },
   "devDependencies": {
@@ -27,9 +27,9 @@
     "@types/d3-sankey": "^0.12.5",
     "@types/d3-scale": "^4.0.9",
     "@types/d3-scale-chromatic": "^3.1.0",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.19",
     "eslint": "^9.39.5",
     "eslint-plugin-react-hooks": "^5.2.0",
@@ -37,6 +37,6 @@
     "tailwindcss": "^3.4.6",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.73.0",
-    "vite": "^5.3.4"
+    "vite": "^6.0.0"
   }
 }
