@@ -1,7 +1,9 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { Link, useSearch } from "@tanstack/react-router";
 import { get } from "../api/client";
+import { localISODate } from "../utils/date";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { Sparkline } from "../components/DataViz";
@@ -45,6 +47,8 @@ function fetchTimeline(): Promise<PartyTimelineResponse> {
 
 export default function PartyTimeline() {
   const { t } = useTranslation();
+  const search = useSearch({ strict: false }) as { date?: string };
+  const date = search?.date;
 
   const timeline = useQuery({
     queryKey: ["party-timeline"],
@@ -97,6 +101,15 @@ export default function PartyTimeline() {
                   "ptimeline.intro",
                   "When each party is observed in parliament: first and last dated join on behalf of the party. Bars show observed presence in the record — not official founding or dissolution dates.",
                 )}
+              </p>
+              <p className="text-sm">
+                <Link
+                  to="/parties"
+                  search={{ date: date ?? localISODate() }}
+                  className="text-sky-400 hover:underline"
+                >
+                  {t("ptimeline.viewAllParties", "View all parties →")}
+                </Link>
               </p>
               <div
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6"

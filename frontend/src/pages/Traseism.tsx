@@ -719,13 +719,13 @@ export function Traseism() {
 
   return (
     <div className="wrap space-y-6">
-      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
+      <section className="py-10 sm:py-14 lg:py-16" data-enter>
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-center gap-8">
+          <div className="flex flex-col md:flex-row md:items-center gap-8 lg:gap-10">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight">{t("traseismTitle")}</h1>
-              <p className="text-sm text-slate-300 mt-2">{t("traseismHeadline")}</p>
-              <p className="text-sm text-slate-400 mt-1">{t("traseismIntro")}</p>
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">{t("traseismTitle")}</h1>
+              <p className="text-sm sm:text-base text-slate-300 mt-2 leading-relaxed max-w-2xl">{t("traseismHeadline")}</p>
+              <p className="text-sm text-slate-400 mt-1 leading-relaxed max-w-2xl">{t("traseismIntro")}</p>
               <p className="text-sm text-slate-200 mt-2 font-medium">
                 {t("traseismNotMotive")}
               </p>
@@ -734,7 +734,7 @@ export function Traseism() {
               <HeroGraphic variant="switches" className="mx-auto" />
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5 mt-8 sm:mt-10">
             <InfoStat
               label={t("traseismSwitchesCount")}
               value={scope?.switches ?? "--"}
@@ -756,36 +756,39 @@ export function Traseism() {
               accent="emerald"
             />
           </div>
-          <div className="mt-8 flex items-center gap-4" data-moment>
-            <span className="text-5xl font-black block tracking-tight">
+          <div className="mt-8 sm:mt-10 flex flex-wrap items-baseline gap-x-4 gap-y-2 border-t border-slate-800/80 pt-8" data-moment>
+            <span className="text-5xl sm:text-6xl font-black block tracking-tight">
               {scope?.switches ?? "--"}
             </span>
-            <span className="text-sm text-slate-400">
+            <span className="text-sm sm:text-base text-slate-400">
               {t("traseismTotalSwitches", "total switches in corpus")}
             </span>
           </div>
         </div>
       </section>
 
-      <section className="card p-4">
-        <h2 className="font-semibold mb-3">{t("traseismScopeTitle")}</h2>
-        <div className="flex flex-wrap items-end gap-4">
-          <div>
+      <section className="card p-4 sm:p-5" aria-labelledby="traseism-scope-heading">
+        <h2 id="traseism-scope-heading" className="font-semibold text-lg sm:text-xl mb-4 tracking-tight">{t("traseismScopeTitle")}</h2>
+        <div className="flex flex-wrap items-end gap-5 sm:gap-6">
+          <div className="min-w-0">
             <div
               id="traseism-chamber-label"
-              className="text-xs text-slate-500 mb-1"
+              className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-2"
             >
               {t("chamber")}
             </div>
             <div
-              className="flex gap-1"
+              className="flex flex-wrap gap-2"
               role="group"
               aria-labelledby="traseism-chamber-label"
             >
               {(["deputies", "senate"] as const).map((c) => (
-                <button type="button"key={c}onClick={() => setScope({ chamber: c })}
+                <button
+                  type="button"
+                  key={c}
+                  onClick={() => setScope({ chamber: c })}
                   aria-pressed={chamber === c}
-                  className={`btn ${
+                  className={`btn btn-hover ${
                     chamber === c
                       ? "bg-sky-700 text-white"
                       : "bg-slate-700 hover:bg-slate-600 text-slate-200"
@@ -796,10 +799,10 @@ export function Traseism() {
               ))}
             </div>
           </div>
-          <div>
+          <div className="min-w-0">
             <label
               htmlFor="traseism-legislature"
-              className="block text-xs text-slate-500 mb-1"
+              className="block text-xs font-medium uppercase tracking-wide text-slate-400 mb-2"
             >
               {t("legislature")}
             </label>
@@ -807,7 +810,7 @@ export function Traseism() {
               id="traseism-legislature"
               value={legislature}
               onChange={(e) => setScope({ legislature: e.target.value })}
-              className={`bg-slate-800 border border-slate-700 rounded-md px-3 py-1.5 text-sm ${FOCUS}`}
+              className={`bg-slate-800 border border-slate-700 rounded-md px-3 py-1.5 text-sm min-w-[8rem] ${FOCUS}`}
             >
               {legislatureOptions.map((year) => (
                 <option key={year} value={year}>
@@ -817,9 +820,11 @@ export function Traseism() {
             </select>
           </div>
           {scope?.period ? (
-            <div className="text-xs text-slate-400">
-              {t("period")}: {scope.period.start ?? "—"} →{" "}
-              {scope.period.end ?? t("present")}
+            <div className="text-xs sm:text-sm text-slate-300/90 pb-0.5 sm:pb-1 border-l border-slate-600/80 pl-3 sm:pl-4">
+              <span className="text-slate-400">{t("period")}:</span>{" "}
+              <span className="font-mono text-slate-200">{scope.period.start ?? "—"}</span>
+              {" → "}
+              <span className="font-mono text-slate-200">{scope.period.end ?? t("present")}</span>
             </div>
           ) : null}
         </div>
@@ -837,7 +842,7 @@ export function Traseism() {
 
           {hasRecord ? (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
                 <StatCard
                   label={t("traseismMembersDenominator")}
                   value={fmtInt(scope.members)}
@@ -861,7 +866,7 @@ export function Traseism() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
                 <StatCard
                   label={t("traseismRepeatSwitchers")}
                   value={fmtInt(scope.repeat_switchers?.people)}

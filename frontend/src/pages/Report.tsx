@@ -104,53 +104,55 @@ export default function Report() {
   return (
     <div className="wrap py-6 print:p-0">
       <div
-        className="min-h-screen flex flex-wrap items-start justify-between gap-3 mb-6 print:mb-3"
+        className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 lg:gap-10 mb-8 sm:mb-10 print:mb-4 print:block"
         data-enter
       >
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-100 print:text-slate-900">
+        <div className="flex-1 min-w-0 space-y-3">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-100 print:text-slate-900">
             {t("report.title", "Transparency Report")}
           </h1>
-          <p className="text-slate-400 print:text-slate-600 text-sm mt-1">
+          <p className="text-slate-400 print:text-slate-600 text-sm sm:text-base mt-1 max-w-2xl leading-relaxed">
             {t(
               "report.subtitle",
               "One-page summary of what the corpus contains — for journalists and citizens.",
             )}
           </p>
           {d && (
-            <p className="text-slate-500 print:text-slate-600 text-xs mt-1">
+            <p className="text-slate-500 print:text-slate-600 text-xs sm:text-sm mt-1">
               {t("report.generated", "Generated")}{" "}
               {new Date(d.generated_at).toLocaleString(i18n.language)}
             </p>
           )}
           {d && (
-            <p className="mt-4 text-slate-200" data-moment>
-              <span className="text-5xl font-black block tracking-tight">
+            <div className="mt-6 sm:mt-8 pt-6 border-t border-slate-800/80 print:border-slate-200" data-moment>
+              <span className="text-5xl sm:text-6xl font-black block tracking-tight text-slate-100 print:text-slate-900">
                 {d.totals.persons.toLocaleString()}
               </span>
-              <span className="text-sm text-slate-400 mt-1">
+              <span className="text-sm sm:text-base text-slate-400 print:text-slate-600 mt-1 block">
                 {t("report.deputiesCount", "deputies in the corpus")}
               </span>
-            </p>
+            </div>
           )}
         </div>
-        <div className="flex gap-2 print:hidden">
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="bg-sky-700 hover:bg-sky-800 text-white px-4 py-2 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
-          >
-            {t("report.print", "Print / Save as PDF")}
-          </button>
-          <a
-            href="/api/export/report"
-            download="transparency-report.json"
-            className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
-          >
-            {t("report.download", "Download JSON")}
-          </a>
+        <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-4 sm:gap-5 print:hidden shrink-0">
+          <HeroGraphic variant="report" className="max-w-[260px] w-full sm:w-auto" />
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="bg-sky-700 hover:bg-sky-800 text-white px-4 py-2 rounded btn-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+            >
+              {t("report.print", "Print / Save as PDF")}
+            </button>
+            <a
+              href="/api/export/report"
+              download="transparency-report.json"
+              className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded btn-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+            >
+              {t("report.download", "Download JSON")}
+            </a>
+          </div>
         </div>
-        <HeroGraphic variant="report" className="print:hidden" />
       </div>
 
       {report.isLoading && (
@@ -229,12 +231,12 @@ export default function Report() {
 
       {d && (
         <>
-          <div className="bg-slate-800/30 rounded-xl p-4 mb-6 print:bg-transparent print:p-0">
-            <section className="mb-4">
-              <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
+          <div className="bg-slate-800/30 rounded-xl p-4 sm:p-5 mb-6 print:bg-transparent print:p-0">
+            <section className="mb-6 sm:mb-8">
+              <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-3 sm:mb-4 tracking-tight">
                 {t("report.corpus", "Corpus at a glance")}
               </h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
                 <InfoStat
                   label={t("report.persons", "Persons")}
                   value={d.totals.persons}
@@ -270,7 +272,7 @@ export default function Report() {
             </section>
 
             <section className="mb-0">
-              <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
+              <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-3 sm:mb-4 tracking-tight">
                 {t("report.topSwitchers", "Top party switchers")}
               </h2>
               <div
@@ -318,12 +320,12 @@ export default function Report() {
             </section>
           </div>
 
-          <div className="bg-slate-800/30 rounded-xl p-4 mb-6 print:bg-transparent print:p-0">
-            <section className="mb-4">
-              <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
+          <div className="bg-slate-800/30 rounded-xl p-4 sm:p-5 mb-6 print:bg-transparent print:p-0">
+            <section className="mb-6 sm:mb-8">
+              <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-3 sm:mb-4 tracking-tight">
                 {t("report.control", "Committee control")}
               </h2>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-3 sm:gap-4">
                 {d.committee_control.parties.map((p) => (
                   <InfoStat
                     key={p.party}
@@ -342,18 +344,18 @@ export default function Report() {
             </section>
 
             <section className="mb-0">
-              <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
+              <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-3 sm:mb-4 tracking-tight">
                 {t("report.waves", "Largest switch waves")}
               </h2>
               {d.switch_waves.length > 0 && (
-                <div className="mt-3 h-10 w-64">
+                <div className="mt-3 h-10 w-64 max-w-full">
                   <Sparkline
                     data={d.switch_waves.slice(0, 6).map((w) => w.switch_count)}
                     height={36}
                   />
                 </div>
               )}
-              <ul className="text-sm space-y-1">
+              <ul className="text-sm space-y-1.5">
                 {d.switch_waves.slice(0, 6).map((w, i) => (
                   <li
                     key={`${w.start_date}-${i}`}
@@ -371,9 +373,9 @@ export default function Report() {
             </section>
           </div>
 
-          <div className="bg-slate-800/30 rounded-xl p-4 mb-6 print:bg-transparent print:p-0">
+          <div className="bg-slate-800/30 rounded-xl p-4 sm:p-5 mb-6 print:bg-transparent print:p-0">
             <section className="mb-4">
-              <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
+              <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-3 sm:mb-4 tracking-tight">
                 {t("report.ages", "Average age by party")}
               </h2>
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">

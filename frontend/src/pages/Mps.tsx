@@ -117,19 +117,19 @@ export default function Mps() {
           setSubmitted(query.trim());
           setOffset(0);
         }}
-        className="flex flex-wrap gap-4 mb-6 items-end"
+        className="flex flex-wrap gap-4 mb-6 items-end bg-slate-800/40 border border-slate-700/60 rounded-lg p-4"
       >
-        <label className="flex flex-col gap-1 text-sm text-slate-400">
+        <label className="flex flex-col gap-1 text-sm text-slate-300">
           {t("mps.search", "Search")}
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("mps.search.placeholder", "name…")}
-            className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200 w-56"
+            className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200 w-56 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm text-slate-400">
+        <label className="flex flex-col gap-1 text-sm text-slate-300">
           {t("mps.sort", "Sort by")}
           <select
             value={sort}
@@ -137,7 +137,7 @@ export default function Mps() {
               setSort(e.target.value);
               setOffset(0);
             }}
-            className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200"
+            className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
           >
             <option value="name">{t("mps.sort.name", "Name")}</option>
             <option value="switches">{t("mps.sort.switches", "Switches")}</option>
@@ -149,36 +149,38 @@ export default function Mps() {
         </label>
         <button
           type="submit"
-          className="bg-sky-700 hover:bg-sky-800 text-white px-4 py-2 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+          className="bg-sky-700 hover:bg-sky-800 text-white px-4 py-2 rounded btn-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
         >
           {t("mps.go", "Go")}
         </button>
       </form>
 
       {cards.isLoading && (
-        <div className="text-slate-500">{t("loading", "Loading…")}</div>
+        <div className="text-slate-400 bg-slate-800/40 border border-slate-700/60 rounded-lg p-4">
+          {t("loading", "Loading…")}
+        </div>
       )}
       {cards.isError && (
-        <div className="text-red-400">
+        <div className="text-red-300 bg-red-900/20 border border-red-800/60 rounded-lg p-4">
           {t("mps.loadError", "Failed to load MPs.")}
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {rows.map((m) => (
           <div
             key={m.id}
-            className="card-hover bg-slate-800 rounded-lg p-4 hover:bg-slate-750/60 transition-colors"
+            className="card-hover bg-slate-800 rounded-lg p-4 border border-slate-700/50 hover:bg-slate-750/60 transition-colors"
           >
             <Link
               to="/person/$id"
               params={{ id: m.id }}
               search={{ date: localISODate() }}
-              className="text-slate-100 font-semibold hover:text-sky-300 hover:underline block"
+              className="link-hover text-slate-100 font-semibold text-lg leading-snug hover:text-sky-300 block focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 rounded-sm"
             >
               {m.name}
             </Link>
-            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
               <span className="bg-slate-700 text-slate-300 px-2 py-0.5 rounded">
                 {m.party ?? t("mps.noParty", "no party recorded")}
               </span>
@@ -201,7 +203,7 @@ export default function Mps() {
       </div>
 
       {rows.length === 0 && !cards.isLoading && !cards.isError && (
-        <div className="text-slate-500">
+        <div className="text-slate-400 bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
           {t("mps.empty", "No persons match this search.")}
         </div>
       )}

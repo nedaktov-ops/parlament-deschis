@@ -80,15 +80,15 @@ export function LiveDashboard() {
   return (
     <div className="wrap space-y-8">
       {/* Section 1: Hero Header - Concise, no wasted space */}
-      <section className="py-8 sm:py-12" data-enter>
+      <section className="py-8 sm:py-12 lg:py-14" data-enter>
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            <div className="lg:col-span-7 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight text-slate-100">{t("overview")}</h1>
-              <p className="text-sm text-slate-400">{t("dashboardIntro")}</p>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+            <div className="lg:col-span-7 space-y-5">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-100">{t("overview")}</h1>
+              <p className="text-sm sm:text-base text-slate-300/90 max-w-2xl leading-relaxed">{t("dashboardIntro")}</p>
               
               {/* Key Metrics as DashboardCards - zero wasted space */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 pt-2">
                 <DashboardCard
                   title={t("dashboardStatPersons", "Members of Parliament")}
                   icon={
@@ -136,18 +136,18 @@ export function LiveDashboard() {
                 />
               </div>
             </div>
-            <div className="lg:col-span-5">
+            <div className="lg:col-span-5 lg:pt-1">
               <HeroGraphic variant="overview" className="mx-auto" />
             </div>
           </div>
           
           {/* Legislature info */}
           {meta.data && (
-            <div className="mt-8 flex items-center gap-4" data-moment>
-              <span className="text-5xl font-black block tracking-tight text-slate-100">
+            <div className="mt-10 sm:mt-12 flex flex-wrap items-baseline gap-x-4 gap-y-2 border-t border-slate-800/80 pt-8" data-moment>
+              <span className="text-5xl sm:text-6xl font-black tracking-tight text-slate-100">
                 {Object.keys(meta.data.legislatures).length}
               </span>
-              <span className="text-sm text-slate-400">
+              <span className="text-sm sm:text-base text-slate-400">
                 {t("dashboardLegislatures", "legislatures in the corpus")}
               </span>
             </div>
@@ -156,14 +156,14 @@ export function LiveDashboard() {
       </section>
 
       {/* Section 2: Party Ecosystem */}
-      <section className="px-4 pb-8" data-enter>
+      <section className="px-4 pb-8 sm:pb-10" data-enter>
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl font-bold text-slate-100 mb-6">{t("partyEcosystem", "Party Ecosystem")}</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100 mb-4 sm:mb-5">{t("partyEcosystem", "Party Ecosystem")}</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 lg:items-start">
             <PartyListTable
               parties={parties}
               onPartyClick={openParty}
-              onViewAll={() => navigate({ to: "/mps", search: { date: clamped } })}
+              onViewAll={() => navigate({ to: "/parties", search: { date: clamped } })}
             />
             <div className="grid grid-cols-1 gap-4">
               <CommitteeControl
@@ -180,10 +180,10 @@ export function LiveDashboard() {
       </section>
 
       {/* Section 3: Deep Dive Visualizations */}
-      <section className="px-4 pb-8" data-enter>
+      <section className="px-4 pb-8 sm:pb-10" data-enter>
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl font-bold text-slate-100 mb-6">{t("deepDiveViews", "Deep Dive Views")}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100 mb-4 sm:mb-5">{t("deepDiveViews", "Deep Dive Views")}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
             <PartyNetwork
               parties={parties.slice(0, 10)}
               edges={[]}

@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { Link, useSearch } from "@tanstack/react-router";
+import { localISODate } from "../utils/date";
 import {
   api,
   generationalShift,
@@ -31,6 +33,8 @@ function fmtInt(v: number): string {
 
 export default function PartyComparison() {
   const { t } = useTranslation();
+  const search = useSearch({ strict: false }) as { date?: string };
+  const date = search?.date;
   const [partyA, setPartyA] = useState<string>("PSD");
   const [partyB, setPartyB] = useState<string>("PNL");
 
@@ -122,11 +126,20 @@ export default function PartyComparison() {
       <h1 className="text-2xl font-bold text-slate-100 mb-2">
         {t("compare.title", "Party Comparison")}
       </h1>
-      <p className="text-slate-400 mb-6">
+      <p className="text-slate-400 mb-2">
         {t(
           "compare.intro",
           "Compare any two parties on size, switch activity, demographics and committee control. All figures come from the dated parliamentary ledgers.",
         )}
+      </p>
+      <p className="text-sm mb-6">
+        <Link
+          to="/parties"
+          search={{ date: date ?? localISODate() }}
+          className="text-sky-400 hover:underline"
+        >
+          {t("compare.viewAllParties", "View all parties →")}
+        </Link>
       </p>
 
       <div className="flex flex-wrap gap-6 mb-8">

@@ -27,6 +27,7 @@ const Mps = lazy(() => import("./pages/Mps").then(m => ({ default: m.default }))
 const MpComparison = lazy(() => import("./pages/MpComparison").then(m => ({ default: m.default })));
 const Report = lazy(() => import("./pages/Report").then(m => ({ default: m.default })));
 const PartyTimeline = lazy(() => import("./pages/PartyTimeline").then(m => ({ default: m.default })));
+const Parties = lazy(() => import("./pages/Parties").then(m => ({ default: m.default })));
 
 function validateDateSearch(search: Record<string, unknown>) {
   const candidate = search.date;
@@ -194,6 +195,7 @@ function RootLayout() {
     else if (path === "/coalitions") label = t("nav.coalitions", "Coalitions");
     else if (path === "/mps") label = t("nav.mps", "MPs");
     else if (path === "/report") label = t("nav.report", "Report");
+    else if (path === "/parties") label = t("nav.parties", "Parties");
     else if (path === "/party-timeline") label = t("nav.partyTimeline", "Timeline");
     else if (path === "/institutional") label = t("institutional");
     else if (path === "/coverage") label = t("coverage");
@@ -263,6 +265,9 @@ function RootLayout() {
           </NavLink>
           <NavLink to="/report" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("nav.report", "Report")}
+          </NavLink>
+          <NavLink to="/parties" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
+            {t("nav.parties", "Parties")}
           </NavLink>
           <NavLink to="/party-timeline" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("nav.partyTimeline", "Timeline")}
@@ -438,6 +443,13 @@ const reportRoute = createRoute({
   validateSearch: validateDateSearch,
 });
 
+const partiesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/parties",
+  component: () => <Suspense fallback={<Loading />}><Parties /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
 const partyTimelineRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/party-timeline",
@@ -455,6 +467,7 @@ const routeTree = rootRoute.addChildren([
   mpsRoute,
   mpComparisonRoute,
   reportRoute,
+  partiesRoute,
   partyTimelineRoute,
   indexRoute,
   electoralRoute,
