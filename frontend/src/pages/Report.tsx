@@ -274,7 +274,7 @@ export default function Report() {
                 {t("report.topSwitchers", "Top party switchers")}
               </h2>
               <div
-                className="overflow-x-auto"
+                className="overflow-x-auto max-w-full"
                 tabIndex={0}
                 role="region"
                 aria-label={t("report.topSwitchers", "Top party switchers")}
@@ -405,7 +405,7 @@ export default function Report() {
                 {t("report.coverage", "Data coverage")}
               </h2>
               <div
-                className="overflow-x-auto"
+                className="overflow-x-auto max-w-full"
                 tabIndex={0}
                 role="region"
                 aria-label={t("report.coverage", "Data coverage")}

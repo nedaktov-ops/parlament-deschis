@@ -56,7 +56,17 @@ h1, h2, h3, h4, h5, h6 {
    responsive horizontal padding so left/right content edges align across
    every route (design-taste-frontend Rule 4). */
 .wrap {
-  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-w-0;
+}
+
+/* Reflow (WCAG 1.4.10): flex/grid item ancestors must be allowed to shrink
+   below their intrinsic min-content width. Without this, a wide data table
+   forces `main` (a flex-1 item with min-width:auto) wider than the viewport
+   instead of scrolling inside its overflow-x-auto region. */
+main,
+main .wrap,
+main section {
+  min-width: 0;
 }
 
 /* Hover micro-animations (design-taste-frontend Rule 5 + modern-web-guidance natural-interactions):

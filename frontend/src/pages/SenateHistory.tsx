@@ -123,7 +123,7 @@ export default function SenateHistory() {
           </ul>
       </div>
 
-      <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("senate.history", "Senate Historical Coverage")}>
+      <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("senate.history", "Senate Historical Coverage")}>
         <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
           <thead className="bg-slate-700">
             <tr>

@@ -179,7 +179,7 @@ export default function PartyTimeline() {
 
       {rows.length > 0 && (
         <div
-          className="bg-slate-800 rounded-lg p-4 overflow-x-auto"
+          className="bg-slate-800 rounded-lg p-4 overflow-x-auto max-w-full"
           tabIndex={0}
           role="region"
           aria-label={t("ptimeline.title", "Party Timeline")}

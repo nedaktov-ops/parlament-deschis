@@ -146,7 +146,7 @@ export default function Coalitions() {
             {t("coalitions.noBreakups", "No coalition breakups recorded.")}
           </div>
         ) : (
-          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("coalitions.breakups", "Coalition breakups")}>
+          <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("coalitions.breakups", "Coalition breakups")}>
             <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
               <thead className="bg-slate-700">
                 <tr>

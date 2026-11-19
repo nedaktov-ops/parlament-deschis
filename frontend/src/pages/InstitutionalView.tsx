@@ -94,7 +94,7 @@ export function InstitutionalView() {
               </p>
               <p className="text-xs text-slate-500 mb-3">{t("crossChamberDateLimit")}</p>
               <div
-                className="overflow-x-auto"
+                className="overflow-x-auto max-w-full"
                 tabIndex={0}
                 role="region"
                 aria-label={t("crossChamberTableCaption")}

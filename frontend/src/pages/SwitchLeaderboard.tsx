@@ -132,7 +132,7 @@ export default function SwitchLeaderboard() {
       )}
 
       {rows.length > 0 && (
-        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("leaderboard.title", "Party Switching Leaderboard")}>
+        <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("leaderboard.title", "Party Switching Leaderboard")}>
           <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
             <thead className="bg-slate-700">
               <tr>

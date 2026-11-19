@@ -104,7 +104,7 @@ function CommitteeCard({
       </button>
 
       {open && (
-        <div className="border-t border-slate-700 overflow-x-auto" tabIndex={0} role="region" aria-label={committee.name}>
+        <div className="border-t border-slate-700 overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={committee.name}>
           {members.isError && (
             <div className="px-4 py-3 text-red-400 text-sm">
               {t("committees.loadError", "Failed to load members.")}
@@ -268,24 +268,26 @@ export default function Committees() {
               { count: controlData.total_committees, date: controlData.as_of },
             )}
           </p>
-          <div className="space-y-2 mb-4">
-            {controlData.parties.map((p) => (
-              <div key={p.party} className="flex items-center gap-3">
-                <span className="w-24 text-sm text-slate-300 shrink-0">
-                  {p.party}
-                </span>
-                <div className="bg-slate-700 rounded-full h-4 flex-1 min-w-[120px]">
-                  <div
-                    className="bg-sky-500 rounded-full h-4"
-                    style={{ width: `${p.share_pct}%` }}
-                    title={`${p.chairs} / ${controlData.total_committees}`}
-                  />
+          <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("control.title", "Committee control index")}>
+            <div className="space-y-2 mb-4">
+              {controlData.parties.map((p) => (
+                <div key={p.party} className="flex items-center gap-3">
+                  <span className="w-24 text-sm text-slate-300 shrink-0">
+                    {p.party}
+                  </span>
+                  <div className="bg-slate-700 rounded-full h-4 flex-1 min-w-[120px]">
+                    <div
+                      className="bg-sky-500 rounded-full h-4"
+                      style={{ width: `${p.share_pct}%` }}
+                      title={`${p.chairs} / ${controlData.total_committees}`}
+                    />
+                  </div>
+                  <span className="w-20 text-sm text-slate-400 text-right shrink-0">
+                    {p.chairs} ({p.share_pct}%)
+                  </span>
                 </div>
-                <span className="w-20 text-sm text-slate-400 text-right shrink-0">
-                  {p.chairs} ({p.share_pct}%)
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
           <details>
             <summary className="text-sm text-sky-400 cursor-pointer hover:text-sky-300">

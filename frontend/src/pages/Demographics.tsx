@@ -157,7 +157,7 @@ export default function Demographics() {
       )}
 
       {rows.length > 0 && (
-        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("demographics.title", "Demographics: Age per Party")}>
+        <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("demographics.title", "Demographics: Age per Party")}>
           <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
             <thead className="bg-slate-700">
               <tr>

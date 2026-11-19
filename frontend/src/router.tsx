@@ -60,10 +60,14 @@ function NotFound() {
 
 function RouteError({ error }: { error?: Error }) {
   const { t } = useTranslation();
+  useEffect(() => {
+    // Diagnostics stay in the console; never render framework internals to users.
+    if (error) console.error(error);
+  }, [error]);
   return (
     <div className="card p-8 text-center space-y-3" role="alert">
       <h2 className="text-xl font-semibold">{t("routeErrorTitle", "Something went wrong")}</h2>
-      <p className="text-slate-400">{error?.message || t("routeErrorBody", "This page could not be displayed.")}</p>
+      <p className="text-slate-400">{t("routeErrorBody", "Ne pare rău, datele nu pot fi afișate.")}</p>
       <Link to="/" search={{ date: localISODate() }} className="btn bg-sky-700 hover:bg-sky-600">{t("backHome", "Back to overview")}</Link>
     </div>
   );
@@ -206,10 +210,10 @@ function RootLayout() {
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-2 focus:rounded-md focus:bg-sky-700 focus:text-white">
         {t("skipToContent", "Skip to content")}
       </a>
-      <header className="border-b border-slate-700/60 bg-panel/50 sticky top-0 z-40">
+      <header className="border-b border-slate-700/60 bg-[#0f172a]/95 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1">
-            <h1 className="text-xl font-bold tracking-tight">{t("title")}</h1>
+            <div className="text-base font-semibold tracking-tight">{t("title")}</div>
             <p className="text-xs text-slate-400">{t("subtitle")}</p>
           </div>
           <div className="flex w-full sm:w-auto flex-wrap items-center gap-2">
@@ -282,7 +286,7 @@ function RootLayout() {
         <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-ink to-transparent" />
         </div>
       </header>
-      <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto px-4 py-5 flex-1">
+      <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto w-full min-w-0 px-4 py-5 flex-1">
         <Outlet />
       </main>
       <Footer />
@@ -490,6 +494,9 @@ export const router = createRouter({
   routeTree,
   stringifySearch,
   parseSearch,
+  // Catch child-route render errors at the match level (inside RootLayout's
+  // <Outlet>) so the header, nav and footer stay mounted on error.
+  defaultErrorComponent: RouteError,
 });
 
 declare module "@tanstack/react-router" {

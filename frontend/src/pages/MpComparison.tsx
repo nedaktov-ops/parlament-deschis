@@ -254,7 +254,7 @@ export default function MpComparison() {
       )}
 
       {chosen.length >= 2 && (
-        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("mpc.title", "MP Comparison")}>
+        <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("mpc.title", "MP Comparison")}>
           <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
             <thead className="bg-slate-700">
               <tr>

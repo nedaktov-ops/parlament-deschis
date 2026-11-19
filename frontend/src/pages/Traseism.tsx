@@ -188,7 +188,7 @@ function MatrixTable({ scope }: { scope: TraseismScope }) {
   }
 
   return (
-    <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("traseismMatrixCaption")}>
+    <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("traseismMatrixCaption")}>
       <table className="w-full text-xs border-collapse">
         <caption className="sr-only">{t("traseismMatrixCaption")}</caption>
         <thead>
@@ -231,7 +231,7 @@ function PartyNetTable({ scope }: { scope: TraseismScope }) {
   }
 
   return (
-    <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("traseismPartyNetCaption")}>
+    <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("traseismPartyNetCaption")}>
       <table className="w-full text-xs border-collapse">
         <caption className="sr-only">{t("traseismPartyNetCaption")}</caption>
         <thead>
@@ -344,7 +344,7 @@ function SwitchLedger({
         <div className="text-slate-500 text-sm py-6">{t("traseismNoRows")}</div>
       ) : (
         <>
-          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("traseismLedgerCaption")}>
+          <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("traseismLedgerCaption")}>
             <table className="w-full text-xs border-collapse">
               <caption className="sr-only">{t("traseismLedgerCaption")}</caption>
               <thead>
@@ -509,7 +509,7 @@ function ScopesOverview({ rows }: { rows: TraseismScope[] }) {
   };
 
   return (
-    <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("traseismAllScopesCaption")}>
+    <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("traseismAllScopesCaption")}>
       <table className="w-full text-xs border-collapse">
         <caption className="sr-only">{t("traseismAllScopesCaption")}</caption>
         <thead>
@@ -625,7 +625,7 @@ function SwitchWavesSection({
           {t("waves.empty", "No waves detected for this scope.")}
         </div>
       ) : (
-        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("waves.title", "Switch waves")}>
+        <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("waves.title", "Switch waves")}>
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-slate-400 border-b border-slate-700">

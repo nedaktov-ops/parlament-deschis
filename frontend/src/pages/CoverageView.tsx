@@ -157,7 +157,7 @@ export default function CoverageView() {
         <div className="card p-4">
           {/* Per-scope table */}
           <div
-            className="overflow-x-auto"
+            className="overflow-x-auto max-w-full"
             tabIndex={0}
             role="region"
             aria-label={t("coverageTableCaption")}
