@@ -19,12 +19,14 @@ export interface PartyNetworkProps {
   parties: PartyNode[];
   edges: SwitchEdge[];
   onNodeClick?: (partyShortName: string) => void;
+  onViewAll?: () => void;
 }
 
 export default function PartyNetwork({
   parties,
   edges,
   onNodeClick,
+  onViewAll,
 }: PartyNetworkProps) {
   const nodes = useMemo(() => {
     return parties.map((p, i) => ({
@@ -125,8 +127,8 @@ export default function PartyNetwork({
       <div className="mt-2 flex flex-wrap gap-2 text-xs">
         <span className="text-slate-500">Nodes: {nodes.length}</span>
         <span className="text-slate-500">Edges: {edges.length}</span>
-        {onNodeClick && (
-          <span className="text-sky-400 ml-auto cursor-pointer" onClick={() => onNodeClick?.('all')}>
+        {onViewAll && (
+          <span className="text-sky-400 ml-auto cursor-pointer" onClick={onViewAll}>
             View all →
           </span>
         )}

@@ -12,12 +12,14 @@ interface PartyNode {
 export interface PartyListTableProps {
   parties: PartyNode[];
   onPartyClick?: (partyShortName: string) => void;
+  onViewAll?: () => void;
   maxRows?: number;
 }
 
 export default function PartyListTable({
   parties,
   onPartyClick,
+  onViewAll,
   maxRows = 10,
 }: PartyListTableProps) {
   const sortedParties = useMemo(() => {
@@ -100,12 +102,14 @@ export default function PartyListTable({
       
       <div className="mt-3 pt-2 border-t border-slate-700/30 flex justify-between text-xs">
         <span className="text-slate-500">Total: {totalMembers.toLocaleString()}</span>
-        <span 
-          className="text-sky-400 cursor-pointer hover:underline"
-          onClick={() => onPartyClick?.('all')}
-        >
-          View all →
-        </span>
+        {onViewAll && (
+          <span 
+            className="text-sky-400 cursor-pointer hover:underline"
+            onClick={onViewAll}
+          >
+            View all →
+          </span>
+        )}
       </div>
     </div>
   );
