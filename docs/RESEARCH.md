@@ -1,5 +1,11 @@
 # Parlament Deschis — Source Research Report
 
+> **Historical document.** The robots.txt snapshots below were correct on
+> 2025-11-12 but are **stale today** (cdep.ro now only disallows `/declaratii/`;
+> senat.ro has no robots.txt). For the current, verified source inventory and
+> a practical enrichment roadmap, read
+> [`docs/DATA-ENRICHMENT-RESEARCH.md`](DATA-ENRICHMENT-RESEARCH.md).
+
 **Date**: 2025-11-12  
 **Scope**: Evidence-based assessment of source availability, URL patterns, and backfill feasibility for 1990→present Romanian Parliament transparency tracker.
 
