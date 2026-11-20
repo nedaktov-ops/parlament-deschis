@@ -18,7 +18,7 @@ from backend.cache import invalidate as invalidate_result_cache
 from backend.config import APP_VERSION, DATASET_METADATA_PATH
 from backend.deps import get_db
 from pipeline.analytics import derive_all_switch_waves, derive_switch_waves
-from pipeline.db import Evidence
+from pipeline.db import Evidence, Vote, VotePosition
 from pipeline.export import (
     CODE_LICENSE,
     DATA_LICENSE,
@@ -1048,6 +1048,271 @@ def dashboard_stats(
             "coverage_score": completeness_score,
             "computed_at": datetime.now(UTC).isoformat(),
         },
+    }
+
+
+@router.get("/votes")
+def votes_list(
+    chamber: str | None = Query(None, pattern=r"^(deputies|senate)$"),
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    from_date: str | None = Query(None, alias="from", description="Start date (ISO)"),
+    to_date: str | None = Query(None, alias="to", description="End date (ISO)"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    """Roll-call votes list.
+
+    Empty table returns ``data_exists:false`` with ``data:[]`` — never 404/500.
+    ``vote_time`` is published by cdep.ro as ``DD.MM.YYYY HH:MM``; ``from``/``to``
+    are therefore applied as string filters on that published value.
+    """
+    from sqlalchemy import select
+
+    stmt = select(Vote)
+    if chamber:
+        stmt = stmt.where(Vote.chamber == chamber)
+    if legislature:
+        stmt = stmt.where(Vote.legislature == legislature)
+
+    rows = db.execute(stmt.order_by(Vote.vote_time.desc().nullslast())).scalars().all()
+
+    if from_date:
+        rows = [v for v in rows if v.vote_time and v.vote_time >= from_date]
+    if to_date:
+        rows = [v for v in rows if v.vote_time and v.vote_time <= to_date]
+
+    total = len(rows)
+    data_exists = total > 0
+    paged = rows[offset : offset + limit]
+    data = [
+        {
+            "id": v.id,
+            "native_vote_id": v.native_vote_id,
+            "chamber": v.chamber,
+            "legislature": v.legislature,
+            "vote_time": v.vote_time,
+            "title_raw": v.title_raw,
+            "present": v.present,
+            "not_voting": v.not_voting,
+            "yes": v.yes,
+            "no": v.no,
+            "abstain": v.abstain,
+            "source_url": v.source_url,
+            "positions_incomplete": v.positions_incomplete,
+        }
+        for v in paged
+    ]
+    return {
+        "status": "ok",
+        "data_exists": data_exists,
+        "data": data,
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+    }
+
+
+@router.get("/votes/{vote_id}")
+def vote_detail(vote_id: str, db: Session = Depends(get_db)):
+    """Single roll-call vote by native_vote_id."""
+    from sqlalchemy import func, select
+
+    vote = db.scalar(select(Vote).where(Vote.native_vote_id == vote_id))
+    if vote is None:
+        return {
+            "status": "ok",
+            "data_exists": False,
+            "data": None,
+        }
+    position_count = (
+        db.scalar(select(func.count(VotePosition.id)).where(VotePosition.vote_id == vote.id)) or 0
+    )
+    return {
+        "status": "ok",
+        "data_exists": True,
+        "data": {
+            "id": vote.id,
+            "native_vote_id": vote.native_vote_id,
+            "chamber": vote.chamber,
+            "legislature": vote.legislature,
+            "vote_time": vote.vote_time,
+            "title_raw": vote.title_raw,
+            "present": vote.present,
+            "not_voting": vote.not_voting,
+            "yes": vote.yes,
+            "no": vote.no,
+            "abstain": vote.abstain,
+            "official_vote_url": vote.official_vote_url,
+            "source_url": vote.source_url,
+            "snapshot_hash": vote.snapshot_hash,
+            "truth_contract_version": vote.truth_contract_version,
+            "positions_incomplete": vote.positions_incomplete,
+            "position_count": position_count,
+        },
+    }
+
+
+@router.get("/votes/{vote_id}/positions")
+def vote_positions(
+    vote_id: str,
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    choice: str | None = Query(None, pattern=r"^(yes|no|abstain|not_voting)$"),
+    db: Session = Depends(get_db),
+):
+    """Individual positions for one roll-call vote."""
+    from sqlalchemy import func, select
+
+    vote = db.scalar(select(Vote).where(Vote.native_vote_id == vote_id))
+    if vote is None:
+        return {
+            "status": "ok",
+            "data_exists": False,
+            "data": [],
+            "total": 0,
+            "offset": offset,
+            "limit": limit,
+        }
+    stmt = select(VotePosition).where(VotePosition.vote_id == vote.id)
+    if choice:
+        stmt = stmt.where(VotePosition.choice == choice)
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    rows = (
+        db.execute(stmt.order_by(VotePosition.name_raw).offset(offset).limit(limit)).scalars().all()
+    )
+    data_exists = total > 0
+    data = [
+        {
+            "person_id": p.person_id,
+            "name_raw": p.name_raw,
+            "group_raw": p.group_raw,
+            "choice": p.choice,
+            "resolution_scheme": p.resolution_scheme,
+            "source_url": p.source_url,
+        }
+        for p in rows
+    ]
+    return {
+        "status": "ok",
+        "data_exists": data_exists,
+        "data": data,
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+    }
+
+
+@router.get("/analytics/vote-cohesion")
+def vote_cohesion(
+    chamber: str | None = Query(None, pattern=r"^(deputies|senate)$"),
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    db: Session = Depends(get_db),
+):
+    """Party cohesion on roll-call votes: yes/no/abstain/not_voting per party."""
+    from sqlalchemy import func, select
+
+    stmt = (
+        select(
+            VotePosition.group_raw.label("party"),
+            VotePosition.choice,
+            func.count(VotePosition.id).label("n"),
+        )
+        .join(Vote, Vote.id == VotePosition.vote_id)
+        .group_by(VotePosition.group_raw, VotePosition.choice)
+    )
+    if chamber:
+        stmt = stmt.where(Vote.chamber == chamber)
+    if legislature:
+        stmt = stmt.where(Vote.legislature == legislature)
+
+    rows = db.execute(stmt).all()
+    total_positions = sum(r[2] for r in rows)
+    data_exists = total_positions > 0
+
+    by_party: dict[str, dict[str, int]] = {}
+    for party, choice, n in rows:
+        if party is None:
+            continue
+        by_party.setdefault(party, {"yes": 0, "no": 0, "abstain": 0, "not_voting": 0})
+        by_party[party][choice] = n
+
+    data = []
+    for party, counts in sorted(by_party.items()):
+        party_total = sum(counts.values())
+        data.append(
+            {
+                "party": party,
+                "yes": counts["yes"],
+                "no": counts["no"],
+                "abstain": counts["abstain"],
+                "not_voting": counts["not_voting"],
+                "total_votes": party_total,
+                "yes_pct": round(counts["yes"] / party_total * 100, 1) if party_total else 0,
+                "no_pct": round(counts["no"] / party_total * 100, 1) if party_total else 0,
+                "abstain_pct": round(counts["abstain"] / party_total * 100, 1)
+                if party_total
+                else 0,
+            }
+        )
+    return {
+        "status": "ok",
+        "data_exists": data_exists,
+        "data": data,
+        "denominator": "resolved positions in scope",
+    }
+
+
+@router.get("/analytics/vote-activity")
+def vote_activity(
+    chamber: str | None = Query(None, pattern=r"^(deputies|senate)$"),
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    from_date: str | None = Query(None, alias="from", description="Start date (ISO)"),
+    to_date: str | None = Query(None, alias="to", description="End date (ISO)"),
+    step_days: int = Query(30, ge=1, le=365),
+    db: Session = Depends(get_db),
+):
+    """Roll-call vote activity over time buckets."""
+    from sqlalchemy import select
+
+    stmt = select(
+        Vote.vote_time,
+        Vote.yes,
+        Vote.no,
+        Vote.abstain,
+        Vote.present,
+    )
+    if chamber:
+        stmt = stmt.where(Vote.chamber == chamber)
+    if legislature:
+        stmt = stmt.where(Vote.legislature == legislature)
+
+    rows = db.execute(stmt.order_by(Vote.vote_time)).all()
+    data_exists = len(rows) > 0
+
+    buckets: dict[str, dict[str, int]] = {}
+    for vote_time, yes, no, abstain, present in rows:
+        if not vote_time:
+            continue
+        day = vote_time.split(" ")[0]
+        b = buckets.setdefault(
+            day, {"date": day, "votes": 0, "yes": 0, "no": 0, "abstain": 0, "present": 0}
+        )
+        b["votes"] += 1
+        if yes:
+            b["yes"] += yes
+        if no:
+            b["no"] += no
+        if abstain:
+            b["abstain"] += abstain
+        if present:
+            b["present"] += present
+
+    return {
+        "status": "ok",
+        "data_exists": data_exists,
+        "data": list(buckets.values()),
+        "buckets": len(buckets),
     }
 
 
