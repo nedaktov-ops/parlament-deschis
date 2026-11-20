@@ -1,7 +1,226 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+// Modular ECharts: register only what this chart needs.
+// Measured chunk: ~487 KB minified / 164 KB gzip (vs 1,040 KB / 345 KB monolith).
+import * as echarts from "echarts/core";
+import { ScatterChart } from "echarts/charts";
+import {
+  GridComponent,
+  LegendComponent,
+  TooltipComponent,
+  ToolboxComponent,
+} from "echarts/components";
+import { CanvasRenderer } from "echarts/renderers";
+import type { ECharts } from "echarts/core";
+import type { EChartsOption } from "echarts";
+import { ideology, type IdeologyEntry } from "../api/client";
+import Skeleton from "../components/ui/Skeleton";
+
+echarts.use([ScatterChart, GridComponent, LegendComponent, TooltipComponent, ToolboxComponent, CanvasRenderer]);
+
+const AXIS_COLOR = "#94a3b8";
+const SPLIT_COLOR = "rgba(148, 163, 184, 0.16)";
+
+// Distinct colors for parties (fallback cycle)
+const PARTY_COLORS = [
+  "#ef4444",
+  "#10b981",
+  "#3b82f6",
+  "#f59e0b",
+  "#8b5cf6",
+  "#ec4899",
+  "#06b6d4",
+  "#84cc16",
+  "#f97316",
+  "#eab308",
+  "#6366f1",
+  "#14b8a6",
+  "#a855f7",
+  "#fb923c",
+  "#c026d3",
+];
 
 export default function Ideology() {
   const { t } = useTranslation();
+
+  const [year, setYear] = useState<string | undefined>(undefined);
+
+  const ideologyQuery = useQuery({
+    queryKey: ["ideology", year],
+    queryFn: () => ideology(year),
+  });
+
+  const data = ideologyQuery.data?.data ?? [];
+  const dataExists = ideologyQuery.data?.data_exists ?? false;
+
+  // Group data by year for the year selector
+  const years = useMemo(() => {
+    const yset = new Set<number>();
+    for (const d of data) {
+      if (d.survey_year) yset.add(d.survey_year);
+    }
+    return Array.from(yset).sort((a, b) => b - a);
+  }, [data]);
+
+  // Filter data by selected year (show latest year by default)
+  const selectedYear = year || (years.length > 0 ? String(years[0]) : undefined);
+  const filteredData = useMemo(
+    () =>
+      selectedYear
+        ? data.filter((d: IdeologyEntry) => d.survey_year === parseInt(selectedYear, 10))
+        : data,
+    [data, selectedYear],
+  );
+
+  if (ideologyQuery.isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="mt-2 h-4 w-64" />
+        <p className="mt-2 text-sm text-slate-500">{t("loading", "Loading…")}</p>
+      </div>
+    );
+  }
+
+  if (ideologyQuery.isError) {
+    return (
+      <div className="text-red-400 text-sm py-6 text-center">
+        {t("view.voturi.loadError", "Failed to load votes.")}
+      </div>
+    );
+  }
+
+  if (!dataExists || filteredData.length === 0) {
+    return (
+      <div className="space-y-6">
+        <section className="py-2" data-enter>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100">
+            {t("view.ideology.title", "Ideological spatial map")}
+          </h1>
+          <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-3xl">
+            {t("view.ideology.intro", "Ideological positioning of parties (left-right, authoritarian-libertarian) based on CHES and PopuList data.")}
+          </p>
+        </section>
+        <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>
+          <div className="text-slate-500 text-sm py-12 text-center">
+            {t("empty.ideology", "Ideological data not yet available.")}
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  // Build scatter plot data
+  const scatterData = filteredData.map((d: IdeologyEntry) => ({
+    value: [d.lrgen ?? 0, d.galtan ?? 0, d.eu_position ?? 0],
+    name: d.party_name,
+    partyfacts_id: d.partyfacts_id,
+    survey_year: d.survey_year,
+    eu_position: d.eu_position,
+    antielite_salience: d.antielite_salience,
+    people_vs_elite: d.people_vs_elite,
+  }));
+
+  const colorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    let idx = 0;
+    for (const d of filteredData) {
+      if (!map[d.party_name]) {
+        map[d.party_name] = PARTY_COLORS[idx % PARTY_COLORS.length];
+        idx++;
+      }
+    }
+    return map;
+  }, [filteredData]);
+
+  const chartRef = useRef<ECharts | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const chart = echarts.init(el);
+    chartRef.current = chart;
+
+    const option: EChartsOption = {
+      backgroundColor: "transparent",
+      tooltip: {
+        trigger: "item",
+        formatter: (params: any) => {
+          const d = params.data as any;
+          return [
+            `<div style="padding: 8px">`,
+            `<div style="font-weight: bold">${d.name}</div>`,
+            `<div>Year: ${d.survey_year}</div>`,
+            `<div>Left-Right: ${(d.value[0] ?? 0).toFixed(2)}</div>`,
+            `<div>GAL-TAN: ${(d.value[1] ?? 0).toFixed(2)}</div>`,
+            `<div>EU Position: ${(d.value[2] ?? 0).toFixed(2)}</div>`,
+            `<div>Anti-Elite: ${(d.antielite_salience ?? 0).toFixed(2)}</div>`,
+            `<div>People vs Elite: ${(d.people_vs_elite ?? 0).toFixed(2)}</div>`,
+            `</div>`,
+          ].join("");
+        },
+      },
+      xAxis: {
+        name: t("view.ideology.axis_left_right", "Economic Left ← → Right"),
+        nameLocation: "middle",
+        nameGap: 30,
+        min: 0,
+        max: 10,
+        splitNumber: 10,
+        axisLine: { lineStyle: { color: AXIS_COLOR } },
+        axisLabel: { color: AXIS_COLOR },
+        splitLine: { lineStyle: { color: SPLIT_COLOR } },
+      },
+      yAxis: {
+        name: t("view.ideology.axis_gal_tan", "Authoritarian ← → Libertarian"),
+        nameLocation: "middle",
+        nameGap: 40,
+        nameRotate: 90,
+        min: 0,
+        max: 10,
+        splitNumber: 10,
+        axisLine: { lineStyle: { color: AXIS_COLOR } },
+        axisLabel: { color: AXIS_COLOR },
+        splitLine: { lineStyle: { color: SPLIT_COLOR } },
+      },
+      series: [
+        {
+          name: "Parties",
+          type: "scatter",
+          data: scatterData.map((d) => ({
+            ...d,
+            itemStyle: {
+              color: colorMap[d.name] ?? "#94a3b8",
+            },
+            label: {
+              show: false,
+            },
+            emphasis: {
+              label: {
+                show: true,
+                formatter: d.name,
+              },
+            },
+          })),
+        },
+      ],
+    };
+
+    chart.setOption(option);
+
+    const onResize = () => chart.resize();
+    const observer =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(onResize) : null;
+    observer?.observe(el);
+    window.addEventListener("resize", onResize);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", onResize);
+      chart.dispose();
+    };
+  }, [filteredData, scatterData, colorMap]);
 
   return (
     <div className="space-y-6">
@@ -15,31 +234,105 @@ export default function Ideology() {
       </section>
 
       <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>
-        <div className="text-slate-500 text-sm py-12 text-center">
-          {t("empty.ideology", "Ideological data not yet available.")}
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4 mb-4">
+          <label className="flex-1 min-w-0">
+            <span className="block text-xs text-slate-400 mb-1">
+              {t("filter.year", "Year")}
+            </span>
+            <select
+              value={selectedYear ?? ""}
+              onChange={(e) => setYear(e.target.value || undefined)}
+              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500"
+            >
+              <option value="">
+                {t("filter.year_all", "All years")}
+              </option>
+              {years.map((y) => (
+                <option key={y} value={String(y)}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="text-xs text-slate-400">
+            {filteredData.length} parties in {years.length} wave(s)
+          </div>
+        </div>
+
+        <div className="h-[500px] w-full">
+          <div ref={containerRef} id="ideology-chart" className="h-full w-full" />
         </div>
       </section>
 
       <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>
         <h2 className="text-lg font-semibold text-slate-100 mb-3">
-          {t("view.ideology.note", "Ideological data not yet ingested. No figures or invented axes shown.")}
+          {t("view.ideology.legend_title", "Party positions")}
         </h2>
-        <ul className="text-sm text-slate-400 space-y-2 max-w-md">
-          <li>
-            {t("view.ideology.sources", "Planned sources:")}{" "}
-            <span className="text-slate-300">CHES (Chapel Hill Expert Survey), PopuList, Party Facts</span>
-          </li>
-          <li>
-            {t("view.ideology.licence", "Licence-gated:")}{" "}
-            <span className="text-slate-300">
-              CC0 / CC BY 4.0 / OGL-ROU-1.0 sources only; CC BY-SA / CC BY-NC treated as cross-check only
-            </span>
-          </li>
-          <li>
-            {t("view.ideology.status", "Status:")}{" "}
-            <span className="text-slate-300">Not ingested — no figures published</span>
-          </li>
-        </ul>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="text-left text-slate-400 border-b border-slate-700">
+                <th className="py-2.5 pr-4 font-medium" scope="col">
+                  Party
+                </th>
+                <th className="py-2.5 pr-4 font-medium text-right" scope="col">
+                  Year
+                </th>
+                <th className="py-2.5 pr-4 font-medium text-right" scope="col">
+                  Left-Right
+                </th>
+                <th className="py-2.5 pr-4 font-medium text-right" scope="col">
+                  GAL-TAN
+                </th>
+                <th className="py-2.5 pr-4 font-medium text-right" scope="col">
+                  EU Position
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredData.map((d: IdeologyEntry) => (
+                <tr
+                  key={`${d.party_name}-${d.survey_year}`}
+                  className="border-b border-slate-700/40 hover:bg-slate-800/40"
+                >
+                  <td className="py-2.5 pr-4 text-slate-200 font-medium">
+                    {d.party_name}
+                  </td>
+                  <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
+                    {d.survey_year}
+                  </td>
+                  <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
+                    {(d.lrgen ?? 0).toFixed(2)}
+                  </td>
+                  <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
+                    {(d.galtan ?? 0).toFixed(2)}
+                  </td>
+                  <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
+                    {(d.eu_position ?? 0).toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="text-xs text-slate-500 mt-2 max-w-3xl">
+        <p>
+          {t("view.ideology.note", "Ideological data not yet ingested. No figures or invented axes shown.")}
+        </p>
+        <p>
+          {t("view.ideology.sources", "Planned sources:")}{" "}
+          <span className="text-slate-300">
+            CHES (Chapel Hill Expert Survey), Party Facts.
+          </span>
+        </p>
+        <p>
+          {t("view.ideology.licence", "Licence-gated:")}{" "}
+          <span className="text-slate-300">
+            CC BY 4.0 (CHES), CC0 (Party Facts).
+          </span>
+        </p>
       </section>
     </div>
   );

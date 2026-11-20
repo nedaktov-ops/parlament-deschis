@@ -860,7 +860,15 @@ export function switchWaves(
   if (legislature) params.set("legislature", legislature);
   const qs = params.toString();
   return get<SwitchWave[]>(`/analytics/switch-waves${qs ? `?${qs}` : ""}`);
-};
+}
+
+export function ideology(
+  year?: string,
+): Promise<IdeologyResponse> {
+  const params = new URLSearchParams();
+  if (year) params.set("year", year);
+  return get<IdeologyResponse>(`/api/analytics/ideology${params.toString() ? `?${params.toString()}` : ""}`);
+}
 
 // --- Feature: Roll-call vote scorecard -------------------------------------
 
@@ -887,4 +895,24 @@ export interface ScorecardResponse {
   total: number;
   offset: number;
   limit: number;
+}
+
+// --- Feature: Roll-call vote ideology (CHES) ---------------------------------
+
+export interface IdeologyEntry {
+  party_name: string;
+  partyfacts_id: string | null;
+  survey_year: number;
+  lrgen: number | null;
+  lrecon: number | null;
+  galtan: number | null;
+  eu_position: number | null;
+  antielite_salience: number | null;
+  people_vs_elite: number | null;
+}
+
+export interface IdeologyResponse {
+  status: string;
+  data_exists: boolean;
+  data: IdeologyEntry[];
 }
