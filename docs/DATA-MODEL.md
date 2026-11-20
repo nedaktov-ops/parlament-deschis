@@ -280,6 +280,29 @@ This document describes the SQLAlchemy ORM models in `pipeline/db.py` and their 
 
 ---
 
+## Roll-call vote tables (Wave 1)
+
+| Table | Purpose | Key columns |
+| --- | --- | --- |
+| `vote` | One official roll-call vote published by a chamber | `source`, `native_vote_id`, `chamber`, `legislature`, `vote_time`, `title_raw`, the five official counts (`present`, `not_voting`, `yes`, `no`, `abstain`), `source_url`, `snapshot_hash`, `truth_contract_version`, `positions_incomplete`, `dedup_key` (unique) |
+| `vote_position` | How one member voted in one vote | `vote_id`, `person_id` (**NOT NULL** - a position is never stored against a guessed identity), `idm_raw`, `cam_raw`, `name_raw`, `group_raw`, `raw_vote`, `choice` (`yes`/`no`/`abstain`/`not_voting`), `resolution_scheme`, `source_url`, `snapshot_hash`, `dedup_key` (unique) |
+| `vote_import_run` | The audit trail of every import | `manifest_sha`, `parser_version`, `resolver_version`, `policy_version`, `applied`, the seen/written counts, `unresolved_count`, `rejected_count`, `report` (the quarantine list) |
+| `source_license` | The licence register - what may be republished | `source_name`, `license_id`, `redistributable`, `share_alike`, `attribution`, `verification_url`, `verification_quote`, `verified_on` |
+
+Rules enforced by the schema and the audit:
+
+* `vote_position.person_id` is mandatory; an unresolved official position is
+  quarantined in `vote_import_run.report` instead of being stored.
+* `choice` is normalised from the published token. `-` means **present but
+  did not vote** (verified against vote 37526), not abstain.
+* `dedup_key` values are deterministic: `<source>:<native_vote_id>` for a vote
+  and `<vote_key>:<person_id>` for a position, so a re-import never
+  duplicates and never depends on a timestamp.
+* `source_license.redistributable = 1` is only allowed for `CC0-1.0`,
+  `CC-BY-4.0` and `OGL-ROU-1.0` (database CHECK constraint).
+
+---
+
 ## Enums (stored as strings)
 
 | Enum | Values |
@@ -306,6 +329,7 @@ Person 1──M Event (person_id)
 Event M──1 Organization (from_org_id, to_org_id)
 Organization 1──M Organization (parent_id, previous_party_id, successor_party_id)
 Membership 1──M Evidence
+Vote 1──M VotePosition M──1 Person
 ```
 
 ---
@@ -323,6 +347,9 @@ Membership 1──M Evidence
 | `coverage` | `chamber`, `legislature` |
 | `evidence` | `membership_id` |
 | `asset_declaration` | `person_id`, `year` |
+| `vote` | `(chamber, legislature, vote_time)`, `dedup_key` (unique) |
+| `vote_position` | `(person_id, choice)`, `dedup_key` (unique) |
+| `source_license` | `source_name` (primary key) |
 
 ---
 

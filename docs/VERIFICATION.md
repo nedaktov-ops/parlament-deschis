@@ -41,6 +41,7 @@ scheduled refresh builds/revalidates this cache before the release audit.
 | `interval_order` | error | A tenure cannot end before it starts. |
 | `missing_start` | error | A tenure with no start date drops out of the movement analysis silently; it is reported loudly. |
 | `batched_dates` | warning | A date shared by many unrelated people is a smell (a default value, not a published fact). |
+| `vote_evidence` | error / warning | Every published roll-call vote keeps its official URL and snapshot hash, its five official counts reconcile (`present = yes + no + abstain + did not vote`), and every stored position points at a real person with a known choice and its own source URL. A vote whose member-level positions could not be mapped completely is flagged as incomplete (warning). A corpus without votes produces no findings. |
 
 Severities: `error` = data defect the audit reports; `warning` = source inconsistency the tool publishes honestly; `info` = informational. Warnings do **not** fail the release gate — hiding them would be worse than publishing them.
 
@@ -69,8 +70,30 @@ The group index publishes a member count per group ("N Membri"). The check compa
 | interval_order | 0 | 0 |
 | missing_start | 0 | 0 |
 | batched_dates | 0 | 2 |
+| vote_evidence | 0 | 0 |
 
 **All evidence checks pass**: every membership carries a source URL, every switch event is backed by dated tenures, no interval is inverted, no start date is missing.
+
+### Roll-call vote verification (Wave 1)
+
+The vote importer has its own verification layer, run **before** anything is
+written:
+
+| Check | What it proves |
+|---|---|
+| manifest SHA-256 | every fixture matches the hash recorded at capture time; one flipped byte aborts the import with zero writes |
+| field map | the day index has exactly 9 elements, the nominal list exactly 6, with no attributes - a format change fails the test |
+| reconciliation | `present = yes + no + abstain + did not vote` for every vote, and the nominal token count matches the official totals |
+| cross-source | the official totals must equal the independent vot-parlament export; a difference aborts the import (`VoteContractError`) |
+| identity | a position is stored only against a person that already exists in the corpus and is identified by the chamber's own `idm`; **no person is ever created** |
+| quarantine | every unresolved position is listed in `vote_import_run.report` with its reason (`no_identifier`, `mandate_check_failed`, `ambiguous_name`, `unmatched_name`, `vote_token_disagreement`) |
+| idempotency | re-running the same manifest writes nothing new; the dedup keys are `cdep:<native_vote_id>` and `cdep:<native_vote_id>:<person_id>` |
+
+Against the shipped corpus (vote 37526, 246 positions) the resolution is
+**146 `cdep_mandate` + 98 `cdep_idm` + 0 `cdep_person`**, with 2 positions
+quarantined (one member missing from our corpus, one identifier whose person
+has no mandate in that chamber and legislature). The person count stays 3 388
+before and after.
 
 The 223 mandate_coverage errors are genuine source gaps (members not listed in any group or as unaffiliated during an interval). The 50 overlap errors are inference artifacts (open-ended memberships that the source published without dates) — all flagged, none hidden.
 

@@ -16,6 +16,7 @@ from pathlib import Path
 from sqlalchemy import (
     JSON,
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Float,
@@ -431,6 +432,35 @@ class VoteImportRun(Base):
     # The quarantine list: what could not be stored and why.
     report: Mapped[dict] = mapped_column(JSON, default=dict)
     dedup_key: Mapped[str] = mapped_column(String(255), unique=True)
+
+
+class SourceLicense(Base):
+    """The licence register - the authority on what may be republished.
+
+    ``redistributable = 1`` is only allowed for the licences that are
+    compatible with this project's CC BY 4.0 dataset (CC0, CC BY 4.0,
+    OGL-ROU-1.0). Non-commercial, ShareAlike and unverified sources are
+    stored with ``redistributable = 0`` and can never enter an export.
+    """
+
+    __tablename__ = "source_license"
+    source_name: Mapped[str] = mapped_column(String(64), primary_key=True)
+    license_id: Mapped[str] = mapped_column(String(32))
+    license_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    redistributable: Mapped[bool] = mapped_column(Boolean, default=False)
+    share_alike: Mapped[bool] = mapped_column(Boolean, default=False)
+    attribution: Mapped[str | None] = mapped_column(Text, nullable=True)
+    verification_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    verification_quote: Mapped[str | None] = mapped_column(Text, nullable=True)
+    verified_on: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    __table_args__ = (
+        CheckConstraint(
+            "redistributable = 0 OR license_id IN ('CC0-1.0', 'CC-BY-4.0', 'OGL-ROU-1.0')",
+            name="ck_source_license_redistributable",
+        ),
+    )
 
 
 class SwitchWave(Base):
