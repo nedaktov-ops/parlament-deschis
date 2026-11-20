@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 export interface DashboardCardProps {
@@ -71,26 +71,26 @@ export default function DashboardCard({
   onClick
 }: DashboardCardProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const v = COLOR_VARIANTS[color];
+
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else if (linkTo) {
+      navigate({ to: linkTo, search: searchParams });
+    }
+  };
 
   return (
     <div
       className={`card p-4 flex flex-col ${v.bg} ${v.border} ${className} ${v.hover} transition-all duration-200 cursor-pointer`}
       role="button"
-      onClick={onClick}
+      onClick={handleClick}
       tabIndex={0}
-      onKeyPress={(e) => {
+      onKeyDown={(e) => {
         if (e.key === "Enter") {
-          if (onClick) onClick();
-          else if (linkTo) {
-            const target = document.createElement('a');
-            target.href = linkTo;
-            if (searchParams) {
-              const sp = new URLSearchParams(searchParams);
-              target.href += '?' + sp.toString();
-            }
-            window.location.href = target.href;
-          }
+          handleClick();
         }
       }}
     >
