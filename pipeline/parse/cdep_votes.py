@@ -140,6 +140,8 @@ def _int(value: str | None) -> int | None:
 
 
 def _rows(raw: bytes) -> list[dict[str, str]]:
+    if not raw or not raw.strip():
+        return []
     root = ElementTree.fromstring(decode_xml_bytes(raw))
     rows: list[dict[str, str]] = []
     for row in root.findall("ROW"):
