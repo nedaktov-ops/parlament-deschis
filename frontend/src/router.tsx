@@ -29,6 +29,9 @@ const Report = lazy(() => import("./pages/Report").then(m => ({ default: m.defau
 const PartyTimeline = lazy(() => import("./pages/PartyTimeline").then(m => ({ default: m.default })));
 const Parties = lazy(() => import("./pages/Parties").then(m => ({ default: m.default })));
 const Voturi = lazy(() => import("./pages/Voturi").then(m => ({ default: m.default })));
+const Radar = lazy(() => import("./pages/Radar").then(m => ({ default: m.default })));
+const Grafice = lazy(() => import("./pages/Grafice").then(m => ({ default: m.default })));
+const Topuri = lazy(() => import("./pages/Topuri").then(m => ({ default: m.default })));
 
 function validateDateSearch(search: Record<string, unknown>) {
   const candidate = search.date;
@@ -465,6 +468,27 @@ const voturiRoute = createRoute({
   validateSearch: validateDateSearch,
 });
 
+const radarRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/radar",
+  component: () => <Suspense fallback={<Loading />}><Radar /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
+const graficeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/grafice",
+  component: () => <Suspense fallback={<Loading />}><Grafice /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
+const topuriRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/topuri",
+  component: () => <Suspense fallback={<Loading />}><Topuri /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
 const routeTree = rootRoute.addChildren([
   senateHistoryRoute,
   switchLeaderboardRoute,
@@ -478,6 +502,9 @@ const routeTree = rootRoute.addChildren([
   partiesRoute,
   partyTimelineRoute,
   voturiRoute,
+  radarRoute,
+  graficeRoute,
+  topuriRoute,
   indexRoute,
   electoralRoute,
   institutionalRoute,
