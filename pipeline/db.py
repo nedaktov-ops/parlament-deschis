@@ -506,6 +506,46 @@ class Vacancy(Base):
     reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
+
+class PartyIdeology(Base):
+    """Party ideology covariates from expert surveys (CHES, PopuList, V-Party).
+
+    One row per (organization, survey_year) combination. All scores are on
+    0-10 scales unless noted. Source: Chapel Hill Expert Survey (CC BY 4.0,
+    EUI archive DOI:10.7910/DVN/TJINLQ).
+    """
+
+    __tablename__ = "party_ideology"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(
+        ForeignKey("organization.id"), nullable=False, index=True
+    )
+    survey_year: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    source: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+
+    # General left-right (0=left, 10=right)
+    lrgen: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Economic left-right (0=left, 10=right)
+    lrecon: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # GAL-TAN (0=TAN, 10=GAL)
+    galtan: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # EU integration position (0=opposed, 10=favored)
+    eu_position: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Anti-elite rhetoric salience
+    antielite_salience: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Populism: people vs elite
+    people_vs_elite: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Provenance
+    source_url: Mapped[str] = mapped_column(String(1024))
+    snapshot_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    dedup_key: Mapped[str] = mapped_column(String(255), unique=True)
+
+    __table_args__ = (
+        Index("ix_party_ideology_org_year", "organization_id", "survey_year"),
+    )
+
+
 class MatchReview(Base):
     __tablename__ = "match_review"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)

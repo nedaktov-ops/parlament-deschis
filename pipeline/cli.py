@@ -34,6 +34,7 @@ from .parse.cdep_group import parse_group_ledger
 from .parse.senat_profile import parse_senator_profile
 from .poller import run_poll_cycle, start_poller
 from .sources.cdep import CdepSource
+from .sources.ches import ChesSource
 from .sources.party_facts import PartyFactsSource
 from .sources.senat import SenatSource
 
@@ -286,6 +287,32 @@ def cmd_partyfacts(args) -> int:
     print("\nParty Facts ingestion results:")
     print(f"  Rows seen:    {totals['rows_seen']}")
     print(f"  ROU rows:     {totals['rows_rou']}")
+    print(f"  Matched:      {totals['rows_matched']}")
+    print(f"  Unmatched:    {totals['rows_unmatched']}")
+    print(f"  Updated:      {totals['rows_updated']}")
+    if args.apply:
+        session.commit()
+        print("  Changes written to database.")
+    else:
+        session.rollback()
+        print("  DRY RUN - no changes written. Use --apply to persist.")
+    return 0
+
+
+def cmd_ches(args) -> int:
+    """Ingest CHES covariates (CC BY 4.0, Dataverse DOI:10.7910/DVN/TJINLQ).
+
+    Downloads the CHES trend CSV, parses ROU rows (country code 12), and
+    matches them to existing Organization records by normalized name.
+    Matched organizations get their ideology covariates stored in the
+    party_ideology table.
+    """
+    session = get_session(args.db)
+    source = ChesSource()
+    totals = source.ingest_ches(session)
+    print("\nCHES ingestion results:")
+    print(f"  Rows seen:    {totals['rows_seen']}")
+    print(f"  ROU rows:     {totals['rows_romania']}")
     print(f"  Matched:      {totals['rows_matched']}")
     print(f"  Unmatched:    {totals['rows_unmatched']}")
     print(f"  Updated:      {totals['rows_updated']}")
@@ -844,6 +871,17 @@ def main(argv=None) -> int:
         help="write matched partyfacts_id to organizations (default: dry run, no changes)",
     )
     p_partyfacts.set_defaults(fn=cmd_partyfacts)
+
+    p_ches = sub.add_parser(
+        "ches",
+        help="Ingest CHES covariates (CC BY 4.0, Dataverse DOI:10.7910/DVN/TJINLQ)",
+    )
+    p_ches.add_argument(
+        "--apply",
+        action="store_true",
+        help="write matched ideology covariates to database (default: dry run, no changes)",
+    )
+    p_ches.set_defaults(fn=cmd_ches)
 
     p_votes = sub.add_parser(
         "votes-import",
