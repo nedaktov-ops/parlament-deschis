@@ -272,6 +272,43 @@ def cmd_enrich(args) -> int:
     return 0
 
 
+def cmd_votes_import(args) -> int:
+    """Import the official roll-call votes from the locked fixtures.
+
+    Dry run by default: nothing is written until ``--apply`` is given.
+    """
+    from .votes import import_votes
+
+    session = get_session(args.db)
+    report = import_votes(
+        session,
+        args.fixtures,
+        dry_run=args.dry_run,
+        vote_ids=args.vote_id or None,
+    )
+    if args.json:
+        print(json.dumps(report.as_dict(), indent=2, ensure_ascii=False))
+    else:
+        print(f"votes seen:           {report.votes_seen}")
+        print(f"positions seen:       {report.positions_seen}")
+        print(f"positions resolved:   {report.positions_resolved}")
+        print(f"  by scheme:          {report.resolved_by_scheme}")
+        print(
+            f"positions quarantined:{report.unresolved_count:>6} (rejected: {report.rejected_count})"
+        )
+        print(f"votes written:        {report.votes_written}")
+        print(f"positions written:    {report.positions_written}")
+        if report.quarantined:
+            print("\nquarantined positions (first 10):")
+            for item in report.quarantined[:10]:
+                print(f"  {item}")
+        if args.dry_run:
+            print("\nDRY RUN - nothing was written. Re-run with --apply to persist.")
+        else:
+            print("\nApplied.")
+    return 0
+
+
 def cmd_assets(args) -> int:
     """Extract asset declarations from PDFs in data/assets/{year}/"""
     result = process_assets_directory(args.year, dry_run=args.dry_run)
@@ -770,6 +807,29 @@ def main(argv=None) -> int:
     )
     p_enrich.add_argument("--legislature", default="2024", help="legislature to enrich")
     p_enrich.set_defaults(fn=cmd_enrich)
+
+    p_votes = sub.add_parser(
+        "votes-import",
+        help="import the official cdep.ro roll-call votes from the locked fixtures (dry run by default)",
+    )
+    p_votes.add_argument(
+        "--fixtures",
+        default=str(FX / "votes"),
+        help="directory holding manifest.json and the vote fixtures",
+    )
+    p_votes.add_argument(
+        "--vote-id",
+        action="append",
+        help="only import this native vote id (repeatable)",
+    )
+    p_votes.add_argument(
+        "--apply",
+        action="store_false",
+        dest="dry_run",
+        help="write the votes to the database (default: dry run, nothing is written)",
+    )
+    p_votes.add_argument("--json", action="store_true", help="print the report as JSON")
+    p_votes.set_defaults(fn=cmd_votes_import)
 
     p_assets = sub.add_parser("assets", help="extract asset declarations from PDFs")
     p_assets.add_argument("--year", type=int, required=True, help="year to process")

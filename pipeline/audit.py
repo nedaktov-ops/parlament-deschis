@@ -31,7 +31,16 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .collect import roster_url
-from .db import Event, Evidence, Mandate, Membership, Organization, Person
+from .db import (
+    Event,
+    Evidence,
+    Mandate,
+    Membership,
+    Organization,
+    Person,
+    Vote,
+    VotePosition,
+)
 from .normalize import name_sort_key, normalize_name
 from .parse.cdep_group import parse_group_ledger, parse_group_list
 from .parse.cdep_roster import parse_roster
@@ -970,6 +979,156 @@ def check_batched_dates(session: Session) -> list[Finding]:
     return findings
 
 
+def check_vote_evidence(session: Session) -> list[Finding]:
+    """Every published vote must be traceable and internally consistent.
+
+    The roll-call votes are the backbone of the behavioural statistics, so
+    they are held to the same evidence standard as the rest of the corpus:
+
+    * every vote keeps the URL of the official publication and the SHA-256
+      of the snapshot it was parsed from;
+    * the five official counts must reconcile
+      (``present = yes + no + abstain + did not vote``);
+    * every stored position points at a real person, carries a known choice
+      and its own source URL;
+    * a vote whose positions could not be mapped completely is flagged
+      (``positions_incomplete``) - a warning, because the official totals are
+      still correct, but the member-level detail is partial.
+
+    A corpus without votes (the state before the Wave 1 importer runs)
+    produces no findings at all.
+    """
+    findings: list[Finding] = []
+    votes = list(session.scalars(select(Vote)))
+    if not votes:
+        return findings
+
+    for vote in votes:
+        if not vote.source_url:
+            findings.append(
+                Finding(
+                    check="vote_evidence",
+                    severity="error",
+                    detail=f"vote {vote.native_vote_id} has no source URL",
+                    context={"vote_id": vote.native_vote_id},
+                )
+            )
+        if not vote.snapshot_hash:
+            findings.append(
+                Finding(
+                    check="vote_evidence",
+                    severity="error",
+                    detail=f"vote {vote.native_vote_id} has no snapshot hash",
+                    context={"vote_id": vote.native_vote_id},
+                )
+            )
+        if not vote.dedup_key:
+            findings.append(
+                Finding(
+                    check="vote_evidence",
+                    severity="error",
+                    detail=f"vote {vote.native_vote_id} has no dedup key",
+                    context={"vote_id": vote.native_vote_id},
+                )
+            )
+        if (
+            vote.present is not None
+            and vote.yes is not None
+            and vote.no is not None
+            and vote.abstain is not None
+            and vote.not_voting is not None
+            and vote.present != vote.yes + vote.no + vote.abstain + vote.not_voting
+        ):
+            findings.append(
+                Finding(
+                    check="vote_evidence",
+                    severity="error",
+                    chamber=vote.chamber,
+                    legislature=vote.legislature,
+                    detail=(
+                        f"vote {vote.native_vote_id} does not reconcile: present={vote.present} "
+                        f"vs yes={vote.yes} no={vote.no} abstain={vote.abstain} "
+                        f"not_voting={vote.not_voting}"
+                    ),
+                    context={"vote_id": vote.native_vote_id},
+                )
+            )
+        if vote.positions_incomplete:
+            findings.append(
+                Finding(
+                    check="vote_evidence",
+                    severity="warning",
+                    chamber=vote.chamber,
+                    legislature=vote.legislature,
+                    detail=f"vote {vote.native_vote_id} has incomplete member-level positions",
+                    context={"vote_id": vote.native_vote_id},
+                )
+            )
+
+    positions = list(session.scalars(select(VotePosition)))
+    for position in positions:
+        if not position.person_id:
+            findings.append(
+                Finding(
+                    check="vote_evidence",
+                    severity="error",
+                    person_id=None,
+                    detail=f"vote position {position.id} has no person",
+                    context={"position_id": position.id, "name": position.name_raw},
+                )
+            )
+        if position.choice not in ("yes", "no", "abstain", "not_voting"):
+            findings.append(
+                Finding(
+                    check="vote_evidence",
+                    severity="error",
+                    detail=(
+                        f"vote position {position.id} has an unknown choice ({position.choice!r})"
+                    ),
+                    context={"position_id": position.id, "raw_vote": position.raw_vote},
+                )
+            )
+        if not position.source_url:
+            findings.append(
+                Finding(
+                    check="vote_evidence",
+                    severity="error",
+                    detail=f"vote position {position.id} has no source URL",
+                    context={"position_id": position.id},
+                )
+            )
+
+    votes_by_id = {vote.id: vote for vote in votes}
+    counts: dict[str, int] = {}
+    for position in positions:
+        counts[position.vote_id] = counts.get(position.vote_id, 0) + 1
+    for vote_id, count in counts.items():
+        vote = votes_by_id.get(vote_id)
+        if vote is None:
+            findings.append(
+                Finding(
+                    check="vote_evidence",
+                    severity="error",
+                    detail=f"vote position points at unknown vote {vote_id}",
+                    context={"vote_id": vote_id},
+                )
+            )
+            continue
+        if vote.present is not None and not vote.positions_incomplete and count != vote.present:
+            findings.append(
+                Finding(
+                    check="vote_evidence",
+                    severity="error",
+                    detail=(
+                        f"vote {vote.native_vote_id} has {count} stored positions "
+                        f"but {vote.present} members were present"
+                    ),
+                    context={"vote_id": vote.native_vote_id, "positions": count},
+                )
+            )
+    return findings
+
+
 CHECKS = {
     "mandate_coverage": check_mandate_coverage,
     "overlap": check_overlaps,
@@ -981,6 +1140,7 @@ CHECKS = {
     "interval_order": check_interval_order,
     "missing_start": check_missing_start,
     "batched_dates": check_batched_dates,
+    "vote_evidence": check_vote_evidence,
 }
 
 

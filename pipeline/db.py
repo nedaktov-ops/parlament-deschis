@@ -347,6 +347,92 @@ class Event(Base):
     dedup_key: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
 
 
+class Vote(Base):
+    """One official roll-call vote published by a chamber.
+
+    The vote itself is the fact ("on 18.11.2026 the Chamber of Deputies
+    adopted PL-x 594/2026 with 245 votes for, 0 against, 0 abstentions and
+    246 members present"); the individual positions live in ``VotePosition``.
+    Every row keeps the URL of the official publication and the SHA-256 of
+    the snapshot it was parsed from, so any number can be re-verified.
+    """
+
+    __tablename__ = "vote"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    source: Mapped[str] = mapped_column(String(32), index=True)
+    native_vote_id: Mapped[str] = mapped_column(String(64), index=True)
+    chamber: Mapped[str] = mapped_column(String(16), index=True)
+    legislature: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
+    vote_time: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    title_raw: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The five official counts published in the day index.
+    present: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    not_voting: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    yes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    no: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    abstain: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    official_vote_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    source_url: Mapped[str] = mapped_column(String(1024))
+    snapshot_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    truth_contract_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # True when the nominal list could not be mapped completely (some
+    # positions are quarantined). Such a vote is published, but flagged.
+    positions_incomplete: Mapped[bool] = mapped_column(Boolean, default=False)
+    dedup_key: Mapped[str] = mapped_column(String(255), unique=True)
+
+    __table_args__ = (Index("ix_vote_scope_date", "chamber", "legislature", "vote_time"),)
+
+
+class VotePosition(Base):
+    """How one member voted in one vote.
+
+    ``person_id`` is mandatory: a position that cannot be tied to a person in
+    our corpus is quarantined in the import report instead of being stored
+    against a guessed identity.
+    """
+
+    __tablename__ = "vote_position"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    vote_id: Mapped[str] = mapped_column(ForeignKey("vote.id"), index=True)
+    person_id: Mapped[str] = mapped_column(ForeignKey("person.id"), nullable=False, index=True)
+    idm_raw: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    cam_raw: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    name_raw: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    group_raw: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    raw_vote: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # yes / no / abstain / not_voting / unknown
+    choice: Mapped[str] = mapped_column(String(16))
+    # cdep_mandate / cdep_idm / cdep_person - how the person was identified
+    resolution_scheme: Mapped[str] = mapped_column(String(32))
+    source_url: Mapped[str] = mapped_column(String(1024))
+    snapshot_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    dedup_key: Mapped[str] = mapped_column(String(255), unique=True)
+
+    __table_args__ = (Index("ix_vote_position_person_choice", "person_id", "choice"),)
+
+
+class VoteImportRun(Base):
+    """One import of the roll-call votes - the audit trail of the importer."""
+
+    __tablename__ = "vote_import_run"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    manifest_sha: Mapped[str] = mapped_column(String(64))
+    parser_version: Mapped[str] = mapped_column(String(32))
+    resolver_version: Mapped[str] = mapped_column(String(32))
+    policy_version: Mapped[str] = mapped_column(String(32))
+    dry_run: Mapped[bool] = mapped_column(Boolean, default=True)
+    applied: Mapped[bool] = mapped_column(Boolean, default=False)
+    votes_seen: Mapped[int] = mapped_column(Integer, default=0)
+    votes_written: Mapped[int] = mapped_column(Integer, default=0)
+    positions_seen: Mapped[int] = mapped_column(Integer, default=0)
+    positions_written: Mapped[int] = mapped_column(Integer, default=0)
+    unresolved_count: Mapped[int] = mapped_column(Integer, default=0)
+    rejected_count: Mapped[int] = mapped_column(Integer, default=0)
+    # The quarantine list: what could not be stored and why.
+    report: Mapped[dict] = mapped_column(JSON, default=dict)
+    dedup_key: Mapped[str] = mapped_column(String(255), unique=True)
+
+
 class SwitchWave(Base):
     """Cluster of party switches detected within a time window, optionally labeled with a trigger event."""
 

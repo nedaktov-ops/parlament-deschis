@@ -134,9 +134,11 @@ def test_nominal_list_vote_tokens_are_da_and_did_not_vote(nominal_37526):
 
 
 def test_nominal_list_names_are_decoded(nominal_37526):
-    names = {f"{r.given_name} {r.family_name}" for r in nominal_37526}
-    assert "Drăgoescu Cezar-Mihail" in names
-    assert "Găl Károly" in names
+    names = {(r.family_name, r.given_name) for r in nominal_37526}
+    assert ("Drăgoescu", "Cezar-Mihail") in names
+    # cdep spells this Hungarian name with an acute accent - keep the source
+    # spelling verbatim, never "correct" it.
+    assert ("Gál", "Károly") in names
 
 
 # --- nominal page (HTML) ----------------------------------------------------

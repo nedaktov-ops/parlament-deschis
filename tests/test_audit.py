@@ -157,6 +157,7 @@ def test_clean_database_has_no_audit_errors(session, monkeypatch):
         "interval_order",
         "missing_start",
         "batched_dates",
+        "vote_evidence",
     }
 
 

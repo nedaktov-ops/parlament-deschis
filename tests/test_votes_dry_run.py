@@ -112,8 +112,8 @@ def _counts(session) -> tuple[int, int, int, int]:
 # --- manifest integrity -----------------------------------------------------
 
 
-def test_manifest_matches_the_locked_fixtures():
-    session = get_session(REPO / "data" / "parlament.db")
+def test_manifest_matches_the_locked_fixtures(tmp_path):
+    session = get_session(tmp_path / "empty.db")
     report = import_votes(session, FIXTURES, dry_run=True)
     assert report.votes_seen == 1
     assert report.positions_seen == 246
