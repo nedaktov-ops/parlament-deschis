@@ -18,7 +18,7 @@ from backend.cache import invalidate as invalidate_result_cache
 from backend.config import APP_VERSION, DATASET_METADATA_PATH
 from backend.deps import get_db
 from pipeline.analytics import derive_all_switch_waves, derive_switch_waves
-from pipeline.db import Evidence, Vote, VotePosition
+from pipeline.db import Evidence, Organization, PartyIdeology, Person, Vote, VotePosition
 from pipeline.export import (
     CODE_LICENSE,
     DATA_LICENSE,
@@ -1336,8 +1336,6 @@ def vote_scorecard(
 
     from sqlalchemy import select
 
-    from pipeline.db import Person
-
     # Fetch all positions in scope, joined to Vote (for chamber/legislature
     # filters) and Person (for canonical name).
     stmt = (
@@ -1448,6 +1446,73 @@ def vote_scorecard(
         "total": total,
         "offset": offset,
         "limit": limit,
+    }
+
+
+@router.get("/api/analytics/ideology")
+def ideology_data(
+    year: str | None = Query(None, pattern=r"^\d{4}$"),
+    db: Session = Depends(get_db),
+):
+    """Party ideology covariates from expert surveys (CHES, CC BY 4.0).
+
+    Returns ideology scores per party per survey year for ideological
+    spatial mapping. All scores on 0-10 scale:
+    - lrgen: general left-right (0=left, 10=right)
+    - galtan: GAL-TAN (0=TAN/authoritarian, 10=GAL/libertarian)
+    - eu_position: EU integration (0=opposed, 10=favored)
+    """
+    from sqlalchemy import select
+
+    stmt = (
+        select(
+            Organization.name,
+            Organization.partyfacts_id,
+            PartyIdeology.survey_year,
+            PartyIdeology.lrgen,
+            PartyIdeology.lrecon,
+            PartyIdeology.galtan,
+            PartyIdeology.eu_position,
+            PartyIdeology.antielite_salience,
+            PartyIdeology.people_vs_elite,
+        )
+        .join(PartyIdeology, PartyIdeology.organization_id == Organization.id)
+        .where(PartyIdeology.source == "ches")
+    )
+    if year:
+        stmt = stmt.where(PartyIdeology.survey_year == int(year))
+
+    rows = db.execute(stmt).all()
+    if not rows:
+        return {
+            "status": "ok",
+            "data_exists": False,
+            "data": [],
+        }
+
+    data = []
+    for row in rows:
+        data.append(
+            {
+                "party_name": row.name,
+                "partyfacts_id": row.partyfacts_id,
+                "survey_year": row.survey_year,
+                "lrgen": row.lrgen,
+                "lrecon": row.lrecon,
+                "galtan": row.galtan,
+                "eu_position": row.eu_position,
+                "antielite_salience": row.antielite_salience,
+                "people_vs_elite": row.people_vs_elite,
+            }
+        )
+
+    # Sort by party name then year
+    data.sort(key=lambda d: (d["party_name"], d["survey_year"]))
+
+    return {
+        "status": "ok",
+        "data_exists": True,
+        "data": data,
     }
 
 
