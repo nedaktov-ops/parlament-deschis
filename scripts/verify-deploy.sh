@@ -2,10 +2,8 @@
 # End-to-end verification of a Parlament Deschis production deployment.
 #
 # The script waits for the Render deploy that matches TARGET_SHA to become
-# live, tolerates a Vercel build that was intentionally skipped by
-# vercel.json's ignoreCommand, then checks the public contract: the SPA, the
-# /api rewrite, health, the pinned dataset release, and two read-only API
-# routes.
+# live, then checks the public contract: the SPA, the /api rewrite, health,
+# the pinned dataset release, and two read-only API routes.
 #
 # Required environment:
 #   TARGET_SHA           commit that must be live on Render
@@ -18,7 +16,6 @@
 # Optional environment:
 #   VERCEL_TEAM_ID, VERCEL_ORIGIN, RENDER_ORIGIN,
 #   VERIFY_TIMEOUT_SECONDS (1800), VERIFY_POLL_SECONDS (20),
-#   VERCEL_SKIP_GRACE_SECONDS (180)
 #   DATASET_MAX_AGE_DAYS (7)   max permitted age of dataset.published_at
 #   FRESHNESS_NOW (RFC3339)    override "now" for deterministic freshness checks
 #   HEALTH_JSON_FILE (path)    OFFLINE fixture mode: make NO network/API calls,
@@ -32,7 +29,6 @@ VERCEL_ORIGIN="${VERCEL_ORIGIN:-https://parlament-deschis.vercel.app}"
 RENDER_ORIGIN="${RENDER_ORIGIN:-https://parlament-deschis.onrender.com}"
 VERIFY_TIMEOUT_SECONDS="${VERIFY_TIMEOUT_SECONDS:-1800}"
 VERIFY_POLL_SECONDS="${VERIFY_POLL_SECONDS:-20}"
-VERCEL_SKIP_GRACE_SECONDS="${VERCEL_SKIP_GRACE_SECONDS:-180}"
 DATASET_MAX_AGE_DAYS="${DATASET_MAX_AGE_DAYS:-7}"
 
 workdir="$(mktemp -d)"
@@ -112,8 +108,6 @@ say "Verifying commit ${TARGET_SHA} against dataset ${EXPECTED_RELEASE}"
 deadline=$((SECONDS + VERIFY_TIMEOUT_SECONDS))
 vercel_state="absent"
 vercel_ok=0
-vercel_skipped=0
-vercel_absent_since=""
 render_state="absent"
 render_ok=0
 
@@ -130,19 +124,12 @@ while ((SECONDS < deadline)); do
 	case "$vercel_state" in
 	READY)
 		vercel_ok=1
-		vercel_skipped=0
 		;;
-	ERROR | BLOCKED)
+	ERROR | BLOCKED | CANCELED)
 		die "Vercel deployment for ${TARGET_SHA} is ${vercel_state}"
 		;;
-	CANCELED | absent)
-		if [ -z "$vercel_absent_since" ]; then
-			vercel_absent_since=$SECONDS
-		fi
-		if ((SECONDS - vercel_absent_since >= VERCEL_SKIP_GRACE_SECONDS)); then
-			vercel_ok=1
-			vercel_skipped=1
-		fi
+	absent)
+		die "Vercel deployment for ${TARGET_SHA} not found (no build started)"
 		;;
 	esac
 
@@ -178,12 +165,7 @@ fi
 if ((vercel_ok != 1)); then
 	die "Vercel did not resolve within ${VERIFY_TIMEOUT_SECONDS}s (last state: ${vercel_state})"
 fi
-
-if ((vercel_skipped == 1)); then
-	say "Vercel: no deployment for ${TARGET_SHA} (build skipped by ignoreCommand); checking the stable origin."
-else
-	say "Vercel: deployment for ${TARGET_SHA} is READY."
-fi
+say "Vercel: deployment for ${TARGET_SHA} is READY."
 say "Render: deploy for ${TARGET_SHA} is live."
 
 health_ok=0
@@ -238,9 +220,6 @@ check_public "${RENDER_ORIGIN}/api/traseism/overview" "$workdir/traseism.json" "
 jq -e . "$workdir/traseism.json" >/dev/null || die "Render /api/traseism/overview did not return JSON"
 
 vercel_label="READY"
-if ((vercel_skipped == 1)); then
-	vercel_label="skipped (no frontend change)"
-fi
 
 say ""
 say "### Deployment verified"

@@ -3,7 +3,6 @@
   "buildCommand": "cd frontend && npm ci && npm run build",
   "outputDirectory": "frontend/dist",
   "framework": "vite",
-  "ignoreCommand": "",
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://parlament-deschis.onrender.com/api/:path*" },
     { "source": "/graphql", "destination": "https://parlament-deschis.onrender.com/graphql" },
