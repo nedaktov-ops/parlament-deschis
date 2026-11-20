@@ -28,6 +28,7 @@ const MpComparison = lazy(() => import("./pages/MpComparison").then(m => ({ defa
 const Report = lazy(() => import("./pages/Report").then(m => ({ default: m.default })));
 const PartyTimeline = lazy(() => import("./pages/PartyTimeline").then(m => ({ default: m.default })));
 const Parties = lazy(() => import("./pages/Parties").then(m => ({ default: m.default })));
+const Voturi = lazy(() => import("./pages/Voturi").then(m => ({ default: m.default })));
 
 function validateDateSearch(search: Record<string, unknown>) {
   const candidate = search.date;
@@ -457,6 +458,13 @@ const partyTimelineRoute = createRoute({
   validateSearch: validateDateSearch,
 });
 
+const voturiRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/Voturi",
+  component: () => <Suspense fallback={<Loading />}><Voturi /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
 const routeTree = rootRoute.addChildren([
   senateHistoryRoute,
   switchLeaderboardRoute,
@@ -469,6 +477,7 @@ const routeTree = rootRoute.addChildren([
   reportRoute,
   partiesRoute,
   partyTimelineRoute,
+  voturiRoute,
   indexRoute,
   electoralRoute,
   institutionalRoute,

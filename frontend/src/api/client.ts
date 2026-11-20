@@ -263,6 +263,115 @@ export interface CrossChamberResponse {
   data: CrossChamberPerson[];
 }
 
+// --- Feature: Roll-call votes ----------------------------------------------
+
+export interface VoteRow {
+  id: string;
+  native_vote_id: string;
+  chamber: string;
+  legislature: string | null;
+  vote_time: string | null;
+  title_raw: string | null;
+  present: number | null;
+  not_voting: number | null;
+  yes: number | null;
+  no: number | null;
+  abstain: number | null;
+  source_url: string;
+  positions_incomplete: boolean;
+}
+
+export interface VotesResponse {
+  status: string;
+  data_exists: boolean;
+  data: VoteRow[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface VoteDetail {
+  id: string;
+  native_vote_id: string;
+  chamber: string;
+  legislature: string | null;
+  vote_time: string | null;
+  title_raw: string | null;
+  present: number | null;
+  not_voting: number | null;
+  yes: number | null;
+  no: number | null;
+  abstain: number | null;
+  official_vote_url: string | null;
+  source_url: string;
+  snapshot_hash: string | null;
+  truth_contract_version: string | null;
+  positions_incomplete: boolean;
+  position_count: number;
+}
+
+export interface VotePositionRow {
+  person_id: string;
+  name_raw: string | null;
+  group_raw: string | null;
+  choice: string;
+  resolution_scheme: string;
+  source_url: string;
+}
+
+export interface VotePositionsResponse {
+  status: string;
+  data_exists: boolean;
+  data: VotePositionRow[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface CohesionParty {
+  party: string;
+  yes: number;
+  no: number;
+  abstain: number;
+  not_voting: number;
+  total_votes: number;
+  yes_pct: number;
+  no_pct: number;
+  abstain_pct: number;
+}
+
+export interface VoteCohesionResponse {
+  status: string;
+  data_exists: boolean;
+  data: CohesionParty[];
+  denominator: string;
+}
+
+export interface ActivityBucket {
+  date: string;
+  votes: number;
+  yes: number;
+  no: number;
+  abstain: number;
+  present: number;
+}
+
+export interface VoteActivityResponse {
+  status: string;
+  data_exists: boolean;
+  data: ActivityBucket[];
+  buckets: number;
+}
+
+export interface VotesFilters {
+  chamber?: string;
+  legislature?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  offset?: number;
+}
+
 const BASE = "/api";
 
 export async function get<T>(path: string): Promise<T> {
@@ -331,6 +440,55 @@ export const api = {
   health: () => get<HealthResponse>("/health"),
   dashboardStats: (asOf?: string) =>
     get<DashboardStatsResponse>(asOf ? `/dashboard/stats?as_of=${asOf}` : "/dashboard/stats"),
+
+  votes: (query: VotesFilters = {}) =>
+    get<VotesResponse>("/votes" + (() => {
+      const params = new URLSearchParams();
+      if (query.chamber) params.set("chamber", query.chamber);
+      if (query.legislature) params.set("legislature", query.legislature);
+      if (query.from) params.set("from", query.from);
+      if (query.to) params.set("to", query.to);
+      if (query.limit !== undefined) params.set("limit", String(query.limit));
+      if (query.offset !== undefined) params.set("offset", String(query.offset));
+      const qs = params.toString();
+      return qs ? `?${qs}` : "";
+    })()),
+  voteDetail: (voteId: string) =>
+    get<VoteDetail>(`/votes/${encodeURIComponent(voteId)}`),
+  votePositions: (voteId: string, query: { limit?: number; offset?: number; choice?: string } = {}) => {
+    const params = new URLSearchParams();
+    if (query.limit !== undefined) params.set("limit", String(query.limit));
+    if (query.offset !== undefined) params.set("offset", String(query.offset));
+    if (query.choice) params.set("choice", query.choice);
+    const qs = params.toString();
+    return get<VotePositionsResponse>(
+      `/votes/${encodeURIComponent(voteId)}/positions${qs ? `?${qs}` : ""}`,
+    );
+  },
+  voteCohesion: (chamber?: string, legislature?: string) => {
+    const params = new URLSearchParams();
+    if (chamber) params.set("chamber", chamber);
+    if (legislature) params.set("legislature", legislature);
+    const qs = params.toString();
+    return get<VoteCohesionResponse>(
+      `/analytics/vote-cohesion${qs ? `?${qs}` : ""}`,
+    );
+  },
+  voteActivity: (
+    chamber?: string,
+    legislature?: string,
+    from?: string,
+    to?: string,
+    stepDays = 30,
+  ) => {
+    const params = new URLSearchParams();
+    if (chamber) params.set("chamber", chamber);
+    if (legislature) params.set("legislature", legislature);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    params.set("step_days", String(stepDays));
+    return get<VoteActivityResponse>(`/analytics/vote-activity?${params.toString()}`);
+  },
 };
 
 function withScope(path: string, chamber?: string, legislature?: string): string {
@@ -686,177 +844,4 @@ export function switchWaves(
   if (legislature) params.set("legislature", legislature);
   const qs = params.toString();
   return get<SwitchWave[]>(`/analytics/switch-waves${qs ? `?${qs}` : ""}`);
-}
-
-// --- Feature: Roll-call votes ----------------------------------------------
-
-export interface VoteRow {
-  id: string;
-  native_vote_id: string;
-  chamber: string;
-  legislature: string | null;
-  vote_time: string | null;
-  title_raw: string | null;
-  present: number | null;
-  not_voting: number | null;
-  yes: number | null;
-  no: number | null;
-  abstain: number | null;
-  source_url: string;
-  positions_incomplete: boolean;
-}
-
-export interface VotesResponse {
-  status: string;
-  data_exists: boolean;
-  data: VoteRow[];
-  total: number;
-  offset: number;
-  limit: number;
-}
-
-export interface VoteDetail {
-  id: string;
-  native_vote_id: string;
-  chamber: string;
-  legislature: string | null;
-  vote_time: string | null;
-  title_raw: string | null;
-  present: number | null;
-  not_voting: number | null;
-  yes: number | null;
-  no: number | null;
-  abstain: number | null;
-  official_vote_url: string | null;
-  source_url: string;
-  snapshot_hash: string | null;
-  truth_contract_version: string | null;
-  positions_incomplete: boolean;
-  position_count: number;
-}
-
-export interface VotePositionRow {
-  person_id: string;
-  name_raw: string | null;
-  group_raw: string | null;
-  choice: string;
-  resolution_scheme: string;
-  source_url: string;
-}
-
-export interface VotePositionsResponse {
-  status: string;
-  data_exists: boolean;
-  data: VotePositionRow[];
-  total: number;
-  offset: number;
-  limit: number;
-}
-
-export interface CohesionParty {
-  party: string;
-  yes: number;
-  no: number;
-  abstain: number;
-  not_voting: number;
-  total_votes: number;
-  yes_pct: number;
-  no_pct: number;
-  abstain_pct: number;
-}
-
-export interface VoteCohesionResponse {
-  status: string;
-  data_exists: boolean;
-  data: CohesionParty[];
-  denominator: string;
-}
-
-export interface ActivityBucket {
-  date: string;
-  votes: number;
-  yes: number;
-  no: number;
-  abstain: number;
-  present: number;
-}
-
-export interface VoteActivityResponse {
-  status: string;
-  data_exists: boolean;
-  data: ActivityBucket[];
-  buckets: number;
-}
-
-export interface VotesFilters {
-  chamber?: string;
-  legislature?: string;
-  from?: string;
-  to?: string;
-  limit?: number;
-  offset?: number;
-}
-
-/** Roll-call votes list. Empty table -> data_exists:false, data:[]. */
-export function votes(query: VotesFilters = {}): Promise<VotesResponse> {
-  const params = new URLSearchParams();
-  if (query.chamber) params.set("chamber", query.chamber);
-  if (query.legislature) params.set("legislature", query.legislature);
-  if (query.from) params.set("from", query.from);
-  if (query.to) params.set("to", query.to);
-  if (query.limit !== undefined) params.set("limit", String(query.limit));
-  if (query.offset !== undefined) params.set("offset", String(query.offset));
-  const qs = params.toString();
-  return get<VotesResponse>(`/votes${qs ? `?${qs}` : ""}`);
-}
-
-/** Single roll-call vote by native_vote_id. */
-export function voteDetail(voteId: string): Promise<VoteDetail> {
-  return get<VoteDetail>(`/votes/${encodeURIComponent(voteId)}`);
-}
-
-/** Individual positions for one roll-call vote. */
-export function votePositions(
-  voteId: string,
-  query: { limit?: number; offset?: number; choice?: string } = {},
-): Promise<VotePositionsResponse> {
-  const params = new URLSearchParams();
-  if (query.limit !== undefined) params.set("limit", String(query.limit));
-  if (query.offset !== undefined) params.set("offset", String(query.offset));
-  if (query.choice) params.set("choice", query.choice);
-  const qs = params.toString();
-  return get<VotePositionsResponse>(
-    `/votes/${encodeURIComponent(voteId)}/positions${qs ? `?${qs}` : ""}`,
-  );
-}
-
-/** Party cohesion on roll-call votes. */
-export function voteCohesion(
-  chamber?: string,
-  legislature?: string,
-): Promise<VoteCohesionResponse> {
-  const params = new URLSearchParams();
-  if (chamber) params.set("chamber", chamber);
-  if (legislature) params.set("legislature", legislature);
-  const qs = params.toString();
-  return get<VoteCohesionResponse>(
-    `/analytics/vote-cohesion${qs ? `?${qs}` : ""}`,
-  );
-}
-
-/** Roll-call vote activity over time buckets. */
-export function voteActivity(
-  chamber?: string,
-  legislature?: string,
-  from?: string,
-  to?: string,
-  stepDays = 30,
-): Promise<VoteActivityResponse> {
-  const params = new URLSearchParams();
-  if (chamber) params.set("chamber", chamber);
-  if (legislature) params.set("legislature", legislature);
-  if (from) params.set("from", from);
-  if (to) params.set("to", to);
-  params.set("step_days", String(stepDays));
-  return get<VoteActivityResponse>(`/analytics/vote-activity?${params.toString()}`);
-}
+};
