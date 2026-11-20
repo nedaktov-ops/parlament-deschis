@@ -52,7 +52,29 @@ import socket as socket_module  # noqa: E402  (imported late so the patch is obv
 
 
 def _corpus_copy(tmp_path: Path) -> Path:
-    """WAL-safe copy of the shipped corpus (never a raw file copy)."""
+    """WAL-safe copy of the shipped corpus (never a raw file copy).
+
+    The corpus is a **release artifact**: ``data/parlament-real.db`` is
+    git-ignored, so it only exists where the published dataset has been
+    downloaded (a developer machine, or the CI job that downloads it). In a
+    plain CI test run the API tests create an *empty* database file, so the
+    test skips instead of asserting against an empty corpus.
+    """
+    if not REAL_DB.exists():
+        pytest.skip("the corpus database is a release artifact; download it first")
+    src = sqlite3.connect(f"file:{REAL_DB}?mode=ro", uri=True)
+    try:
+        persons = src.execute("select count(*) from person").fetchone()[0]
+    except sqlite3.DatabaseError as exc:
+        pytest.skip(f"the corpus database is not usable yet: {exc}")
+    finally:
+        src.close()
+    if persons < 3000:
+        pytest.skip(
+            f"the corpus database holds {persons} persons; "
+            "download the published dataset before running this check"
+        )
+
     target = tmp_path / "corpus.db"
     src = sqlite3.connect(f"file:{REAL_DB}?mode=ro", uri=True)
     dst = sqlite3.connect(target)
