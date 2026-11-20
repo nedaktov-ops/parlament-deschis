@@ -166,6 +166,7 @@ class Organization(Base):
     color: Mapped[str | None] = mapped_column(String(16), nullable=True)
     parent_id: Mapped[str | None] = mapped_column(ForeignKey("organization.id"), nullable=True)
     wikidata_qid: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    partyfacts_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     founding_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     dissolution_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     localised_labels: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -593,6 +594,7 @@ _ADDED_COLUMNS: dict[str, dict[str, str]] = {
     },
     "organization": {
         "legislature": "VARCHAR(16)",
+        "partyfacts_id": "VARCHAR(32)",
     },
 }
 

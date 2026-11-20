@@ -34,6 +34,7 @@ from .parse.cdep_group import parse_group_ledger
 from .parse.senat_profile import parse_senator_profile
 from .poller import run_poll_cycle, start_poller
 from .sources.cdep import CdepSource
+from .sources.party_facts import PartyFactsSource
 from .sources.senat import SenatSource
 
 FX = Path(__file__).parent.parent / "tests" / "fixtures"
@@ -269,6 +270,31 @@ def cmd_enrich(args) -> int:
     print(f"  Errors: {results['error']}")
     if args.dry_run:
         print("\nDRY RUN - no changes written. Use --apply to persist.")
+    return 0
+
+
+def cmd_partyfacts(args) -> int:
+    """Ingest Party Facts covariates (CC0, Dataverse DOI:10.7910/DVN/TJINLQ).
+
+    Downloads external-parties.csv, parses ROU rows, and matches them to
+    existing Organization records by normalized name. Matched organizations
+    get their partyfacts_id populated for ideological covariate joins.
+    """
+    session = get_session(args.db)
+    source = PartyFactsSource()
+    totals = source.ingest_partyfacts(session)
+    print("\nParty Facts ingestion results:")
+    print(f"  Rows seen:    {totals['rows_seen']}")
+    print(f"  ROU rows:     {totals['rows_rou']}")
+    print(f"  Matched:      {totals['rows_matched']}")
+    print(f"  Unmatched:    {totals['rows_unmatched']}")
+    print(f"  Updated:      {totals['rows_updated']}")
+    if args.apply:
+        session.commit()
+        print("  Changes written to database.")
+    else:
+        session.rollback()
+        print("  DRY RUN - no changes written. Use --apply to persist.")
     return 0
 
 
@@ -807,6 +833,17 @@ def main(argv=None) -> int:
     )
     p_enrich.add_argument("--legislature", default="2024", help="legislature to enrich")
     p_enrich.set_defaults(fn=cmd_enrich)
+
+    p_partyfacts = sub.add_parser(
+        "party-facts",
+        help="Ingest Party Facts covariates (CC0, Dataverse DOI:10.7910/DVN/TJINLQ)",
+    )
+    p_partyfacts.add_argument(
+        "--apply",
+        action="store_true",
+        help="write matched partyfacts_id to organizations (default: dry run, no changes)",
+    )
+    p_partyfacts.set_defaults(fn=cmd_partyfacts)
 
     p_votes = sub.add_parser(
         "votes-import",
