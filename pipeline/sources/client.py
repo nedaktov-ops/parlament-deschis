@@ -48,6 +48,11 @@ class FetchResult:
     from_cache: bool = False
     etag: str | None = None
     last_modified: str | None = None
+    # The raw response bytes, exactly as the server sent them. ``text`` is a
+    # decoded string and re-encoding it can change the bytes (cdep.ro serves
+    # UTF-8 with an XML prolog that claims ISO-8859-2), so the evidence layer
+    # archives and hashes ``content``, never a re-encoded ``text``.
+    content: bytes | None = None
 
 
 @dataclass
@@ -216,7 +221,14 @@ class PoliteClient:
             etag = resp.headers.get("ETag")
             lm = resp.headers.get("Last-Modified")
             self._conditional[url] = {"etag": etag, "last_modified": lm, "text": text}
-            return FetchResult(url, resp.status_code, text, etag=etag, last_modified=lm)
+            return FetchResult(
+                url,
+                resp.status_code,
+                text,
+                etag=etag,
+                last_modified=lm,
+                content=resp.content,
+            )
         raise RuntimeError(f"failed to fetch {url}")
 
     def post(

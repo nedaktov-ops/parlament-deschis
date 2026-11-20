@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="ISO-8859-2"?>
+<ROWSET>
+ <ROW>
+  <VOTID>37480</VOTID>
+  <TIME_VOT>10.11.2026 12:18</TIME_VOT>
+  <DESCRIERE>Modificare ordine de zi</DESCRIERE>
+  <CAMERA>0</CAMERA>
+  <PREZENTI>344</PREZENTI>
+  <NU_AU_VOTAT>5</NU_AU_VOTAT>
+  <AU_VOTAT_DA>329</AU_VOTAT_DA>
+  <AU_VOTAT_NU>4</AU_VOTAT_NU>
+  <AU_VOTAT_AB>6</AU_VOTAT_AB>
+ </ROW>
+ <ROW>
+  <VOTID>37481</VOTID>
+  <TIME_VOT>10.11.2026 12:19</TIME_VOT>
+  <DESCRIERE>Aprobare ordine de zi</DESCRIERE>
+  <CAMERA>0</CAMERA>
+  <PREZENTI>347</PREZENTI>
+  <NU_AU_VOTAT>3</NU_AU_VOTAT>
+  <AU_VOTAT_DA>340</AU_VOTAT_DA>
+  <AU_VOTAT_NU>1</AU_VOTAT_NU>
+  <AU_VOTAT_AB>3</AU_VOTAT_AB>
+ </ROW>
+ <ROW>
+  <VOTID>37482</VOTID>
+  <TIME_VOT>10.11.2026 12:20</TIME_VOT>
+  <DESCRIERE>Program de lucru</DESCRIERE>
+  <CAMERA>0</CAMERA>
+  <PREZENTI>350</PREZENTI>
+  <NU_AU_VOTAT>4</NU_AU_VOTAT>
+  <AU_VOTAT_DA>345</AU_VOTAT_DA>
+  <AU_VOTAT_NU>1</AU_VOTAT_NU>
+  <AU_VOTAT_AB>0</AU_VOTAT_AB>
+ </ROW>
+ <ROW>
+  <VOTID>37483</VOTID>
+  <TIME_VOT>10.11.2026 12:21</TIME_VOT>
+  <DESCRIERE>Proiectul de Hotărâre pentru modificarea şi completarea Hotărârii Parlamentului României nr.5/2025 privind constituirea Comisiei speciale comune a Camerei Deputaţilor şi Senatului pentru combaterea traficului de persoane</DESCRIERE>
+  <CAMERA>0</CAMERA>
+  <PREZENTI>350</PREZENTI>
+  <NU_AU_VOTAT>3</NU_AU_VOTAT>
+  <AU_VOTAT_DA>346</AU_VOTAT_DA>
+  <AU_VOTAT_NU>1</AU_VOTAT_NU>
+  <AU_VOTAT_AB>0</AU_VOTAT_AB>
+ </ROW>
+ <ROW>
+  <VOTID>37484</VOTID>
+  <TIME_VOT>10.11.2026 12:23</TIME_VOT>
+  <DESCRIERE>Propunere</DESCRIERE>
+  <CAMERA>0</CAMERA>
+  <PREZENTI>353</PREZENTI>
+  <NU_AU_VOTAT>2</NU_AU_VOTAT>
+  <AU_VOTAT_DA>101</AU_VOTAT_DA>
+  <AU_VOTAT_NU>93</AU_VOTAT_NU>
+  <AU_VOTAT_AB>157</AU_VOTAT_AB>
+ </ROW>
+ <ROW>
+  <VOTID>37485</VOTID>
+  <TIME_VOT>10.11.2026 12:24</TIME_VOT>
+  <DESCRIERE>Proiectul de Hotărâre pentru modificarea anexei la Hotărârea Parlamentului României nr.31/2025 privind constituirea Comisiei speciale comune a Camerei Deputaţilor şi Senatului în domeniul legislaţiei privind prevenirea, combaterea şi sancţionarea violenţei domestice - România fără violenţă domestică</DESCRIERE>
+  <CAMERA>0</CAMERA>
+  <PREZENTI>355</PREZENTI>
+  <NU_AU_VOTAT>3</NU_AU_VOTAT>
+  <AU_VOTAT_DA>352</AU_VOTAT_DA>
+  <AU_VOTAT_NU>0</AU_VOTAT_NU>
+  <AU_VOTAT_AB>0</AU_VOTAT_AB>
+ </ROW>
+ <ROW>
+  <VOTID>37486</VOTID>
+  <TIME_VOT>10.11.2026 12:25</TIME_VOT>
+  <DESCRIERE>Proiectul de Hotărâre pentru modificarea anexei la Hotărârea Parlamentului României nr.12/2025 privind aprobarea componenţei nominale şi a conducerii Delegaţiei permanente a Parlamentului României la Adunarea Parlamentară a NATO.</DESCRIERE>
+  <CAMERA>0</CAMERA>
+  <PREZENTI>351</PREZENTI>
+  <NU_AU_VOTAT>4</NU_AU_VOTAT>
+  <AU_VOTAT_DA>335</AU_VOTAT_DA>
+  <AU_VOTAT_NU>7</AU_VOTAT_NU>
+  <AU_VOTAT_AB>5</AU_VOTAT_AB>
+ </ROW>
+ <ROW>
+  <VOTID>37487</VOTID>
+  <TIME_VOT>10.11.2026 12:27</TIME_VOT>
+  <DESCRIERE>Proiectul de Hotărâre pentru modificarea anexei la Hotărârea Parlamentului României nr.8/2025 privind aprobarea componenţei nominale şi a conducerii Delegaţiei permanente a Parlamentului României la Adunarea Parlamentară a Consiliului Europei.</DESCRIERE>
+  <CAMERA>0</CAMERA>
+  <PREZENTI>348</PREZENTI>
+  <NU_AU_VOTAT>4</NU_AU_VOTAT>
+  <AU_VOTAT_DA>331</AU_VOTAT_DA>
+  <AU_VOTAT_NU>8</AU_VOTAT_NU>
+  <AU_VOTAT_AB>5</AU_VOTAT_AB>
+ </ROW>
+ <ROW>
+  <VOTID>37488</VOTID>
+  <TIME_VOT>10.11.2026 12:28</TIME_VOT>
+  <DESCRIERE>Proiectul de Hotărâre pentru modificarea anexei la Hotărârea Parlamentului României nr.15/2025 privind aprobarea componenţei nominale şi a conducerii Comitetului director al Grupului Român al Uniunii Interparlamentare</DESCRIERE>
+  <CAMERA>0</CAMERA>
+  <PREZENTI>359</PREZENTI>
+  <NU_AU_VOTAT>4</NU_AU_VOTAT>
+  <AU_VOTAT_DA>273</AU_VOTAT_DA>
+  <AU_VOTAT_NU>34</AU_VOTAT_NU>
+  <AU_VOTAT_AB>48</AU_VOTAT_AB>
+ </ROW>
+ <ROW>
+  <VOTID>37489</VOTID>
+  <TIME_VOT>10.11.2026 12:31</TIME_VOT>
+  <DESCRIERE>Proiectul de Hotărâre privind desemnarea unui consilier de conturi care să exercite atribuţiile preşedintelui Curţii de Conturi</DESCRIERE>
+  <CAMERA>0</CAMERA>
+  <PREZENTI>353</PREZENTI>
+  <NU_AU_VOTAT>3</NU_AU_VOTAT>
+  <AU_VOTAT_DA>248</AU_VOTAT_DA>
+  <AU_VOTAT_NU>54</AU_VOTAT_NU>
+  <AU_VOTAT_AB>48</AU_VOTAT_AB>
+ </ROW>
+ <ROW>
+  <VOTID>37490</VOTID>
+  <TIME_VOT>10.11.2026 12:37</TIME_VOT>
+  <DESCRIERE>Proiectul de Hotărâre pentru modificarea anexei la Hotărârea Parlamentului României nr.9/2025 privind aprobarea componenţei nominale şi a conducerii Delegaţiei permanente a Parlamentului României la Adunarea Parlamentară a Cooperării Economice a Mării Negre</DESCRIERE>
+  <CAMERA>0</CAMERA>
+  <PREZENTI>348</PREZENTI>
+  <NU_AU_VOTAT>3</NU_AU_VOTAT>
+  <AU_VOTAT_DA>340</AU_VOTAT_DA>
+  <AU_VOTAT_NU>1</AU_VOTAT_NU>
+  <AU_VOTAT_AB>4</AU_VOTAT_AB>
+ </ROW>
+ <ROW>
+  <VOTID>37491</VOTID>
+  <TIME_VOT>10.11.2026 12:38</TIME_VOT>
+  <DESCRIERE>Propunere modalitate vot</DESCRIERE>
+  <CAMERA>0</CAMERA>
+  <PREZENTI>359</PREZENTI>
+  <NU_AU_VOTAT>4</NU_AU_VOTAT>
+  <AU_VOTAT_DA>349</AU_VOTAT_DA>
+  <AU_VOTAT_NU>3</AU_VOTAT_NU>
+  <AU_VOTAT_AB>3</AU_VOTAT_AB>
+ </ROW>
+ <ROW>
+  <VOTID>37492</VOTID>
+  <TIME_VOT>10.11.2026 15:49</TIME_VOT>
+  <DESCRIERE>Propunere modalitate vot</DESCRIERE>
+  <CAMERA>0</CAMERA>
+  <PREZENTI>218</PREZENTI>
+  <NU_AU_VOTAT>3</NU_AU_VOTAT>
+  <AU_VOTAT_DA>213</AU_VOTAT_DA>
+  <AU_VOTAT_NU>1</AU_VOTAT_NU>
+  <AU_VOTAT_AB>1</AU_VOTAT_AB>
+ </ROW>
+</ROWSET>

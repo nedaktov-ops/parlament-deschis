@@ -1,0 +1,107 @@
+{
+  "captured_at": "2026-11-20T14:51:10.649268+00:00",
+  "captured_by": "scripts/capture_vote_fixtures.py",
+  "files": [
+    {
+      "byte_count": 5174,
+      "capture_kind": "raw",
+      "captured_at": "2026-11-20T14:50:53.760708+00:00",
+      "captured_by": "scripts/capture_vote_fixtures.py",
+      "http_status": 200,
+      "path": "cdep_evot2015_day_20261118.xml",
+      "policy": "polite-v1",
+      "sha256": "0609cb0ab9054fa0dba54e37455acebc89630d009555c7902023b7a526af54b1",
+      "source_url": "https://www.cdep.ro/ords/pls/steno/evot2015.xml?par1=1&par2=20261118"
+    },
+    {
+      "byte_count": 5466,
+      "capture_kind": "raw",
+      "captured_at": "2026-11-20T14:50:56.311440+00:00",
+      "captured_by": "scripts/capture_vote_fixtures.py",
+      "http_status": 200,
+      "path": "cdep_evot2015_day_20261110.xml",
+      "policy": "polite-v1",
+      "sha256": "879442cf43bdf35f29406808c852f1c69bf5db755d0c319a85e949f04645c18d",
+      "source_url": "https://www.cdep.ro/ords/pls/steno/evot2015.xml?par1=1&par2=20261110"
+    },
+    {
+      "byte_count": 37040,
+      "capture_kind": "raw",
+      "captured_at": "2026-11-20T14:50:58.752221+00:00",
+      "captured_by": "scripts/capture_vote_fixtures.py",
+      "http_status": 200,
+      "path": "cdep_evot2015_nominal_37526.xml",
+      "policy": "polite-v1",
+      "sha256": "8f1775f178b6b025a650df6695325a419e3918fd4f846a0c9759137a3883cd73",
+      "source_url": "https://www.cdep.ro/ords/pls/steno/evot2015.xml?par1=2&par2=37526"
+    },
+    {
+      "byte_count": 94774,
+      "capture_kind": "raw",
+      "captured_at": "2026-11-20T14:51:01.656269+00:00",
+      "captured_by": "scripts/capture_vote_fixtures.py",
+      "http_status": 200,
+      "path": "cdep_evot2015_nominal_37526.html",
+      "policy": "polite-v1",
+      "sha256": "09ee06a7d33ef533346d41082bbb3e265832a3d239081497a05779f2490c6bd0",
+      "source_url": "https://www.cdep.ro/ords/pls/steno/evot2015.nominal?idv=37526&idl=1"
+    },
+    {
+      "byte_count": 95732,
+      "capture_kind": "raw",
+      "captured_at": "2026-11-20T14:51:04.011721+00:00",
+      "captured_by": "scripts/capture_vote_fixtures.py",
+      "http_status": 200,
+      "path": "cdep_evot2015_nominal_37492.html",
+      "policy": "polite-v1",
+      "sha256": "005c32d330c106da9e92537f29ac90f38d4b73f202eb5f88101ada5be11f8817",
+      "source_url": "https://www.cdep.ro/ords/pls/steno/evot2015.nominal?idv=37492&idl=1"
+    },
+    {
+      "byte_count": 27906,
+      "capture_kind": "head",
+      "captured_at": "2026-11-20T14:51:08.093332+00:00",
+      "captured_by": "scripts/capture_vote_fixtures.py",
+      "http_status": 200,
+      "path": "vot_parlament_votes_export_head.csv",
+      "policy": "polite-v1",
+      "sha256": "2cfd7ff4e732920aef8b9e34ea61fa54df5c0afa979a2a040b5390b162741e0d",
+      "source_url": "https://vot-parlament.ro/votes/export.csv"
+    },
+    {
+      "byte_count": 126897,
+      "capture_kind": "raw",
+      "captured_at": "2026-11-20T14:51:09.010999+00:00",
+      "captured_by": "scripts/capture_vote_fixtures.py",
+      "http_status": 200,
+      "path": "vot_parlament_vote_37526.json",
+      "policy": "polite-v1",
+      "sha256": "8c3e769169e05ab20688d056a4c3c62967deee83e51bc329194c032794bf4353",
+      "source_url": "https://vot-parlament.ro/votes/37526.json"
+    },
+    {
+      "byte_count": 7213,
+      "capture_kind": "raw",
+      "captured_at": "2026-11-20T14:51:10.649240+00:00",
+      "captured_by": "scripts/capture_vote_fixtures.py",
+      "http_status": 404,
+      "path": "vot_parlament_api_votes_37526_404.html",
+      "policy": "polite-v1",
+      "sha256": "99ce45b88ca062b280d9b68b5bf3a096866956badd48b8c58600cb93f7c37375",
+      "source_url": "https://vot-parlament.ro/api/votes/37526"
+    }
+  ],
+  "policy": "polite-v1",
+  "sources": {
+    "cdep": {
+      "base_url": "https://www.cdep.ro/ords/pls/steno",
+      "licence": "official parliamentary facts (OGL-ROU-1.0)",
+      "robots": "https://www.cdep.ro/robots.txt disallows /declaratii/ only"
+    },
+    "vot_parlament": {
+      "base_url": "https://vot-parlament.ro",
+      "licence": "CC BY 4.0 - cross-check / contract only, never the source of a row",
+      "robots": "User-agent: * Allow: / (training bots are disallowed)"
+    }
+  }
+}
