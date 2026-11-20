@@ -11,7 +11,6 @@ from pathlib import Path
 import pytest
 
 from pipeline.parse.ches import (
-    ChesRow,
     filter_romania,
     parse_chess_csv,
 )
