@@ -17,7 +17,7 @@ import csv
 import io
 from dataclasses import dataclass
 
-COUNTRY_CODE_ROMANIA = 12
+COUNTRY_CODE_ROMANIA = 27
 
 
 @dataclass
