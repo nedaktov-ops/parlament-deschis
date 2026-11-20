@@ -1,21 +1,89 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { api, type VoteRow } from "../api/client";
+import { api, type VotePositionRow } from "../api/client";
 import Skeleton from "../components/ui/Skeleton";
+
+const CHOICE_COLOR: Record<string, string> = {
+  yes: "#10b981", // emerald-500
+  no: "#ef4444", // rose-500
+  abstain: "#f59e0b", // amber-500
+  not_voting: "#94a3b8", // slate-400
+};
+
+interface PartyVoteCell {
+  party: string;
+  choice: string | null;
+  count: number;
+  total: number;
+}
 
 export default function Radar() {
   const { t } = useTranslation();
 
   const votesQuery = useQuery({
     queryKey: ["radar-votes"],
-    queryFn: () => api.votes({ chamber: undefined, legislature: undefined, limit: 100 }),
+    queryFn: () => api.votes({ chamber: undefined, legislature: undefined, limit: 30 }),
   });
 
   const votes = useMemo(() => votesQuery.data?.data ?? [], [votesQuery.data]);
   const dataExists = votesQuery.data?.data_exists ?? false;
 
-  if (votesQuery.isLoading) {
+  const positionQueries = useQueries({
+    queries: votes.map((v) => ({
+      queryKey: ["radar-positions", v.native_vote_id],
+      queryFn: () => api.votePositions(v.native_vote_id, { limit: 500 }),
+      enabled: votesQuery.isSuccess && !!v.native_vote_id,
+    })),
+  });
+
+  const positionsData = useMemo(() => {
+    const map = new Map<string, VotePositionRow[]>();
+    positionQueries.forEach((q, i) => {
+      const vote = votes[i];
+      if (q.data?.data && vote) {
+        map.set(vote.native_vote_id, q.data.data);
+      }
+    });
+    return map;
+  }, [positionQueries, votes]);
+
+  // Build alignment matrix: parties x votes
+  const matrix = useMemo(() => {
+    const parties = new Set<string>();
+    const cells = new Map<string, PartyVoteCell>(); // key: "${party}|${vote_id}"
+
+    votes.forEach((vote) => {
+      const positions = positionsData.get(vote.native_vote_id) ?? [];
+      const byParty = new Map<string, Record<string, number>>();
+      positions.forEach((p) => {
+        if (!p.group_raw) return;
+        parties.add(p.group_raw);
+        const choiceCounts = byParty.get(p.group_raw) ?? {};
+        choiceCounts[p.choice] = (choiceCounts[p.choice] || 0) + 1;
+        byParty.set(p.group_raw, choiceCounts);
+      });
+      byParty.forEach((choiceCounts, party) => {
+        const total = Object.values(choiceCounts).reduce((a, b) => a + b, 0);
+        const dominant = Object.entries(choiceCounts).sort(
+          (a, b) => b[1] - a[1],
+        )[0];
+        cells.set(
+          `${party}|${vote.native_vote_id}`,
+          {
+            party,
+            choice: dominant ? dominant[0] : null,
+            count: dominant ? dominant[1] : 0,
+            total,
+          },
+        );
+      });
+    });
+
+    return { parties: Array.from(parties).sort(), votes, cells };
+  }, [votes, positionsData]);
+
+  if (votesQuery.isLoading || positionQueries.some((q) => q.isLoading)) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <Skeleton className="h-8 w-32" />
@@ -25,7 +93,7 @@ export default function Radar() {
     );
   }
 
-  if (votesQuery.isError) {
+  if (votesQuery.isError || positionQueries.some((q) => q.isError)) {
     return (
       <div className="text-red-400 text-sm py-6 text-center">
         {t("view.voturi.loadError", "Failed to load votes.")}
@@ -48,7 +116,7 @@ export default function Radar() {
       </section>
 
       <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>
-        {!dataExists || votes.length === 0 ? (
+        {!dataExists || votes.length === 0 || matrix.parties.length === 0 ? (
           <div className="text-slate-500 text-sm py-12 text-center">
             {t("empty.rollcall", "Roll-call vote data is not yet available for this legislature.")}
           </div>
@@ -59,31 +127,71 @@ export default function Radar() {
               aria-label={t("aria.rollcallTable", "Table of plenary votes and each MP's position")}
               className="min-w-full text-sm"
             >
+              <caption className="sr-only">
+                {t("aria.rollcallTable", "Table of plenary votes and each MP's position")}
+              </caption>
               <thead>
                 <tr className="text-left text-slate-400 border-b border-slate-700">
                   <th className="py-2.5 pr-4 font-medium" scope="col">
-                    {t("filter.date", "Date")}
+                    {t("filter.party", "Party")}
                   </th>
-                  <th className="py-2.5 pr-4 font-medium" scope="col">
-                    {t("mps.search", "Title")}
-                  </th>
-                  <th className="py-2.5 pr-4 font-medium" scope="col">
-                    {t("filter.chamber", "Chamber")}
-                  </th>
+                  {matrix.votes.map((v) => (
+                    <th
+                      key={v.native_vote_id}
+                      className="py-2.5 pr-4 font-medium text-center text-slate-400 border-b border-slate-700"
+                      scope="col"
+                      title={v.title_raw ?? ""}
+                    >
+                      {v.vote_time?.split(" ")[0] ?? "—"}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {votes.map((v: VoteRow) => (
-                  <tr key={v.native_vote_id} className="border-b border-slate-700/40">
-                    <td className="py-2.5 pr-4 text-slate-200">{v.vote_time ?? "—"}</td>
-                    <td className="py-2.5 pr-4 text-slate-200">{v.title_raw ?? "—"}</td>
-                    <td className="py-2.5 pr-4 text-slate-300">{v.chamber}</td>
+                {matrix.parties.map((party) => (
+                  <tr key={party} className="border-b border-slate-700/40">
+                    <td className="py-2.5 pr-4 text-slate-200 font-medium">
+                      {party}
+                    </td>
+                    {matrix.votes.map((vote) => {
+                      const cell = matrix.cells.get(`${party}|${vote.native_vote_id}`);
+                      const choice = cell?.choice ?? null;
+                      const count = cell?.count ?? 0;
+                      const total = cell?.total ?? 0;
+                      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                      return (
+                        <td
+                          key={vote.native_vote_id}
+                          className="py-2.5 pr-4 text-center border-b border-slate-700/40"
+                          title={`${party}: ${choice ?? "—"} ${count}/${total} (${pct}%)`}
+                          style={{
+                            backgroundColor: choice
+                              ? CHOICE_COLOR[choice as keyof typeof CHOICE_COLOR] + "20"
+                              : "transparent",
+                          }}
+                        >
+                          {count > 0 ? (
+                            <span className="text-xs font-mono tabular-nums" style={{ color: (choice && CHOICE_COLOR[choice as keyof typeof CHOICE_COLOR]) || "#94a3b8" }}>
+                              {count}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-600">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+      </section>
+
+      <section className="text-xs text-slate-500 mt-2 max-w-3xl">
+        <p>
+          {t("view.radar.note", "Each cell shows how many MPs of a party voted a given way in a roll-call vote. Colour = dominant party choice; number = count of MPs with that choice.")}
+        </p>
       </section>
     </div>
   );

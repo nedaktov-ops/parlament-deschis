@@ -1316,6 +1316,141 @@ def vote_activity(
     }
 
 
+@router.get("/api/votes/scorecard")
+def vote_scorecard(
+    chamber: str | None = Query(None, pattern=r"^(deputies|senate)$"),
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    min_votes: int = Query(1, ge=0),
+    db: Session = Depends(get_db),
+):
+    """MP behavioural scorecard: loyalty / rebellion / participation per person.
+
+    Loyalty = share of votes where the MP voted with their party's majority choice
+    in that vote. Rebellion = share where they voted against it. Participation =
+    share of all votes in scope the MP cast a position for. No attendance score;
+    every figure is derived from observed roll-call positions only.
+    """
+    from collections import defaultdict
+
+    from sqlalchemy import select
+
+    from pipeline.db import Person
+
+    # Fetch all positions in scope, joined to Vote (for chamber/legislature
+    # filters) and Person (for canonical name).
+    stmt = (
+        select(VotePosition, Vote, Person)
+        .join(Vote, Vote.id == VotePosition.vote_id)
+        .outerjoin(Person, Person.id == VotePosition.person_id)
+    )
+    if chamber:
+        stmt = stmt.where(Vote.chamber == chamber)
+    if legislature:
+        stmt = stmt.where(Vote.legislature == legislature)
+
+    rows = db.execute(stmt.order_by(Vote.vote_time)).all()
+    if not rows:
+        return {
+            "status": "ok",
+            "data_exists": False,
+            "data": [],
+            "total": 0,
+            "offset": offset,
+            "limit": limit,
+        }
+
+    # --- First pass: party majority choice per (vote_id, party) -------------
+    vote_party_choices: dict[str, dict[str, dict[str, int]]] = defaultdict(
+        lambda: defaultdict(lambda: defaultdict(int))
+    )
+    vote_ids: set[str] = set()
+    for pos, vote, _person in rows:
+        vote_ids.add(vote.id)
+        if pos.group_raw:
+            vote_party_choices[vote.id][pos.group_raw][pos.choice] += 1
+
+    vote_party_majority: dict[tuple[str, str], str] = {}
+    for vid, parties in vote_party_choices.items():
+        for party, choices in parties.items():
+            vote_party_majority[(vid, party)] = max(choices.items(), key=lambda kv: kv[1])[0]
+
+    # --- Second pass: aggregate per person ----------------------------------
+    person_stats: dict[str, dict] = {}
+    for pos, vote, person in rows:
+        pid = pos.person_id
+        if pid not in person_stats:
+            person_stats[pid] = {
+                "person_id": pid,
+                "name_raw": pos.name_raw,
+                "canonical_name": person.canonical_name if person else None,
+                "group_raw": pos.group_raw,
+                "party": pos.group_raw,
+                "total_votes": 0,
+                "yes_votes": 0,
+                "no_votes": 0,
+                "abstain_votes": 0,
+                "not_voting_votes": 0,
+                "loyal_votes": 0,
+                "rebel_votes": 0,
+            }
+        stats = person_stats[pid]
+        stats["total_votes"] += 1
+        choice_key = f"{pos.choice}_votes"
+        if choice_key in stats:
+            stats[choice_key] += 1
+        if pos.group_raw:
+            majority = vote_party_majority.get((vote.id, pos.group_raw))
+            if majority == pos.choice:
+                stats["loyal_votes"] += 1
+            else:
+                stats["rebel_votes"] += 1
+
+    total_votes_in_scope = len(vote_ids)
+
+    # --- Build response ------------------------------------------------------
+    data = []
+    for pid, stats in person_stats.items():
+        total = stats["total_votes"]
+        if total < min_votes:
+            continue
+        data.append(
+            {
+                "person_id": pid,
+                "name_raw": stats["name_raw"],
+                "canonical_name": stats["canonical_name"],
+                "group_raw": stats["group_raw"],
+                "party": stats["party"],
+                "total_votes": total,
+                "yes_votes": stats["yes_votes"],
+                "no_votes": stats["no_votes"],
+                "abstain_votes": stats["abstain_votes"],
+                "not_voting_votes": stats["not_voting_votes"],
+                "loyalty_pct": round(stats["loyal_votes"] / total * 100, 1) if total else 0,
+                "rebellion_pct": round(stats["rebel_votes"] / total * 100, 1) if total else 0,
+                "participation_pct": round(total / total_votes_in_scope * 100, 1)
+                if total_votes_in_scope
+                else 0,
+            }
+        )
+
+    # Sort by total_votes descending (most active MPs first)
+    data.sort(key=lambda d: d["total_votes"], reverse=True)
+    total = len(data)
+    data_exists = total > 0
+    paged = data[offset : offset + limit]
+
+    return {
+        "status": "ok",
+        "data_exists": data_exists,
+        "data": paged,
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+    }
+
+
 @router.get("/traseism/overview")
 def traseism_overview(db: Session = Depends(get_db)):
     """One row per chamber and legislature: members, switches, switchers, rate."""

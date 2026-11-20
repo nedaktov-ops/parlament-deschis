@@ -489,6 +489,22 @@ export const api = {
     params.set("step_days", String(stepDays));
     return get<VoteActivityResponse>(`/analytics/vote-activity?${params.toString()}`);
   },
+
+  scorecard: (
+    legislature?: string,
+    chamber?: string,
+    limit = 50,
+    offset = 0,
+    min_votes = 1,
+  ) => {
+    const params = new URLSearchParams();
+    if (legislature) params.set("legislature", legislature);
+    if (chamber) params.set("chamber", chamber);
+    params.set("limit", String(limit));
+    params.set("offset", String(offset));
+    params.set("min_votes", String(min_votes));
+    return get<ScorecardResponse>(`/api/votes/scorecard?${params.toString()}`);
+  },
 };
 
 function withScope(path: string, chamber?: string, legislature?: string): string {
@@ -845,3 +861,30 @@ export function switchWaves(
   const qs = params.toString();
   return get<SwitchWave[]>(`/analytics/switch-waves${qs ? `?${qs}` : ""}`);
 };
+
+// --- Feature: Roll-call vote scorecard -------------------------------------
+
+export interface ScorecardEntry {
+  person_id: string;
+  name_raw: string | null;
+  canonical_name: string | null;
+  group_raw: string | null;
+  party: string | null;
+  total_votes: number;
+  yes_votes: number;
+  no_votes: number;
+  abstain_votes: number;
+  not_voting_votes: number;
+  loyalty_pct: number;
+  rebellion_pct: number;
+  participation_pct: number;
+}
+
+export interface ScorecardResponse {
+  status: string;
+  data_exists: boolean;
+  data: ScorecardEntry[];
+  total: number;
+  offset: number;
+  limit: number;
+}
