@@ -14,8 +14,8 @@ import pytest
 from pipeline.parse.party_facts import (
     filter_rou,
     is_populist_dataset,
-    partyfacts_ids_for_country,
     parse_external_parties,
+    partyfacts_ids_for_country,
 )
 
 FX = Path(__file__).parent / "fixtures" / "party_facts"
