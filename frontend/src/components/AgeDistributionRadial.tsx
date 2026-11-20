@@ -2,8 +2,9 @@ import { useMemo } from "react";
 
 export interface CohortData {
   label: string;
-  minAge: number;
-  maxAge: number;
+  // The radial chart only uses count/avgAge; the API has no age range.
+  minAge?: number;
+  maxAge?: number;
   count: number;
   avgAge: number;
 }

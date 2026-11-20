@@ -1,5 +1,4 @@
 // src/components/ui/Skeleton.tsx
-import React from "react";
 /**
  * Simple skeleton placeholder for loading states.
  * Usage: <Skeleton className="h-6 w-24" />

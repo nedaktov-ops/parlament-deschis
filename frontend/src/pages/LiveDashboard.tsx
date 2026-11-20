@@ -1,24 +1,23 @@
-import { useMemo } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { api } from "../api/client";
+import { api, committeeControl, switchWaves } from "../api/client";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import ThemeToggle from "../components/ui/ThemeToggle";
-import Skeleton from "../components/ui/Skeleton";
+import HeroGraphic from "../components/HeroGraphic";
 import DashboardCard from "../components/DashboardCard";
 import PartyListTable from "../components/PartyListTable";
-// Lazy‑load heavy visualisation components for faster initial paint
-import { lazy, Suspense } from "react";
+import CommitteeControl from "../components/CommitteeControl";
+import DataQualityGauge from "../components/DataQualityGauge";
+import DashboardHeader from "../components/ui/DashboardHeader";
+import AgeDistributionSection from "../components/ui/AgeDistributionSection";
+import Skeleton from "../components/ui/Skeleton";
+import type { SwitchWaveData } from "../components/SwitchTimeline";
+import { localISODate } from "../utils/date";
+
+// Heavy visualisations load only when the dashboard is opened.
 const PartyNetwork = lazy(() => import("../components/PartyNetwork"));
 const SwitchTimeline = lazy(() => import("../components/SwitchTimeline"));
 const CrossChamberFlow = lazy(() => import("../components/CrossChamberFlow"));
-
-import SwitchTimeline, { SwitchWaveData } from "../components/SwitchTimeline";
-import CommitteeControl from "../components/CommitteeControl";
-import CrossChamberFlow from "../components/CrossChamberFlow";
-import DataQualityGauge from "../components/DataQualityGauge";
-import { committeeControl, switchWaves } from "../api/client";
-import { localISODate } from "../utils/date";
 
 const TODAY = localISODate();
 
@@ -90,13 +89,7 @@ export function LiveDashboard() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
             <div className="lg:col-span-7 space-y-5">
-              // Top‑level header with theme toggle
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-100">
-              {t("overview")}
-            </h1>
-            <ThemeToggle />
-          </div>
+              <DashboardHeader />
               <p className="text-sm sm:text-base text-slate-300/90 max-w-2xl leading-relaxed">{t("dashboardIntro")}</p>
               
               {/* Key Metrics as DashboardCards - zero wasted space */}
@@ -186,6 +179,7 @@ export function LiveDashboard() {
               <DataQualityGauge
                 coverageData={coverageDetailed.data ?? []}
               />
+              <AgeDistributionSection />
             </div>
           </div>
         </div>
@@ -196,21 +190,27 @@ export function LiveDashboard() {
         <div className="max-w-7xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100 mb-4 sm:mb-5">{t("deepDiveViews", "Deep Dive Views")}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
-            <PartyNetwork
-              parties={parties.slice(0, 10)}
-              edges={[]}
-              onNodeClick={openParty}
-              onViewAll={() => navigate({ to: "/mps", search: { date: clamped } })}
-            />
-            <SwitchTimeline
-              waves={waveData}
-              legislatures={meta.data?.legislatures ?? {}}
-              onWaveClick={() => navigate({ to: "/traseism", search: { date: clamped, chamber: "deputies", legislature: undefined } })}
-            />
-            <CrossChamberFlow
-              data={crossChamberData}
-              onPersonClick={openPerson}
-            />
+            <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+              <PartyNetwork
+                parties={parties.slice(0, 10)}
+                edges={[]}
+                onNodeClick={openParty}
+                onViewAll={() => navigate({ to: "/mps", search: { date: clamped } })}
+              />
+            </Suspense>
+            <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+              <SwitchTimeline
+                waves={waveData}
+                legislatures={meta.data?.legislatures ?? {}}
+                onWaveClick={() => navigate({ to: "/traseism", search: { date: clamped, chamber: "deputies", legislature: undefined } })}
+              />
+            </Suspense>
+            <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+              <CrossChamberFlow
+                data={crossChamberData}
+                onPersonClick={openPerson}
+              />
+            </Suspense>
           </div>
         </div>
       </section>

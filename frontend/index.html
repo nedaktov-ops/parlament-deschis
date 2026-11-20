@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Parlament Deschis — transparență parlamentară</title>
+    <script>
+      // Apply the saved theme before first paint so the page never flashes
+      // the wrong colours. Default (no attribute) is the dark theme.
+      (function () {
+        try {
+          var saved = localStorage.getItem("parlament-deschis-theme");
+          if (saved === "light" || saved === "dark") {
+            document.documentElement.dataset.theme = saved;
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

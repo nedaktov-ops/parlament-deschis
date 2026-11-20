@@ -1,6 +1,5 @@
 // src/components/ui/Drawer.tsx
 import { useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 
 /**
  * Generic drawer component (right‑hand side panel).
@@ -11,7 +10,6 @@ export default function Drawer({ open, onClose, children }: {
   onClose: () => void;
   children: React.ReactNode;
 }) {
-  const { t } = useTranslation();
   const drawerRef = useRef<HTMLElement>(null);
 
   // Focus trap and Escape handling

@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { ensurePopoverSupport } from "../utils/popoverSupport";
-import { ensurePopoverSupport } from "../utils/popoverSupport";
 import { useTranslation } from "react-i18next";
 import type { EvidenceItem } from "../api/client";
 
@@ -28,8 +26,6 @@ export default function CitationPopover({ items }: { items: EvidenceItem[] }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Ensure native popover support (or polyfill) is loaded before any UI interaction.
-    void ensurePopoverSupport();
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);

@@ -212,7 +212,7 @@ function RootLayout() {
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-2 focus:rounded-md focus:bg-sky-700 focus:text-white">
         {t("skipToContent", "Skip to content")}
       </a>
-      <header className="border-b border-slate-700/60 bg-[#0f172a]/95 backdrop-blur-sm sticky top-0 z-40">
+      <header className="border-b border-slate-700/60 bg-ink/95 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1">
             <div className="text-base font-semibold tracking-tight">{t("title")}</div>

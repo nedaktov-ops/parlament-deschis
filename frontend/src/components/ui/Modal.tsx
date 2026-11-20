@@ -1,6 +1,5 @@
 // src/components/ui/Modal.tsx
 import { useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 
 /**
  * Generic modal dialog component (non‑destructive replacement for About).
@@ -15,7 +14,6 @@ export default function Modal({ open, onClose, children }: {
   onClose: () => void;
   children: React.ReactNode;
 }) {
-  const { t } = useTranslation();
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Trap focus and prevent background scroll when open
