@@ -31,10 +31,19 @@ from .db import (
 from .export import write_export
 from .ingest import ingest_cdep_group_ledger, ingest_senator_profile, seed_key_events
 from .parse.cdep_group import parse_group_ledger
+from .parse.cdep_votes import (
+    chamber_for_cam,
+    join_nominal,
+    normalize_choice,
+    parse_day_index,
+    parse_nominal_list,
+    parse_nominal_page,
+)
 from .parse.senat_profile import parse_senator_profile
 from .poller import run_poll_cycle, start_poller
 from .sources.cdep import CdepSource
 from .sources.ches import ChesSource
+from .sources.client import PoliteClient
 from .sources.party_facts import PartyFactsSource
 from .sources.senat import SenatSource
 
@@ -359,6 +368,180 @@ def cmd_votes_import(args) -> int:
             print("\nDRY RUN - nothing was written. Re-run with --apply to persist.")
         else:
             print("\nApplied.")
+    return 0
+
+
+def cmd_ingest_votes(args) -> int:
+    """Import official roll-call votes from live cdep.ro feed for a date range.
+
+    Fetches day index XML and nominal lists/pages from cdep.ro, parses,
+    resolves person identities, and stores Vote/VotePosition/VoteImportRun.
+
+    Dry run by default: nothing is written until ``--apply`` is given.
+    """
+    from .db import Vote, VotePosition
+    from .votes import (
+        SOURCE,
+        resolve_position,
+    )
+
+    session = get_session(args.db)
+    client = PoliteClient()
+
+    start_date = date.fromisoformat(args.start_date)
+    end_date = date.fromisoformat(args.end_date)
+
+    total_votes_seen = 0
+    total_votes_written = 0
+    total_positions_seen = 0
+    total_positions_written = 0
+    total_unresolved = 0
+    total_rejected = 0
+
+    current = start_date
+    while current <= end_date:
+        date_str = current.strftime("%Y%m%d")
+        day_url = f"https://www.cdep.ro/ords/pls/steno/evot2015.xml?par1=1&par2={date_str}"
+
+        try:
+            result = client.get(day_url)
+        except Exception as exc:
+            print(f"  {date_str}: fetch failed: {exc}")
+            current += timedelta(days=1)
+            continue
+
+        day_records = parse_day_index(result.content)
+        if not day_records:
+            current += timedelta(days=1)
+            continue
+
+        print(f"  {date_str}: {len(day_records)} vote(s)")
+
+        for record in day_records:
+            vote_id = record.vote_id
+
+            # Fetch nominal list XML and nominal page HTML
+            nominal_xml_url = (
+                f"https://www.cdep.ro/ords/pls/steno/evot2015.xml?par1=2&par2={vote_id}"
+            )
+            nominal_html_url = (
+                f"https://www.cdep.ro/ords/pls/steno/evot2015.nominal?idv={vote_id}&idl=1"
+            )
+
+            try:
+                nominal_xml_res = client.get(nominal_xml_url)
+                nominal_html_res = client.get(nominal_html_url)
+            except Exception as exc:
+                print(f"    {vote_id}: fetch failed: {exc}")
+                total_votes_seen += 1
+                total_unresolved += 1
+                continue
+
+            xml_rows = parse_nominal_list(nominal_xml_res.content)
+            page_rows = parse_nominal_page(nominal_html_res.text)
+            joined = join_nominal(xml_rows, page_rows)
+
+            total_votes_seen += 1
+
+            # Resolve person identities
+            resolutions = []
+            for position in joined.positions:
+                person_id, scheme, reason = resolve_position(
+                    session, position.idm, position.cam, position.legislature
+                )
+                resolutions.append((position, person_id, scheme))
+                if person_id is None:
+                    total_unresolved += 1
+                    if reason == "mandate_check_failed":
+                        total_rejected += 1
+
+            # Determine chamber and legislature
+            chamber = chamber_for_cam(getattr(record, "camera", None)) or chamber_for_cam(
+                joined.positions[0].cam if joined.positions else None
+            )
+            legislature = joined.positions[0].legislature if joined.positions else None
+
+            # Create Vote record (check for existing by dedup_key)
+            vote_key = f"{SOURCE}:{vote_id}"
+            existing = session.scalar(select(Vote).where(Vote.dedup_key == vote_key))
+            if existing is None:
+                vote = Vote(
+                    source=SOURCE,
+                    native_vote_id=vote_id,
+                    chamber=chamber or "",
+                    legislature=legislature,
+                    vote_time=getattr(record, "time_vote", None),
+                    title_raw=getattr(record, "description", None),
+                    present=getattr(record, "present", None),
+                    not_voting=getattr(record, "not_voting", None),
+                    yes=getattr(record, "yes", None),
+                    no=getattr(record, "no", None),
+                    abstain=getattr(record, "abstain", None),
+                    official_vote_url=nominal_html_res.url,
+                    source_url=nominal_xml_res.url,
+                    snapshot_hash=None,
+                    truth_contract_version=None,
+                    positions_incomplete=total_unresolved > 0,
+                    dedup_key=vote_key,
+                )
+                session.add(vote)
+                session.flush()
+                votes_written_this_run = 1
+            else:
+                vote = existing
+                votes_written_this_run = 0
+
+            # Insert VotePositions
+            positions_written_this_run = 0
+            for position, person_id, scheme in resolutions:
+                if person_id is None:
+                    continue
+                position_key = f"{vote_key}:{person_id}"
+                already = session.scalar(
+                    select(VotePosition).where(VotePosition.dedup_key == position_key)
+                )
+                if already is not None:
+                    continue
+                session.add(
+                    VotePosition(
+                        vote_id=vote.id,
+                        person_id=person_id,
+                        idm_raw=position.idm,
+                        cam_raw=position.cam,
+                        name_raw=position.name_raw,
+                        group_raw=position.group_html or position.group_xml,
+                        raw_vote=position.vote_raw,
+                        choice=normalize_choice(position.vote_raw),
+                        resolution_scheme=scheme,
+                        source_url=nominal_html_res.url,
+                        snapshot_hash=None,
+                        dedup_key=position_key,
+                    )
+                )
+                positions_written_this_run += 1
+
+            total_votes_written += votes_written_this_run
+            total_positions_written += positions_written_this_run
+
+        current += timedelta(days=1)
+
+    if args.apply:
+        session.commit()
+        print("\nApplied:")
+        print(f"  votes seen:           {total_votes_seen}")
+        print(f"  positions seen:       {total_positions_seen}")
+        print(f"  votes written:        {total_votes_written}")
+        print(f"  positions written:    {total_positions_written}")
+        print(f"  positions quarantined:{total_unresolved} (rejected: {total_rejected})")
+    else:
+        session.rollback()
+        print("\nDRY RUN - nothing was written.")
+        print(f"  votes seen:           {total_votes_seen}")
+        print(f"  positions seen:       {total_positions_seen}")
+        print(f"  would write votes:    {total_votes_written}")
+        print(f"  would write positions:{total_positions_written}")
+        print(f"  would quarantine:     {total_unresolved} (rejected: {total_rejected})")
+
     return 0
 
 
@@ -905,6 +1088,34 @@ def main(argv=None) -> int:
     )
     p_votes.add_argument("--json", action="store_true", help="print the report as JSON")
     p_votes.set_defaults(fn=cmd_votes_import)
+
+    p_ingest_votes = sub.add_parser(
+        "ingest-votes",
+        help="ingest official cdep.ro roll-call votes from live feed (dry run by default)",
+    )
+    p_ingest_votes.add_argument(
+        "--start-date",
+        required=True,
+        help="start date (YYYYMMDD, inclusive)",
+    )
+    p_ingest_votes.add_argument(
+        "--end-date",
+        required=True,
+        help="end date (YYYYMMDD, inclusive)",
+    )
+    p_ingest_votes.add_argument(
+        "--limit-days",
+        type=int,
+        default=30,
+        help="maximum number of days to scan (default 30)",
+    )
+    p_ingest_votes.add_argument(
+        "--apply",
+        action="store_true",
+        dest="dry_run",
+        help="write votes to database (default: dry run, nothing is written)",
+    )
+    p_ingest_votes.set_defaults(fn=cmd_ingest_votes)
 
     p_assets = sub.add_parser("assets", help="extract asset declarations from PDFs")
     p_assets.add_argument("--year", type=int, required=True, help="year to process")
