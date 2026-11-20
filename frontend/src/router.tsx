@@ -32,6 +32,7 @@ const Voturi = lazy(() => import("./pages/Voturi").then(m => ({ default: m.defau
 const Radar = lazy(() => import("./pages/Radar").then(m => ({ default: m.default })));
 const Grafice = lazy(() => import("./pages/Grafice").then(m => ({ default: m.default })));
 const Topuri = lazy(() => import("./pages/Topuri").then(m => ({ default: m.default })));
+const Ideology = lazy(() => import("./pages/Ideology").then(m => ({ default: m.default })));
 
 function validateDateSearch(search: Record<string, unknown>) {
   const candidate = search.date;
@@ -489,6 +490,13 @@ const topuriRoute = createRoute({
   validateSearch: validateDateSearch,
 });
 
+const ideologyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/ideology",
+  component: () => <Suspense fallback={<Loading />}><Ideology /></Suspense>,
+  validateSearch: validateDateSearch,
+});
+
 const routeTree = rootRoute.addChildren([
   senateHistoryRoute,
   switchLeaderboardRoute,
@@ -505,6 +513,7 @@ const routeTree = rootRoute.addChildren([
   radarRoute,
   graficeRoute,
   topuriRoute,
+  ideologyRoute,
   indexRoute,
   electoralRoute,
   institutionalRoute,
