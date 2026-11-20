@@ -3,10 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import HeroGraphic from "../components/HeroGraphic";
+import ThemeToggle from "../components/ui/ThemeToggle";
+import Skeleton from "../components/ui/Skeleton";
 import DashboardCard from "../components/DashboardCard";
 import PartyListTable from "../components/PartyListTable";
-import PartyNetwork from "../components/PartyNetwork";
+// Lazy‑load heavy visualisation components for faster initial paint
+import { lazy, Suspense } from "react";
+const PartyNetwork = lazy(() => import("../components/PartyNetwork"));
+const SwitchTimeline = lazy(() => import("../components/SwitchTimeline"));
+const CrossChamberFlow = lazy(() => import("../components/CrossChamberFlow"));
+
 import SwitchTimeline, { SwitchWaveData } from "../components/SwitchTimeline";
 import CommitteeControl from "../components/CommitteeControl";
 import CrossChamberFlow from "../components/CrossChamberFlow";
@@ -84,7 +90,13 @@ export function LiveDashboard() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
             <div className="lg:col-span-7 space-y-5">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-100">{t("overview")}</h1>
+              // Top‑level header with theme toggle
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-100">
+              {t("overview")}
+            </h1>
+            <ThemeToggle />
+          </div>
               <p className="text-sm sm:text-base text-slate-300/90 max-w-2xl leading-relaxed">{t("dashboardIntro")}</p>
               
               {/* Key Metrics as DashboardCards - zero wasted space */}
