@@ -6,6 +6,7 @@ All commands accept --db PATH (default data/parlament.db).
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -410,6 +411,7 @@ def cmd_ingest_votes(args) -> int:
             current += timedelta(days=1)
             continue
 
+        day_hash = hashlib.sha256(result.content).hexdigest()
         day_records = parse_day_index(result.content)
         if not day_records:
             current += timedelta(days=1)
@@ -436,6 +438,8 @@ def cmd_ingest_votes(args) -> int:
                 total_votes_seen += 1
                 total_unresolved += 1
                 continue
+
+            html_hash = hashlib.sha256(nominal_html_res.text.encode("utf-8")).hexdigest()
 
             xml_rows = parse_nominal_list(nominal_xml_res.content)
             page_rows = parse_nominal_page(nominal_html_res.text)
@@ -479,7 +483,7 @@ def cmd_ingest_votes(args) -> int:
                     abstain=getattr(record, "abstain", None),
                     official_vote_url=nominal_html_res.url,
                     source_url=nominal_xml_res.url,
-                    snapshot_hash=None,
+                    snapshot_hash=day_hash,
                     truth_contract_version=None,
                     positions_incomplete=total_unresolved > 0,
                     dedup_key=vote_key,
@@ -514,7 +518,7 @@ def cmd_ingest_votes(args) -> int:
                         choice=normalize_choice(position.vote_raw),
                         resolution_scheme=scheme,
                         source_url=nominal_html_res.url,
-                        snapshot_hash=None,
+                        snapshot_hash=html_hash,
                         dedup_key=position_key,
                     )
                 )
@@ -1112,7 +1116,6 @@ def main(argv=None) -> int:
     p_ingest_votes.add_argument(
         "--apply",
         action="store_true",
-        dest="dry_run",
         help="write votes to database (default: dry run, nothing is written)",
     )
     p_ingest_votes.set_defaults(fn=cmd_ingest_votes)
