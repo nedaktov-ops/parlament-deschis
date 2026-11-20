@@ -952,3 +952,73 @@ Consequences for the fleet:
 2. This is a second, independent confirmation of Addendum A: even when a tool is **visible** in the catalog, its backing service may be unavailable. Visibility ≠ availability.
 3. Add to the @worker-qa-sentinel verification checklist: before any agent depends on an MCP service, resolve it with `search(...)` **and** make one bounded call; on timeout/error, record `NOT PROVEN` and proceed with the unassisted instruction. Never fabricate optimizer output or silently substitute a local rewrite.
 4. The strategy itself is unaffected: its authority remains the six-worker evidence digest and the file:line citations, not any prompt-engineering transform.
+
+---
+
+## Addendum C — Wave 1 execution record (2026-11-20)
+
+Wave 1 was executed against `/home/nedaktov/parlament-deschis` (HEAD `b40aa7b`,
+pushed to `origin/main`). Six atomic commits, each independently green:
+
+| Commit | Content | Checkpoint evidence |
+|---|---|---|
+| `0b4b7c1` | The four governance/research documents | `git status` clean; push `2995bfd..0b4b7c1` |
+| `a8af8a2` | Byte-exact vote fixtures + capture tool + FIELD-MAP + licence appendix + the 11-step recipe | capture printed 8 SHA-256 digests; `ruff` clean; `pytest tests/test_polite_client_content.py` → 3 passed |
+| `93723be` | **RED** phase: the vote test suite, failing at collection | collection errors for `pipeline.parse.cdep_votes`, `pipeline.parse.vot_parlament`, `pipeline.votes`, `Vote` — the intended failure |
+| `e7b9dd3` | **GREEN**: models, parsers, importer, CLI, `vote_evidence` audit check | 342 passed; audit `--strict --baseline` → *275 known errors, 0 new errors* |
+| `b2e6fa5` | Licence register (`source_license` + CHECK constraint + 15 sources) | `pytest tests/test_source_licenses.py` → 7 passed |
+| `b40aa7b` | Fix: the corpus-based assertion skips when the release dataset is absent | clean-checkout simulation: **335 passed, 5 skipped**; CI run `44773229004` → test/audit/docker/evidence-guards all **success** |
+
+### C.1 The plan was wrong in eight places — corrected by evidence
+
+| # | The blueprint said | The live truth | Consequence |
+|---|---|---|---|
+| RT-C1 | `Vote.id` / `VotePosition.id` are `Integer` primary keys | every model in this repo uses `String(36)` UUID primary keys (`db.py:104-125`, `:196-226`) | the models follow the repo convention; an integer PK would have been the foreign body in the file |
+| RT-C2 | the nominal token `-` means *abstain* | vote 37526 has `NU_AU_VOTAT=1`, `AU_VOTAT_AB=0` and exactly one `-` → `-` means **present but did not vote** | `normalize_choice("-") == "not_voting"`; an "abstain" reading would have inflated abstentions by 100 % |
+| RT-C3 | the XML is ISO-8859-2 | the prolog says ISO-8859-2, the HTTP header says UTF-8 and the **bytes are UTF-8** (`c4 83` present, `e3` absent) | `decode_xml_bytes()` tries UTF-8 first; trusting the prolog produced `DrÄ\x83goescu` |
+| RT-C4 | 245 positions resolve via `cdep_idm`, 1 unresolved | under the mandate-check rule: **146 `cdep_mandate` + 98 `cdep_idm` + 0 `cdep_person`**, 2 quarantined (1 `no_identifier` — the deputy is absent from our corpus; 1 `mandate_check_failed` — the identifier points at a person without a mandate in that chamber) | the resolver, the report fields and the tests use these numbers |
+| RT-C5 | a dry run writes a `VoteImportRun` row with `applied=False` (A12) | a dry run now writes **nothing at all** — not even the run row | strictly stronger guarantee; the report is returned and printed instead |
+| RT-C6 | `vot_parlament` is `CC-BY-4.0`, `redistributable = 1` | its `robots.txt` disallows the training bots and it serves `Content-Signal: ai-train=no, use=reference` | registered as **cross-check only** (`redistributable = 0`); every published row comes from cdep.ro |
+| RT-C7 | the day fixture is 5 394 bytes | the live page is **5 174 bytes** (the source changed) | the manifest is the authority, the byte counts are measured at capture time; A1 compares against the manifest, not against a number written down months earlier |
+| RT-C8 | §5.7 step 5 runs `pipeline.cli create-all` | there is no `create-all` command; `get_session()` → `init_db()` → `create_all()` creates the tables automatically | the real sequence is: WAL-safe copy → `votes-import --apply` (the tables appear) → verify counts |
+
+A ninth correction is not a plan error but an environment fact worth
+recording: **`data/parlament-real.db` and `data/parlament.db` are git-ignored
+release artifacts** (`.gitignore:12-14`). In a clean CI checkout the API
+tests create an *empty* `data/parlament-real.db` as a side effect, so a test
+that asserts against the shipped corpus must skip with an explicit reason
+instead of failing (commit `b40aa7b`).
+
+### C.2 What Wave 1 proves
+
+* The official cdep.ro roll-call feed is parseable, byte-exact and
+  reproducible: 16 votes in one day index, 246 positions in one nominal vote,
+  218 members in one joint vote (161 deputies + 57 senators).
+* The official numbers reconcile with an independent source
+  (vot-parlament.ro): 246 present / 245 yes / 0 no / 0 abstain / 1 did not
+  vote, three ways.
+* Identity resolution is possible **without inventing anybody**: 244 of 246
+  positions resolve to existing people by the chamber's own identifier, the
+  remaining 2 are quarantined with a reason, and the person count stays
+  **3 388** before and after.
+* A third-party outage cannot block the official corpus: the build-isolation
+  test proves that no vote code is reachable from `cmd_build_corpus`,
+  `prepare_db.py`, `backend/main.py`, the Dockerfile, `ci.yml` or `data.yml`.
+* The licence boundary is enforced in the database, not in a README: a
+  ShareAlike source cannot be marked redistributable (the `CHECK` constraint
+  rejects it).
+
+### C.3 Wave 1 is NOT complete — the remaining items
+
+| Item | State | Note |
+|---|---|---|
+| `npm run lint` as a CI gate | **NOT DONE** | `ci.yml` runs `ruff` and `pytest`, not the frontend lint (7 pre-existing warnings) |
+| dead 180 s Vercel deploy tolerance | **NOT DONE** | `scripts/verify-deploy.sh` still tolerates a missing deployment although `vercel.json:6` sets `ignoreCommand: ""` |
+| `scripts/deploy-all.sh` quarantine | **NOT DONE** | it still hardcodes a commit message and uses `git add -A` (R-10) |
+| quick-win frontend defects #1–#13, #16 | **NOT DONE** | they belong to the frontend wave; the list is in §6 of the blueprint and in the @worker-frontend-stats report |
+| production vote backfill | **NOT DONE** | deliberately: Wave 1 is dry-run only; the backfill and the workflow wiring are Wave 2 |
+| test-vote policy (`VOTID 37515`) | **UNVERIFIED** | needs a written sign-off before a production backfill |
+| `NU` / `AB` literal nominal tokens | **UNVERIFIED** | no fixture yet shows an explicit "no" or "abstain" token; the capture resolver is in FIELD-MAP §8 |
+| day-level `CAMERA=1` (senate-only sitting) | **UNVERIFIED** | resolver: capture one senate-day index |
+| release / deploy of the new tables | **NOT PROVEN** | the tables are created on demand; they are empty in the published dataset until the Wave 2 backfill |
+
