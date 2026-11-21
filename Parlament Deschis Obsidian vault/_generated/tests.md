@@ -7,9 +7,9 @@ status: active
 authority: mirror
 tags: [type/reference, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py, tests/]
-created: 2026-11-21T14:54:04+02:00
-updated: 2026-11-21T14:54:04+02:00
-source_commit: bef18e1a501a757fe5b423cc367ac8d7d3954b3a
+created: 2026-11-21T15:46:37+02:00
+updated: 2026-11-21T15:46:37+02:00
+source_commit: 7a6bcb47bdbb935a58bcb1a9781d9488d9101f7f
 generated: true
 generator: scripts/vault_sync.py
 ---
@@ -20,7 +20,7 @@ generator: scripts/vault_sync.py
 
 Counts come from the source-commit versions of tracked files under `tests/`.
 
-- Python test files: 47; `def test_` definitions: 362.
+- Python test files: 48; `def test_` definitions: 366.
 - Bats test files: 0; `@test` cases: 0.
 
 | File | Pattern | Count |
@@ -42,6 +42,7 @@ Counts come from the source-commit versions of tracked files under `tests/`.
 | `tests/test_cdep_roster.py` | `def test_` | 2 |
 | `tests/test_ches_parser.py` | `def test_` | 6 |
 | `tests/test_cli.py` | `def test_` | 14 |
+| `tests/test_cli_coverage_dimensions.py` | `def test_` | 4 |
 | `tests/test_collect_cache.py` | `def test_` | 10 |
 | `tests/test_committee_scoping.py` | `def test_` | 2 |
 | `tests/test_crosscheck.py` | `def test_` | 1 |

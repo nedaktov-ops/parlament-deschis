@@ -7,9 +7,9 @@ status: active
 authority: mirror
 tags: [type/state, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py]
-created: 2026-11-21T14:54:04+02:00
-updated: 2026-11-21T14:54:04+02:00
-source_commit: bef18e1a501a757fe5b423cc367ac8d7d3954b3a
+created: 2026-11-21T15:46:37+02:00
+updated: 2026-11-21T15:46:37+02:00
+source_commit: 7a6bcb47bdbb935a58bcb1a9781d9488d9101f7f
 generated: true
 generator: scripts/vault_sync.py
 ---
@@ -20,8 +20,8 @@ generator: scripts/vault_sync.py
 
 | Fact | Value |
 |---|---|
-| Source commit (last non-vault change) | `bef18e1a501a757fe5b423cc367ac8d7d3954b3a` |
-| Source commit date | `2026-11-21T14:54:04+02:00` |
+| Source commit (last non-vault change) | `7a6bcb47bdbb935a58bcb1a9781d9488d9101f7f` |
+| Source commit date | `2026-11-21T15:46:37+02:00` |
 | Default branch | `main` |
 
 Branch name, ahead/behind and dirty state are deliberately omitted: they
