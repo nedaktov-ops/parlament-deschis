@@ -268,6 +268,43 @@ class CorpusIngestor:
             return leg_start, leg_start.isoformat(), "LEGISLATURE_START", True
         return None, None, "UNKNOWN", True
 
+    def _closed_stint_exists(
+        self,
+        *,
+        person_id: str,
+        org_id: str,
+        chamber: str,
+        legislature: str,
+        start: date | None,
+        end: date | None,
+    ) -> bool:
+        """True when an identical CLOSED stint is already in the session.
+
+        ``ux_membership_closed_stint`` rejects a second row with the same key;
+        the source occasionally publishes (or inference derives) the same
+        interval twice. Skipping the duplicate preserves the first row and its
+        evidence instead of aborting the whole corpus build. Open stints are
+        not covered by that index and are therefore never deduplicated here.
+        """
+        if end is None:
+            return False
+        return (
+            self.session.scalar(
+                select(Membership.id)
+                .where(
+                    Membership.person_id == person_id,
+                    Membership.org_id == org_id,
+                    Membership.chamber == chamber,
+                    Membership.legislature == legislature,
+                    Membership.start_date == start,
+                    Membership.end_date == end,
+                    Membership.post_id.is_(None),
+                )
+                .limit(1)
+            )
+            is not None
+        )
+
     def _write_membership(
         self,
         *,
@@ -291,6 +328,23 @@ class CorpusIngestor:
         end = leave.earliest if leave is not None else None
         end_precision = leave.precision if leave is not None else None
         confidence = "derived" if inferred else "official_ledger"
+        if self._closed_stint_exists(
+            person_id=person.id,
+            org_id=group.id,
+            chamber=rec.chamber,
+            legislature=rec.legislature,
+            start=start,
+            end=end,
+        ):
+            log.warning(
+                "skipping duplicate closed stint for %s in %s %s (%s -> %s)",
+                person.canonical_name,
+                rec.chamber,
+                rec.legislature,
+                start,
+                end,
+            )
+            return None
         membership = Membership(
             person_id=person.id,
             org_id=group.id,
@@ -566,6 +620,24 @@ class CorpusIngestor:
                     spans.append((leg_start, leg_end))
 
                 for start, end in spans:
+                    if self._closed_stint_exists(
+                        person_id=person.id,
+                        org_id=group.id,
+                        chamber=rec.chamber,
+                        legislature=rec.legislature,
+                        start=start,
+                        end=end,
+                    ):
+                        log.warning(
+                            "skipping duplicate inferred unaffiliated stint for %s "
+                            "in %s %s (%s -> %s)",
+                            row.name,
+                            rec.chamber,
+                            rec.legislature,
+                            start,
+                            end,
+                        )
+                        continue
                     membership = Membership(
                         person_id=person.id,
                         org_id=group.id,

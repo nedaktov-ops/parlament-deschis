@@ -42,10 +42,10 @@ export default function LiveFeed({
   const events = useQuery({
     queryKey: ["recent", legislature ?? undefined, chamber ?? undefined],
     queryFn: () => api.recentEvents(40, chamber ?? undefined, legislature ?? undefined),
-    // Feature 13: switch alerts. Poll only while the tab is visible
-    // (refetchIntervalInBackground defaults to false), so a hidden tab
-    // generates no traffic — this is a live-feed feature, not keep-alive.
-    refetchInterval: 60_000,
+    // Production data is immutable at runtime (the poller is disabled in
+    // render.yaml). There is nothing new to poll for between releases, so the
+    // feed refreshes on mount/window-focus only. Alerts therefore mean "new
+    // since the previous data release", not "real-time".
   });
 
   // New-switch detection: everything present on first load is "seen"; any
@@ -75,7 +75,6 @@ export default function LiveFeed({
   const health = useQuery({
     queryKey: ["health"],
     queryFn: api.health,
-    refetchInterval: 60_000,
   });
   const sourceRuns = Object.values(health.data?.sources ?? {}).filter(
     (value): value is SourceHealth => typeof value === "object" && value !== null,
@@ -159,7 +158,7 @@ export default function LiveFeed({
         >
           <div className="flex items-center justify-between gap-2 mb-1">
             <span className="text-amber-300 text-xs font-semibold">
-              {t("switchAlerts.title", "New party switches detected")}
+              {t("switchAlerts.title", "New party switches in this data release")}
             </span>
               <button
                 type="button"

@@ -13,7 +13,6 @@ export default function Footer() {
   const health = useQuery({
     queryKey: ["health"],
     queryFn: api.health,
-    refetchInterval: 60_000,
   });
 
   const sourceRuns = Object.values(health.data?.sources ?? {}).filter(
