@@ -72,10 +72,10 @@ Enforced by [MAINTENANCE-PROTOCOL](MAINTENANCE-PROTOCOL.md) and the machine cont
 - **20-DIRECTION** — [ACTION-PLAN](../20-DIRECTION/ACTION-PLAN.md) (exhaustive actionable steps), [CONTINUATION-STRATEGY](../20-DIRECTION/CONTINUATION-STRATEGY.md), [TASK-REGISTER](../20-DIRECTION/TASK-REGISTER.md), [VISION](../20-DIRECTION/VISION.md)
 - **30-SYSTEM** — [ARCHITECTURE](../30-SYSTEM/ARCHITECTURE.md)
 - **40-FRONTEND** — [DESIGN-CONTRACT](../40-FRONTEND/DESIGN-CONTRACT.md)
-- **50-RESEARCH** — [RESEARCH-LOG](../50-RESEARCH/RESEARCH-LOG.md)
+- **50-RESEARCH** — [RESEARCH-FLEET](../50-RESEARCH/RESEARCH-FLEET-2026-11-21.md) (missing-component research), [RESEARCH-LOG](../50-RESEARCH/RESEARCH-LOG.md)
 - **60-EVIDENCE** — [AUDIT-2026-11-21](../60-EVIDENCE/AUDIT-2026-11-21.md)
 - **70-ARCHIVE** — [STRATEGY-BLUEPRINTS-HISTORICAL](../70-ARCHIVE/STRATEGY-BLUEPRINTS-HISTORICAL.md)
 
 ## Freshness & NOT PROVEN
 
-`as_of` **2026-11-21**, source commit `96e6fdd`. Local green does **not** mean production green. The exact Vercel build commit is unknown (strongly inferred as `6b848f1`), and client-side rendering of SPA routes is unknown (SPA fallback is proven, route rendering is not). See [RESEARCH-LOG](../50-RESEARCH/RESEARCH-LOG.md).
+`as_of` **2026-11-21**. Local green is production green for the current checks: GitHub status ties Vercel deployment IDs to specific SHAs, and the live browser gate passes 24/24 with zero JavaScript errors and zero axe violations. Still NOT PROVEN: which SHA the live Vercel alias serves (needs a Vercel token), runtime read-only enforcement at the OS level, historic licence seeding, and the original research date. See [RESEARCH-FLEET](../50-RESEARCH/RESEARCH-FLEET-2026-11-21.md) and [RESEARCH-LOG](../50-RESEARCH/RESEARCH-LOG.md).
