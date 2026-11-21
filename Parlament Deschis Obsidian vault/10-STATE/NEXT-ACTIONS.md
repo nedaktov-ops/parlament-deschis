@@ -81,3 +81,33 @@ Exhaustive register: [ACTION-PLAN](../20-DIRECTION/ACTION-PLAN.md). Quick view: 
 
 1. Owner chooses option A/B/C/D for the data workflow pin (item 1) — the only remaining P0 operational unknown.
 2. Then: staging load test, H4-A newsletter/social polish (needs data source), and the two decision follow-throughs (genealogy relabelling, Senate hold monitoring).
+
+## E. Progress snapshot — plugin install and Docker remedy (2026-11-21)
+
+**Completed in this pass**
+- Obsidian now carries the exhaustive [ACTION-PLAN](../20-DIRECTION/ACTION-PLAN.md)
+  (26 stable-ID steps) and the six-agent [RESEARCH-FLEET](../50-RESEARCH/RESEARCH-FLEET-2026-11-21.md)
+  evidence note; vault lint 46 notes, doc-truth 0, sync clean.
+- Vercel plugin installed **globally** with `opencode plugin add github:vercel/vercel-plugin`
+  (global config diff: added `"plugins": ["github:vercel/vercel-plugin"]`). Vercel
+  skills are now available in-session (deployment, routing, CSP, schedules,
+  verification, CLI); the Vercel MCP still needs `/mcps` → vercel → sign-in, so
+  no new Vercel tools are exposed yet. `npx vercel-plugin doctor` is not
+  available as an npm executable in this environment.
+- Docker CI failure root cause proven: `download_dataset.py` in the Docker
+  `data` stage calls `api.github.com` **unauthenticated**, so a shared-runner
+  rate limit returns `HTTP 403: rate limit exceeded` (run `44914654135`).
+  `scripts/download_dataset.py` already accepts `GITHUB_TOKEN` from the
+  environment and strips Authorization on cross-host redirects, so the fix is
+  a BuildKit secret mount in `Dockerfile` plus `secrets:` on the build step in
+  `.github/workflows/ci.yml` — no new secret values introduced.
+
+**Remaining after this pass**
+- Implement and verify the authenticated dataset download in Docker (in progress).
+- Owner decision A/B/C/D for the workflow pin; then option A + ≥189-vote guard.
+- Release-asset vote merge + `assert-votes` gate (A-03).
+- Genealogy/Senate relabelling, i18n key, Voturi state wiring, staging load
+  test, staged CSP tightening, and the owner-only policy decisions.
+
+See [RESEARCH-FLEET](../50-RESEARCH/RESEARCH-FLEET-2026-11-21.md) for evidence
+and [ACTION-PLAN](../20-DIRECTION/ACTION-PLAN.md) for gates and rollbacks.

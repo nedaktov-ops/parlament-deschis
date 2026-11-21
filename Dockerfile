@@ -51,19 +51,18 @@ RUN uv sync --locked --no-dev
 # The build must fail loudly when the database is missing: an image without
 # it would serve an empty tool, which is worse than no tool at all.
 #
-# Residual risk (P5-E): this in-build download calls the GitHub releases API
-# WITHOUT a token, so it shares the shared-runner IP's unauthenticated 60
-# requests/hour allowance and can intermittently 403 under load. The `audit`
-# job in ci.yml already authenticates its download with GITHUB_TOKEN (P4-C);
-# the image build does not. Authenticating here would require plumbing a new
-# BuildKit `--mount=type=secret` plus a `secrets:` entry on the build step in
-# ci.yml. No such build-secret mechanism exists anywhere in this repo, so we
-# deliberately do NOT introduce an unconfigured secret requirement that would
-# break builds. Retry/backoff in download_dataset.py mitigates transient
-# failures; the rate-limit ceiling is accepted as a documented residual.
+# The in-build download authenticates when CI supplies a BuildKit secret
+# (`github_token`), avoiding the shared-runner's unauthenticated 60 req/hour
+# allowance that produced `HTTP 403: rate limit exceeded` in CI. Local builds
+# without the secret still work via download_dataset.py's retry/backoff.
+# The secret exists only in this RUN layer and is never copied into the image.
 FROM backend AS data
 COPY data/latest-release.txt ./data/latest-release.txt
-RUN python scripts/download_dataset.py \
+RUN --mount=type=secret,id=github_token,required=false \
+    if [ -f /run/secrets/github_token ]; then \
+      export GITHUB_TOKEN="$(cat /run/secrets/github_token)"; \
+    fi; \
+    python scripts/download_dataset.py \
         --metadata /tmp/dataset-metadata.json \
         /tmp/source.db \
     && python scripts/prepare_db.py /tmp/source.db /app/data/parlament.db \
