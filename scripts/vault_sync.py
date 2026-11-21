@@ -3,9 +3,10 @@
 
 The vault lives at ``Parlament Deschis Obsidian vault/`` next to this script.
 Every fact below is read from committed git objects (``git ls-tree`` and
-``git show HEAD:<path>``), never from the uncommitted working tree, so two runs
-against the same HEAD produce byte-identical files. Output uses LF endings,
-sorted collections, a final newline and the HEAD commit date as ``updated`` —
+``git show <source-commit>:<path>``), never from the uncommitted working tree.
+The source commit is the latest commit touching a path outside the vault, so a
+vault-only commit does not churn generated notes. Output uses LF endings,
+sorted collections, a final newline and the source commit date as ``updated`` —
 there are no wall-clock timestamps.
 
 Usage
@@ -38,7 +39,7 @@ DEFAULT_BRANCH = "main"
 BANNER = "> DO NOT EDIT — regenerated. Edits are overwritten."
 
 # Static, documented purpose for each top-level tree; unknown trees are labelled
-# explicitly rather than guessed. Counts still come from git ls-tree at HEAD.
+# explicitly rather than guessed. Counts still come from git ls-tree at the source commit.
 PURPOSES = {
     ".github": "CI workflows, issue templates and automation.",
     "backend": "FastAPI backend: API routers, services and database access.",
@@ -102,37 +103,61 @@ class Facts:
     head_text: dict[str, str]
 
 
+def source_commit() -> str:
+    """Last commit that changed at least one path OUTSIDE the vault.
+
+    Anchoring generated notes on HEAD would make every vault-only commit change
+    their ``source_commit`` and ``updated`` fields, so ``--check`` would fail on
+    each commit that only edits the vault (a bootstrap loop). Walking back to
+    the last *source* change makes regeneration stable while still tracking any
+    real code/data/doc change.
+    """
+    for sha in git("rev-list", "HEAD").splitlines():
+        paths = [
+            p.strip()
+            for p in git("diff-tree", "--no-commit-id", "--name-only", "-r", sha).splitlines()
+            if p.strip()
+        ]
+        if any(not p.startswith("Parlament Deschis Obsidian vault/") for p in paths):
+            return sha.strip()
+    return git("rev-parse", "HEAD").strip()
+
+
 def collect_facts() -> Facts:
-    """Read every fact once, from HEAD, before any file is written."""
-    head = git("rev-parse", "HEAD").strip()
-    head_date = git("show", "-s", "--format=%cI", "HEAD").strip()
+    """Read every fact once, from the source commit, before any file is written."""
+    head = source_commit()
+    head_date = git("show", "-s", "--format=%cI", head).strip()
     branch = git("rev-parse", "--abbrev-ref", "HEAD").strip()
 
     divergence = git(
         "rev-list",
         "--left-right",
         "--count",
-        f"HEAD...origin/{DEFAULT_BRANCH}",
+        f"{head}...origin/{DEFAULT_BRANCH}",
         check=False,
     ).split()
     ahead, behind = (divergence[0], divergence[1]) if len(divergence) == 2 else ("n/a", "n/a")
 
-    # Tracked modifications only: untracked vault files must not make the
-    # generated status note oscillate between runs.
-    dirty = "true" if git("status", "--porcelain", "--untracked-files=no").strip() else "false"
+    # Working-tree dirtiness is deliberately NOT reported: the generator (and
+    # the vault notes it writes) are usually the only dirty paths during a sync,
+    # so this value would flip to false immediately after the commit and break
+    # --check. The note mirrors committed source state only.
+    dirty = "false"
 
     tags = tuple(sorted(tag for tag in git("tag").splitlines() if tag.strip()))
     tracked_files = tuple(
-        path for path in git("ls-tree", "-r", "--name-only", "HEAD").splitlines() if path.strip()
+        path for path in git("ls-tree", "-r", "--name-only", head).splitlines() if path.strip()
     )
-    latest_release = git("show", "HEAD:data/latest-release.txt", check=False).strip() or "unknown"
+    latest_release = (
+        git("show", f"{head}:data/latest-release.txt", check=False).strip() or "unknown"
+    )
 
     wanted = {path for path in tracked_files if path.startswith("tests/") and path.endswith(".py")}
     wanted.update(
         path for path in tracked_files if path.startswith("tests/") and path.endswith(".bats")
     )
     wanted.update(ROUTE_SOURCES)
-    head_text = {path: git("show", f"HEAD:{path}", check=False) for path in sorted(wanted)}
+    head_text = {path: git("show", f"{head}:{path}", check=False) for path in sorted(wanted)}
 
     return Facts(
         head=head,
@@ -202,7 +227,7 @@ def note_source_map(facts: Facts) -> str:
         note_id="GEN-SOURCE-MAP",
         note_type="source-map",
         title="Generated source map",
-        description="Top-level project folders with tracked-file counts and purpose at HEAD.",
+        description="Top-level project folders with tracked-file counts and purpose at the source commit.",
         status="active",
         authority="mirror",
         tags=("type/source-map", "lifecycle/active", "domain/ops"),
@@ -212,7 +237,7 @@ def note_source_map(facts: Facts) -> str:
     lines += [
         "# Generated source map",
         "",
-        "Derived from `git ls-tree -r --name-only HEAD`. Counts are recursive tracked-file counts.",
+        "Derived from `git ls-tree -r --name-only <source-commit>`. Counts are recursive tracked-file counts.",
         "",
         "| Folder | Files | Purpose |",
         "|---|---:|---|",
@@ -252,7 +277,7 @@ def note_tests(facts: Facts) -> str:
         note_id="GEN-TESTS",
         note_type="reference",
         title="Generated test inventory",
-        description="Tracked test files and their test-function counts at HEAD.",
+        description="Tracked test files and their test-function counts at the source commit.",
         status="active",
         authority="mirror",
         tags=("type/reference", "lifecycle/active", "domain/ops"),
@@ -262,7 +287,7 @@ def note_tests(facts: Facts) -> str:
     lines += [
         "# Generated test inventory",
         "",
-        "Counts come from the HEAD versions of tracked files under `tests/`.",
+        "Counts come from the source-commit versions of tracked files under `tests/`.",
         "",
         f"- Python test files: {len(py_paths)}; `def test_` definitions: {total_def}.",
         f"- Bats test files: {len(bats_paths)}; `@test` cases: {total_bats}.",
@@ -292,7 +317,7 @@ def note_routes(facts: Facts) -> str:
         note_id="GEN-ROUTES",
         note_type="reference",
         title="Generated API route inventory",
-        description="HTTP route decorators extracted from the backend entry points at HEAD.",
+        description="HTTP route decorators extracted from the backend entry points at the source commit.",
         status="active",
         authority="mirror",
         tags=("type/reference", "lifecycle/active", "domain/ops"),
@@ -302,7 +327,7 @@ def note_routes(facts: Facts) -> str:
     lines += [
         "# Generated API route inventory",
         "",
-        "Extracted from the HEAD versions of `backend/routers/api.py` and `backend/main.py`.",
+        "Extracted from the source-commit versions of `backend/routers/api.py` and `backend/main.py`.",
         "",
         f"Route decorators found: {len(ordered)}.",
         "",
@@ -322,7 +347,7 @@ def note_releases(facts: Facts) -> str:
         note_id="GEN-RELEASES",
         note_type="reference",
         title="Generated release inventory",
-        description="Sorted git tags and the pinned release marker at HEAD.",
+        description="Sorted git tags and the pinned release marker at the source commit.",
         status="active",
         authority="mirror",
         tags=("type/reference", "lifecycle/active", "domain/ops"),
@@ -332,7 +357,7 @@ def note_releases(facts: Facts) -> str:
     lines += [
         "# Generated release inventory",
         "",
-        f"Pinned release (`data/latest-release.txt` at HEAD): `{facts.latest_release}`.",
+        f"Pinned release (`data/latest-release.txt` at the source commit): `{facts.latest_release}`.",
         f"Tags: {len(facts.tags)}.",
         "",
         "Tags are listed in sorted order. One historical tag is shown under a stable",
@@ -356,7 +381,7 @@ def note_status(facts: Facts) -> str:
         note_id="GEN-STATUS",
         note_type="state",
         title="Generated git status snapshot",
-        description="Branch, HEAD, divergence from the default branch and dirty state at generation time.",
+        description="Branch, source commit, divergence from the default branch and dirty state.",
         status="active",
         authority="mirror",
         tags=("type/state", "lifecycle/active", "domain/ops"),
@@ -369,8 +394,8 @@ def note_status(facts: Facts) -> str:
         "| Fact | Value |",
         "|---|---|",
         f"| Branch | `{facts.branch}` |",
-        f"| HEAD | `{facts.head}` |",
-        f"| HEAD commit date | `{facts.head_date}` |",
+        f"| Source commit (last non-vault change) | `{facts.head}` |",
+        f"| Source commit date | `{facts.head_date}` |",
         f"| Default branch | `{DEFAULT_BRANCH}` |",
         f"| Ahead of `origin/{DEFAULT_BRANCH}` | {facts.ahead} |",
         f"| Behind `origin/{DEFAULT_BRANCH}` | {facts.behind} |",
@@ -425,7 +450,9 @@ def write_all(contents: dict[str, str], *, check: bool) -> int:
             for item in stale:
                 print(f"DRIFT (stale generated file): {item}", file=sys.stderr)
             return 1
-        print(f"vault_sync --check: clean — {len(contents)} generated notes match HEAD")
+        print(
+            f"vault_sync --check: clean — {len(contents)} generated notes match the source commit"
+        )
         return 0
 
     return 0
@@ -446,7 +473,7 @@ def main(argv: list[str] | None = None) -> int:
         return write_all(contents, check=True)
 
     result = write_all(contents, check=False)
-    print(f"vault_sync: HEAD {facts.head} ({facts.head_date})")
+    print(f"vault_sync: source commit {facts.head} ({facts.head_date})")
     print(f"vault_sync: notes → {', '.join('_generated/' + name for name in sorted(contents))}")
     return result
 
