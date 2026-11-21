@@ -97,9 +97,8 @@ export function PersonDeepDive() {
   }
 
   const totalEvents = p.events.length;
-  const switches = p.events.filter(
-    (e) => e.type === "switch_group" || e.type === "switch_party",
-  ).length;
+  // R-04: keep the "Group switches" label truthful — count group events only.
+  const switches = p.events.filter((e) => e.type === "switch_group").length;
   const chambersCovered = new Set(
     p.events.map((e) => e.chamber).filter(Boolean),
   ).size;

@@ -245,8 +245,8 @@ export default function Committees() {
                 accent="emerald"
               />
               <InfoStat
-                label={t("committees.totalMembers", "Total members")}
-                value={totalMembers}
+                label={t("committees.totalMembers", "Members in expanded committees")}
+                value={countedCommittees.current.size === 0 ? "—" : totalMembers}
                 accent="sky"
               />
               <InfoStat

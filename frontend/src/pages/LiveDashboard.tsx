@@ -118,13 +118,13 @@ export function LiveDashboard() {
                   color="emerald"
                 />
                 <DashboardCard
-                  title={t("dashboardStatSwitches", "Switches")}
+                  title={t("dashboardStatSwitches", "All observed affiliation changes")}
                   icon={
                     <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                       <path d="M12 4v16M8 12h8"/>
                     </svg>
                   }
-                  value={stats?.switches ?? "--"}
+                  value={stats?.switches_all ?? "--"}
                   linkTo="/traseism"
                   color="amber"
                 />

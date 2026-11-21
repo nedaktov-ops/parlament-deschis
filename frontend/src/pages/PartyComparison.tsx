@@ -111,8 +111,8 @@ export default function PartyComparison() {
       },
       {
         label: t("compare.chairs", "Committee chairs"),
-        a: chairsA ? `${chairsA.chairs} (${chairsA.share_pct}%)` : "0",
-        b: chairsB ? `${chairsB.chairs} (${chairsB.share_pct}%)` : "0",
+        a: chairsA ? `${chairsA.chairs} (${chairsA.share_pct}%)` : "—",
+        b: chairsB ? `${chairsB.chairs} (${chairsB.share_pct}%)` : "—",
         higherIsBetter:
           (chairsA?.chairs ?? 0) === (chairsB?.chairs ?? 0)
             ? null
@@ -226,6 +226,7 @@ export default function PartyComparison() {
                     className={`px-4 py-3 text-center font-semibold ${
                       m.higherIsBetter === "a" ? "text-emerald-300" : "text-slate-200"
                     }`}
+                    title={m.a === "—" ? t("compare.chairsUnavailable", "No dated chair data in corpus → unavailable, not zero") : undefined}
                   >
                     {m.a}
                     {m.higherIsBetter === "a" && (
@@ -239,6 +240,7 @@ export default function PartyComparison() {
                     className={`px-4 py-3 text-center font-semibold ${
                       m.higherIsBetter === "b" ? "text-emerald-300" : "text-slate-200"
                     }`}
+                    title={m.b === "—" ? t("compare.chairsUnavailable", "No dated chair data in corpus → unavailable, not zero") : undefined}
                   >
                     {m.b}
                     {m.higherIsBetter === "b" && (

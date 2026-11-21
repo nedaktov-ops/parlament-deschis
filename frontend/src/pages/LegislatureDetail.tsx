@@ -80,8 +80,12 @@ export function LegislatureDetail() {
               accent="emerald"
             />
             <InfoStat
-              label={t("legislatureStatSwitches", "Switches")}
-              value={movements.data?.filter((e) => e.type === "switch_group").length ?? "--"}
+              label={t("legislatureStatSwitches", "Group switches in loaded movements")}
+              value={
+                movements.isLoading || movements.isError
+                  ? "--"
+                  : (movements.data?.filter((e) => e.type === "switch_group").length ?? "--")
+              }
               accent="amber"
             />
             <InfoStat

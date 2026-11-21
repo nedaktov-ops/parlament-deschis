@@ -89,7 +89,7 @@ export default function Topuri() {
             />
           </label>
           <div className="text-xs text-slate-400">
-            {entries.length} MPs shown
+            {entries.length} of {scorecardQuery.data?.total ?? "—"} MPs shown
           </div>
         </div>
 
@@ -113,6 +113,7 @@ export default function Topuri() {
         )}
 
         {!scorecardQuery.isLoading && !scorecardQuery.isError && entries.length > 0 && (
+          <>
           <div className="overflow-x-auto">
             <table
               role="table"
@@ -154,18 +155,22 @@ export default function Topuri() {
                       {e.total_votes}
                     </td>
                     <td className="py-2.5 pr-4 text-right">
-                      <div className="flex items-center gap-2">
-                        <DataBar value={e.loyalty_pct} max={100} tone={LOYALTY_TONE(e.loyalty_pct)} />
-                        <span className="text-slate-300 tabular-nums w-8">
-                          {e.loyalty_pct}%
-                        </span>
-                      </div>
+                      {e.loyalty_pct === null ? (
+                        <span className="text-slate-400">—</span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <DataBar value={e.loyalty_pct} max={100} tone={LOYALTY_TONE(e.loyalty_pct)} />
+                          <span className="text-slate-300 tabular-nums w-8">
+                            {e.loyalty_pct}%
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
-                      {e.rebellion_pct}%
+                      {e.rebellion_pct === null ? "—" : `${e.rebellion_pct}%`}
                     </td>
                     <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
-                      {e.participation_pct}%
+                      {e.participation_pct === null ? "—" : `${e.participation_pct}%`}
                     </td>
                     <td className="py-2.5 pr-4 text-slate-300 font-mono text-xs">
                       {e.party ?? "—"}
@@ -175,6 +180,17 @@ export default function Topuri() {
               </tbody>
             </table>
           </div>
+          <p role="note" className="mt-2 text-xs text-slate-400">
+            {t(
+              "topuri.denominators",
+              "Loyalty/rebellion denominator: {{alignment}} yes/no positions with a party majority (abstain/not-voting excluded). Participation denominator: {{participation}} votes in scope.",
+              {
+                alignment: scorecardQuery.data?.data[0]?.denominators.alignment ?? "—",
+                participation: scorecardQuery.data?.data[0]?.denominators.participation ?? "—",
+              },
+            )}
+          </p>
+          </>
         )}
       </section>
 

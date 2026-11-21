@@ -31,6 +31,7 @@ export default function SwitchLeaderboard() {
 
   const rows = leaderboard.data?.data ?? [];
 
+  // R-04: top-N sum of the displayed rows, NOT a corpus total.
   const totalSwitches = rows.reduce((sum, row) => sum + row.switch_count, 0);
   const uniqueSwitchers = rows.length;
   const topSwitcherCount = rows.length > 0 ? rows[0].switch_count : 0;
@@ -51,13 +52,13 @@ export default function SwitchLeaderboard() {
               <p className="text-slate-400 text-lg mb-6">
                 {t(
                   "leaderboard.intro",
-                  "MPs ranked by the number of observed party/group switches. Every count comes from the chambers' own dated group ledgers.",
+                  "MPs ranked by observed group switch count (switch_group) within the reported scope.",
                 )}
               </p>
               {/* Dealt moment: InfoStat cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 <InfoStat
-                  label={t("leaderboard.stat.total_switches", "Total switches")}
+                  label={t("leaderboard.stat.total_switches", "Group switches in top N")}
                   value={totalSwitches}
                   accent="amber"
                 />
@@ -161,19 +162,23 @@ export default function SwitchLeaderboard() {
                   <td className="px-4 py-3 text-right">
                     <span
                       className={`inline-block px-2 py-1 rounded text-sm font-semibold ${
-                        row.loyalty_score >= 70
-                          ? "bg-emerald-900/40 text-emerald-300"
-                          : row.loyalty_score >= 40
-                            ? "bg-amber-900/40 text-amber-300"
-                            : "bg-red-900/40 text-red-300"
+                        row.loyalty_score === null
+                          ? "bg-slate-700/40 text-slate-400"
+                          : row.loyalty_score >= 70
+                            ? "bg-emerald-900/40 text-emerald-300"
+                            : row.loyalty_score >= 40
+                              ? "bg-amber-900/40 text-amber-300"
+                              : "bg-red-900/40 text-red-300"
                       }`}
-                      title={t("leaderboard.loyalty.hint", {
-                        switches: row.switch_count,
-                        events: row.total_events,
-                        years: row.tenure_years,
+                      title={t("leaderboard.loyalty.denominators", {
+                        switches: row.loyalty_inputs.switch_count,
+                        events: row.loyalty_inputs.total_events_in_scope,
+                        years: row.loyalty_inputs.tenure_years,
+                        weight: row.loyalty_inputs.tenure_weight ?? "—",
+                        status: row.loyalty_status,
                       })}
                     >
-                      {row.loyalty_score}
+                      {row.loyalty_score === null ? "—" : row.loyalty_score}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-slate-400 text-sm">
@@ -211,7 +216,7 @@ export default function SwitchLeaderboard() {
         <p className="mt-2">
           {t(
             "leaderboard.methodology.loyalty",
-            "Loyalty = 100 × (1 − (switches ÷ total events) × tenure weight), where tenure weight = min(1, career years ÷ 4). 100 means no observed switch in the record.",
+            "Loyalty = 100 × (1 − (switches ÷ total events in scope) × min(1, tenure years ÷ 4)). 100 is the maximum proxy value; any MP with an observed group switch is capped below 100; — means no observed event span in scope.",
           )}
         </p>
         <p className="mt-2">

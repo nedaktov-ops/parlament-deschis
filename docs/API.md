@@ -395,9 +395,10 @@ endpoints documented above):
 | Endpoint | Purpose |
 |---|---|
 | `GET /api/dashboard/stats` | Dashboard counts (see the committee-count table above); `computed_at` is regenerated per request |
+| `GET /api/coverage/summary` | Raw corpus-wide coverage totals; percentages derived from integer counts and `null` at a zero denominator |
 | `GET /api/health/live` | Liveness probe |
 | `GET /api/health/ready` | Database-readiness probe (also the Render healthcheck path) |
-| `GET /api/mps?as_of=&chamber=&legislature=` | MP biography cards, filterable/sortable (including by `committees`). Optional `as_of` (ISO date), `chamber` (`deputies`\|`senate`) and `legislature` (`YYYY`) scope the cards, their switch/committee aggregates and the displayed party. An invalid `as_of` returns **422**; omitting all three preserves the current whole-corpus behaviour. The response carries `total` and a `scope` echo. |
+| `GET /api/mps?as_of=&chamber=&legislature=` | MP biography cards, filterable/sortable (including by `committees`). Optional `as_of` (ISO date), `chamber` (`deputies`\|`senate`) and `legislature` (`YYYY`) scope the cards, their switch/committee aggregates and the displayed party. An invalid `as_of` returns **422**; omitting all three preserves the current whole-corpus behaviour. The response carries `total` (corpus-wide, independent of `limit`/`offset` — never the page length), a `definition` string and a `scope` echo. |
 | `GET /api/parties` | Party list used by the UI |
 | `GET /api/traseism/overview` | Traseism overview (`party`, `by_party`, `matrix`, `timing`) |
 | `GET /api/traseism/summary` | Per-scope traseism summary |
@@ -434,7 +435,18 @@ is **2,002** (1,217 group + 785 party). `GET /api/export/report` and
 
 The pinned release DB confirms the split: `switch_group=1217`,
 `switch_party=785` (sum 2,002), as recorded in
-`docs/AUDIT-RESOLUTIONS-2026-11-21.md` (R1).
+`docs/AUDIT-RESOLUTIONS-2026-11-21.md` (R1). The **local** development DB has
+`switch_party=0`, so its honest triple is `1217 / 0 / 1217`; both triples satisfy
+`group + party == all` (R1 is definitional evidence, not a local measurement).
+
+The API now publishes both definitions as separate labelled fields:
+`GET /api/dashboard/stats` → `data.switches_group`, `data.switches_party`,
+`data.switches_all` (with a `data.definitions` map); `GET /api/export/report`
+→ `totals.switches_group`, `totals.switches_party`, `totals.switches_all`
+(`totals.switches` is a deprecated alias of `switches_group`).
+`GET /api/traseism/summary` and `/overview` carry a `definitions` map stating
+that their `switches` field is group-only. The bare `switches` field on
+`/dashboard/stats` is a deprecated alias of `switches_all`.
 
 ### Membership counts
 

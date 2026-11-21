@@ -145,7 +145,7 @@ export default function Grafice() {
                     </div>
                   </div>
                   <div className="bg-slate-900/50 p-3 rounded">
-                    <div className="text-xs text-slate-400">Switches</div>
+                    <div className="text-xs text-slate-400">Group switches</div>
                     <div className="text-xl text-slate-100 tabular-nums">
                       {summary.switches}
                     </div>

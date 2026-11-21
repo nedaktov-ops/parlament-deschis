@@ -121,7 +121,7 @@ export default function PartyTimeline() {
                   accent="sky"
                 />
                 <InfoStat
-                  label={t("ptimeline.statSwitches", "Total switches")}
+                  label={t("ptimeline.statSwitches", "Dated joins in range")}
                   value={datedJoins}
                   accent="emerald"
                 />

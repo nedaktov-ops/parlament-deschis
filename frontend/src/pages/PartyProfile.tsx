@@ -49,7 +49,8 @@ export function PartyProfile() {
   const switchTimeline = useMemo(() => {
     const counts = new Map<string, number>();
     for (const m of movements.data ?? []) {
-      counts.set(m.event_date, (counts.get(m.event_date) ?? 0) + 1);
+      const previous = counts.get(m.event_date);
+      counts.set(m.event_date, previous === undefined ? 1 : previous + 1);
     }
     return [...counts.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
@@ -77,7 +78,11 @@ export function PartyProfile() {
 
   const p = party.data;
 
-  const totalSwitches = (p.switches_in ?? 0) + (p.switches_out ?? 0);
+  // R-04: backend null means "no dated data", not zero. Never fabricate a sum.
+  const totalSwitches =
+    p.switches_in === null || p.switches_out === null
+      ? null
+      : p.switches_in + p.switches_out;
 
   const hasSwitchTimeline = switchTimeline.length > 0;
 
@@ -120,8 +125,8 @@ export function PartyProfile() {
           accent="emerald"
         />
         <InfoStat
-          label={t("pp.totalSwitches", "Total switches")}
-          value={totalSwitches}
+          label={t("pp.totalSwitches", "Party switches (in + out)")}
+          value={totalSwitches === null ? "—" : totalSwitches}
           accent="sky"
         />
         <InfoStat

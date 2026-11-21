@@ -209,6 +209,13 @@ def traseism_summary(
             "by_month": [{"month": m, "count": c} for m, c in sorted(month_counts.items())],
         },
         "coverage": {"completeness": completeness, "note": note},
+        "definitions": {
+            "switches": "Group switches only (Event.type='switch_group'); this is NOT the dashboard all-events total.",
+            "party.switches": "Party changes with the unaffiliated bucket skipped, derived from dated group memberships.",
+            "members": "Distinct persons holding a parliamentary-group seat in scope.",
+            "switch_rate": "switchers / members (distinct people, not events).",
+            "switches_per_100_members": "switches / members * 100.",
+        },
     }
 
 
@@ -288,6 +295,7 @@ def traseism_overview(session: Session) -> list[dict]:
                 "repeat_switchers": summary["repeat_switchers"],
                 "timing": summary["timing"],
                 "coverage": summary["coverage"],
+                "definitions": summary["definitions"],
             }
         )
     return rows

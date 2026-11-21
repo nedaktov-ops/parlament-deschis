@@ -753,12 +753,16 @@ export function Traseism() {
               accent="emerald"
             />
           </div>
+          {/* R-04: InfoStat has no `title` prop; declare the definition in a sibling note. */}
+          <p role="note" className="text-xs text-slate-400 mt-2 max-w-2xl">
+            {t("groupSwitchesOnly", "Group switches only (switch_group); see /api/dashboard/stats for all events.")}
+          </p>
           <div className="mt-8 sm:mt-10 flex flex-wrap items-baseline gap-x-4 gap-y-2 border-t border-slate-800/80 pt-8" data-moment>
             <span className="moment-value block">
               {scope?.switches ?? "--"}
             </span>
             <span className="text-sm sm:text-base text-slate-400">
-              {t("traseismTotalSwitches", "total switches in corpus")}
+              {t("traseismTotalSwitches", "group switches in scope")}
             </span>
           </div>
         </div>

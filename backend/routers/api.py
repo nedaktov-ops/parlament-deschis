@@ -415,9 +415,12 @@ def mps_cards(
     return {
         "status": "ok",
         "data": cards,
+        # R-04: `total` is the corpus-wide denominator computed from the fully
+        # scoped query BEFORE offset/limit (see above), never the page length.
+        "total": total,
+        "definition": "total = persons matching q across the whole corpus (after any scope filters), independent of offset/limit.",
         "offset": offset,
         "limit": limit,
-        "total": total,
         "scope": {
             "as_of": ref_date.isoformat() if ref_date else None,
             "chamber": chamber,
@@ -490,6 +493,74 @@ def coverage_dimensions(db: Session = Depends(get_db)):
     from pipeline.coverage import coverage_dimensions as _coverage_dimensions
 
     return _coverage_dimensions(db)
+
+
+@router.get("/coverage/summary")
+def coverage_summary(db: Session = Depends(get_db)):
+    """Corpus-wide coverage aggregates from raw counts, never rounded pcts.
+
+    A percentage is ``null`` when its denominator is zero. This endpoint is
+    additive: ``/coverage/detailed`` keeps its list shape for existing clients.
+    """
+    from sqlalchemy import and_, case, func, select
+
+    from pipeline.db import Event, Membership, Organization
+    from pipeline.queries import is_group
+
+    mem = db.execute(
+        select(
+            func.count(Membership.id),
+            func.sum(case((Membership.start_date.is_not(None), 1), else_=0)),
+            func.sum(case((Membership.source_url.is_not(None), 1), else_=0)),
+        )
+        .join(Organization, Organization.id == Membership.org_id)
+        .where(is_group())
+    ).one()
+    memberships = int(mem[0] or 0)
+    dated = int(mem[1] or 0)
+    sourced = int(mem[2] or 0)
+
+    is_switch = Event.type.in_(("switch_group", "switch_party"))
+    ev = db.execute(
+        select(
+            func.sum(case((Event.type == "switch_group", 1), else_=0)),
+            func.sum(case((Event.type == "switch_party", 1), else_=0)),
+            func.sum(case((is_switch, 1), else_=0)),
+            func.sum(case((and_(is_switch, Event.source_url.is_not(None)), 1), else_=0)),
+        )
+    ).one()
+    group = int(ev[0] or 0)
+    party = int(ev[1] or 0)
+    all_switches = int(ev[2] or 0)
+    switches_sourced = int(ev[3] or 0)
+    assert all_switches == group + party  # disjoint event types; fail loudly
+
+    def pct(numerator: int, denominator: int) -> float | None:
+        return round(100 * numerator / denominator, 1) if denominator else None
+
+    return {
+        "status": "ok",
+        "totals": {
+            "memberships": memberships,
+            "memberships_dated": dated,
+            "memberships_sourced": sourced,
+            "switches_group": group,
+            "switches_party": party,
+            "switches_all": all_switches,
+            "switches_sourced": switches_sourced,
+        },
+        "percentages": {
+            "dated": pct(dated, memberships),
+            "sourced": pct(sourced, memberships),
+            "switches_sourced": pct(switches_sourced, all_switches),
+        },
+        "definitions": {
+            "memberships_dated": "Group membership rows with a published start_date.",
+            "dated": "memberships_dated / memberships; null when memberships == 0.",
+            "switches_all": "switch_group + switch_party events; exact sum.",
+            "switches_sourced": "Switch events with a source_url.",
+        },
+    }
 
 
 @router.get("/committees")
@@ -988,14 +1059,19 @@ def get_generational_shift(
     from pipeline.analytics import generational_shift
 
     try:
-        evaluation_date, results = generational_shift(
+        evaluation_date, results, totals = generational_shift(
             db,
             legislature=legislature,
             as_of=_parse_date(as_of, date.today()) if as_of else None,
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return {"status": "ok", "as_of": evaluation_date.isoformat(), "data": results}
+    return {
+        "status": "ok",
+        "as_of": evaluation_date.isoformat(),
+        "totals": totals,
+        "data": results,
+    }
 
 
 # --- Traseism statistics ---------------------------------------------------
@@ -1108,13 +1184,12 @@ def dashboard_stats(
     else:
         total_memberships = db.scalar(select(func.count(Membership.id))) or 0
 
-    # Get total switch events
-    total_switches = (
-        db.scalar(
-            select(func.count(Event.id)).where(Event.type.in_(["switch_group", "switch_party"]))
-        )
-        or 0
-    )
+    # R-04: publish both switch definitions separately. The two event types
+    # are disjoint, so their sum is exact — never an approximation. Keep
+    # ``switches`` as a deprecated alias of ``switches_all`` for old clients.
+    switch_group = db.scalar(select(func.count(Event.id)).where(Event.type == "switch_group")) or 0
+    switch_party = db.scalar(select(func.count(Event.id)).where(Event.type == "switch_party")) or 0
+    total_switches = switch_group + switch_party
 
     # Get total committees
     total_committees = (
@@ -1139,26 +1214,39 @@ def dashboard_stats(
     cross_chamber_persons = queries.get_cross_chamber_careers(db, ref_date or date.today())
     cross_chamber_count = len(cross_chamber_persons)
 
-    # Get coverage completeness score
+    # R-04: expose the denominator. The score is an exact share of coverage
+    # ROWS, not a share of memberships/events, and is null when there are no rows.
     coverage_scores = db.scalars(select(Coverage.completeness)).all()
-    if coverage_scores:
-        full_count = sum(1 for s in coverage_scores if s == "full")
-        completeness_score = round((full_count / len(coverage_scores)) * 100)
-    else:
-        completeness_score = 0
+    coverage_rows_total = len(coverage_scores)
+    coverage_full_rows = sum(1 for s in coverage_scores if s == "full")
+    completeness_score = (
+        round((coverage_full_rows / coverage_rows_total) * 100) if coverage_rows_total else None
+    )
 
     return {
         "status": "ok",
         "data": {
             "persons": total_persons,
             "memberships": total_memberships,
-            "switches": total_switches,
+            "switches": total_switches,  # deprecated alias of switches_all
+            "switches_all": total_switches,
+            "switches_group": switch_group,
+            "switches_party": switch_party,
             "committees": total_committees,
             "legislatures": legislature_count,
             "parties": party_count,
             "cross_chamber": cross_chamber_count,
             "coverage_score": completeness_score,
+            "coverage_full_rows": coverage_full_rows,
+            "coverage_rows_total": coverage_rows_total,
             "computed_at": datetime.now(UTC).isoformat(),
+            "definitions": {
+                "switches_group": "Observed parliamentary-group changes within the same chamber and legislature (Event.type='switch_group').",
+                "switches_party": "Observed changes of the party behind the group, unaffiliated bucket skipped (Event.type='switch_party').",
+                "switches_all": "switches_group + switches_party; disjoint event types, exact sum. Previously published bare as 'switches'.",
+                "memberships": "All Membership rows in the prepared runtime corpus (7,349); the raw release asset has 7,358 before dedupe.",
+                "coverage_score": "Share of coverage ROWS with completeness='full'; null when there are no rows.",
+            },
         },
     }
 
@@ -1536,6 +1624,7 @@ def vote_scorecard(
                 "not_voting_votes": 0,
                 "loyal_votes": 0,
                 "rebel_votes": 0,
+                "alignment_denominator": 0,
             }
         stats = person_stats[pid]
         stats["total_votes"] += 1
@@ -1544,10 +1633,15 @@ def vote_scorecard(
             stats[choice_key] += 1
         if pos.group_raw:
             majority = vote_party_majority.get((vote.id, pos.group_raw))
-            if majority == pos.choice:
-                stats["loyal_votes"] += 1
-            else:
-                stats["rebel_votes"] += 1
+            # R-04: rebellion is only a yes/no position against the party
+            # majority. Abstain/not-voting are not rebellion and must not
+            # inflate the denominator.
+            if majority is not None and pos.choice in ("yes", "no"):
+                stats["alignment_denominator"] += 1
+                if majority == pos.choice:
+                    stats["loyal_votes"] += 1
+                else:
+                    stats["rebel_votes"] += 1
 
     total_votes_in_scope = len(vote_ids)
 
@@ -1569,11 +1663,24 @@ def vote_scorecard(
                 "no_votes": stats["no_votes"],
                 "abstain_votes": stats["abstain_votes"],
                 "not_voting_votes": stats["not_voting_votes"],
-                "loyalty_pct": round(stats["loyal_votes"] / total * 100, 1) if total else 0,
-                "rebellion_pct": round(stats["rebel_votes"] / total * 100, 1) if total else 0,
+                "loyalty_pct": round(
+                    stats["loyal_votes"] / stats["alignment_denominator"] * 100, 1
+                )
+                if stats["alignment_denominator"]
+                else None,
+                "rebellion_pct": round(
+                    stats["rebel_votes"] / stats["alignment_denominator"] * 100, 1
+                )
+                if stats["alignment_denominator"]
+                else None,
                 "participation_pct": round(total / total_votes_in_scope * 100, 1)
                 if total_votes_in_scope
-                else 0,
+                else None,
+                "denominators": {
+                    "alignment": stats["alignment_denominator"],
+                    "participation": total_votes_in_scope,
+                    "definition": "alignment = positions with a party majority and an observed yes/no choice; abstain and not_voting excluded; participation = all votes in scope.",
+                },
             }
         )
 
@@ -1590,6 +1697,10 @@ def vote_scorecard(
         "total": total,
         "offset": offset,
         "limit": limit,
+        "definitions": {
+            "rebellion_pct": "no-votes against the party's majority choice / alignment denominator; null when denominator is 0.",
+            "participation_pct": "positions cast / votes in scope; null when denominator is 0.",
+        },
     }
 
 
@@ -1845,10 +1956,18 @@ def switch_leaderboard(
         tenure_years = 0.0
         if span and span[0] and span[1]:
             tenure_years = max((span[1] - span[0]).days / 365.25, 0.0)
-        tenure_weight = min(1.0, tenure_years / 4.0)
-        switch_ratio = (count / total_events) if total_events else 0.0
-        volatility = switch_ratio * tenure_weight
-        loyalty = round(max(0.0, min(100.0, 100.0 * (1.0 - volatility))), 1)
+        tenure_weight = min(1.0, tenure_years / 4.0) if tenure_years > 0 else None
+        # R-04: with a zero observed span a single switch produced exactly 100,
+        # contradicted by the UI's "100 = never switched". Undefined means null.
+        if not total_events or tenure_weight is None:
+            loyalty = None
+            loyalty_status = "undefined: no observed event span in scope"
+        else:
+            volatility = (count / total_events) * tenure_weight
+            loyalty = round(max(0.0, min(100.0, 100.0 * (1.0 - volatility))), 1)
+            if count > 0:
+                loyalty = min(loyalty, 99.9)  # never present an observed switcher as 100
+            loyalty_status = "ok"
 
         leaderboard.append(
             {
@@ -1861,6 +1980,13 @@ def switch_leaderboard(
                 "total_events": total_events,
                 "tenure_years": round(tenure_years, 1),
                 "loyalty_score": loyalty,
+                "loyalty_status": loyalty_status,
+                "loyalty_inputs": {
+                    "switch_count": count,
+                    "total_events_in_scope": total_events,
+                    "tenure_years": round(tenure_years, 1),
+                    "tenure_weight": round(tenure_weight, 3) if tenure_weight is not None else None,
+                },
             }
         )
 
@@ -1875,7 +2001,15 @@ def switch_leaderboard(
     else:
         score_scope = "all_chambers_all_legislatures"
 
-    return {"status": "ok", "score_scope": score_scope, "data": leaderboard}
+    return {
+        "status": "ok",
+        "score_scope": score_scope,
+        "definitions": {
+            "switches": "switch_group events only, scoped as score_scope.",
+            "loyalty_score": "100*(1 - switch_count/total_events_in_scope * min(1, tenure_years/4)); null when tenure_years <= 0; capped below 100 when a switch is observed.",
+        },
+        "data": leaderboard,
+    }
 
 
 # P3-B: export endpoints live only in backend/routers/exports.py. They were

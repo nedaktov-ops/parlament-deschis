@@ -95,7 +95,7 @@ export default function Parties() {
                   <th className="py-2 pr-4 font-medium">{t("party", "Party")}</th>
                   <th className="py-2 pr-4 font-medium">{t("parties.col.shortName", "Acronym")}</th>
                   <th className="py-2 pr-4 font-medium text-right">{t("parties.col.members", "Members")}</th>
-                  <th className="py-2 pr-4 font-medium text-right">{t("parties.col.switchesIn", "Switches in")}</th>
+                  <th className="py-2 pr-4 font-medium text-right">{t("parties.col.switchesIn", "Group switches in")}</th>
                 </tr>
               </thead>
               <tbody>

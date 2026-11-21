@@ -85,15 +85,21 @@ export default function Ideology() {
   );
 
   // Build scatter plot data
-  const scatterData = filteredData.map((d: IdeologyEntry) => ({
-    value: [d.lrgen ?? 0, d.galtan ?? 0, d.eu_position ?? 0],
-    name: d.party_name,
-    partyfacts_id: d.partyfacts_id,
-    survey_year: d.survey_year,
-    eu_position: d.eu_position,
-    antielite_salience: d.antielite_salience,
-    people_vs_elite: d.people_vs_elite,
-  }));
+  // R-04: parties without a published score are omitted, not plotted at zero.
+  const scatterData = filteredData
+    .filter(
+      (d: IdeologyEntry) =>
+        d.lrgen !== null && d.galtan !== null && d.eu_position !== null,
+    )
+    .map((d: IdeologyEntry) => ({
+      value: [d.lrgen, d.galtan, d.eu_position],
+      name: d.party_name,
+      partyfacts_id: d.partyfacts_id,
+      survey_year: d.survey_year,
+      eu_position: d.eu_position,
+      antielite_salience: d.antielite_salience,
+      people_vs_elite: d.people_vs_elite,
+    }));
 
   const colorMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -126,11 +132,11 @@ export default function Ideology() {
             `<div style="padding: 8px">`,
             `<div style="font-weight: bold">${d.name}</div>`,
             `<div>Year: ${d.survey_year}</div>`,
-            `<div>Left-Right: ${(d.value[0] ?? 0).toFixed(2)}</div>`,
-            `<div>GAL-TAN: ${(d.value[1] ?? 0).toFixed(2)}</div>`,
-            `<div>EU Position: ${(d.value[2] ?? 0).toFixed(2)}</div>`,
-            `<div>Anti-Elite: ${(d.antielite_salience ?? 0).toFixed(2)}</div>`,
-            `<div>People vs Elite: ${(d.people_vs_elite ?? 0).toFixed(2)}</div>`,
+            `<div>Left-Right: ${d.value[0] == null ? "—" : d.value[0].toFixed(2)}</div>`,
+            `<div>GAL-TAN: ${d.value[1] == null ? "—" : d.value[1].toFixed(2)}</div>`,
+            `<div>EU Position: ${d.value[2] == null ? "—" : d.value[2].toFixed(2)}</div>`,
+            `<div>Anti-Elite: ${d.antielite_salience == null ? "—" : d.antielite_salience.toFixed(2)}</div>`,
+            `<div>People vs Elite: ${d.people_vs_elite == null ? "—" : d.people_vs_elite.toFixed(2)}</div>`,
             `</div>`,
           ].join("");
         },
@@ -275,6 +281,9 @@ export default function Ideology() {
         <div className="h-[500px] w-full">
           <div ref={containerRef} id="ideology-chart" className="h-full w-full" />
         </div>
+        <p role="note" className="mt-2 text-xs text-slate-400">
+          {t("view.ideology.scoresNote", "Parties without a published CHES score are omitted, not plotted at zero.")}
+        </p>
       </section>
 
       <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>
@@ -315,13 +324,13 @@ export default function Ideology() {
                     {d.survey_year}
                   </td>
                   <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
-                    {(d.lrgen ?? 0).toFixed(2)}
+                    {d.lrgen === null ? "—" : d.lrgen.toFixed(2)}
                   </td>
                   <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
-                    {(d.galtan ?? 0).toFixed(2)}
+                    {d.galtan === null ? "—" : d.galtan.toFixed(2)}
                   </td>
                   <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
-                    {(d.eu_position ?? 0).toFixed(2)}
+                    {d.eu_position === null ? "—" : d.eu_position.toFixed(2)}
                   </td>
                 </tr>
               ))}

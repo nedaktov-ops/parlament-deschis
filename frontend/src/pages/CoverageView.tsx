@@ -43,25 +43,21 @@ export default function CoverageView() {
     ),
     [coverage.data, scope.chamber, scope.legislature],
   );
-  const totals = useMemo(() => {
-    const totalMemberships = rows.reduce((sum, r) => sum + r.total_memberships, 0);
-    const datedMemberships = rows.reduce(
-      (sum, r) => sum + Math.round(((r.dated_pct ?? 0) / 100) * r.total_memberships),
-      0,
-    );
-    const totalSwitches = rows.reduce((sum, r) => sum + r.total_switches, 0);
-    const sourcedSwitches = rows.reduce(
-      (sum, r) =>
-        sum + Math.round(((r.sourced_switches_pct ?? 0) / 100) * r.total_switches),
-      0,
-    );
-    return {
-      totalMemberships,
-      datedMemberships,
-      totalSwitches,
-      sourcedSwitches,
-    };
-  }, [rows]);
+  // R-04: corpus-wide aggregates come from the API's raw integer counts,
+  // never from back-computing rows via rounded percentages.
+  const summary = useQuery({
+    queryKey: ["coverage-summary"],
+    queryFn: () => api.coverageSummary(),
+  });
+  const totals = useMemo(
+    () => ({
+      totalMemberships: summary.data?.totals.memberships ?? null,
+      datedMemberships: summary.data?.totals.memberships_dated ?? null,
+      totalSwitches: summary.data?.totals.switches_all ?? null,
+      sourcedSwitches: summary.data?.totals.switches_sourced ?? null,
+    }),
+    [summary.data],
+  );
 
   const chamberCount = useMemo(() => new Set(rows.map((r) => r.chamber)).size, [rows]);
   const legislatureCount = useMemo(
@@ -72,10 +68,8 @@ export default function CoverageView() {
   const partialCount = rows.filter((r) => r.completeness === "partial").length;
   const fullPct = rows.length > 0 ? (fullCount / rows.length) * 100 : 0;
   const partialPct = rows.length > 0 ? (partialCount / rows.length) * 100 : 0;
-  const overallPct =
-    totals.totalMemberships > 0
-      ? (totals.datedMemberships / totals.totalMemberships) * 100
-      : 0;
+  // R-04: derived by the backend from raw counts; null at a zero denominator.
+  const overallPct: number | null = summary.data?.percentages.dated ?? null;
 
   if (coverage.isLoading) {
     return (
@@ -137,16 +131,28 @@ export default function CoverageView() {
 
               {/* Progress ring — overall coverage */}
               <div className="mt-6 flex items-center gap-4">
-                <ProgressRing value={overallPct} size={56} />
+                {overallPct === null ? (
+                  <span className="text-2xl font-bold text-slate-400">—</span>
+                ) : (
+                  <ProgressRing value={overallPct} size={56} />
+                )}
                 <div>
                   <div className="text-sm font-bold text-slate-100">
-                    {overallPct.toFixed(0)}%
+                    {fmtPct(overallPct)}
                   </div>
                   <div className="text-xs text-slate-400">
                     {t("coverageOverallLabel", "Overall coverage")}
                   </div>
                 </div>
               </div>
+              <p role="note" className="mt-2 text-xs text-slate-400">
+                {t("coverageRawCounts", "Members with a start date: {{dated}} / {{total}}; switch events with a source: {{sourced}} / {{switches}}.", {
+                  dated: totals.datedMemberships ?? "—",
+                  total: totals.totalMemberships ?? "—",
+                  sourced: totals.sourcedSwitches ?? "—",
+                  switches: totals.totalSwitches ?? "—",
+                })}
+              </p>
             </div>
             <div className="w-full md:w-auto max-w-[260px]">
               <HeroGraphic variant="overview" className="mx-auto" />

@@ -42,9 +42,10 @@ export default function Mps() {
   });
 
   const rows = cards.data?.data ?? [];
-  const total = cards.data?.total ?? 0;
+  // R-04: API corpus total, never the rendered page length.
+  const total = cards.data?.total ?? null;
   const canPrev = offset > 0;
-  const canNext = total > 0 ? offset + rows.length < total : rows.length === PAGE_SIZE;
+  const canNext = total !== null ? offset + rows.length < total : false;
 
   return (
     <div className="space-y-6">
@@ -64,8 +65,8 @@ export default function Mps() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
             <InfoStat
-              label={t("mpsTotalMps", "Total MPs")}
-              value={total}
+              label={t("mpsTotalMps", "MPs in corpus")}
+              value={total ?? "--"}
               accent="sky"
             />
             <InfoStat
@@ -79,17 +80,17 @@ export default function Mps() {
               accent="amber"
             />
             <InfoStat
-              label={t("mpsTotalSwitches", "Total switches")}
+              label={t("mpsTotalSwitches", "Group switches in page")}
               value={rows.reduce((sum, m) => sum + m.switches, 0)}
               accent="rose"
             />
           </div>
           <div className="mt-8 flex items-center gap-4" data-moment>
             <span className="moment-value block">
-              {total}
+              {total ?? "--"}
             </span>
             <span className="text-sm text-slate-400">
-              {t("mpsTotalMpsLabel", "members of parliament in corpus")}
+              {t("mpsTotalMpsLabel", "persons in corpus")}
             </span>
           </div>
         </div>

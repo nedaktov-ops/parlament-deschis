@@ -139,8 +139,8 @@ export default function MpComparison() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
             <InfoStat
-              label={t("mpcTotalMps", "Total MPs")}
-              value={poolList.length}
+              label={t("mpcTotalMps", "MPs in corpus (search pool capped at 200)")}
+              value={pool.data?.total ?? "--"}
               accent="sky"
             />
             <InfoStat
@@ -156,10 +156,10 @@ export default function MpComparison() {
           </div>
           <div className="mt-8 flex items-center gap-4" data-moment>
             <span className="moment-value block">
-              {poolList.length}
+              {pool.data?.total ?? "--"}
             </span>
             <span className="text-sm text-slate-400">
-              {t("mpcTotalMpsLabel", "members of parliament in corpus")}
+              {t("mpcTotalMpsLabel", "persons in corpus")}
             </span>
           </div>
         </div>

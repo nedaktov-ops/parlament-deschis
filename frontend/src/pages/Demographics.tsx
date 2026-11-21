@@ -31,8 +31,9 @@ export default function Demographics() {
 
   const rows = shift.data?.data ?? [];
   const asOf = shift.data?.as_of;
-  // Derive the in-scope coverage figure from what this page already fetches.
-  const birthDated = rows.reduce((sum, r) => sum + r.mps_with_birth_dates, 0);
+  const totals = shift.data?.totals;
+  const knownBirthDates = totals?.mps_with_birth_date ?? null;
+  const inScope = totals?.mps_in_scope ?? null;
 
   // Find min/max avg age for a simple visual scale.
   const ages = rows.map((r) => r.avg_age);
@@ -40,25 +41,12 @@ export default function Demographics() {
   const maxAge = ages.length > 0 ? Math.max(...ages) : 0;
   const span = maxAge - minAge || 1;
 
-  // Headline stats for the hero info-graphic cards.
-  const totalMPs = birthDated;
-  const avgAge =
-    rows.length > 0
-      ? Math.round((rows.reduce((s, r) => s + r.avg_age, 0) / rows.length) * 10) /
-        10
-      : 0;
-  const medianAges = rows.map((r) => r.median_age).sort((a, b) => a - b);
-  const medianAge =
-    medianAges.length > 0
-      ? medianAges.length % 2 === 1
-        ? medianAges[Math.floor(medianAges.length / 2)]
-        : (medianAges[medianAges.length / 2 - 1] +
-            medianAges[medianAges.length / 2]) /
-          2
-      : 0;
-  const partiesWithData = rows.filter((r) => r.mps_with_birth_dates > 0).length;
-  const coveragePct =
-    rows.length > 0 ? Math.round((partiesWithData / rows.length) * 100) : 0;
+  // R-04: population-level figures from the API totals — never a mean of
+  // per-party means and never parties-with-data / parties as "coverage".
+  const totalMPs = inScope;
+  const avgAge = totals?.population_avg_age ?? null;
+  const medianAge = totals?.population_median_age ?? null;
+  const coveragePct = totals?.coverage_pct ?? null;
 
   return (
     <div className="space-y-6">
@@ -80,27 +68,27 @@ export default function Demographics() {
               {/* Dealt moment: headline figure for the page. */}
               <div className="mt-4 flex items-center gap-4" data-moment>
                 <span className="moment-value block">
-                  {totalMPs.toLocaleString()}
+                  {totalMPs === null ? "—" : totalMPs.toLocaleString()}
                 </span>
                 <span className="text-sm text-slate-400">
-                  {t("demographics.moment.totalMPs", "members with birth dates")}
+                  {t("demographics.moment.totalMPs", "MPs in scope")}
                 </span>
               </div>
               {/* InfoStat cards — key metrics at a glance. */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
                 <InfoStat
-                  label={t("demographics.stat.totalMPs", "Total MPs")}
-                  value={totalMPs}
+                  label={t("demographics.stat.totalMPs", "MPs in scope")}
+                  value={totalMPs === null ? "—" : totalMPs}
                   accent="sky"
                 />
                 <InfoStat
                   label={t("demographics.stat.avgAge", "Average age")}
-                  value={avgAge}
+                  value={avgAge === null ? "—" : avgAge}
                   accent="emerald"
                 />
                 <InfoStat
                   label={t("demographics.stat.medianAge", "Median age")}
-                  value={medianAge}
+                  value={medianAge === null ? "—" : medianAge}
                   accent="amber"
                 />
                 <InfoStat
@@ -121,8 +109,10 @@ export default function Demographics() {
             </div>
             <div className="w-full md:w-auto max-w-[260px] flex flex-col items-center gap-4">
               <HeroGraphic variant="people" className="mx-auto" />
-              {rows.length > 0 && (
+              {coveragePct !== null ? (
                 <ProgressRing value={coveragePct} size={56} color="stroke-emerald-400" />
+              ) : (
+                <span className="text-2xl font-bold text-slate-400">—</span>
               )}
             </div>
           </div>
@@ -211,7 +201,15 @@ export default function Demographics() {
           {t("demographics.coverage", "Data coverage")}
         </h2>
         <p>
-          {t("demographics.coverage.desc", { birthDated })}
+          {t(
+            "demographics.coverage.desc",
+            "Birth date known: {{known}} / {{total}} ({{pct}}%).",
+            {
+              known: knownBirthDates ?? "—",
+              total: inScope ?? "—",
+              pct: coveragePct === null ? "—" : `${coveragePct}%`,
+            },
+          )}
         </p>
       </div>
     </div>

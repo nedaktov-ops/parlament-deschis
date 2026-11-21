@@ -72,7 +72,7 @@ export default function SenateHistory() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
             <InfoStat
-              label={t("senateStatMembers", "Senate Members")}
+              label={t("senateStatMembers", "Persons in coverage rows (all chambers)")}
               value={coverage.data?.reduce((acc, r) => acc + r.persons, 0) ?? "--"}
               accent="sky"
             />
@@ -87,7 +87,7 @@ export default function SenateHistory() {
               accent="amber"
             />
             <InfoStat
-              label={t("senateStatCoverage", "Full Coverage %")}
+              label={t("senateStatCoverage", "Full coverage rows")}
               value={
                 rows.filter((r) => r.completeness === "full").length
               }
@@ -100,7 +100,7 @@ export default function SenateHistory() {
               {coverage.data?.reduce((acc, r) => acc + r.persons, 0) ?? "--"}
             </span>
             <span className="text-sm text-slate-400">
-              {t("senateStatMembersLabel", "senate members in corpus")}
+              {t("senateStatMembersLabel", "persons in coverage rows (all chambers)")}
             </span>
           </div>
         </div>

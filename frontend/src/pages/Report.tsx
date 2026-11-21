@@ -92,9 +92,7 @@ export default function Report() {
         ? "text-amber-600 print:text-amber-700"
         : "text-slate-500";
 
-  const completenessValue = (c: string): number =>
-    c === "full" ? 100 : c === "partial" ? 60 : 0;
-
+  // R-04: `partial`/`none` are states, not percentages. They render as "—".
   const completenessRingColor = (c: string): string =>
     c === "full"
       ? "stroke-emerald-400"
@@ -132,7 +130,7 @@ export default function Report() {
                 {d.totals.persons.toLocaleString()}
               </span>
               <span className="text-sm sm:text-base text-slate-400 print:text-slate-600 mt-1 block">
-                {t("report.deputiesCount", "deputies in the corpus")}
+                {t("report.personsInCorpus", "persons in corpus")}
               </span>
             </div>
           )}
@@ -256,7 +254,7 @@ export default function Report() {
                   max={statMax}
                 />
                 <InfoStat
-                  label={t("report.switches", "Party switches")}
+                  label={t("report.switches", "Group switches")}
                   value={d.totals.switches}
                   max={statMax}
                 />
@@ -272,6 +270,9 @@ export default function Report() {
                   barValue={d.totals.persons_with_birth_date}
                 />
               </div>
+              <p role="note" className="mt-3 text-xs text-slate-500 print:text-slate-600">
+                {t("groupSwitchesOnly", "Group switches only (switch_group); see /api/dashboard/stats for all events.")}
+              </p>
             </section>
 
             <section className="mb-0">
@@ -409,6 +410,9 @@ export default function Report() {
               <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
                 {t("report.coverage", "Data coverage")}
               </h2>
+              <p className="mb-2 text-xs text-slate-500 print:text-slate-600">
+                {t("report.coverageNote", "'partial' means incomplete data, not a numeric percentage.")}
+              </p>
               <div
                 className="overflow-x-auto max-w-full"
                 tabIndex={0}
@@ -450,12 +454,16 @@ export default function Report() {
                             >
                               {c.completeness}
                             </span>
-                            <ProgressRing
-                              value={completenessValue(c.completeness)}
-                              max={100}
-                              size={22}
-                              color={completenessRingColor(c.completeness)}
-                            />
+                            {c.completeness === "full" ? (
+                              <ProgressRing
+                                value={100}
+                                max={100}
+                                size={22}
+                                color={completenessRingColor(c.completeness)}
+                              />
+                            ) : (
+                              <span className="text-xs text-slate-500 print:text-slate-600">—</span>
+                            )}
                           </div>
                         </td>
                       </tr>

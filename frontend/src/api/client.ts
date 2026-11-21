@@ -125,13 +125,39 @@ export interface CoverageRow extends CoverageItem {
 export interface DashboardStats {
   persons: number;
   memberships: number;
-  switches: number;
+  switches: number; // deprecated alias of switches_all
+  switches_all: number;
+  switches_group: number;
+  switches_party: number;
   committees: number;
   legislatures: number;
   parties: number;
   cross_chamber: number;
-  coverage_score: number;
+  coverage_score: number | null;
+  coverage_full_rows: number;
+  coverage_rows_total: number;
+  definitions: Record<string, string>;
   computed_at: string;
+}
+
+/** R-04: canonical coverage aggregates; percentages are null when denominator is 0. */
+export interface CoverageSummaryResponse {
+  status: string;
+  totals: {
+    memberships: number;
+    memberships_dated: number;
+    memberships_sourced: number;
+    switches_group: number;
+    switches_party: number;
+    switches_all: number;
+    switches_sourced: number;
+  };
+  percentages: {
+    dated: number | null;
+    sourced: number | null;
+    switches_sourced: number | null;
+  };
+  definitions: Record<string, string>;
 }
 
 export interface DashboardStatsResponse {
@@ -395,7 +421,9 @@ export interface MpsResponse {
   data: MpCard[];
   offset: number;
   limit: number;
+  /** R-04: corpus-wide denominator, independent of offset/limit (never the page length). */
   total: number;
+  definition: string;
   scope: { as_of: string | null; chamber: string | null; legislature: string | null };
 }
 export interface MpsQuery {
@@ -490,6 +518,7 @@ export const api = {
   ),
   coverage: () => get<CoverageItem[]>("/coverage"),
   coverage_detailed: () => get<CoverageRow[]>("/coverage/detailed"),
+  coverageSummary: () => get<CoverageSummaryResponse>("/coverage/summary"),
   about: () => get<AboutResponse>("/about"),
   health: () => get<HealthResponse>("/health"),
   dashboardStats: (asOf?: string) =>
@@ -654,6 +683,7 @@ export interface TraseismScope {
   repeat_switchers: TraseismRepeatSwitchers;
   timing: TraseismTiming;
   coverage: TraseismCoverage;
+  definitions: Record<string, string>;
 }
 
 export interface TraseismSwitchRow {
@@ -725,11 +755,20 @@ export interface SwitchLeaderboardEntry {
   parties: string[];
   total_events: number;
   tenure_years: number;
-  loyalty_score: number;
+  loyalty_score: number | null;
+  loyalty_status: string;
+  loyalty_inputs: {
+    switch_count: number;
+    total_events_in_scope: number;
+    tenure_years: number;
+    tenure_weight: number | null;
+  };
 }
 
 export interface SwitchLeaderboardResponse {
   status: string;
+  score_scope: string;
+  definitions: Record<string, string>;
   data: SwitchLeaderboardEntry[];
 }
 
@@ -759,6 +798,15 @@ export interface GenerationalShiftEntry {
 export interface GenerationalShiftResponse {
   status: string;
   as_of: string;
+  totals: {
+    mps_in_scope: number;
+    mps_with_birth_date: number;
+    mps_unknown_birth_date: number;
+    population_avg_age: number | null;
+    population_median_age: number | null;
+    coverage_pct: number | null;
+    definition: string;
+  };
   data: GenerationalShiftEntry[];
 }
 
@@ -938,9 +986,14 @@ export interface ScorecardEntry {
   no_votes: number;
   abstain_votes: number;
   not_voting_votes: number;
-  loyalty_pct: number;
-  rebellion_pct: number;
-  participation_pct: number;
+  loyalty_pct: number | null;
+  rebellion_pct: number | null;
+  participation_pct: number | null;
+  denominators: {
+    alignment: number;
+    participation: number;
+    definition: string;
+  };
 }
 
 export interface ScorecardResponse {
