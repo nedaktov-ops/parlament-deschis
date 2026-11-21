@@ -67,7 +67,21 @@ resolved.
 
 **Decision:** R-01 PASS. Next: R-02 (layout/type) — serial, same `index.css` ownership now transferred to call-site-only edits per CO-1. W1 remains IN PROGRESS until R-02 lands.
 
-## W2 — Scope + counts + states (R-03, R-04, R-05) — **PENDING**
+## W2 — Scope + counts + states (R-03, R-04, R-05) — **IN PROGRESS (R-03 PASS)**
+
+### R-03 — Unified scope / as_of — **PASS**
+
+| Item | Evidence |
+|---|---|
+| Baseline | HEAD `02bedce`; product tree legitimately changed by W1 — all files re-read before editing |
+| Backup | `/tmp/opencode/R03-scope-02bedce-20261121T211425`, SHA256SUMS `e9033a1a…`, 160 files, all `OK` |
+| Commit | `2b37342` — 32 files, 694 insertions / 357 deletions (3 new) |
+| Scope | 32 owned files only; `git diff --check` clean; index.css utilities and exports.py untouched |
+| Blocking gates | ruff clean (master fixed 1 import-order error in new test); pytest **412 passed**; lint 0; build exit 0; API probes: `as_of=nope → 422`, `person as_of=nope → 422`, unscoped `/mps` default 3388, scoped totals OK; UI gate 24/24, zero JavaScript errors, zero axe violations (master re-run); URL persistence OK |
+| Residuals | MpComparison 3 selection arrays remain local state (explicit UI disclosure added); pre-existing `/grafice` overflow deferred to R-08; pre-existing `npm ls` ELSPROBLEMS for i18next |
+| NOT PROVEN | none — all checkpoints printed evidence |
+
+**Decision:** R-03 PASS. Next: R-04 (count/definition honesty), serial — it edits `client.ts`, `i18n.ts`, `api.py`, pages already touched by R-03; master will re-verify all gates.
 
 ## W3 — Feature honesty (R-08) — **PENDING**
 
@@ -82,3 +96,4 @@ resolved.
 | 2026-11-21 | W0 | PASS | bundle/DB/manifest/restore all green | begin W1 after supervisor plan + axe check |
 | 2026-11-21 | W1/R-01 | PASS | guard RED→GREEN, lint/build/Tailwind/verify-dashboard green, UI 24/24 zero axe (master re-run) | continue W1 with R-02 (layout/type) |
 | 2026-11-21 | W1 overall | AMBER | R-01 and R-02 owned gates PASS; 2 edge-probe rows are proven pre-existing (stale probe UUID, /grafice overflow) | proceed W2 with residuals tracked (grafice overflow -> R-08; probe UUID -> recipe maintenance) |
+| 2026-11-21 | W2/R-03 | PASS | ruff clean, pytest 412, lint/build green, API probes incl. 422, UI 24/24 zero axe (master re-run), URL persistence OK | continue W2 with R-04 (counts) |

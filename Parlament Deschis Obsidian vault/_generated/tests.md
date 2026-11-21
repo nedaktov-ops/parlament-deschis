@@ -7,9 +7,9 @@ status: active
 authority: mirror
 tags: [type/reference, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py, tests/]
-created: 2026-11-21T21:12:56+02:00
-updated: 2026-11-21T21:12:56+02:00
-source_commit: 3f1f175fa6d0d40b037c1a31536b25b0543b0f1a
+created: 2026-11-21T22:15:29+02:00
+updated: 2026-11-21T22:15:29+02:00
+source_commit: 2b37342d686091fc349f1ce25a0ea869a17562d2
 generated: true
 generator: scripts/vault_sync.py
 ---
@@ -20,7 +20,7 @@ generator: scripts/vault_sync.py
 
 Counts come from the source-commit versions of tracked files under `tests/`.
 
-- Python test files: 48; `def test_` definitions: 366.
+- Python test files: 49; `def test_` definitions: 370.
 - Bats test files: 0; `@test` cases: 0.
 
 | File | Pattern | Count |
@@ -61,6 +61,7 @@ Counts come from the source-commit versions of tracked files under `tests/`.
 | `tests/test_polite_client_content.py` | `def test_` | 3 |
 | `tests/test_prepare_db.py` | `def test_` | 6 |
 | `tests/test_reconcile.py` | `def test_` | 14 |
+| `tests/test_scope_backend.py` | `def test_` | 4 |
 | `tests/test_security_hardening.py` | `def test_` | 6 |
 | `tests/test_senat_profile.py` | `def test_` | 9 |
 | `tests/test_senat_source.py` | `def test_` | 6 |
