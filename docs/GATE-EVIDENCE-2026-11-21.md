@@ -243,3 +243,26 @@ Both were stopped after G08. Final verification at 2026-11-21T11:49:
 - Other agents' servers on ports 8000, 8001, 5188 were left untouched.
 
 **Server cleanup: CONFIRMED.**
+
+## W1.2 / W1.3 addendum — GitHub PR evidence (2026-11-21)
+
+After the gate sweep, the branch was pushed and PR opened (authorized scope;
+no merge, no deploy, no branch-protection change):
+
+```
+git push -u origin review/completion-20261121   -> PUSH_EXIT:0, new remote branch
+gh pr create --base main --head review/completion-20261121
+  -> PR #48  https://github.com/nedaktov-ops/parlament-deschis/pull/48  OPEN
+gh pr checks 48 --watch --interval 15
+  test              pass  1m4s
+  audit             pass  13s
+  docker            pass  1m4s
+  evidence-guards   pass  16s
+  Vercel            pass  (preview deployment)
+  WATCH_EXIT:0
+```
+
+**Wave 1 step W1.3 (make PR CI green) is GREEN.** Owner-only steps W1.4
+(merge), W1.5 (branch protection) and W1.6/W1.7 (deploy/parity) were
+deliberately NOT performed. Production therefore still serves the old bundle
+and pre-fix backend — see `docs/CONTINUATION-STRATEGY-2026-11-21.md` §5.

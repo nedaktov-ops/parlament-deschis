@@ -109,8 +109,12 @@ of a dataset release: new commit restoring the previous value of
 | W1.7 | Verify Vercel (frontend) second: new bundle hash, 24/24 live | 🔒 deploy | hash ≠ `index-D61EXxHz.js`; UI 24/24 | platform rollback |
 | W1.8 | Record evidence (bundle hashes, PR SHA, check list, hashes) | no | G05 + `git diff --check` green | `git revert <sha>` |
 
-**Session boundary:** W0.1–W0.6, W1.1–W1.3 and W1.8 are executed now.
-W1.4–W1.7 are prepared as owner/deploy runbooks and deliberately NOT performed.
+**Session outcome:** W0.1–W0.6, W1.1–W1.3 and W1.8 were executed. The branch was
+pushed and PR #48 opened; all four required checks passed (`test`, `audit`,
+`docker`, `evidence-guards`). W1.4–W1.7 are prepared as owner/deploy runbooks
+and deliberately NOT performed — production still serves the pre-fix bundle
+and backend. Evidence: `docs/GATE-EVIDENCE-2026-11-21.md`,
+`docs/BACKUP-EVIDENCE-2026-11-21.md`.
 
 ## 6. Wave 2 — Data completeness and release (recipe specs; next session)
 

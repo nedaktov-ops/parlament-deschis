@@ -77,6 +77,16 @@ trigger.
   local pin; at the tag itself the pin read an earlier superseded tag, updated
   after publication (R10).
 
+## W1.2/W1.3 update (2026-11-21)
+
+Branch `review/completion-20261121` was pushed (exit 0) and PR
+[#48](https://github.com/nedaktov-ops/parlament-deschis/pull/48) opened against
+`main`. All four required CI checks passed on the PR: `test`, `audit`,
+`docker`, `evidence-guards` (plus Vercel preview). **W1.3 GREEN.** Owner-only
+steps W1.4 (merge), W1.5 (branch protection) and W1.6/W1.7 (deploy) were
+deliberately not performed; production still serves the old bundle and pre-fix
+backend. Evidence: `docs/GATE-EVIDENCE-2026-11-21.md` W1.2/W1.3 addendum.
+
 ## Required deploy order
 
 Deploy the **backend first**, then the **frontend**:
