@@ -138,12 +138,12 @@ export default function MpComparison() {
   const maxCommittees = Math.max(...chosen.map((c) => c.committees), 0);
 
   return (
-    <div className="wrap space-y-6">
-      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
-        <div className="max-w-7xl mx-auto">
+    <div className="space-y-6">
+      <section className="hero-section" data-enter>
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight">{t("mpc.title", "MP Comparison")}</h1>
+              <h1 className="page-title">{t("mpc.title", "MP Comparison")}</h1>
               <p className="text-sm text-slate-300 mt-2">
                 {t("mpc.intro")}
               </p>
@@ -170,7 +170,7 @@ export default function MpComparison() {
             />
           </div>
           <div className="mt-8 flex items-center gap-4" data-moment>
-            <span className="text-5xl font-black block tracking-tight">
+            <span className="moment-value block">
               {poolList.length}
             </span>
             <span className="text-sm text-slate-400">
@@ -255,7 +255,7 @@ export default function MpComparison() {
 
       {chosen.length >= 2 && (
         <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("mpc.title", "MP Comparison")}>
-          <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
+          <table className="min-w-full bg-slate-800 rounded-xl overflow-hidden data-table">
             <thead className="bg-slate-700">
               <tr>
                 <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">

@@ -60,13 +60,13 @@ export default function Demographics() {
     rows.length > 0 ? Math.round((partiesWithData / rows.length) * 100) : 0;
 
   return (
-    <div className="wrap space-y-6">
+    <div className="space-y-6">
       {/* Hero section — fills the first screen alone */}
       <section className="hero-section" data-enter>
-        <div className="max-w-7xl mx-auto">
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight text-slate-100">
+              <h1 className="page-title">
                 {t("demographics.title", "Demographics: Age per Party")}
               </h1>
               <p className="text-sm text-slate-400">
@@ -78,7 +78,7 @@ export default function Demographics() {
               </p>
               {/* Dealt moment: headline figure for the page. */}
               <div className="mt-4 flex items-center gap-4" data-moment>
-                <span className="text-5xl font-black block tracking-tight text-slate-200">
+                <span className="moment-value block">
                   {totalMPs.toLocaleString()}
                 </span>
                 <span className="text-sm text-slate-400">
@@ -158,22 +158,22 @@ export default function Demographics() {
 
       {rows.length > 0 && (
         <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("demographics.title", "Demographics: Age per Party")}>
-          <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
+          <table className="min-w-full bg-slate-800 rounded-xl overflow-hidden data-table">
             <thead className="bg-slate-700">
               <tr>
-                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                   {t("demographics.col.party", "Party")}
                 </th>
-                <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-right text-sm font-medium !text-slate-300">
                   {t("demographics.col.mps", "MPs with birth date")}
                 </th>
-                <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-right text-sm font-medium !text-slate-300">
                   {t("demographics.col.avg", "Average age")}
                 </th>
-                <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-right text-sm font-medium !text-slate-300">
                   {t("demographics.col.median", "Median age")}
                 </th>
-                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                   {t("demographics.col.dist", "Distribution")}
                 </th>
               </tr>

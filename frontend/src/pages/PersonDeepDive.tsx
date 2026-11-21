@@ -105,13 +105,13 @@ export function PersonDeepDive() {
   ).size;
 
   return (
-    <div className="wrap space-y-6">
+    <div className="space-y-6">
       {/* Section 1: Hero — MP biography graphic, fills the first screen alone */}
       <section className="hero-section" data-enter>
-        <div className="max-w-7xl mx-auto">
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight">{p.name}</h1>
+              <h1 className="page-title">{p.name}</h1>
               <p className="text-sm text-slate-400">{t("personDeepDive.subtitle")}</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
                 <InfoStat
@@ -144,7 +144,7 @@ export function PersonDeepDive() {
                 </div>
               )}
               <div className="mt-6 flex items-center gap-4" data-moment>
-                <span className="text-5xl font-black block tracking-tight">
+                <span className="moment-value block">
                   {totalEvents}
                 </span>
                 <span className="text-sm text-slate-400">{t("personDeepDive.moment")}</span>

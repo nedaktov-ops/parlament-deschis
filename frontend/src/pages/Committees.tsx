@@ -113,7 +113,7 @@ function CommitteeCard({
             </div>
           )}
           {members.data && members.data.members.length > 0 && (
-            <table className="min-w-full text-sm">
+            <table className="min-w-full text-sm data-table">
               <thead className="bg-slate-700/60">
                 <tr>
                   <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">
@@ -196,13 +196,13 @@ export default function Committees() {
   );
 
   return (
-    <div className="wrap py-6 print:p-0">
+    <div className="py-6 print:p-0">
       <div
-        className="min-h-screen flex flex-wrap items-start justify-between gap-3 mb-6 print:mb-3"
+        className="flex flex-wrap items-start justify-between gap-3 mb-6 print:mb-3"
         data-enter
       >
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-100 print:text-slate-900">
+          <h1 className="page-title print:text-slate-900">
             {t("committees.title", "Commitment Tracker")}
           </h1>
           <p className="text-slate-400 print:text-slate-600 text-sm mt-1">
@@ -213,7 +213,7 @@ export default function Committees() {
           </p>
           {list.data && (
             <p className="mt-4 text-slate-200" data-moment>
-              <span className="text-5xl font-black block tracking-tight">
+              <span className="moment-value block">
                 {list.data.length.toLocaleString()}
               </span>
               <span className="text-sm text-slate-400 mt-1">
@@ -295,7 +295,7 @@ export default function Committees() {
             <summary className="text-sm text-sky-400 cursor-pointer hover:text-sky-300">
               {t("control.showChairs", "Show all chairs →")}
             </summary>
-            <table className="min-w-full text-sm mt-3">
+            <table className="min-w-full text-sm mt-3 data-table">
               <thead className="bg-slate-700/60">
                 <tr>
                   <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">

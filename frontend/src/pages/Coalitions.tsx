@@ -53,13 +53,13 @@ export default function Coalitions() {
   });
 
   return (
-    <div className="wrap space-y-6">
+    <div className="space-y-6">
       {/* Section 1: Hero — fills the first screen alone (H2-G recipe). */}
-      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
-        <div className="max-w-7xl mx-auto">
+      <section className="hero-section" data-enter>
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight text-slate-100">
+              <h1 className="page-title">
                 {t("coalitions.title", "Coalition Stability")}
               </h1>
               <p className="text-sm text-slate-400">
@@ -110,7 +110,7 @@ export default function Coalitions() {
           {!waves.isLoading && !waves.isError && (
             <>
               <div className="mt-8 flex items-center gap-4" data-moment>
-                <span className="text-5xl font-black block tracking-tight text-slate-100">
+                <span className="moment-value block">
                   {all.length}
                 </span>
                 <span className="text-sm text-slate-400">
@@ -147,19 +147,19 @@ export default function Coalitions() {
           </div>
         ) : (
           <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("coalitions.breakups", "Coalition breakups")}>
-            <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
+            <table className="min-w-full bg-slate-800 rounded-xl overflow-hidden data-table">
               <thead className="bg-slate-700">
                 <tr>
-                  <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                  <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                     {t("coalitions.col.event", "Event")}
                   </th>
-                  <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                  <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                     {t("coalitions.col.date", "Date")}
                   </th>
-                  <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                  <th scope="col" className="px-4 py-3 text-right text-sm font-medium !text-slate-300">
                     {t("coalitions.col.switches", "Switches in wave")}
                   </th>
-                  <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                  <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                     {t("coalitions.col.since", "Since prior formation")}
                   </th>
                 </tr>

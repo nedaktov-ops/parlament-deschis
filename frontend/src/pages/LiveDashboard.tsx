@@ -83,10 +83,10 @@ export function LiveDashboard() {
   }));
 
   return (
-    <div className="wrap space-y-8">
+    <div className="space-y-8">
       {/* Section 1: Hero Header - Concise, no wasted space */}
       <section className="py-8 sm:py-12 lg:py-14" data-enter>
-        <div className="max-w-7xl mx-auto">
+        <div>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
             <div className="lg:col-span-7 space-y-5">
               <DashboardHeader />
@@ -149,7 +149,7 @@ export function LiveDashboard() {
           {/* Legislature info */}
           {meta.data && (
             <div className="mt-10 sm:mt-12 flex flex-wrap items-baseline gap-x-4 gap-y-2 border-t border-slate-800/80 pt-8" data-moment>
-              <span className="text-5xl sm:text-6xl font-black tracking-tight text-slate-100">
+              <span className="moment-value">
                 {Object.keys(meta.data.legislatures).length}
               </span>
               <span className="text-sm sm:text-base text-slate-400">
@@ -161,8 +161,8 @@ export function LiveDashboard() {
       </section>
 
       {/* Section 2: Party Ecosystem */}
-      <section className="px-4 pb-8 sm:pb-10" data-enter>
-        <div className="max-w-7xl mx-auto">
+      <section className="pb-8 sm:pb-10" data-enter>
+        <div>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100 mb-4 sm:mb-5">{t("partyEcosystem", "Party Ecosystem")}</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 lg:items-start">
             <PartyListTable
@@ -186,8 +186,8 @@ export function LiveDashboard() {
       </section>
 
       {/* Section 3: Deep Dive Visualizations */}
-      <section className="px-4 pb-8 sm:pb-10" data-enter>
-        <div className="max-w-7xl mx-auto">
+      <section className="pb-8 sm:pb-10" data-enter>
+        <div>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100 mb-4 sm:mb-5">{t("deepDiveViews", "Deep Dive Views")}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
             <Suspense fallback={<Skeleton className="h-64 w-full" />}>

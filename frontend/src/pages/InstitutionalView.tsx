@@ -23,7 +23,7 @@ export function InstitutionalView() {
   return (
     <div className="space-y-4">
       <div className="card p-4">
-        <h1 className="text-2xl font-bold mb-3">{t("institutionalView")}</h1>
+        <h1 className="page-title mb-3">{t("institutionalView")}</h1>
         <p className="text-sm text-slate-400 mb-4">{t("institutionalViewDesc")}</p>
         <div className="mb-4">
           <label htmlFor="institutional-as-of" className="block text-xs text-slate-300 mb-1">
@@ -99,7 +99,7 @@ export function InstitutionalView() {
                 role="region"
                 aria-label={t("crossChamberTableCaption")}
               >
-                <table className="w-full text-sm text-left">
+                <table className="w-full text-sm text-left data-table">
                   <caption className="sr-only">{t("crossChamberTableCaption")}</caption>
                   <thead>
                     <tr className="border-b border-slate-700 text-slate-300">

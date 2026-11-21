@@ -218,7 +218,7 @@ function RootLayout() {
         {t("skipToContent", "Skip to content")}
       </a>
       <header className="border-b border-slate-700/60 bg-ink/95 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1">
             <div className="text-base font-semibold tracking-tight">{t("title")}</div>
             <p className="text-xs text-slate-400">{t("subtitle")}</p>
@@ -243,7 +243,7 @@ function RootLayout() {
           </div>
         </div>
         <div className="relative">
-        <nav className="flex gap-1 border-b border-slate-700 px-4 overflow-x-auto" aria-label={t("mainNavigation")}>
+        <nav className="flex gap-1 border-b border-slate-700 px-4 sm:px-6 lg:px-8 overflow-x-auto" aria-label={t("mainNavigation")}>
           <NavLink to="/" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("overview")}
           </NavLink>
@@ -296,7 +296,7 @@ function RootLayout() {
         <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-ink to-transparent" />
         </div>
       </header>
-      <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto w-full min-w-0 px-4 py-5 flex-1">
+      <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto w-full min-w-0 px-4 sm:px-6 lg:px-8 py-5 flex-1">
         <Outlet />
       </main>
       <Footer />

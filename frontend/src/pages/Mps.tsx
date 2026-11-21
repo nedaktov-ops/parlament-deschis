@@ -66,12 +66,12 @@ export default function Mps() {
   const canNext = rows.length === PAGE_SIZE;
 
   return (
-    <div className="wrap space-y-6">
-      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
-        <div className="max-w-7xl mx-auto">
+    <div className="space-y-6">
+      <section className="hero-section" data-enter>
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight">{t("mps.title", "MP Biography Cards")}</h1>
+              <h1 className="page-title">{t("mps.title", "MP Biography Cards")}</h1>
               <p className="text-sm text-slate-300 mt-2">
                 {t("mps.intro")}
               </p>
@@ -103,7 +103,7 @@ export default function Mps() {
             />
           </div>
           <div className="mt-8 flex items-center gap-4" data-moment>
-            <span className="text-5xl font-black block tracking-tight">
+            <span className="moment-value block">
               {rows.length}
             </span>
             <span className="text-sm text-slate-400">
@@ -170,7 +170,7 @@ export default function Mps() {
         {rows.map((m) => (
           <div
             key={m.id}
-            className="card-hover bg-slate-800 rounded-lg p-4 border border-slate-700/50 hover:bg-slate-750/60 transition-colors"
+            className="card-hover bg-slate-800 rounded-xl p-4 border border-slate-700/50 hover:bg-slate-750/60 transition-colors"
           >
             <Link
               to="/person/$id"

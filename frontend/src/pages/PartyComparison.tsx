@@ -122,8 +122,8 @@ export default function PartyComparison() {
     "bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200";
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-100 mb-2">
+    <div className="py-6">
+      <h1 className="page-title mb-2">
         {t("compare.title", "Party Comparison")}
       </h1>
       <p className="text-slate-400 mb-2">
@@ -184,13 +184,13 @@ export default function PartyComparison() {
 
       {a && b && (
         <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("compare.title", "Party Comparison")}>
-          <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
+          <table className="min-w-full bg-slate-800 rounded-xl overflow-hidden data-table">
             <thead className="bg-slate-700">
               <tr>
-                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                   {t("compare.col.metric", "Metric")}
                 </th>
-                <th scope="col" className="px-4 py-3 text-center text-sm font-semibold text-slate-100">
+                <th scope="col" className="px-4 py-3 text-center text-sm font-semibold !text-slate-100">
                   {a.color && (
                     <span
                       aria-hidden="true"
@@ -200,7 +200,7 @@ export default function PartyComparison() {
                   )}
                   {a.short_name}
                 </th>
-                <th scope="col" className="px-4 py-3 text-center text-sm font-semibold text-slate-100">
+                <th scope="col" className="px-4 py-3 text-center text-sm font-semibold !text-slate-100">
                   {b.color && (
                     <span
                       aria-hidden="true"

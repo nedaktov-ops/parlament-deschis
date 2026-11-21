@@ -50,12 +50,12 @@ export function LegislatureDetail() {
   }
 
   return (
-    <div className="wrap space-y-6">
-      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
-        <div className="max-w-7xl mx-auto">
+    <div className="space-y-6">
+      <section className="hero-section" data-enter>
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight">
+              <h1 className="page-title">
                 {t("legislature")} {year}
               </h1>
               <p className="text-sm text-slate-300 mt-2">
@@ -93,7 +93,7 @@ export function LegislatureDetail() {
             />
           </div>
           <div className="mt-8 flex items-center gap-4" data-moment>
-            <span className="text-5xl font-black block tracking-tight">
+            <span className="moment-value block">
               {chamber.data?.total ?? "--"}
             </span>
             <span className="text-sm text-slate-400">

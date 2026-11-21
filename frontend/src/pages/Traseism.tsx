@@ -94,7 +94,7 @@ function StatCard({
   title?: string;
 }) {
   return (
-    <div className="bg-slate-800/50 rounded p-3">
+    <div className="bg-slate-800/50 rounded-xl p-4">
       <div className="text-slate-500 text-xs">{label}</div>
       <div className="text-2xl font-bold text-slate-100" title={title}>
         {value}
@@ -189,7 +189,7 @@ function MatrixTable({ scope }: { scope: TraseismScope }) {
 
   return (
     <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("traseismMatrixCaption")}>
-      <table className="w-full text-xs border-collapse">
+      <table className="w-full data-table border-collapse">
         <caption className="sr-only">{t("traseismMatrixCaption")}</caption>
         <thead>
           <tr className="text-left text-slate-500">
@@ -232,7 +232,7 @@ function PartyNetTable({ scope }: { scope: TraseismScope }) {
 
   return (
     <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("traseismPartyNetCaption")}>
-      <table className="w-full text-xs border-collapse">
+      <table className="w-full data-table border-collapse">
         <caption className="sr-only">{t("traseismPartyNetCaption")}</caption>
         <thead>
           <tr className="text-left text-slate-500">
@@ -345,7 +345,7 @@ function SwitchLedger({
       ) : (
         <>
           <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("traseismLedgerCaption")}>
-            <table className="w-full text-xs border-collapse">
+            <table className="w-full data-table border-collapse">
               <caption className="sr-only">{t("traseismLedgerCaption")}</caption>
               <thead>
                 <tr className="text-left text-slate-500">
@@ -510,7 +510,7 @@ function ScopesOverview({ rows }: { rows: TraseismScope[] }) {
 
   return (
     <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("traseismAllScopesCaption")}>
-      <table className="w-full text-xs border-collapse">
+      <table className="w-full data-table border-collapse">
         <caption className="sr-only">{t("traseismAllScopesCaption")}</caption>
         <thead>
           <tr className="text-left text-slate-500">
@@ -626,7 +626,7 @@ function SwitchWavesSection({
         </div>
       ) : (
         <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("waves.title", "Switch waves")}>
-          <table className="min-w-full text-sm">
+          <table className="min-w-full text-sm data-table">
             <thead>
               <tr className="text-left text-slate-400 border-b border-slate-700">
                 <th scope="col" className="py-2 pr-4">{t("waves.col.period", "Period")}</th>
@@ -718,12 +718,12 @@ export function Traseism() {
   };
 
   return (
-    <div className="wrap space-y-6">
+    <div className="space-y-6">
       <section className="py-10 sm:py-14 lg:py-16" data-enter>
-        <div className="max-w-7xl mx-auto">
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8 lg:gap-10">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">{t("traseismTitle")}</h1>
+              <h1 className="page-title">{t("traseismTitle")}</h1>
               <p className="text-sm sm:text-base text-slate-300 mt-2 leading-relaxed max-w-2xl">{t("traseismHeadline")}</p>
               <p className="text-sm text-slate-400 mt-1 leading-relaxed max-w-2xl">{t("traseismIntro")}</p>
               <p className="text-sm text-slate-200 mt-2 font-medium">
@@ -757,7 +757,7 @@ export function Traseism() {
             />
           </div>
           <div className="mt-8 sm:mt-10 flex flex-wrap items-baseline gap-x-4 gap-y-2 border-t border-slate-800/80 pt-8" data-moment>
-            <span className="text-5xl sm:text-6xl font-black block tracking-tight">
+            <span className="moment-value block">
               {scope?.switches ?? "--"}
             </span>
             <span className="text-sm sm:text-base text-slate-400">

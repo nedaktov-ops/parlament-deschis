@@ -129,19 +129,19 @@ h1, h2, h3, h4, h5, h6 {
   @apply bg-panel rounded-xl border border-slate-700/60 shadow-lg;
 }
 
-/* De-facto page wrap: constrains content width, centers it, and applies
-   responsive horizontal padding so left/right content edges align across
-   every route (design-taste-frontend Rule 4). */
-.wrap {
-  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-w-0;
-}
+/* R-02 D1 — ONE container owner. `main#main-content` owns max-width, centring
+   and the horizontal gutter (px-4 sm:px-6 lg:px-8 = 16 / 24 / 32 px, symmetric
+   at 320 / 768 / 1024). Page roots MUST NOT declare a container class; the
+   gutter token is applied literally in router.tsx to main, the header inner
+   div and the nav so brand, nav and content share one left edge. The former
+   `.wrap` utility is retired (R-02 CO-1: R-01 owns all utilities in this file). */
 
 /* Reflow (WCAG 1.4.10): flex/grid item ancestors must be allowed to shrink
    below their intrinsic min-content width. Without this, a wide data table
    forces `main` (a flex-1 item with min-width:auto) wider than the viewport
    instead of scrolling inside its overflow-x-auto region. */
 main,
-main .wrap,
+main > div,
 main section {
   min-width: 0;
 }

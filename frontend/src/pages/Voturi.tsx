@@ -61,7 +61,7 @@ export default function Voturi() {
   return (
     <div className="space-y-6">
       <section className="py-2" data-enter>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100">
+        <h1 className="page-title">
           {t("view.voturi.title", "Roll-call votes")}
         </h1>
         <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-3xl">
@@ -107,7 +107,7 @@ export default function Voturi() {
             aria-label={t("aria.votesScroll", "Scrollable table of plenary votes")}
           >
             <table
-              className="min-w-full text-sm"
+              className="min-w-full text-sm data-table"
               aria-label={t("aria.rollcallTable", "Table of plenary votes and each MP's position")}
             >
               <caption className="sr-only">

@@ -80,14 +80,14 @@ export function PartyProfile() {
   const hasSwitchTimeline = switchTimeline.length > 0;
 
   return (
-    <div className="wrap space-y-6">
+    <div className="space-y-6">
       {/* Section 1: Hero — fills the first screen alone */}
       <section className="hero-section" data-enter>
-        <div className="max-w-7xl mx-auto">
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
               <HeroGraphic variant="committee" className="mx-auto md:mx-0 mb-6 md:mb-0" />
-              <h1 className="text-3xl font-bold tracking-tight text-slate-100">{p.name}</h1>
+              <h1 className="page-title">{p.name}</h1>
               <p className="text-sm text-slate-400">{p.short_name} · {t("party")}</p>
               {p.wikidata_qid && (
                 <a
@@ -102,7 +102,7 @@ export function PartyProfile() {
               {/* Dealt moment: party membership count */}
               <div className="mt-6 flex items-center gap-3 px-3 py-2 rounded bg-slate-800/50 border border-slate-700/50" data-moment>
                 <span className="moment-badge">{t("currentMembers")}</span>
-                <span className="text-2xl font-bold text-slate-100">{formatCount(p.current_members)}</span>
+                <span className="moment-value">{formatCount(p.current_members)}</span>
               </div>
             </div>
           </div>

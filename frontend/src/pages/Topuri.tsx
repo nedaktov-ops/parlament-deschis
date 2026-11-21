@@ -51,7 +51,7 @@ export default function Topuri() {
   return (
     <div className="space-y-6">
       <section className="py-2" data-enter>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100">
+        <h1 className="page-title">
           {t("view.topuri.title", "MP behavioural scorecard")}
         </h1>
         <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-3xl">
@@ -105,7 +105,7 @@ export default function Topuri() {
             <table
               role="table"
               aria-label="MP behavioural scorecard: loyalty, rebellion and participation per MP"
-              className="min-w-full text-sm"
+              className="min-w-full text-sm data-table"
             >
               <caption className="sr-only">
                 MP behavioural scorecard: loyalty, rebellion and participation per MP

@@ -42,15 +42,15 @@ export default function SwitchLeaderboard() {
   const topSwitcherCount = rows.length > 0 ? rows[0].switch_count : 0;
 
   return (
-    <div className="p-6">
+    <div className="py-6">
       {/* Hero section — H2-D: min-h-screen, data-enter, HeroGraphic, dealt moment */}
-      <section className="min-h-screen mb-8" data-enter>
-        <div className="max-w-7xl mx-auto">
+      <section className="hero-section" data-enter>
+        <div>
           <div className="flex flex-col lg:flex-row lg:items-start gap-8">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-4">
                 <HeroGraphic variant="switches" className="w-10 h-10" />
-                <h1 className="text-3xl font-bold tracking-tight text-slate-100">
+                <h1 className="page-title">
                   {t("leaderboard.title", "Party Switching Leaderboard")}
                 </h1>
               </div>
@@ -133,28 +133,28 @@ export default function SwitchLeaderboard() {
 
       {rows.length > 0 && (
         <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("leaderboard.title", "Party Switching Leaderboard")}>
-          <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
+          <table className="min-w-full bg-slate-800 rounded-xl overflow-hidden data-table">
             <thead className="bg-slate-700">
               <tr>
-                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                   #
                 </th>
-                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                   {t("leaderboard.col.name", "MP")}
                 </th>
-                <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-right text-sm font-medium !text-slate-300">
                   {t("leaderboard.col.switches", "Switches")}
                 </th>
-                <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-right text-sm font-medium !text-slate-300">
                   {t("leaderboard.col.loyalty", "Loyalty")}
                 </th>
-                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                   {t("leaderboard.col.parties", "Parties joined")}
                 </th>
-                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                   {t("leaderboard.col.first", "First")}
                 </th>
-                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                   {t("leaderboard.col.last", "Last")}
                 </th>
               </tr>

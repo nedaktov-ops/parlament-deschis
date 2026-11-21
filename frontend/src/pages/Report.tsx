@@ -102,13 +102,13 @@ export default function Report() {
         : "stroke-slate-400";
 
   return (
-    <div className="wrap py-6 print:p-0">
+    <div className="py-6 print:p-0">
       <div
         className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 lg:gap-10 mb-8 sm:mb-10 print:mb-4 print:block"
         data-enter
       >
         <div className="flex-1 min-w-0 space-y-3">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-100 print:text-slate-900">
+          <h1 className="page-title print:text-slate-900">
             {t("report.title", "Transparency Report")}
           </h1>
           <p className="text-slate-400 print:text-slate-600 text-sm sm:text-base mt-1 max-w-2xl leading-relaxed">
@@ -125,7 +125,7 @@ export default function Report() {
           )}
           {d && (
             <div className="mt-6 sm:mt-8 pt-6 border-t border-slate-800/80 print:border-slate-200" data-moment>
-              <span className="text-5xl sm:text-6xl font-black block tracking-tight text-slate-100 print:text-slate-900">
+              <span className="moment-value block print:text-slate-900">
                 {d.totals.persons.toLocaleString()}
               </span>
               <span className="text-sm sm:text-base text-slate-400 print:text-slate-600 mt-1 block">
@@ -281,7 +281,7 @@ export default function Report() {
                 role="region"
                 aria-label={t("report.topSwitchers", "Top party switchers")}
               >
-                <table className="min-w-full text-sm">
+                <table className="min-w-full text-sm data-table">
                   <thead>
                     <tr className="text-left text-slate-400 print:text-slate-600 border-b border-slate-700 print:border-slate-300">
                       <th scope="col" className="py-1 pr-3">{t("report.col.mp", "MP")}</th>
@@ -412,7 +412,7 @@ export default function Report() {
                 role="region"
                 aria-label={t("report.coverage", "Data coverage")}
               >
-                <table className="min-w-full text-sm">
+                <table className="min-w-full text-sm data-table">
                   <thead>
                     <tr className="text-left text-slate-400 print:text-slate-600 border-b border-slate-700 print:border-slate-300">
                       <th scope="col" className="py-1 pr-3">

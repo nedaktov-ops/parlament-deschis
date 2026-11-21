@@ -87,13 +87,13 @@ export default function CoverageView() {
   }
 
   return (
-    <div className="wrap space-y-6">
+    <div className="space-y-6">
       {/* Section 1: Hero — fills the first screen alone */}
-      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
-        <div className="max-w-7xl mx-auto">
+      <section className="hero-section" data-enter>
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight">{t("coverageTitle")}</h1>
+              <h1 className="page-title">{t("coverageTitle")}</h1>
               <p className="text-sm text-slate-400">{t("coverageDesc")}</p>
 
               {/* InfoStat cards */}
@@ -142,7 +142,7 @@ export default function CoverageView() {
 
           {/* Dealt moment — total coverage entries */}
           <div className="mt-8 flex items-center gap-4" data-moment>
-            <span className="text-5xl font-black block tracking-tight">
+            <span className="moment-value block">
               {rows.length}
             </span>
             <span className="text-sm text-slate-400">
@@ -153,7 +153,7 @@ export default function CoverageView() {
       </section>
 
       {/* Section 2: Coverage table (existing) */}
-      <section className="wrap space-y-4">
+      <section className="space-y-4">
         <div className="card p-4">
           {/* Per-scope table */}
           <div
@@ -162,7 +162,7 @@ export default function CoverageView() {
             role="region"
             aria-label={t("coverageTableCaption")}
           >
-            <table className="w-full text-xs border-collapse">
+            <table className="w-full data-table border-collapse">
               <caption className="sr-only">{t("coverageTableCaption")}</caption>
               <thead>
                 <tr className="text-left text-slate-500">

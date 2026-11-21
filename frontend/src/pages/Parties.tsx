@@ -43,7 +43,7 @@ export default function Parties() {
   return (
     <div className="space-y-6">
       <section className="py-2" data-enter>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100">
+        <h1 className="page-title">
           {t("nav.parties", "Parties")}
         </h1>
         <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-3xl">
@@ -94,7 +94,7 @@ export default function Parties() {
 
         {!partiesQuery.isLoading && !partiesQuery.isError && filtered.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
+            <table className="min-w-full text-sm data-table">
               <thead>
                 <tr className="text-left text-slate-400 border-b border-slate-700">
                   <th className="py-2 pr-4 font-medium">{t("party", "Party")}</th>

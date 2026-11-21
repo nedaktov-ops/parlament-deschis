@@ -87,13 +87,13 @@ export default function PartyTimeline() {
   }, [rows]);
 
   return (
-    <div className="p-6">
+    <div className="py-6">
       {/* H2-O Hero section — fills the first screen alone */}
       <section className="hero-section" data-enter>
-        <div className="max-w-7xl mx-auto">
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight">
+              <h1 className="page-title">
                 {t("ptimeline.title", "Party Timeline")}
               </h1>
               <p className="text-sm text-slate-400">
@@ -139,7 +139,7 @@ export default function PartyTimeline() {
                 />
               </div>
               <div className="mt-8 flex items-center gap-4" data-moment>
-                <span className="text-5xl font-black block tracking-tight">
+                <span className="moment-value block">
                   {rows.length}
                 </span>
                 <span className="text-sm text-slate-400">
