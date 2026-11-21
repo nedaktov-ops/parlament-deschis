@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { api } from "../api/client";
+import LoadingState from "../components/LoadingState";
+import EmptyState from "../components/EmptyState";
 import { localISODate } from "../utils/date";
 
 const TODAY = localISODate();
@@ -78,7 +80,7 @@ export default function Parties() {
         </div>
 
         {partiesQuery.isLoading && (
-          <div className="text-slate-500 text-sm py-6">{t("loading", "Loading…")}</div>
+          <LoadingState label={t("loading", "Loading…")} />
         )}
         {partiesQuery.isError && (
           <div className="text-red-400 text-sm py-6">
@@ -87,9 +89,7 @@ export default function Parties() {
         )}
 
         {!partiesQuery.isLoading && !partiesQuery.isError && filtered.length === 0 && (
-          <div className="text-slate-500 text-sm py-6">
-            {t("parties.empty", "No parties match this search.")}
-          </div>
+          <EmptyState title={t("parties.empty", "No parties match this search.")} />
         )}
 
         {!partiesQuery.isLoading && !partiesQuery.isError && filtered.length > 0 && (

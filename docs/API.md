@@ -70,6 +70,51 @@ percentages, switch totals, and the latest refresh time. Metrics are derived
 when no persisted coverage rows exist. Percentage fields are `null` when their
 denominator is zero.
 
+### `GET /api/coverage/dimensions`
+Honest per-scope coverage across three independent dimensions — `mandates`,
+`votes` and `biographies` — derived from the rows actually present in the
+database. Returns a JSON array with one row per chamber / legislature scope
+(20 scopes in the pinned release). Each row has `chamber`, `legislature`,
+`period_start`, `period_end` and three objects `mandates`, `votes`,
+`biographies`; each object carries `status` (`none` | `partial` | `full`) and
+`count`, and `biographies` additionally carries `total` (persons in scope).
+Real example row (pinned release, `deputies` / `1990`):
+
+```json
+{
+  "chamber": "deputies",
+  "legislature": "1990",
+  "period_start": "1990-06-18",
+  "period_end": "1992-10-08",
+  "mandates": {"status": "full", "count": 448, "note": null},
+  "votes": {"status": "none", "count": 0, "note": "No votes ingested in this scope."},
+  "biographies": {
+    "status": "partial", "count": 418, "total": 448,
+    "note": "418 of 448 persons in scope have a known birth date."
+  }
+}
+```
+
+Status semantics, computed independently per dimension:
+
+- **mandates** — distinct persons holding a group tenure in scope; `full` only
+  at ≥ 90% of a verified seat count (seat count unknown ⇒ `partial`, no rows ⇒
+  `none`). Reuses the legacy coverage logic unchanged.
+- **votes** — rows in the `vote` table for the scope. No rows (or no vote table)
+  ⇒ `none`. There is no published expected-total bar for votes, so this
+  dimension is **never `full`**; populated scopes are `partial`.
+- **biographies** — persons in scope with a known `birth_date` (`count`) over
+  the same person set the mandate count uses (`total`). `full` only at 100%,
+  otherwise `partial` / `none`.
+
+> **Supersession note (2026-11-21):** this endpoint supersedes the mandate-only
+> "full for all scopes" headline of `GET /api/coverage` and
+> `GET /api/coverage/detailed`. Those two legacy payloads describe **mandates
+> only** and remain unchanged; a scope whose mandates are `full` is never
+> claimed here to have full votes or biographies. See also
+> [Count definitions](#count-definitions) for why overlapping totals measure
+> different things.
+
 ### `GET /api/evidence/{evidence_id}`
 Evidence detail with snapshot URL.
 

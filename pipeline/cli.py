@@ -600,6 +600,27 @@ def cmd_coverage(args) -> int:
         print(
             f"{row['chamber']:10} {row['legislature']:8} {row['completeness']:8} persons={row['persons']:4}  {row['note'] or ''}"
         )
+    # Additive: the mandate-only lines above stay byte-identical for callers.
+    # The dimension view is derived from the rows actually present, so a scope
+    # whose mandates are "full" is never shown as having full votes or bios.
+    from .coverage import coverage_dimensions
+
+    print("\nCoverage dimensions (mandates / votes / biographies):")
+    try:
+        dimensions = coverage_dimensions(session)
+    except Exception as exc:
+        # Legacy DBs may lack a column this view needs; keep the mandate output
+        # usable and report the gap honestly instead of crashing the command.
+        print(f"  dimensions unavailable: {type(exc).__name__}: {exc}")
+    else:
+        for row in dimensions:
+            mandates, votes, bios = row["mandates"], row["votes"], row["biographies"]
+            print(
+                f"  {row['chamber']:10} {row['legislature']:8} "
+                f"mandates={mandates['status']}({mandates['count']}) "
+                f"votes={votes['status']}({votes['count']}) "
+                f"biographies={bios['status']}({bios['count']}/{bios['total']})"
+            )
     if args.refresh:
         n = refresh_coverage(session)
         session.commit()

@@ -13,6 +13,15 @@
 > pinned in `data/latest-release.txt`. Numbers below are historical unless the
 > text explicitly says "live" with a 2026-11-19 check.
 
+> **Current-state correction (2026-11-21 — P-1).** Feature 12 below
+> ("Real-Time Switch Alerts") and the `poll_switch_alerts.py` recipe are
+> **superseded as delivered behaviour** and retained only as the original
+> strategy/history. All `refetchInterval: 60_000` client polls were removed from
+> `frontend/src`, and `render.yaml` sets `PARLAMENT_POLL_INTERVAL_MIN: ""`, so
+> the dataset is immutable at runtime. Switch alerts now mean "new in this data
+> release", not real-time. Evidence, implementation, verification and rollback:
+> [docs/POLICY-DECISIONS-2026-11-21.md](POLICY-DECISIONS-2026-11-21.md).
+
 ## Executive Summary
 
 This strategy delivers **15 transparency features** enabling voters to draw meaningful conclusions about Romanian parliamentary politics — **without** collecting every possible data point. The project has solid infrastructure (pipeline, DB, API, frontend) but its core mission was failing: users couldn't draw useful conclusions.
@@ -83,7 +92,7 @@ This strategy delivers **15 transparency features** enabling voters to draw mean
 
 | # | Feature | Verified Data | Effort | Transparency Value |
 |---|---------|--------------|--------|-------------------|
-| 12 | **Real-Time Switch Alerts** (toast when new MP switches parties) | Poller on `event` table for new `switch_group` events | 3 days | "Citizens get notified when democracy changes" |
+| 12 | **Real-Time Switch Alerts** (toast when new MP switches parties) | Poller on `event` table for new `switch_group` events | 3 days | "Citizens get notified when democracy changes" — **SUPERSEDED 2026-11-21 (P-1):** no runtime poll exists; alerts mean "new in this data release" ([docs/POLICY-DECISIONS-2026-11-21.md](POLICY-DECISIONS-2026-11-21.md)) |
 | 13 | **Coalition Stability Analysis** (how long do party alliances last?) | `mandate` table (5273 entries) + `event` switch events | 3 days | "Government stability: how long do alliances last?" |
 | 14 | **MP Comparison Tool** (compare 2-3 MPs: birth_date, switch count, committee seats, loyalty score) | All above data combined | 3 days | "Compare individual MPs side-by-side" |
 | 15 | **Load Testing & Staging Deploy** (50 concurrent users, p95 < 500ms) | API endpoints: `/api/parties`, `/api/persons/:id`, `/api/switch-leaderboard` | 3 days | "Production readiness + stakeholder demo" |
@@ -279,6 +288,9 @@ def get_person_deepdive(person_id):
 import time
 def poll_switch_alerts(stop_event):
     """Real-time switch alerts"""
+    # SUPERSEDED 2026-11-21 (P-1): historical recipe only, never a shipped
+    # runtime poller. No 60 s client poll exists; alerts now mean "new in this
+    # data release". See docs/POLICY-DECISIONS-2026-11-21.md.
     last_check = time.time()
     while not stop_event.is_set():
         conn = sqlite3.connect('data/parlament.db')
@@ -290,7 +302,7 @@ def poll_switch_alerts(stop_event):
                 # send_alert(switch) — UI integration
                 pass
             last_check = time.time()
-        time.sleep(300)  # 5-minute polling
+        time.sleep(300)  # 5-minute polling [SUPERSEDED 2026-11-21 (P-1): historical recipe, no 5-minute/60 s poll runs today; see docs/POLICY-DECISIONS-2026-11-21.md]
     conn.close()
 ```
 

@@ -6,6 +6,12 @@ import { api, type HealthResponse } from "../api/client";
 // live system status indicator alongside grouped links, logo and copyright.
 // Status data reuses the existing health/freshness pattern from LiveFeed.tsx
 // (api.health, source status dots, lastDataRefresh label).
+//
+// H4-A (2026-11-21): only the data-backed items are implemented — last refresh,
+// status dot, and the existing source/provenance link. Newsletter signup and
+// "social proof" (logos / "trusted by") are NOT implemented: this project has
+// no subscription endpoint, subscriber list or endorsement data to support
+// them, so no invented links or claims are added.
 type SourceHealth = Exclude<HealthResponse["sources"][string], string>;
 
 export default function Footer() {
@@ -37,6 +43,9 @@ export default function Footer() {
         : t("dataRefreshUnavailable");
   const statusDot =
     refreshFailed ? "bg-rose-400" : mostRecentRefresh ? "bg-emerald-400" : "bg-slate-400";
+  // Existing health payload also carries the dataset release tag; show it as
+  // provenance when present (no i18n key yet — English default kept).
+  const releaseTag = health.data?.dataset.release_tag;
 
   return (
     <footer className="border-t border-slate-700/60 bg-panel mt-auto">
@@ -126,12 +135,20 @@ export default function Footer() {
         <div
           className="border-t border-slate-700/60 pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 text-xs" aria-live="polite">
             <span
               aria-hidden="true"
               className={`w-2 h-2 rounded-full ${statusDot}`}
             />
             <span className="text-slate-400">{refreshLabel}</span>
+            {releaseTag && (
+              <span className="text-slate-400">
+                {" · "}
+                {t("footer.datasetRelease", "Dataset release: {{tag}}", {
+                  tag: releaseTag,
+                })}
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-400">
             © {new Date().getFullYear()} Parlament Deschis — CC-BY 4.0
