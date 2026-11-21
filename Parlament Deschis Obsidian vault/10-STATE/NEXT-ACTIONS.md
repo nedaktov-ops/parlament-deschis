@@ -94,16 +94,19 @@ Exhaustive register: [ACTION-PLAN](../20-DIRECTION/ACTION-PLAN.md). Quick view: 
   verification, CLI); the Vercel MCP still needs `/mcps` → vercel → sign-in, so
   no new Vercel tools are exposed yet. `npx vercel-plugin doctor` is not
   available as an npm executable in this environment.
-- Docker CI failure root cause proven: `download_dataset.py` in the Docker
-  `data` stage calls `api.github.com` **unauthenticated**, so a shared-runner
-  rate limit returns `HTTP 403: rate limit exceeded` (run `44914654135`).
-  `scripts/download_dataset.py` already accepts `GITHUB_TOKEN` from the
-  environment and strips Authorization on cross-host redirects, so the fix is
-  a BuildKit secret mount in `Dockerfile` plus `secrets:` on the build step in
-  `.github/workflows/ci.yml` — no new secret values introduced.
+- Docker CI failure root cause proven and **FIXED (PR #64, `main` `2eeca99`)**:
+  the Docker `data` stage called `api.github.com` unauthenticated, so a shared
+  runner rate limit returned `HTTP 403: rate limit exceeded` (run
+  `44914654135`). `Dockerfile` now mounts a `github_token` BuildKit secret
+  (`required=false`, local builds still work) and `.github/workflows/ci.yml`
+  passes `secrets.GITHUB_TOKEN`. `scripts/download_dataset.py` already read
+  `GITHUB_TOKEN` and stripped Authorization on cross-host redirects, so no new
+  secret values or script changes were needed. CI docker job **passes** with
+  the authenticated build; the secret exists only in one RUN layer. Local
+  verification was blocked because buildx is absent on this machine — CI is
+  the verifier. Syntax checked against docker/build-push-action v7 docs.
 
 **Remaining after this pass**
-- Implement and verify the authenticated dataset download in Docker (in progress).
 - Owner decision A/B/C/D for the workflow pin; then option A + ≥189-vote guard.
 - Release-asset vote merge + `assert-votes` gate (A-03).
 - Genealogy/Senate relabelling, i18n key, Voturi state wiring, staging load
