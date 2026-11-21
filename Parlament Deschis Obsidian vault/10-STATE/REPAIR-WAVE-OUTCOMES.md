@@ -35,7 +35,21 @@ green result; an unrun check is NOT PROVEN, never PASS.
 supervisor plan confirms recipe file ownership and the axe prerequisite is
 resolved.
 
-## W1 — Visual foundation (R-01, R-02) — **IN PROGRESS (R-01 PASS)**
+## W1 — Visual foundation (R-01, R-02) — **AMBER (both recipes' owned gates PASS)**
+
+### R-02 — Layout / type scale — **PASS (owned gates); AMBER wave**
+
+| Item | Evidence |
+|---|---|
+| Commit | `3f1f175` — 26 files, 138 insertions / 138 deletions |
+| Scope | 26 R-02-owned files only; `git diff --check` clean; R-01 utilities byte-identical (CO-1 honoured) |
+| Static counts | `wrap=0 inner=0 proot=0 shellmax=2 sectionpx=0`; `hero=11 herodup=0`; `title=24 visibleh1=29 oldh1=0`; `black=0 moment=14 table=23` |
+| Blocking gates | lint exit 0; build exit 0 (924 modules, 9.96s); UI gate 24/24, zero JavaScript errors, zero axe violations (master independent re-run) |
+| Collateral fix | 23 page-owned `!text-slate-*` classes restore original `<th>` colours after `.data-table` activation — the axe regression was proven against baseline and fixed within page ownership |
+| Residual (NOT PROVEN as a pass) | literal `CP-R02-10 EDGE PROBE PASS: 72/72` reads **67/72**: gutter invariant itself holds 72/72 (16/24/32), but 5 rows fail for reasons reproduced identically on a pristine HEAD baseline — (a) recipe's stale person UUID → 404/error state, h1=0; (b) pre-existing `/grafice` horizontal overflow (docScrollW 389@320 / 780@768) |
+| Other NOT PROVEN | manual screenshot review, print after `.data-table`, non-axe contrast measurement |
+
+**Decision:** W1 is **AMBER**, not GREEN. Both implementers' owned work passed every automatable gate; the two edge-probe residuals are pre-existing/external and proven by baseline reproduction. Most effective next step: proceed to W2 (scope + counts + states — higher value) while logging the two residuals as tracked follow-ups (`/grafice` overflow → R-08 owner; probe UUID → recipe maintenance), rather than blocking the programme on pre-existing defects.
 
 ### R-01 — Design-system primitives — **PASS**
 
@@ -67,3 +81,4 @@ resolved.
 |---|---|---|---|---|
 | 2026-11-21 | W0 | PASS | bundle/DB/manifest/restore all green | begin W1 after supervisor plan + axe check |
 | 2026-11-21 | W1/R-01 | PASS | guard RED→GREEN, lint/build/Tailwind/verify-dashboard green, UI 24/24 zero axe (master re-run) | continue W1 with R-02 (layout/type) |
+| 2026-11-21 | W1 overall | AMBER | R-01 and R-02 owned gates PASS; 2 edge-probe rows are proven pre-existing (stale probe UUID, /grafice overflow) | proceed W2 with residuals tracked (grafice overflow -> R-08; probe UUID -> recipe maintenance) |
