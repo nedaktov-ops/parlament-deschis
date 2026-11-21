@@ -102,9 +102,13 @@ mapping, any official register with a declared single-valued relation.
 
 - **A-20 RESOLVED**: `POST /graphql {"query":"{__typename}"}` → 200 on both hosts;
   earlier 404 was a GET-only probe artifact. GraphiQL disabled in production.
-- **A-16 PARTIAL**: GitHub status ties deploy IDs to SHAs (`afd1944` →
-  `DMWBXLWkHjm65NiMzFHraiXJg1zd`, `e4c3107` → `AactV98rQaCR23spBQXM9kskCEys`);
-  which SHA the live alias serves remains NOT PROVEN without a Vercel token.
+- **A-16 RESOLVED via Vercel MCP (2026-11-21)**: `list_deployment_aliases` on
+  production deployment `dpl_AR9EZfrmk6UzG8vkpp5gWC32BKev` shows the alias
+  `parlament-deschis.vercel.app`. `list_deployments` ties that deployment to
+  commit `e7c9ab9b6e846690c0bff672027f70d443d4779c` (merge PR #66). The live
+  alias therefore serves `e7c9ab9` — previously NOT PROVEN, now observed.
+  Earlier SHAs recorded for comparison: `afd1944` → `DMWBXLWkHjm65NiMzFHraiXJg1zd`,
+  `e4c3107` → `AactV98rQaCR23spBQXM9kskCEys`.
 - **A-15**: tokenless POSTs to all three write endpoints return 503 before any
   write; OS-level FS proof impossible on Render Free (no shell) — use a
   disposable instance for the DB-level probe.
