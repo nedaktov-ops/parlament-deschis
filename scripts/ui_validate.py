@@ -17,13 +17,32 @@ project dependencies — installing them would bloat the pinned lockfile).
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
+import urllib.request
 
 from playwright.async_api import async_playwright
 
 BASE = (sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:5174").rstrip("/")
 AXE_PATH = "/tmp/axe.min.js"
-PERSON_ID = "cb5ca84e-7bba-4d0b-bea8-91b81aa8eb53"  # live /api/mps first row
+
+
+def _resolve_person_id() -> str:
+    """Use a person that actually exists in the corpus under test.
+
+    Hard-coding a UUID silently breaks after every data release (new UUIDs),
+    producing a 404 that looks like an application defect. Fall back to the
+    historical id and report it in the route name only when the API is absent.
+    """
+    try:
+        with urllib.request.urlopen(BASE + "/api/mps?limit=1", timeout=10) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        return payload["data"][0]["id"]
+    except Exception:  # noqa: BLE001 - a validation tool must not crash on probe failure
+        return "cb5ca84e-7bba-4d0b-bea8-91b81aa8eb53"
+
+
+PERSON_ID = _resolve_person_id()
 
 ROUTES: list[tuple[str, str]] = [
     ("overview", "/"),

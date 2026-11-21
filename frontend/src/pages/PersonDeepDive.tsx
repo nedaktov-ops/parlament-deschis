@@ -75,6 +75,7 @@ export function PersonDeepDive() {
   if (person.isLoading) {
     return (
       <div className="card p-4">
+        <h1 className="sr-only">{t("personDeepDive.title", "Parliamentary profile")}</h1>
         <div className="text-slate-500 text-sm py-8">{t("loading")}</div>
       </div>
     );
@@ -83,6 +84,7 @@ export function PersonDeepDive() {
   if (person.isError || !p) {
     return (
       <div className="card p-4" role="alert">
+        <h1 className="sr-only">{t("personDeepDive.title", "Parliamentary profile")}</h1>
         <p className="text-rose-200 text-sm py-4">{t("personLoadError")}</p>
         <button type="button"className="btn bg-slate-700 hover:bg-slate-600" onClick={() => person.refetch()}>
           {t("traseismRetry")}
