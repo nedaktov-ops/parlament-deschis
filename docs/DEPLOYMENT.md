@@ -18,6 +18,12 @@ spins down after 15 minutes without inbound traffic; the first request can take
 30–60 seconds. That is accepted. Upgrade the Render plan if the cold start is
 not acceptable.
 
+> **Current-state note (2026-11-21 — P-1).** The "30–60 seconds" above is the
+> Render cold-start wake time, **not** a 60 s polling interval. All 60 s client
+> polls (`refetchInterval: 60_000`) were removed from `frontend/src`; switch
+> alerts mean "new in this data release", not real-time. Evidence:
+> [docs/POLICY-DECISIONS-2026-11-21.md](POLICY-DECISIONS-2026-11-21.md).
+
 ## Required GitHub configuration
 
 Repository **Settings → Secrets and variables → Actions**:

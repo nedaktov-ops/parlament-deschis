@@ -38,7 +38,7 @@
 
 | # | Issue | Evidence |
 |---|-------|----------|
-| B1 | All pages use identical `card p-4` styling | Every page uses `bg-slate-800 rounded-xl border border-slate-700/60 shadow-lg` — no visual hierarchy |
+| B1 | All pages use identical `card p-4` styling | Every page uses `bg-slate-800 rounded-xl border border-slate-700/60 shadow-lg` — no visual hierarchy (2026-11-21 note: `/60` is a Tailwind opacity modifier, **not** a 60 s poll; all 60 s client polls were removed per [docs/POLICY-DECISIONS-2026-11-21.md](POLICY-DECISIONS-2026-11-21.md)) |
 | B2 | No hero graphics on 6 pages | SenateHistory, Demographics, Coalitions, Committees, MpComparison, PersonDeepDive lack HeroGraphic |
 | B3 | No per-tab information graphics | Every nav tab has identical typography treatment |
 | B4 | Empty states are plain text | `text-slate-500` with no illustration or CTA |

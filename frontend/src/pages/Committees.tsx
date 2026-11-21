@@ -12,6 +12,8 @@ import {
 import { localISODate } from "../utils/date";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
+import LoadingState from "../components/LoadingState";
+import EmptyState from "../components/EmptyState";
 
 function fmtDate(value: string | null): string {
   if (!value) return "—";
@@ -358,7 +360,7 @@ export default function Committees() {
       </div>
 
       {list.isLoading && (
-        <div className="text-slate-500">{t("loading", "Loading…")}</div>
+        <LoadingState label={t("loading", "Loading…")} />
       )}
       {list.isError && (
         <div className="text-red-400">
@@ -377,12 +379,12 @@ export default function Committees() {
       </div>
 
       {rows.length === 0 && !list.isLoading && !list.isError && (
-        <div className="text-slate-500">
-          {t(
+        <EmptyState
+          title={t(
             "committees.empty",
             "No committee data ingested yet for this scope.",
           )}
-        </div>
+        />
       )}
 
       <div className="mt-6 bg-slate-800/50 rounded p-4 text-sm text-slate-400">

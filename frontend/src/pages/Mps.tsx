@@ -5,6 +5,8 @@ import { Link } from "@tanstack/react-router";
 import { get } from "../api/client";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
+import LoadingState from "../components/LoadingState";
+import EmptyState from "../components/EmptyState";
 import { localISODate } from "../utils/date";
 
 interface MpCard {
@@ -156,9 +158,7 @@ export default function Mps() {
       </form>
 
       {cards.isLoading && (
-        <div className="text-slate-400 bg-slate-800/40 border border-slate-700/60 rounded-lg p-4">
-          {t("loading", "Loading…")}
-        </div>
+        <LoadingState label={t("loading", "Loading…")} />
       )}
       {cards.isError && (
         <div className="text-red-300 bg-red-900/20 border border-red-800/60 rounded-lg p-4">
@@ -203,9 +203,7 @@ export default function Mps() {
       </div>
 
       {rows.length === 0 && !cards.isLoading && !cards.isError && (
-        <div className="text-slate-400 bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
-          {t("mps.empty", "No persons match this search.")}
-        </div>
+        <EmptyState title={t("mps.empty", "No persons match this search.")} />
       )}
 
       <div className="mt-6 flex items-center gap-4">
