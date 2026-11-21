@@ -15,6 +15,12 @@ verified: 2026-11-21
 
 # Release pin and verification gates
 
+> **Current-state addendum (2026-11-21):** the pin below was superseded by
+> `data-20261121-votes-001` (sha256 `eabdb857…`, 189 votes / 24,682 positions,
+> strict audit 275 known / 0 new, DELETE journal, 15 licence rows). The
+> historical figures below are preserved as a dated snapshot. Evidence:
+> [EXECUTION-LOG](EXECUTION-LOG-2026-11-21.md).
+
 Authoritative measurements as of HEAD `6fd6028`. Current-state interpretation
 is in [CURRENT-STATE](CURRENT-STATE.md); disputes in
 [CONTRADICTIONS](CONTRADICTIONS.md).

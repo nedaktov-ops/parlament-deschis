@@ -151,3 +151,26 @@ the duplicate closed-stint group.
 Verification for this pass: pytest **404 passed**, ruff clean, lint **0 errors /
 0 warnings**, build exit 0, doc-truth 0, strict audit **275/0**, UI **24/24**
 real browser, vault lint 42 notes, sync `--check` clean, workflow YAML valid.
+
+## F. Owner gates executed (2026-11-21)
+
+All remaining items from section C were executed and verified. The complete
+evidence is in [EXECUTION-LOG](EXECUTION-LOG-2026-11-21.md):
+
+- **Merged** PRs #48, #47, #8, #49, #50, #51 into `main` (`ad34bde`), with all
+  four required checks green on each. Pre-merge tag `w1-before-merge` at `6b848f1`.
+- **Branch protection** enabled: four required checks, one approval, no
+  force-push/deletion, admins included. Self-authored PRs required a temporary,
+  documented lifting of the review requirement, restored immediately after each merge.
+- **Deployed** backend first then frontend: canonical routes live, zero
+  `/api/api` paths, bundle hash `index-C3QLvq6v.js`, enforcing CSP on both hosts.
+- **Published** `data-20261121-votes-001` with 189 votes / 24,682 positions,
+  strict audit 275/0, prepared DELETE-mode DB, 15 licence rows; pinned via PR #50.
+- **Policy decisions** P-1/P-2/P-3 recorded in `docs/POLICY-DECISIONS-2026-11-21.md`.
+- **PR triage** complete: 2 merged, 7 closed with evidence; zero open PRs.
+- **Live UI gate** 24/24 with real vote data after PR #51 fixed stale person IDs
+  and h1-less loading states.
+
+Remaining: exact Vercel build commit, runtime read-only proof, historic licence
+seeding, research-date anomaly, genealogy, Senate profiles, H3-D/H4-A, staging
+load test, Cron watchdog, and issue #14's next green scheduled run.

@@ -24,6 +24,7 @@ Read this note first. It is the canonical, date-stamped snapshot of the project 
 - **IN PROGRESS →** [GIT-POSITION](../10-STATE/GIT-POSITION.md)
 - **NOT DONE →** [GAP-REGISTER](../10-STATE/GAP-REGISTER.md)
 - **NEXT →** [TASK-REGISTER](../20-DIRECTION/TASK-REGISTER.md)
+- **EXECUTED OWNER GATES →** [EXECUTION-LOG](../10-STATE/EXECUTION-LOG-2026-11-21.md)
 
 ## Done (verified)
 
@@ -33,11 +34,11 @@ Published dataset: `data-20261117-T213500` — 3,388 persons, 7,349 prepared mem
 
 ## In progress / local-only
 
-Branch `review/completion-20261121` was pushed and PR [#48](https://github.com/nedaktov-ops/parlament-deschis/pull/48) is OPEN with all four required checks SUCCESS (`test`, `audit`, `docker`, `evidence-guards`). Local HEAD `f7a2325` is 14 commits ahead of `origin/main` (`6b848f1`). `main` is still RED and unprotected because the PR has not been merged, and nothing has been deployed — the local green is not the production state. Full detail: [GIT-POSITION](../10-STATE/GIT-POSITION.md) and [ACTION-LOG](../10-STATE/ACTION-LOG.md).
+PR #48, #47, #8, #49, #50 and #51 were merged into `main` (now `ad34bde`), all four required checks green on each; branch protection is active with four required checks, one approval, no force-push/deletion. Backend and frontend were deployed; production serves release `data-20261121-votes-001` with 189 live votes and an enforcing CSP. Local green is now production green. There are **no open PRs**. Full evidence: [EXECUTION-LOG](../10-STATE/EXECUTION-LOG-2026-11-21.md) and [GIT-POSITION](../10-STATE/GIT-POSITION.md).
 
 ## Not done / blocked
 
-Production has **no vote data** (live `/api/votes` reports total 0; the published corpus has no vote tables). The verified fixes have not been deployed — Vercel/Render still serve the pre-fix build, so there is a deploy lag. Issue #14 is open with 11 failed data runs from `cdep.ro` timeouts. Party genealogy has 0 links, Senate historical profile ingest is deferred, and the blog/donations plan has not started. See [GAP-REGISTER](../10-STATE/GAP-REGISTER.md).
+Issue #14 remains open (11 historic failed data runs from `cdep.ro` timeouts; the retry/offline fallback is deployed but a green scheduled run has not yet been observed). Party genealogy has 0 links, Senate historical profile ingest is deferred, H3-D/H4-A frontend polish and the staging load test remain. Blog/donations was formally dropped from active scope (P-3). See [GAP-REGISTER](../10-STATE/GAP-REGISTER.md) and [EXECUTION-LOG](../10-STATE/EXECUTION-LOG-2026-11-21.md).
 
 ## How to move forward
 
@@ -66,7 +67,7 @@ Enforced by [MAINTENANCE-PROTOCOL](MAINTENANCE-PROTOCOL.md) and the machine cont
 ## Note index
 
 - **00-START** — [START-HERE](START-HERE.md) (this note)
-- **10-STATE** — [ACTION-LOG](../10-STATE/ACTION-LOG.md), [CURRENT-STATE](../10-STATE/CURRENT-STATE.md)
+- **10-STATE** — [EXECUTION-LOG](../10-STATE/EXECUTION-LOG-2026-11-21.md), [ACTION-LOG](../10-STATE/ACTION-LOG.md), [CURRENT-STATE](../10-STATE/CURRENT-STATE.md)
 - **20-DIRECTION** — [CONTINUATION-STRATEGY](../20-DIRECTION/CONTINUATION-STRATEGY.md), [TASK-REGISTER](../20-DIRECTION/TASK-REGISTER.md), [VISION](../20-DIRECTION/VISION.md)
 - **30-SYSTEM** — [ARCHITECTURE](../30-SYSTEM/ARCHITECTURE.md)
 - **40-FRONTEND** — [DESIGN-CONTRACT](../40-FRONTEND/DESIGN-CONTRACT.md)
