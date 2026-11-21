@@ -7,9 +7,9 @@ status: active
 authority: mirror
 tags: [type/state, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py]
-created: 2026-11-21T11:55:03+02:00
-updated: 2026-11-21T11:55:03+02:00
-source_commit: e46eab8bc1e8c2b15e4ab0ad1980592a65d861b6
+created: 2026-11-21T12:47:21+02:00
+updated: 2026-11-21T12:47:21+02:00
+source_commit: 987536a68c7ad92badde987d360d9a421e45c5d4
 generated: true
 generator: scripts/vault_sync.py
 ---
@@ -21,10 +21,10 @@ generator: scripts/vault_sync.py
 | Fact | Value |
 |---|---|
 | Branch | `review/completion-20261121` |
-| Source commit (last non-vault change) | `e46eab8bc1e8c2b15e4ab0ad1980592a65d861b6` |
-| Source commit date | `2026-11-21T11:55:03+02:00` |
+| Source commit (last non-vault change) | `987536a68c7ad92badde987d360d9a421e45c5d4` |
+| Source commit date | `2026-11-21T12:47:21+02:00` |
 | Default branch | `main` |
-| Ahead of `origin/main` | 13 |
+| Ahead of `origin/main` | 16 |
 | Behind `origin/main` | 0 |
 | Tracked working-tree changes | false |
 

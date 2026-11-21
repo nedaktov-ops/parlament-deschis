@@ -7,9 +7,9 @@ status: active
 authority: mirror
 tags: [type/reference, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py, tests/]
-created: 2026-11-21T11:55:03+02:00
-updated: 2026-11-21T11:55:03+02:00
-source_commit: e46eab8bc1e8c2b15e4ab0ad1980592a65d861b6
+created: 2026-11-21T12:47:21+02:00
+updated: 2026-11-21T12:47:21+02:00
+source_commit: 987536a68c7ad92badde987d360d9a421e45c5d4
 generated: true
 generator: scripts/vault_sync.py
 ---
@@ -20,7 +20,7 @@ generator: scripts/vault_sync.py
 
 Counts come from the source-commit versions of tracked files under `tests/`.
 
-- Python test files: 47; `def test_` definitions: 343.
+- Python test files: 47; `def test_` definitions: 362.
 - Bats test files: 0; `@test` cases: 0.
 
 | File | Pattern | Count |
@@ -30,10 +30,10 @@ Counts come from the source-commit versions of tracked files under `tests/`.
 | `tests/test_admin_lockout.py` | `def test_` | 4 |
 | `tests/test_analytics.py` | `def test_` | 5 |
 | `tests/test_analytics_transparency.py` | `def test_` | 3 |
-| `tests/test_api.py` | `def test_` | 44 |
+| `tests/test_api.py` | `def test_` | 49 |
 | `tests/test_api_exports.py` | `def test_` | 6 |
 | `tests/test_approxdate.py` | `def test_` | 10 |
-| `tests/test_audit.py` | `def test_` | 15 |
+| `tests/test_audit.py` | `def test_` | 18 |
 | `tests/test_audit_overlap.py` | `def test_` | 2 |
 | `tests/test_cache.py` | `def test_` | 3 |
 | `tests/test_cdep_committee.py` | `def test_` | 18 |
@@ -42,7 +42,7 @@ Counts come from the source-commit versions of tracked files under `tests/`.
 | `tests/test_cdep_roster.py` | `def test_` | 2 |
 | `tests/test_ches_parser.py` | `def test_` | 6 |
 | `tests/test_cli.py` | `def test_` | 14 |
-| `tests/test_collect_cache.py` | `def test_` | 5 |
+| `tests/test_collect_cache.py` | `def test_` | 10 |
 | `tests/test_committee_scoping.py` | `def test_` | 2 |
 | `tests/test_crosscheck.py` | `def test_` | 1 |
 | `tests/test_dataset_download.py` | `def test_` | 7 |
@@ -64,7 +64,7 @@ Counts come from the source-commit versions of tracked files under `tests/`.
 | `tests/test_senat_profile.py` | `def test_` | 9 |
 | `tests/test_senat_source.py` | `def test_` | 6 |
 | `tests/test_senate_source.py` | `def test_` | 6 |
-| `tests/test_source_licenses.py` | `def test_` | 7 |
+| `tests/test_source_licenses.py` | `def test_` | 13 |
 | `tests/test_traseism.py` | `def test_` | 4 |
 | `tests/test_vote_hash_backfill.py` | `def test_` | 3 |
 | `tests/test_vote_ideology_convergence.py` | `def test_` | 14 |
