@@ -111,3 +111,43 @@ Exact Vercel build commit; client-side SPA rendering; runtime read-only
 enforcement; historical licence seeding; original `2025-11-12` research date.
 Each needs a named resolver, not a guess — see
 [RESEARCH-LOG](../50-RESEARCH/RESEARCH-LOG.md).
+
+## E. Second execution pass — Wave 2/3 agent steps (2026-11-21)
+
+Five custom recipe agents (X1–X5) implemented the agent-doable steps from
+section C with disjoint file ownership. Commit `987536a`; generated vault
+notes regenerated at `b2ccea7`.
+
+| ID | Action | Completion evidence | Status |
+|---|---|---|---|
+| W2.1 | Licence register wired into `licenses-seed` CLI, `init`, `build-corpus`; `check_license_quarantine` audit check | CLI help lists command; seed on copy → 15 rows (9 redistributable / 6 cross-check); second run idempotent; strict audit 275 known / 0 new with 0 new findings; tracked DBs unchanged (SHA manifest) | completed locally |
+| W2.2 | Honest per-dimension coverage | `GET /api/coverage/dimensions` 200 with 20 scopes; votes `none`/`partial` never `full`; legacy `/api/coverage*` byte-identical (SHA `4a61ab18…`); 5 new tests | completed locally |
+| W2.3 | cdep acquisition resilience | retries 8 / backoff cap 45 s with fake-failure tests; `data.yml` online→offline `--strict` fallback with separate third-party cache; YAML parses; flags verified against `--help` | completed locally; runner fix needs a real workflow run (owner) |
+| W2.5 | Count labels | `docs/API.md` "Count definitions" section and `README.md` labels: 1,217 group / 785 party / 2,002 total; 7,358 raw / 7,349 prepared; doc-truth 0 | completed |
+| W3.1 | Frontend quick wins | `type="button"` added; all 7 exhaustive-deps warnings resolved with evidence (lint 0 errors / 0 warnings); build exit 0; LiveFeed guard exit 0; UI gate 24/24 real browser | completed |
+| — | CRLF cache bug in `pipeline/collect.py` | cached pages now read with `newline=""`; new regression test passes; offline rebuild cleared all 144 profile failures | completed locally |
+
+### Newly discovered residual (do not guess)
+
+The offline rebuild now gets past source fetching but fails with
+`UNIQUE constraint failed: index 'ux_membership_closed_stint'` during ingest
+(fresh DB, `--offline --skip-committees --strict`). Root cause NOT PROVEN;
+it is a separate schema/ingest defect. A dedicated recipe must investigate and
+fix it before the workflow offline fallback can succeed. Logged as **W2.8**,
+priority P0, owner: agent, blocker: none, next: reproduce on a copy and trace
+the duplicate closed-stint group.
+
+### Still remaining after this pass
+
+- Owner gates unchanged: W1.4 merge PR #48, W1.5 branch protection,
+  W1.6/W1.7 backend-then-frontend deploy, W4.2 policy decisions.
+- W2.4 vote-containing release (needs W2.8 + owner release/dispatch).
+- W2.6 CHES dry-run commit bug, W2.7 genealogy/Senate decisions,
+  W3.2 60 s poll / CSP / GraphQL decisions, W4.1 staging load test,
+  Q1 nine-PR triage, Q2 live SPA/read-only verification.
+- Document the new `/api/coverage/dimensions` endpoint in `docs/API.md`
+  (X2 did not own that file in this pass; W2.5 agent edited it for labels only).
+
+Verification for this pass: pytest **404 passed**, ruff clean, lint **0 errors /
+0 warnings**, build exit 0, doc-truth 0, strict audit **275/0**, UI **24/24**
+real browser, vault lint 42 notes, sync `--check` clean, workflow YAML valid.
