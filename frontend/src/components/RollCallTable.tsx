@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, type VotePositionRow } from "../api/client";
+import ErrorState from "./ErrorState";
 import Skeleton from "./ui/Skeleton";
 
 const CHOICE_COLOR: Record<string, string> = {
@@ -51,26 +52,31 @@ export default function RollCallTable({ voteId }: RollCallTableProps) {
 
   if (query.isError) {
     return (
-      <div className="text-red-400 text-sm py-6 text-center">
-        {t("view.voturi.loadError", "Failed to load votes.")}
-      </div>
+      <ErrorState
+        message={t("view.voturi.loadError", "Failed to load votes.")}
+        onRetry={() => void query.refetch()}
+      />
     );
   }
 
   if (!dataExists || data.length === 0) {
     return (
-      <div className="text-slate-500 text-sm py-6 text-center">
-        {t("empty.rollcall", "Roll-call vote data is not yet available for this legislature.")}
+      <div className="text-slate-400 text-sm py-6 text-center">
+        {t("view.voturi.positionsEmpty", "No positions recorded for this vote.")}
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div
+      className="overflow-x-auto"
+      role="region"
+      tabIndex={0}
+      aria-label={t("aria.positionsScroll", "Scrollable table of vote positions")}
+    >
       <table
-        role="table"
-        aria-label={t("aria.rollcallTable", "Table of plenary votes and each MP's position")}
         className="min-w-full text-sm"
+        aria-label={t("aria.rollcallTable", "Table of plenary votes and each MP's position")}
       >
         <caption className="sr-only">
           {t("aria.rollcallTable", "Table of plenary votes and each MP's position")}
@@ -78,13 +84,13 @@ export default function RollCallTable({ voteId }: RollCallTableProps) {
         <thead>
           <tr className="text-left text-slate-400 border-b border-slate-700">
             <th className="py-2.5 pr-4 font-medium" scope="col">
-              {t("mps.search", "Search")}
+              {t("report.col.mp", "MP")}
             </th>
             <th className="py-2.5 pr-4 font-medium" scope="col">
               {t("filter.party", "Party")}
             </th>
             <th className="py-2.5 pr-4 font-medium" scope="col">
-              {t("vote.yes", "Yes")} / {t("vote.no", "No")} / {t("vote.abstain", "Abstain")}
+              {t("view.voturi.col.choice", "Position")}
             </th>
             <th className="py-2.5 pr-4 font-medium text-right" scope="col">
               {t("mps.source", "Source")}
@@ -96,23 +102,19 @@ export default function RollCallTable({ voteId }: RollCallTableProps) {
             <tr
               key={p.person_id}
               className="border-b border-slate-700/40 hover:bg-slate-800/40"
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                }
-              }}
             >
               <td className="py-2.5 pr-4 text-slate-200">
-                {p.name_raw || t("mps.noParty", "no party recorded")}
+                {p.name_raw || t("mpc.unknown", "unknown")}
               </td>
               <td className="py-2.5 pr-4">
                 {p.group_raw ? (
                   <span className="text-slate-300 font-mono text-xs">{p.group_raw}</span>
-                ) : null}
+                ) : (
+                  "—"
+                )}
               </td>
               <td className="py-2.5 pr-4 text-slate-300 tabular-nums">
+                {/* Text label always accompanies colour: choice is never encoded by colour alone. */}
                 <span
                   className="inline-flex items-center gap-1"
                   style={{ color: CHOICE_COLOR[p.choice] }}
@@ -120,8 +122,19 @@ export default function RollCallTable({ voteId }: RollCallTableProps) {
                   {choiceLabel(p.choice)}
                 </span>
               </td>
-              <td className="py-2.5 pr-4 text-right text-xs text-slate-500 tabular-nums">
-                {p.source_url ? p.source_url.split("/")[2] : "—"}
+              <td className="py-2.5 pr-4 text-right text-xs text-slate-400 tabular-nums">
+                {p.source_url ? (
+                  <a
+                    href={p.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sky-400 hover:underline"
+                  >
+                    {p.source_url.split("/")[2] ?? t("mps.source", "Source")}
+                  </a>
+                ) : (
+                  "—"
+                )}
               </td>
             </tr>
           ))}

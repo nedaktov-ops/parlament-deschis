@@ -52,7 +52,7 @@ export default function AgeDistributionRadial({
       return slice;
     });
     return slices;
-  }, [cohorts, totalAge]);
+  }, [cohorts, totalAge, centerX, centerY, radius]);
 
   const avgAge = useMemo(() => {
     if (!cohorts.length) return 0;

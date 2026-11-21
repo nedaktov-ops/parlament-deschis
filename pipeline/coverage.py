@@ -15,10 +15,10 @@ note. Everything else is ``partial`` or ``none``.
 
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, inspect, select
 from sqlalchemy.orm import Session
 
-from .db import Coverage, KeyEvent, Membership, Organization
+from .db import Coverage, KeyEvent, Membership, Organization, Person, Vote
 from .queries import is_group
 
 # Modern (2004+) chamber sizes. Used as a conservative "full" bar only for
@@ -140,3 +140,120 @@ def _parse(iso: str | None):
     from datetime import date
 
     return date.fromisoformat(iso)
+
+
+# --- Honest multi-dimension view -------------------------------------------
+# ``coverage_snapshot`` (and therefore the legacy /api/coverage responses)
+# describes mandates only. Reporting ``full`` for all 20 scopes without saying
+# what it measures invites the reader to assume votes and biographies are also
+# complete. The functions below add a separate, dimension-aware read derived
+# entirely from the rows actually present. They do not change any legacy shape.
+
+
+def _vote_counts(session: Session) -> tuple[dict[tuple[str, str | None], int], bool]:
+    """Vote rows per (chamber, legislature); the flag is ``False`` with no table.
+
+    A release database may predate the vote schema. With no vote table there
+    can be no vote rows, so the honest answer is ``none`` for every scope — not
+    an exception, and certainly not an invented ``full``.
+    """
+    if not inspect(session.get_bind()).has_table(Vote.__tablename__):
+        return {}, False
+    rows = session.execute(
+        select(Vote.chamber, Vote.legislature, func.count(Vote.id)).group_by(
+            Vote.chamber, Vote.legislature
+        )
+    ).all()
+    return {(row[0], row[1]): row[2] for row in rows}, True
+
+
+def _biography_counts(session: Session) -> dict[tuple[str, str | None], tuple[int, int]]:
+    """(persons, persons_with_birth_date) per group-membership scope.
+
+    Uses the same group predicate and person set as ``_distinct_persons`` so the
+    biography denominator means exactly what the mandate denominator means.
+    Committee memberships stay excluded by ``is_group()``.
+    """
+    rows = session.execute(
+        select(
+            Membership.chamber,
+            Membership.legislature,
+            func.count(func.distinct(Membership.person_id)),
+            func.count(func.distinct(case((Person.birth_date.is_not(None), Person.id)))),
+        )
+        .join(Organization, Organization.id == Membership.org_id)
+        .join(Person, Person.id == Membership.person_id)
+        .where(is_group())
+        .group_by(Membership.chamber, Membership.legislature)
+    ).all()
+    return {(row[0], row[1]): (row[2] or 0, row[3] or 0) for row in rows}
+
+
+def coverage_dimensions(session: Session) -> list[dict]:
+    """Per-scope coverage for mandates, votes and biographies — from real rows.
+
+    Statuses are ``none`` / ``partial`` / ``full``. Nothing is inferred from a
+    headline number:
+
+    * mandates reuse ``coverage_snapshot`` unchanged (distinct group persons
+      against a verified seat bar only where one is known);
+    * votes are counted from the ``vote`` table. No rows — or no table — means
+      ``none``. There is no published expected vote total, so this dimension
+      is never marked ``full``;
+    * biographies are counted from ``person.birth_date`` over the same persons
+      the mandate count uses. ``full`` is reserved for 100% coverage, which is
+      stricter than the mandate ratio and so cannot overstate completeness.
+    """
+    vote_counts, vote_table_present = _vote_counts(session)
+    bio_counts = _biography_counts(session)
+    out: list[dict] = []
+    for scope in coverage_snapshot(session):
+        key = (scope["chamber"], scope["legislature"])
+        votes = vote_counts.get(key, 0)
+        bio_total, bio_known = bio_counts.get(key, (0, 0))
+
+        if votes == 0:
+            vote_status = "none"
+            vote_note = (
+                "Vote table is not present in this database."
+                if not vote_table_present
+                else "No votes ingested in this scope."
+            )
+        else:
+            vote_status = "partial"
+            vote_note = (
+                f"{votes} vote(s) ingested in this scope; no published expected-total "
+                "bar exists for votes, so 'full' is never claimed."
+            )
+
+        if bio_total == 0:
+            bio_status, bio_note = "none", "No persons with group memberships in this scope."
+        elif bio_known == 0:
+            bio_status, bio_note = "none", "No birth dates known for persons in this scope."
+        elif bio_known >= bio_total:
+            bio_status, bio_note = "full", f"Birth date known for all {bio_total} persons in scope."
+        else:
+            bio_status = "partial"
+            bio_note = f"{bio_known} of {bio_total} persons in scope have a known birth date."
+
+        out.append(
+            {
+                "chamber": scope["chamber"],
+                "legislature": scope["legislature"],
+                "period_start": scope["period_start"],
+                "period_end": scope["period_end"],
+                "mandates": {
+                    "status": scope["completeness"],
+                    "count": scope["persons"],
+                    "note": scope["note"],
+                },
+                "votes": {"status": vote_status, "count": votes, "note": vote_note},
+                "biographies": {
+                    "status": bio_status,
+                    "count": bio_known,
+                    "total": bio_total,
+                    "note": bio_note,
+                },
+            }
+        )
+    return out

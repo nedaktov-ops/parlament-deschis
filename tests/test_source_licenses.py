@@ -7,9 +7,12 @@ strict: a source that cannot be proven free is not free.
 
 from __future__ import annotations
 
+import inspect
+
 import pytest
 from sqlalchemy.exc import IntegrityError
 
+from pipeline.cli import cmd_build_corpus, main
 from pipeline.db import SourceLicense, get_session
 from pipeline.licenses import (
     COMPATIBLE_LICENSES,
@@ -99,3 +102,107 @@ def test_seeding_twice_changes_nothing(session):
     second = {row.source_name: row.license_id for row in session.query(SourceLicense).all()}
     assert first == second
     assert session.query(SourceLicense).count() == len(REGISTER)
+
+
+# --- W2.1: the CLI path that actually seeds the register before release -------
+# These drive the real argparse entry point (not just the helper), so a broken
+# subcommand wiring or a missing commit is a test failure, not a silent no-op.
+
+
+def _seed_via_cli(db_path) -> int:
+    return main(["--db", str(db_path), "licenses-seed"])
+
+
+_SNAPSHOT_COLUMNS = (
+    "source_name",
+    "license_id",
+    "license_url",
+    "redistributable",
+    "share_alike",
+    "attribution",
+    "verification_url",
+    "verification_quote",
+    "verified_on",
+    "note",
+)
+
+
+def _snapshot(db_path) -> list[tuple]:
+    session = get_session(db_path)
+    try:
+        rows = session.query(SourceLicense).order_by(SourceLicense.source_name).all()
+        return [tuple(getattr(row, column) for column in _SNAPSHOT_COLUMNS) for row in rows]
+    finally:
+        session.close()
+
+
+def test_cli_seeds_exactly_fifteen_rows_on_an_empty_db(tmp_path, capsys):
+    db = tmp_path / "cli-empty.db"
+    assert _seed_via_cli(db) == 0
+    assert "15 entries written, 15 rows in source_license" in capsys.readouterr().out
+    session = get_session(db)
+    try:
+        assert session.query(SourceLicense).count() == 15
+    finally:
+        session.close()
+
+
+def test_cli_reseeding_changes_nothing(tmp_path):
+    db = tmp_path / "cli-reseed.db"
+    assert _seed_via_cli(db) == 0
+    first = _snapshot(db)
+    assert _seed_via_cli(db) == 0
+    assert _snapshot(db) == first
+    assert len(first) == len(REGISTER)
+
+
+def test_cli_seeded_cross_check_sources_stay_non_redistributable(tmp_path):
+    db = tmp_path / "cli-crosscheck.db"
+    assert _seed_via_cli(db) == 0
+    session = get_session(db)
+    try:
+        rows = {row.source_name: row for row in session.query(SourceLicense).all()}
+        for name in CROSS_CHECK_ONLY:
+            assert rows[name].redistributable is False, f"{name} must stay display-only"
+        assert redistributable_sources(session) == set(COPY_ALLOWED)
+    finally:
+        session.close()
+
+
+def test_cli_seeded_db_still_rejects_a_forged_sa_row(tmp_path):
+    db = tmp_path / "cli-forged.db"
+    assert _seed_via_cli(db) == 0
+    session = get_session(db)
+    try:
+        session.add(
+            SourceLicense(
+                source_name="forged",
+                license_id="CC-BY-SA-4.0",
+                redistributable=True,
+            )
+        )
+        with pytest.raises(IntegrityError):
+            session.commit()
+        session.rollback()
+        assert session.query(SourceLicense).count() == len(REGISTER)
+        assert session.get(SourceLicense, "forged") is None
+    finally:
+        session.close()
+
+
+def test_init_also_seeds_the_register(tmp_path):
+    """Fresh DBs get the register at init time, not only via the new command."""
+    db = tmp_path / "cli-init.db"
+    assert main(["--db", str(db), "init"]) == 0
+    session = get_session(db)
+    try:
+        assert session.query(SourceLicense).count() == len(REGISTER)
+    finally:
+        session.close()
+
+
+def test_build_corpus_seeds_before_it_writes_corpus_rows():
+    """data.yml prepares the release from the DB this command writes."""
+    source = inspect.getsource(cmd_build_corpus)
+    assert "ensure_source_licenses" in source
+    assert source.index("ensure_source_licenses") < source.index("stats = ingest_corpus(")

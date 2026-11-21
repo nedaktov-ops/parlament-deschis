@@ -41,7 +41,7 @@ export default function TimelineChart({
   to: string;
   groups?: OrgBrief[];
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const chartId = useId();
   const [chamber, setChamber] = useState<"deputies" | "senate">("deputies");
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -169,7 +169,7 @@ export default function TimelineChart({
       },
       series,
     };
-  }, [data, groupNames, colorMap, t, i18n.language]);
+  }, [data, groupNames, colorMap, t]);
 
   useEffect(() => {
     const chart = chartRef.current;

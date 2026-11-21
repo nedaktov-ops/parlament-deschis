@@ -26,9 +26,20 @@ MAX_RETRIES = 4
 # Connection-level errors (timeouts, DNS failures, refused connects) are retried
 # more aggressively than HTTP 5xx responses, since cdep.ro occasionally drops
 # the initial connection from CI runners.
-DEFAULT_CONNECT_RETRIES = 6
+#
+# Bounded tuning (W2.3 / issue #14, evidence 2026-11-21): commit a52bd3c raised
+# this budget to 6 attempts on 2026-11-15, yet 7 of the 11 recorded failures
+# happened afterwards (2026-11-16..20) and the last one (run 44729831051)
+# exhausted exactly six 25 s ConnectTimeouts before exiting. The budget was
+# spent, not skipped, so we widen it to a bounded 8 attempts and raise the
+# backoff ceiling 30 s -> 45 s. That extends the transient-outage window for
+# one page from ~3.5 min to ~7 min while keeping the 2.5 s per-host pace
+# (<=1 req/s), robots checks and 20% jitter. It is deliberately not unbounded:
+# a sustained runner-side outage is handled by the strict offline rebuild in
+# .github/workflows/data.yml, not by hammering the official site.
+DEFAULT_CONNECT_RETRIES = 8
 BACKOFF_BASE = 2.0
-BACKOFF_MAX = 30.0
+BACKOFF_MAX = 45.0
 BACKOFF_JITTER = 0.2
 
 

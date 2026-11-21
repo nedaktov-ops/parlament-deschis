@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 export interface ErrorStateProps {
   message?: string;
   onRetry?: () => void;
@@ -7,6 +9,8 @@ export default function ErrorState({
   message,
   onRetry,
 }: ErrorStateProps) {
+  const { t } = useTranslation();
+
   return (
     <div
       role="alert"
@@ -14,7 +18,6 @@ export default function ErrorState({
     >
       <svg
         aria-hidden="true"
-        role="alert"
         className="text-rose-400 mb-6"
         width="40"
         height="40"
@@ -37,9 +40,9 @@ export default function ErrorState({
           type="button"
           onClick={onRetry}
           className="btn mt-4 bg-slate-700 hover:bg-slate-600"
-          aria-label="Retry"
+          aria-label={t("retry", "Retry")}
         >
-          Retry
+          {t("retry", "Retry")}
         </button>
       )}
     </div>

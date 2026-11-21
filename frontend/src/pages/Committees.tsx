@@ -268,7 +268,7 @@ export default function Committees() {
               { count: controlData.total_committees, date: controlData.as_of },
             )}
           </p>
-          <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("control.title", "Committee party control overview")}>
+          <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("control.table", "Committee control table")}>
             <div className="space-y-2 mb-4">
               {controlData.parties.map((p) => (
                 <div key={p.party} className="flex items-center gap-3">

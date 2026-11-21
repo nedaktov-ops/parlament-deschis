@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "project": {
+    "name": "Parlament Deschis",
+    "repo_path": "/home/nedaktov/parlament-deschis",
+    "default_branch": "main",
+    "current_head": "6fd6028",
+    "current_head_full": "6fd60285cd81ec1a291129f5a4e4dc3a90fc25cf",
+    "release_pin": "data-20261117-T213500"
+  },
+  "frontmatter": {
+    "required_fields": [
+      "id",
+      "type",
+      "title",
+      "description",
+      "status",
+      "authority",
+      "tags",
+      "source_paths",
+      "created",
+      "updated",
+      "source_commit"
+    ],
+    "optional_fields": ["verified", "generated", "generator"],
+    "generated_note_fields": {
+      "generated": true,
+      "generator": "scripts/vault_sync.py"
+    },
+    "rules": [
+      "Frontmatter is the first thing in every note.",
+      "tags has at most three values: type/<type>, one lifecycle/<active|stale|archived>, one domain/<project|frontend|data|ops|research>.",
+      "source_commit is the HEAD SHA the note was synced against.",
+      "Use relative Markdown links only; wikilinks are banned.",
+      "Follow 00-START/MAINTENANCE-PROTOCOL.md section 6 for banned literal strings in Markdown."
+    ]
+  },
+  "closed_vocabularies": {
+    "type": [
+      "moc",
+      "state",
+      "gap",
+      "decision",
+      "task",
+      "research",
+      "evidence",
+      "source-map",
+      "runbook",
+      "reference",
+      "archive",
+      "daily"
+    ],
+    "status": ["active", "stale", "archived", "superseded", "open", "in-progress", "done"],
+    "authority": ["canonical", "mirror", "derived", "historical", "unverified"],
+    "lifecycle_tag": ["active", "stale", "archived"],
+    "domain_tag": ["project", "frontend", "data", "ops", "research"],
+    "link_style": ["relative-markdown"]
+  },
+  "folder_map": {
+    "00-START": "Entry point, maintenance protocol and authoritative source map.",
+    "10-STATE": "Current state, contradictions, release evidence, git position and gap register.",
+    "20-DIRECTION": "Vision, task register, decisions and wave status.",
+    "30-SYSTEM": "Architecture, API, data model, methodology, deployment and data-release procedure.",
+    "40-FRONTEND": "Design contract, stack and tokens, and frontend QA results.",
+    "50-RESEARCH": "Data enrichment, source research and the research log.",
+    "60-EVIDENCE": "Dated audit, review, gap-analysis and verification evidence.",
+    "70-ARCHIVE": "Historical snapshots retained for history only; never override active notes.",
+    "Daily Notes": "Date-stamped daily notes named YYYY-MM-DD (automatic creation off; created on first use).",
+    "Templates": "New-note templates: State-Note, Task, Decision, Daily.",
+    "_generated": "Machine-written notes owned by scripts/vault_sync.py; never hand-edit.",
+    "_attachments": "Attachment target configured in .obsidian/app.json.",
+    ".obsidian": "Obsidian UI state; per-machine workspace and cache files are gitignored."
+  },
+  "generated_notes": [
+    {
+      "path": "_generated/source-map.md",
+      "type": "source-map",
+      "description": "Top-level project folders, recursive file counts and purpose, from git ls-tree at HEAD."
+    },
+    {
+      "path": "_generated/tests.md",
+      "type": "reference",
+      "description": "Python test-file inventory with @test and def test_ counts from HEAD versions."
+    },
+    {
+      "path": "_generated/routes.md",
+      "type": "reference",
+      "description": "API route decorators extracted from backend/routers/api.py and backend/main.py at HEAD."
+    },
+    {
+      "path": "_generated/releases.md",
+      "type": "reference",
+      "description": "Sorted git tags plus the content of data/latest-release.txt at HEAD."
+    },
+    {
+      "path": "_generated/status.md",
+      "type": "state",
+      "description": "Branch, HEAD SHA, ahead/behind versus origin/main, dirty flag and HEAD commit date."
+    }
+  ],
+  "generator": {
+    "script": "scripts/vault_sync.py",
+    "source_of_truth": "git objects at HEAD (git ls-tree / git show HEAD:<path>), not the working tree",
+    "regenerate": "python3 scripts/vault_sync.py",
+    "check": "python3 scripts/vault_sync.py --check",
+    "determinism": "Sorted collections, LF endings, final newline, HEAD commit date; no wall-clock timestamps."
+  },
+  "update_ritual": [
+    "Run `git status` and capture the working-tree state before touching anything.",
+    "Make the changes in hand-written notes only; never edit files under _generated/.",
+    "Run `python3 scripts/vault_sync.py` to regenerate derived content.",
+    "Inspect `git diff -- \"Parlament Deschis Obsidian vault/_generated\"`.",
+    "Update the hand-written notes to match, recording the reason for each change.",
+    "Run `python3 scripts/vault_sync.py --check` plus `git diff --exit-code` to prove there is no residual drift; if it fails, stop and do not claim the vault is current.",
+    "Commit code and vault changes together."
+  ]
+}

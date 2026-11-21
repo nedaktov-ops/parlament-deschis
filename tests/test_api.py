@@ -26,6 +26,7 @@ from pipeline.db import (
     Person,
     PipelineRun,
     SwitchWave,
+    Vote,
     get_session,
     make_engine,
     make_session_factory,
@@ -1274,3 +1275,183 @@ def test_dashboard_stats_rejects_invalid_as_of(api):
     good = api.client.get("/api/dashboard/stats", params={"as_of": "2025-01-01"})
     assert good.status_code == 200
     assert good.json()["status"] == "ok"
+
+
+# --- W2.2: honest per-dimension coverage -----------------------------------
+
+
+def test_coverage_dimensions_shape_and_honest_defaults(api):
+    """The new view is per-scope, and each dimension reports an honest status.
+
+    The seeded DB has mandates (2 deputies), no votes, and only one of those two
+    persons with a birth date. None of those facts may be upgraded to ``full``.
+    """
+    response = api.client.get("/api/coverage/dimensions")
+    assert response.status_code == 200
+    rows = {row["chamber"]: row for row in response.json()}
+    assert set(rows) == {"deputies", "senate"}
+
+    deputies = rows["deputies"]
+    assert set(deputies) == {
+        "chamber",
+        "legislature",
+        "period_start",
+        "period_end",
+        "mandates",
+        "votes",
+        "biographies",
+    }
+    assert deputies["mandates"] == {
+        "status": "partial",
+        "count": 2,
+        "note": "2 of ~330 seats ingested.",
+    }
+    assert deputies["votes"] == {
+        "status": "none",
+        "count": 0,
+        "note": "No votes ingested in this scope.",
+    }
+    assert deputies["biographies"] == {
+        "status": "partial",
+        "count": 1,
+        "total": 2,
+        "note": "1 of 2 persons in scope have a known birth date.",
+    }
+
+    # Senate scope has no memberships: nothing is fabricated for any dimension.
+    assert rows["senate"]["mandates"]["status"] == "none"
+    assert rows["senate"]["votes"]["status"] == "none"
+    assert rows["senate"]["biographies"]["status"] == "none"
+
+    assert all(
+        row[dimension]["status"] in {"none", "partial", "full"}
+        for row in rows.values()
+        for dimension in ("mandates", "votes", "biographies")
+    )
+
+
+def test_coverage_dimensions_seeded_votes_give_counts_but_never_full(api):
+    """In-scope vote rows produce real counts; out-of-scope rows do not leak.
+
+    There is no published expected vote total, so even a populated vote corpus
+    stays ``partial`` — the endpoint must not invent a ``full`` bar for votes.
+    """
+    session = api.factory()
+    session.add_all(
+        [
+            Vote(
+                source="cdep",
+                native_vote_id="v-1",
+                chamber="deputies",
+                legislature="2024",
+                source_url="https://www.cdep.ro/v1",
+                dedup_key="vote:w22:1",
+            ),
+            Vote(
+                source="cdep",
+                native_vote_id="v-2",
+                chamber="deputies",
+                legislature="2024",
+                source_url="https://www.cdep.ro/v2",
+                dedup_key="vote:w22:2",
+            ),
+            Vote(
+                source="cdep",
+                native_vote_id="v-other",
+                chamber="senate",
+                legislature="2020",  # no KeyEvent scope -> must not leak in
+                source_url="https://www.cdep.ro/v3",
+                dedup_key="vote:w22:other",
+            ),
+        ]
+    )
+    session.commit()
+    session.close()
+
+    rows = {row["chamber"]: row for row in api.client.get("/api/coverage/dimensions").json()}
+    assert rows["deputies"]["votes"]["count"] == 2
+    assert rows["deputies"]["votes"]["status"] == "partial"
+    assert "no published expected-total" in rows["deputies"]["votes"]["note"]
+    assert rows["senate"]["votes"]["count"] == 0
+    assert rows["senate"]["votes"]["status"] == "none"
+    # Other dimensions are independent of vote rows.
+    assert rows["deputies"]["mandates"]["status"] == "partial"
+    assert rows["deputies"]["biographies"]["status"] == "partial"
+
+
+def test_coverage_dimensions_missing_vote_table_reports_none(api):
+    """A DB without a vote table cannot have votes: report ``none``, not 500."""
+    from sqlalchemy import text
+
+    session = api.factory()
+    session.execute(text("DROP TABLE vote"))
+    session.commit()
+    session.close()
+
+    rows = {row["chamber"]: row for row in api.client.get("/api/coverage/dimensions").json()}
+    assert rows["deputies"]["votes"] == {
+        "status": "none",
+        "count": 0,
+        "note": "Vote table is not present in this database.",
+    }
+
+
+def test_coverage_dimensions_biographies_full_only_when_all_dates_known(api):
+    """With one birth date missing biographies stay ``partial``; all known -> ``full``."""
+    session = api.factory()
+    session.query(Person).filter(Person.id == api.ids.p2).update(
+        {Person.birth_date: date(1990, 5, 5)}
+    )
+    session.commit()
+    session.close()
+
+    rows = {row["chamber"]: row for row in api.client.get("/api/coverage/dimensions").json()}
+    # Now every deputy in scope has a birth date -> honest full for biographies.
+    assert rows["deputies"]["biographies"]["status"] == "full"
+    assert rows["deputies"]["biographies"]["count"] == 2
+    # Mandates stay partial: birth dates are not mandates.
+    assert rows["deputies"]["mandates"]["status"] == "partial"
+    assert rows["deputies"]["votes"]["status"] == "none"
+
+
+def test_legacy_coverage_endpoints_keep_exact_shape(api):
+    """W2.2 is additive: the two legacy coverage payloads gain no new keys."""
+    legacy = api.client.get("/api/coverage")
+    assert legacy.status_code == 200
+    assert all(
+        set(row)
+        == {
+            "chamber",
+            "legislature",
+            "period_start",
+            "period_end",
+            "completeness",
+            "note",
+            "persons",
+        }
+        for row in legacy.json()
+    )
+
+    detailed = api.client.get("/api/coverage/detailed")
+    assert detailed.status_code == 200
+    assert all(
+        set(row)
+        == {
+            "chamber",
+            "legislature",
+            "period_start",
+            "period_end",
+            "completeness",
+            "note",
+            "persons",
+            "total_memberships",
+            "dated_pct",
+            "sourced_pct",
+            "total_switches",
+            "sourced_switches_pct",
+            "last_refresh",
+        }
+        for row in detailed.json()
+    )
+    leaked = {"dimensions", "mandates", "votes", "biographies"}
+    assert not leaked.intersection(key for row in [*legacy.json(), *detailed.json()] for key in row)

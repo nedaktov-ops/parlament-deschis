@@ -1,0 +1,109 @@
+---
+id: release-verification
+type: reference
+title: Release Pin and Verification Gates
+description: Reference for the release pin, count definitions, journal modes, audit baseline and exact gate commands with expected outputs.
+status: active
+authority: derived
+tags: [type/reference, lifecycle/active, domain/ops]
+source_paths: [docs/COMPREHENSIVE-REVIEW-2026-11-21.md, docs/AUDIT-RESOLUTIONS-2026-11-21.md, docs/POST-INITIAL-AUDIT-2026-11-21.md]
+created: 2026-11-21
+updated: 2026-11-21
+source_commit: 6fd6028
+verified: 2026-11-21
+---
+
+# Release pin and verification gates
+
+Authoritative measurements as of HEAD `6fd6028`. Current-state interpretation
+is in [CURRENT-STATE](CURRENT-STATE.md); disputes in
+[CONTRADICTIONS](CONTRADICTIONS.md).
+
+## Release pin
+
+- Live and local pin: `data-20261117-T213500` — the latest GitHub release and
+  the value served by `/api/health` (R10). At the tag itself the pin read an
+  earlier, superseded tag; the marker was updated after publication.
+- Pinned asset `{sha256 7298ffd1…}` has 18 tables and **no** `vote`,
+  `vote_position` or `vote_import_run` table. Votes exist only in gitignored
+  working databases and have never been released.
+
+## Raw vs prepared membership counts
+
+- **7,358** memberships in the raw GitHub release asset.
+- **7,349** memberships in the prepared runtime DB served live.
+- The difference of 9 is deliberate: `prepare_db.py` removes nine duplicate
+  closed stints. The prepared count is the current-state truth (R2).
+
+## Journal modes
+
+- Shipped asset: `journal_mode=delete` (read-only filesystem compatibility,
+  `user_version=1`, header bytes 18/19 = `1,1`).
+- Local/runtime working copies: `journal_mode=wal`.
+- Both are correct at their lifecycle stage; trust the release evidence for
+  the shipped artifact (R3).
+
+## Switch definitions
+
+Two measures describe the same corpus and must be labelled (G-P0-05):
+
+- `switch_group` — **1,217** events; the only measure counted by
+  `/api/export/report` and `/api/traseism/summary`.
+- `switch_party` — **785** events, present in the pinned release asset (local
+  working DBs report zero).
+- `/dashboard/stats` reports **1,217 + 785 = 2,002** across **142** waves.
+  Definitional, not a defect (R1).
+
+## Audit baseline: 275 known / 0 new
+
+`audit-corpus --strict` returns **275 known errors, 0 new** and exit 0. "275
+known" is the accepted evidence baseline for the pinned corpus; the gate
+fails only on a *new* departure. The four `vote_evidence` "no snapshot hash"
+errors live in a gitignored working DB, not in the release corpus used by CI.
+
+## UI gate history
+
+| Snapshot | Result |
+| --- | --- |
+| 2026-11-19 | RED — 3 routes, React #310 hooks failure |
+| Wave 1 integrated | 18/18 routes, zero JavaScript errors |
+| 2026-11-21 widened gate (`scripts/ui_validate.py`) | 24/24 routes locally, zero JavaScript errors, zero axe violations |
+| Fresh agent vs live API proxy | 23/24 — `/api/analytics/ideology` 404 in production |
+
+24/24 is proven for the repository only; production remains NOT PROVEN (R8).
+
+## Doc-truth gate
+
+`bash scripts/check-doc-truth.sh` reports `false-claims: 0` at local HEAD. It
+checks a fixed set of precise false assertions; after F8 the bare-token
+pattern was narrowed so legitimate research/licence statements are not
+flagged. Creative phrasings for the external Romanian civic source (ro_281)
+and old release tags are intentionally excluded by the checker.
+
+## Exact gate commands and expected outputs
+
+Run from the repo root at HEAD `6fd6028`:
+
+```
+uv run pytest -q
+  → 384 passed, 1 warning in 65.38s; EXIT 0
+uv run ruff check backend pipeline scripts tests
+  → All checks passed!; EXIT 0
+cd frontend && npm run lint
+  → 0 errors, 7 pre-existing warnings; EXIT 0
+cd frontend && npm run build
+  → built in 9.36s; EXIT 0
+audit-corpus --strict            # against the README/pinned DB
+  → 275 known errors, 0 new; EXIT 0
+bash scripts/check-doc-truth.sh
+  → false-claims: 0; EXIT 0
+python3 scripts/ui_validate.py
+  → 24/24 routes, zero JavaScript errors, zero axe; EXIT 0
+workflow YAML parse
+  → 5/5 parsed; EXIT 0
+git diff --check
+  → clean; EXIT 0
+```
+
+CI on `main` is RED despite these local results because the fixes are
+unpushed — see [GIT-POSITION](GIT-POSITION.md).

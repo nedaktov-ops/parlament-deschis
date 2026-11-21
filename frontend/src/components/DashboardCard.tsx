@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 export interface DashboardCardProps {
@@ -71,29 +71,12 @@ export default function DashboardCard({
   onClick
 }: DashboardCardProps) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const v = COLOR_VARIANTS[color];
 
-  const handleClick = () => {
-    if (onClick) {
-      onClick();
-    } else if (linkTo) {
-      navigate({ to: linkTo, search: searchParams });
-    }
-  };
+  const cardClass = `card p-4 flex flex-col ${v.bg} ${v.border} ${className} ${v.hover} transition-all duration-200 cursor-pointer`;
 
-  return (
-    <div
-      className={`card p-4 flex flex-col ${v.bg} ${v.border} ${className} ${v.hover} transition-all duration-200 cursor-pointer`}
-      role="button"
-      onClick={handleClick}
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          handleClick();
-        }
-      }}
-    >
+  const content = (
+    <>
       <div className="flex items-center gap-2 mb-2">
         <span className={`w-8 h-8 flex items-center justify-center rounded ${v.accent}`}>{icon}</span>
         <h2 className="text-sm font-medium text-slate-200">{title}</h2>
@@ -101,11 +84,24 @@ export default function DashboardCard({
       <div className="text-2xl font-bold text-slate-100">
         {typeof value === 'number' ? value.toLocaleString() : value}
       </div>
-      {linkTo && (
-        <Link to={linkTo} search={searchParams} className="sr-only">
-          {t("navigateTo", "Navigate to")} {title}
-        </Link>
-      )}
-    </div>
+    </>
+  );
+
+  // Use a native interactive element as the card itself. A `role="button"`
+  // wrapper around a focusable <Link> is a nested-interactive axe violation,
+  // and a hand-rolled onKeyDown misses Space and repeats differently.
+  if (linkTo) {
+    return (
+      <Link to={linkTo} search={searchParams} className={cardClass}>
+        {content}
+        <span className="sr-only">{t("navigateTo", "Navigate to")} {title}</span>
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" className={cardClass} onClick={onClick}>
+      {content}
+    </button>
   );
 }

@@ -149,7 +149,11 @@ def fetch_cached(
     if html_path.exists() and meta_path.exists():
         try:
             meta = json.loads(meta_path.read_text(encoding="utf-8"))
-            cached_text = html_path.read_text(encoding="utf-8", errors="replace")
+            # Preserve CR/LF exactly: Path.read_text() uses universal newlines
+            # and would translate CRLF to LF, changing the SHA-256 recorded at
+            # fetch time and making a valid offline cache look corrupted.
+            with html_path.open("r", encoding="utf-8", errors="replace", newline="") as handle:
+                cached_text = handle.read()
             fetched_at = datetime.fromisoformat(meta["fetched_at"])
             last_checked_at = datetime.fromisoformat(
                 meta.get("last_checked_at", meta["fetched_at"])
@@ -190,9 +194,7 @@ def fetch_cached(
                     meta["etag"] = res.etag
                 if res.last_modified:
                     meta["last_modified"] = res.last_modified
-                _atomic_write_text(
-                    meta_path, json.dumps(meta, ensure_ascii=False)
-                )
+                _atomic_write_text(meta_path, json.dumps(meta, ensure_ascii=False))
                 return cached_text, meta["sha256"], fetched_at
             return _store_response(
                 html_path,
@@ -589,9 +591,7 @@ def collect_profiles(
             out[mandate] = ProfileRecord(mandate, url, None, None, error="not cached")
             continue
         try:
-            cache_ttl = (cache_ttl_by_legislature or {}).get(
-                mandate.legislature, DEFAULT_CACHE_TTL
-            )
+            cache_ttl = (cache_ttl_by_legislature or {}).get(mandate.legislature, DEFAULT_CACHE_TTL)
             page, digest, fetched = fetch_cached(
                 client,
                 url,

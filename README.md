@@ -30,11 +30,18 @@ The denominator is **members at risk**: distinct people who held a group seat in
 
 ## Data: real, source-cited, with known limitations
 
-- **3,388 persons**, **7,358 memberships** (100% carry source URL + SHA-256 evidence), **7,429 events**, **1,217 switches** across all 20 scopes. Counts are from the release pinned in `data/latest-release.txt`; read that file for the current tag — do not hard-code a tag in documentation.
+- **3,388 persons**, **7,358 memberships** (raw release-asset count; 100% carry source URL + SHA-256 evidence. The served DB has 7,349 after `scripts/prepare_db.py` removes 9 duplicate closed stints), **7,429 events**, **1,217 switches** (group switches only; 785 party switches are added in `/api/dashboard/stats`, which reports 2,002 total switch events — a definitional difference, not a data bug) across all 20 scopes. Counts are from the release pinned in `data/latest-release.txt`; read that file for the current tag — do not hard-code a tag in documentation.
 - Primary source: `cdep.ro` — group ledgers (`structura2015.gp`) publish dated membership intervals ("Membru din" / "până în"); MP profiles (`structura2015.mp`) link every mandate a person ever held (`idm` is per-mandate, so identity is resolved via the mandate graph, never by name).
 - The group index **omits** groups that no longer exist (e.g. the 2016–2020 Deputies ALDE group). The collector probes the id space to find them: **15 hidden groups across 10 scopes**.
 - The alphabetical roster (`structura2015.de?par=A`) is a second view of the same data; the three views are reconciled against each other (group page vs. index count vs. roster). **141 of 143 groups reconcile exactly**; the 2 exceptions are documented source inconsistencies.
 - Cross-checked against the independent tracker `parlament.openpolitics.ro`: Ponta PSD→independent 5 Sep 2017, Sitterli 9 Oct 2017, Balint independent→PSD 1 Sep 2017, ALDE split 8 May / 20 Jun 2017 — all match cdep's dates.
+
+> **Count-label note (2026-11-21):** The labels above supersede earlier
+> unlabelled figures. "7,358 memberships" is the raw release-asset count; the
+> served DB has 7,349 after dedupe. "1,217 switches" is the group-only count;
+> `/api/dashboard/stats` reports 2,002 because it adds 785 party switches.
+> These are definitional differences, not data bugs. Evidence and exact source
+> lines are in [docs/API.md](docs/API.md#count-definitions).
 
 ---
 

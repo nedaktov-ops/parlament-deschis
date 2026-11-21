@@ -11,9 +11,9 @@ import {
   TooltipComponent,
 } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
-import type { ECharts } from "echarts/core";
 import type { EChartsOption } from "echarts";
 import { api, type ActivityBucket } from "../api/client";
+import ErrorState from "./ErrorState";
 
 echarts.use([
   BarChart,
@@ -27,6 +27,10 @@ echarts.use([
 
 const AXIS_COLOR = "#94a3b8";
 const SPLIT_COLOR = "rgba(148, 163, 184, 0.16)";
+
+/** Never let a malformed value reach the canvas renderer as NaN/Infinity. */
+const finite = (value: number | null | undefined): number =>
+  typeof value === "number" && Number.isFinite(value) ? value : 0;
 
 interface VoteActivityChartProps {
   chamber?: string;
@@ -43,7 +47,6 @@ export default function VoteActivityChart({
 }: VoteActivityChartProps) {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const chartRef = useRef<ECharts | null>(null);
 
   const activityQuery = useQuery({
     queryKey: ["vote-activity-chart", chamber, legislature],
@@ -57,18 +60,25 @@ export default function VoteActivityChart({
 
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    // On error the chart container is unmounted; dispose any previous instance.
+    if (!el || activityQuery.isError) return;
     const chart = echarts.init(el);
-    chartRef.current = chart;
+
+    // ECharts animates on canvas; the global CSS reduced-motion rule does not
+    // reach it, so opt out explicitly when the user asks for less motion.
+    const reduceMotion =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const dates = buckets.map((b) => b.date);
-    const totalVotes = buckets.map((b) => b.votes ?? 0);
-    const yesVotes = buckets.map((b) => b.yes ?? 0);
-    const noVotes = buckets.map((b) => b.no ?? 0);
-    const abstainVotes = buckets.map((b) => b.abstain ?? 0);
+    const totalVotes = buckets.map((b) => finite(b.votes));
+    const yesVotes = buckets.map((b) => finite(b.yes));
+    const noVotes = buckets.map((b) => finite(b.no));
+    const abstainVotes = buckets.map((b) => finite(b.abstain));
 
     const option: EChartsOption = {
       backgroundColor: "transparent",
+      animation: !reduceMotion,
       tooltip: {
         trigger: "axis",
         backgroundColor: "#0f172a",
@@ -154,9 +164,8 @@ export default function VoteActivityChart({
       observer?.disconnect();
       window.removeEventListener("resize", onResize);
       chart.dispose();
-      chartRef.current = null;
     };
-  }, [buckets, t]);
+  }, [buckets, t, activityQuery.isError]);
 
   const empty = buckets.length === 0;
 
@@ -167,33 +176,42 @@ export default function VoteActivityChart({
           {t("view.grafice.activityTitle", "Roll-call vote activity over time")}
         </h2>
       </div>
-      <div className="relative h-[300px]">
-        <div
-          ref={containerRef}
-          className="absolute inset-0"
-          role="img"
-          aria-label={
-            t("view.grafice.activityTitle", "Roll-call vote activity over time")
-          }
+      {activityQuery.isError ? (
+        <ErrorState
+          message={t("view.grafice.activityLoadError", "Failed to load vote activity.")}
+          onRetry={() => void activityQuery.refetch()}
         />
-        {activityQuery.isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center text-slate-300 text-sm pointer-events-none">
-            {t("loading")}
+      ) : (
+        <>
+          <div className="relative h-[300px]">
+            <div
+              ref={containerRef}
+              className="absolute inset-0"
+              role="img"
+              aria-label={
+                t("view.grafice.activityTitle", "Roll-call vote activity over time")
+              }
+            />
+            {activityQuery.isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center text-slate-300 text-sm pointer-events-none">
+                {t("loading")}
+              </div>
+            )}
+            {!activityQuery.isLoading && empty && (
+              <div className="absolute inset-0 flex items-center justify-center text-slate-300 text-sm pointer-events-none">
+                {t("view.grafice.activityEmpty", "No vote activity recorded yet.")}
+              </div>
+            )}
           </div>
-        )}
-        {!activityQuery.isLoading && empty && (
-          <div className="absolute inset-0 flex items-center justify-center text-slate-300 text-sm pointer-events-none">
-            {t("view.grafice.activityEmpty", "No vote activity recorded yet.")}
-          </div>
-        )}
-      </div>
-      {!empty && (
-        <div className="mt-3 text-xs text-slate-400">
-          {t(
-            "view.grafice.activityNote",
-            "Daily roll-call vote counts with yes/no/abstain breakdown. Data from the official cdep.ro feed.",
+          {!empty && (
+            <div className="mt-3 text-xs text-slate-400">
+              {t(
+                "view.grafice.activityNote",
+                "Daily roll-call vote counts with yes/no/abstain breakdown. Data from the official cdep.ro feed.",
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );

@@ -612,7 +612,7 @@
     "/api/committees": {
       "get": {
         "summary": "Committees",
-        "description": "Committee list with active dated memberships, when committee data exists.\n\nCommittee tenures are not ingested yet, so the current corpus returns an\nempty list instead of a fabricated composition or a missing-route error.",
+        "description": "Committees with at least one active dated membership on ``as_of``.\n\nThe corpus does carry dated committee chair/member tenures, so this endpoint\nreturns the committees active on the reference date (default: today).\nCommittees without an active tenure are omitted rather than returned with a\nfabricated composition.",
         "operationId": "committees_api_committees_get",
         "parameters": [
           {
@@ -1521,6 +1521,549 @@
               "title": "As Of"
             },
             "description": "Reference date (ISO format)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/votes": {
+      "get": {
+        "summary": "Votes List",
+        "description": "Roll-call votes list.\n\nEmpty table returns ``data_exists:false`` with ``data:[]`` — never 404/500.\n``vote_time`` is published by cdep.ro as ``DD.MM.YYYY HH:MM``; ``from``/``to``\naccept that format or ISO ``YYYY-MM-DD`` and are compared as calendar dates\n(a raw string compare on ``DD.MM.YYYY`` is not chronological).",
+        "operationId": "votes_list_api_votes_get",
+        "parameters": [
+          {
+            "name": "chamber",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(deputies|senate)$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Chamber"
+            }
+          },
+          {
+            "name": "legislature",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{4}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Legislature"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start date (ISO)",
+              "title": "From"
+            },
+            "description": "Start date (ISO)"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End date (ISO)",
+              "title": "To"
+            },
+            "description": "End date (ISO)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/votes/scorecard": {
+      "get": {
+        "summary": "Vote Scorecard",
+        "description": "MP behavioural scorecard: loyalty / rebellion / participation per person.\n\nLoyalty = share of votes where the MP voted with their party's majority choice\nin that vote. Rebellion = share where they voted against it. Participation =\nshare of all votes in scope the MP cast a position for. No attendance score;\nevery figure is derived from observed roll-call positions only.",
+        "operationId": "vote_scorecard_api_votes_scorecard_get",
+        "parameters": [
+          {
+            "name": "chamber",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(deputies|senate)$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Chamber"
+            }
+          },
+          {
+            "name": "legislature",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{4}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Legislature"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "min_votes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 1,
+              "title": "Min Votes"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/votes/{vote_id}": {
+      "get": {
+        "summary": "Vote Detail",
+        "description": "Single roll-call vote by native_vote_id.",
+        "operationId": "vote_detail_api_votes__vote_id__get",
+        "parameters": [
+          {
+            "name": "vote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Vote Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/votes/{vote_id}/positions": {
+      "get": {
+        "summary": "Vote Positions",
+        "description": "Individual positions for one roll-call vote.",
+        "operationId": "vote_positions_api_votes__vote_id__positions_get",
+        "parameters": [
+          {
+            "name": "vote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Vote Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "choice",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(yes|no|abstain|not_voting)$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Choice"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/vote-cohesion": {
+      "get": {
+        "summary": "Vote Cohesion",
+        "description": "Party cohesion on roll-call votes: yes/no/abstain/not_voting per party.",
+        "operationId": "vote_cohesion_api_analytics_vote_cohesion_get",
+        "parameters": [
+          {
+            "name": "chamber",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(deputies|senate)$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Chamber"
+            }
+          },
+          {
+            "name": "legislature",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{4}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Legislature"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/vote-activity": {
+      "get": {
+        "summary": "Vote Activity",
+        "description": "Roll-call vote activity, one bucket per published day.\n\n``from``/``to`` are applied to the published ``vote_time`` date. There is\ndeliberately no ``step_days`` parameter: the chart consumes daily buckets,\nand an accepted-but-ignored granularity knob was a silent contract breach.",
+        "operationId": "vote_activity_api_analytics_vote_activity_get",
+        "parameters": [
+          {
+            "name": "chamber",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(deputies|senate)$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Chamber"
+            }
+          },
+          {
+            "name": "legislature",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{4}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Legislature"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start date (ISO or DD.MM.YYYY)",
+              "title": "From"
+            },
+            "description": "Start date (ISO or DD.MM.YYYY)"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End date (ISO or DD.MM.YYYY)",
+              "title": "To"
+            },
+            "description": "End date (ISO or DD.MM.YYYY)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/ideology": {
+      "get": {
+        "summary": "Ideology Data",
+        "description": "Party ideology covariates from expert surveys (CHES, CC BY 4.0).\n\nReturns ideology scores per party per survey year for ideological\nspatial mapping. All scores on 0-10 scale:\n- lrgen: general left-right (0=left, 10=right)\n- galtan: GAL-TAN (0=TAN/authoritarian, 10=GAL/libertarian)\n- eu_position: EU integration (0=opposed, 10=favored)",
+        "operationId": "ideology_data_api_analytics_ideology_get",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{4}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
           }
         ],
         "responses": {

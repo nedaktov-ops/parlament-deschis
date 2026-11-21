@@ -340,11 +340,18 @@ export interface CohesionParty {
   abstain_pct: number;
 }
 
+/** Provenance stamp carried by every /api/analytics response. */
+export interface AnalyticsMeta {
+  generated_at: string;
+  count: number;
+}
+
 export interface VoteCohesionResponse {
   status: string;
   data_exists: boolean;
   data: CohesionParty[];
   denominator: string;
+  meta: AnalyticsMeta;
 }
 
 export interface ActivityBucket {
@@ -361,6 +368,7 @@ export interface VoteActivityResponse {
   data_exists: boolean;
   data: ActivityBucket[];
   buckets: number;
+  meta: AnalyticsMeta;
 }
 
 export interface VotesFilters {
@@ -479,15 +487,16 @@ export const api = {
     legislature?: string,
     from?: string,
     to?: string,
-    stepDays = 30,
   ) => {
     const params = new URLSearchParams();
     if (chamber) params.set("chamber", chamber);
     if (legislature) params.set("legislature", legislature);
     if (from) params.set("from", from);
     if (to) params.set("to", to);
-    params.set("step_days", String(stepDays));
-    return get<VoteActivityResponse>(`/analytics/vote-activity?${params.toString()}`);
+    const qs = params.toString();
+    return get<VoteActivityResponse>(
+      `/analytics/vote-activity${qs ? `?${qs}` : ""}`,
+    );
   },
 
   scorecard: (
@@ -503,7 +512,7 @@ export const api = {
     params.set("limit", String(limit));
     params.set("offset", String(offset));
     params.set("min_votes", String(min_votes));
-    return get<ScorecardResponse>(`/api/votes/scorecard?${params.toString()}`);
+    return get<ScorecardResponse>(`/votes/scorecard?${params.toString()}`);
   },
 };
 
@@ -867,7 +876,7 @@ export function ideology(
 ): Promise<IdeologyResponse> {
   const params = new URLSearchParams();
   if (year) params.set("year", year);
-  return get<IdeologyResponse>(`/api/analytics/ideology${params.toString() ? `?${params.toString()}` : ""}`);
+  return get<IdeologyResponse>(`/analytics/ideology${params.toString() ? `?${params.toString()}` : ""}`);
 }
 
 // --- Feature: Roll-call vote scorecard -------------------------------------
@@ -915,4 +924,5 @@ export interface IdeologyResponse {
   status: string;
   data_exists: boolean;
   data: IdeologyEntry[];
+  meta: AnalyticsMeta;
 }

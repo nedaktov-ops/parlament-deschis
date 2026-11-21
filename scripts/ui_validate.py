@@ -44,6 +44,15 @@ ROUTES: list[tuple[str, str]] = [
     ("party-profile", "/party/PSD"),
     ("person-deep-dive", f"/person/{PERSON_ID}"),
     ("legislature", "/legislature/2024"),
+    # Routes added after the original 18-route gate was defined. They must be
+    # scanned too: the newest vote/ideology views are precisely the ones most
+    # likely to regress (empty states, lazy chunks, chart JS errors).
+    ("parties", "/parties"),
+    ("votes", "/Voturi"),
+    ("radar", "/radar"),
+    ("grafice", "/grafice"),
+    ("topuri", "/topuri"),
+    ("ideology", "/ideology"),
 ]
 
 

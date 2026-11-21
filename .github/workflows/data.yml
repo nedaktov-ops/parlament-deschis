@@ -7,6 +7,26 @@ name: Data
 # API: a push made with GITHUB_TOKEN does not start CI or Render's connected
 # Git deployment. Scheduled runs are best-effort; workflow_dispatch remains
 # the recovery path.
+#
+# W2.3 / issue #14 (cdep.ro ConnectTimeout on GitHub runners):
+#
+#   `--strict` is kept on BOTH the online build and the cached fallback. It is
+#   the gate that refuses to ingest unless every chamber/legislature scope,
+#   roster, group index and profile referenced by a ledger is present and the
+#   three-view cross-check passes. We never remove it to turn a red run green.
+#
+#   What the cached fallback proves: the archived *official* cdep.ro fragments
+#   are complete, parseable and internally consistent; every ingested row still
+#   hashes back to an archived official page (manifest.jsonl), and the separate
+#   `audit-corpus --strict --baseline` gate below must still pass. It does NOT
+#   prove freshness — only a successful online revalidation does — and it does
+#   NOT re-fetch the committee ledger (see the --skip-committees note on the
+#   step). The chosen mode is recorded in the release body so a degraded run is
+#   visible rather than silently presented as a fresh online build.
+#
+#   The official cdep page archive and third-party civic-source caches use
+#   separate cache-key namespaces on purpose: a civic-source outage must never
+#   block the official corpus, and a cdep outage must never evict civic caches.
 
 on:
   schedule:
@@ -43,8 +63,8 @@ jobs:
 
       # Restore and save are deliberately split: actions/cache's automatic
       # post-save is skipped when a job fails, which is exactly when fresh
-      # pages are most needed. A separate always() save step below fixes that.
-      - name: Restore the page archive
+      # pages are most needed. Separate always() save steps below fix that.
+      - name: Restore the official cdep page archive
         id: page-cache
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -53,26 +73,83 @@ jobs:
           restore-keys: |
             cdep-pages-
 
-      - name: Collect and ingest
+      # Deliberately NOT under the cdep-pages-* key. Wikidata/civic results are
+      # licensed cross-checks, never a substitute for an official ledger; a
+      # separate namespace means a civic-source outage cannot block the
+      # official corpus rebuild, and a cdep outage cannot evict civic caches.
+      - name: Restore the third-party source cache
+        id: thirdparty-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: data/wikidata_cache.db
+          key: thirdparty-sources-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            thirdparty-sources-
+
+      # `--strict` is intentional on both attempts (see the header notes).
+      # `if ...; then ... else ... fi` is used instead of `|| true` / a silent
+      # skip: a failed online build is *observed*, and if the offline rebuild
+      # fails too, the step exits with the original online status. Failure is
+      # never converted into success by the fallback itself.
+      - name: Collect and ingest (strict, with cached fallback)
+        id: collect
         env:
           FORCE: ${{ inputs.force && '1' || '' }}
         run: |
-          if [ -n "$FORCE" ]; then
-            uv run python -m pipeline.cli --db data/parlament-real.db build-corpus \
-              --chamber both --cache data/cache/cdep --strict --force \
-              --current-cache-ttl-hours 24 --historical-cache-ttl-hours 720
-          else
+          build_corpus() {
             uv run python -m pipeline.cli --db data/parlament-real.db build-corpus \
               --chamber both --cache data/cache/cdep --strict \
-              --current-cache-ttl-hours 24 --historical-cache-ttl-hours 720
+              --current-cache-ttl-hours 24 --historical-cache-ttl-hours 720 "$@"
+          }
+
+          if [ -n "$FORCE" ]; then
+            if build_corpus --force; then
+              echo "mode=online" >> "$GITHUB_OUTPUT"
+              exit 0
+            else
+              online_status=$?
+            fi
+          else
+            if build_corpus; then
+              echo "mode=online" >> "$GITHUB_OUTPUT"
+              exit 0
+            else
+              online_status=$?
+            fi
           fi
 
-      - name: Save the page archive (even on failure)
+          echo "online cdep.ro build failed (exit $online_status); rebuilding strictly from the restored official page archive" >&2
+          # --offline: use only cached official pages, never contact cdep.ro.
+          # --skip-committees: the committee adapter has no disk cache and
+          # always fetches live, so it cannot run during a cdep outage. This is
+          # the CLI's documented escape hatch and keeps the fallback genuinely
+          # offline; committee rows are refreshed by the next online run. The
+          # release body records this mode so it is never presented as fresh.
+          if build_corpus --offline --skip-committees; then
+            echo "mode=offline" >> "$GITHUB_OUTPUT"
+            exit 0
+          else
+            offline_status=$?
+          fi
+
+          echo "strict offline rebuild also failed (exit $offline_status)" >&2
+          exit "$online_status"
+
+      - name: Save the official cdep page archive (even on failure)
         if: always()
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: data/cache/cdep
           key: cdep-pages-${{ github.run_id }}-${{ github.run_attempt }}
+
+      # Separate key namespace; skipped when no third-party cache was produced
+      # so a fresh runner cannot fail the save step.
+      - name: Save the third-party source cache (even on failure)
+        if: always() && hashFiles('data/wikidata_cache.db') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: data/wikidata_cache.db
+          key: thirdparty-sources-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Audit the corpus
         run: >-
@@ -96,6 +173,11 @@ jobs:
           body: |
             Validated dataset built from official sources by workflow run
             ${{ github.run_id }} (attempt ${{ github.run_attempt }}).
+
+            Build mode: `${{ steps.collect.outputs.mode }}`. An `offline` mode means
+            cdep.ro was unreachable and the corpus was rebuilt under the same
+            `--strict` gate from the cached official page archive; freshness and
+            the committee ledger are NOT proven for that run.
 
             * `parlament.db` - the SQLite database served by the API.
             * `manifest.jsonl` - every page fetched, with its URL and SHA-256.

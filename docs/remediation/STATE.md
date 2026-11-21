@@ -5,6 +5,42 @@
 **Started:** 2026-11-19
 **Supervisor pass:** 2026-11-19 (adversarial verification of Wave 1, raw output below)
 
+---
+
+## 2026-11-21 completion-review addendum (read-only audit, Agent D)
+
+This ledger is a dated 2026-11-19 remediation record and is preserved as-is.
+Facts re-verified on 2026-11-21 by Agent D (raw evidence in the completion
+report):
+
+- `data/latest-release.txt` = `data-20261117-T213500`; live `GET /api/health`
+  agrees (`status: ok`, `persons: 3388`, `memberships: 7349`).
+- Live `GET /api/dashboard/stats` `memberships` = **7349**; the 2026-11-19
+  snapshot in `docs/DASHBOARD-VERIFICATION.md` recorded 7358. Drift is annotated
+  in that document; the snapshot itself was not rewritten.
+- CI run `44879894155` (push to `main`) FAILED only in job `test` → step
+  "Frontend lint, type-check and build": 4 `react-hooks/rules-of-hooks` errors
+  in `frontend/src/pages/Ideology.tsx` (lines 125/137/138/140). `audit` and
+  `evidence-guards` PASSED; `docker` skipped. Agent A owns that file; Agent D did
+  not touch it.
+- `main` branch protection: `gh api .../branches/main/protection` → 404
+  "Branch not protected". Owner-only setting; left unchanged.
+- Issue #14 remains OPEN with 11 "dataset release: not published" notes. Sampled
+  logs (runs 44729831051, 44517323355, 43706510010) all fail in
+  "Collect and ingest" on repeated `ConnectTimeout` to `www.cdep.ro`
+  (`/ords/pls/parlam/structura2015.gp?idl=1&cam=2&leg=1990`). Root cause is
+  external source reachability, not a workflow-config defect.
+- QA gate repaired (2026-11-21): `scripts/check-doc-truth.sh` initially exited 1
+  with `false-claims: 37`, all from the overbroad bare `281\.ro` token flagging
+  legitimate external-source references, plus one historical `data-20261117-T060923`
+  tag list. Both bare tokens were replaced with precise false-assertion patterns
+  (the 14 other specific strings are unchanged). Clean tree now: `false-claims: 0`,
+  EXIT 0. Adversarial proof in an isolated scratch git repo: seeding the genuine
+  phrases "281.ro is our product", "Target is 281.ro", "469 current MPs from
+  281.ro API", "release pinned today ... data-20261117-T060923" and "193 passed"
+  produced `false-claims: 5`, EXIT 1; removing the seeded file restored
+  `false-claims: 0`, EXIT 0. The gate still fails on real false claims.
+
 ## Wave status
 
 | Wave | Theme | Status |

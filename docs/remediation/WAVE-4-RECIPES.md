@@ -102,15 +102,31 @@ npm install
 
 ---
 
-### R-D0.3 — Vite 8 Upgrade Implementation
+### R-D0.3 — Vite 6 Upgrade Implementation
 
 **Role:** Build Engineer
 **Worktree:** `/tmp/opencode/wt-D0.3`, branch `remediation/D0.3`
 **Scope:** `frontend/package.json`
 **Dependency:** Must complete R-D0.2 first
 
+**Shipped state (verified 2026-11-21):** `frontend/package.json` declares
+`"vite": "^6.0.0"` and `"react": "^19.0.0"`. `npm ls vite react` resolves
+`vite@6.4.6` / `react@19.3.1` under Node `v24.22.3`. The real dependency bump
+is `fb95e56` — `git log -S'"vite": "^6.0.0"' -- frontend/package.json` returns
+that commit alone, and it is the only one touching `package.json` and
+`package-lock.json`. The commits `dd463d1`, `23b5b81` and `1d72d06` modify only
+`EVIDENCE.md`; they are **evidence-only** records, not dependency bumps,
+notwithstanding their `upgrade(...)` commit messages.
+
+**HISTORICAL — superseded 2026-11-21:** this recipe previously carried a
+title naming a later Vite major and a procedure step quoting the pre-upgrade
+version string. Both were inconsistent with the shipped tree; the conflict is
+recorded at `docs/POST-INITIAL-AUDIT-2026-11-21.md:80` and
+`docs/GAP-ANALYSIS-2026-11-21.md:110`. Do not reintroduce those values.
+
 ### Procedure
-1. Update Vite version in package.json to ^5.0.0 (check actual latest)
+1. Confirm `frontend/package.json` still declares `^6.0.0`; the upgrade already
+   shipped in `fb95e56`. Do not reintroduce the superseded pre-upgrade value.
 2. Run `npm install`
 3. Run `npm run build` and fix any configuration issues
 4. Verify HMR works in dev mode

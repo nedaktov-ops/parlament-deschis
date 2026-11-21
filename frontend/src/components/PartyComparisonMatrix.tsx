@@ -75,6 +75,7 @@ export default function PartyComparisonMatrix({
           Top transitions show major party switching activity
         </div>
         <button
+          type="button"
           onClick={() => onCellClick?.('all', 'all')}
           className="text-sky-400 hover:underline text-xs"
         >
