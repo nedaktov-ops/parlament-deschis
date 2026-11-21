@@ -78,8 +78,7 @@ def git(*args: str, check: bool = True) -> str:
     proc = subprocess.run(
         ["git", *args],
         cwd=REPO_ROOT,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
         encoding="utf-8",
         errors="replace",
