@@ -6,35 +6,43 @@ description: Branch, HEAD, ahead/behind, unpushed commits, CI conclusions, prote
 status: active
 authority: canonical
 tags: [type/state, lifecycle/active, domain/ops]
-source_paths: [docs/COMPREHENSIVE-REVIEW-2026-11-21.md, docs/GAP-ANALYSIS-2026-11-21.md, docs/POST-INITIAL-AUDIT-2026-11-21.md]
+source_paths: [docs/CONTINUATION-STRATEGY-2026-11-21.md, docs/COMPREHENSIVE-REVIEW-2026-11-21.md, docs/GAP-ANALYSIS-2026-11-21.md, docs/POST-INITIAL-AUDIT-2026-11-21.md]
 created: 2026-11-21
 updated: 2026-11-21
-source_commit: 6fd6028
-verified: 2026-11-21
+source_commit: 96e6fdd
 ---
 
 # Git position and CI state
 
-Directly observed at `6fd6028`. Interpretation of the live state is in
+> **Addendum (2026-11-21):** Re-anchored 2026-11-21 from `docs/CONTINUATION-STRATEGY-2026-11-21.md` §0. Vault mirror: [CONTINUATION-STRATEGY](../20-DIRECTION/CONTINUATION-STRATEGY.md).
+
+Directly observed at `96e6fdd`. Interpretation of the live state is in
 [CURRENT-STATE](CURRENT-STATE.md); gap IDs in [GAP-REGISTER](GAP-REGISTER.md).
+
+> **Historical (2026-11-21):** at the earlier post-initial-audit snapshot this note recorded HEAD `6fd6028`, 3 ahead / 0 behind; that value is superseded by this re-anchor.
 
 ## Branch and commits
 
 | Item | Value |
 | --- | --- |
 | Branch | `review/completion-20261121` |
-| HEAD | `6fd6028` (full `6fd60285cd81ec1a291129f5a4e4dc3a90fc25cf`) |
+| HEAD | `96e6fdd` (full `96e6fdd5d75c3f7f51a6888a693eeca40e954674`) |
 | `origin/main` / GitHub default | `6b848f1` |
-| Ahead / behind | **3 ahead / 0 behind** |
-| Remote branch containing HEAD | none — all three commits are unpushed |
+| Ahead / behind | **8 ahead / 0 behind** |
+| Remote branch containing HEAD | none — all eight commits are unpushed |
 
-Unpushed commits, oldest first:
+Unpushed commits, oldest first (8):
 
 | Commit | Summary |
 | --- | --- |
 | `3eb3c0a` | `fix(review): complete CI, vote API, a11y and docs gaps (2026-11-21 review)` |
 | `221cf78` | `docs: add docs-vs-live gap analysis from coordinated six-agent review` |
-| `6fd6028` | `docs: exhaustive post-initial audit with contradiction resolutions` |
+| `6fd6028` | `docs: exhaustive post-initial audit with contradiction resolutions` (historical audit snapshot) |
+| `a311382` | `feat(vault): build Obsidian state mirror with idempotent sync and lint` |
+| `537cef7` | `fix(vault-sync): anchor generated notes on last non-vault commit` |
+| `bf75556` | `chore(vault): regenerate generated notes at stable source commit` |
+| `bc4bee2` | `style(vault-sync): satisfy ruff UP022 (capture_output)` |
+| `96e6fdd` | `chore(vault): regenerate notes after style fix` |
 
 ## CI check conclusions on main
 

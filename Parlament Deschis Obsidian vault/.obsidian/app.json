@@ -5,5 +5,8 @@
   "showFrontmatter": true,
   "propertiesInDocument": "visible",
   "attachmentFolderPath": "_attachments",
-  "userIgnoreFilters": ["_generated/", ".obsidian/"]
+  "userIgnoreFilters": [
+    "_generated/",
+    ".obsidian/"
+  ]
 }

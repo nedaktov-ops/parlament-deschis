@@ -3,6 +3,31 @@
 **Version:** 1.0 · **Date:** 2026-11-19 · **Baseline:** `eb069d2b` (pre-remediation)
 **Status:** ACTIVE — This is a strategic roadmap, not immediate remediation
 
+> **Correction note — 2026-11-21 (evidence-backed).** The shipped tree declares
+> `vite ^6.0.0` / `react ^19.0.0` in `frontend/package.json`; `npm ls vite react`
+> resolves `vite@6.4.6` / `react@19.3.1` on Node `v24.22.3`. The commit that
+> actually bumped the dependencies is **`fb95e56`**
+> (`git log -S'"vite": "^6.0.0"' -- frontend/package.json` returns that commit
+> alone; it is the only one touching `package.json` and `package-lock.json`).
+> The commits `dd463d1`, `23b5b81` and `1d72d06` modified only `EVIDENCE.md`:
+> they are **evidence-only**, not dependency bumps, notwithstanding their
+> `upgrade(...)` messages. Sections 1.1 and 2.2 are corrected to match.
+>
+> **HISTORICAL / OBSOLETE (2026-11-21):** the "blocked by Node 18" reasoning in
+> `docs/remediation/WAVE-4-COMPLETION.md:47,71` no longer holds — the runtime is
+> Node v24.22.3 (`node --version`). Later-major evaluation is a separate gated
+> programme (`docs/MASTER-STRATEGY.md:759`), not a current blocker.
+>
+> **NOT PROVEN (2026-11-21):** the approval tick at
+> `docs/remediation/WAVE-4-SUPERVISOR.md:17` ("STRATEGY.md approved") and the
+> "Error boundary hook: Available for integration" tick at
+> `docs/remediation/WAVE-4-COMPLETION.md:39`. No dated approval record and no
+> captured boundary-integration output were found; `STATE.md:52` says recipes
+> are pending stakeholder review and `docs/POST-INITIAL-AUDIT-2026-11-21.md:83-85`
+> records the approval as unproven. Resolver: the owner of those two files must
+> attach dated evidence or relabel the ticks. Their history is preserved here;
+> this note supersedes them without editing files outside this wave's ownership.
+
 ---
 
 ## Executive Summary
@@ -22,12 +47,12 @@ The project is **functional and stable**. Wave 4 represents optimization and mod
 
 | Component | Current Version | Recommended | Gap |
 |---|---|---|---|
-| **React** | 18.3.1 | 19.x | Major upgrade path available |
-| **Vite** | 5.3.4 | 8.x | Significant performance improvements |
+| **React** | ^19.0.0 (19.3.1 installed) | keep 19.x | Upgraded and shipped in `fb95e56` |
+| **Vite** | ^6.0.0 (6.4.6 installed) | keep 6.x | Upgraded and shipped in `fb95e56` |
 | **ECharts** | 5.5.1 | 6.x | New chart types, better performance |
 | **Tailwind CSS** | 3.4.6 | 4.x | JIT engine, improved class handling |
 | **i18next** | 23.12.0 | 27.x | Type improvements, better SSR |
-| **Node.js** | (assumed 18+) | 22.x LTS | Better performance, security |
+| **Node.js** | v24.22.3 (verified 2026-11-21) | maintain 24.x | Earlier 18-based constraint is obsolete |
 | **Python** | 3.12 | 3.13 | Latest stable |
 
 ### 1.2 Missing Infrastructure
@@ -72,19 +97,26 @@ git checkout e9ef278 -- frontend/package.json
 npm install
 ```
 
-#### 2.2 Vite Upgrade Strategy
+#### 2.2 Vite Upgrade Strategy (SHIPPED — Vite 6)
 
-**Goal:** Upgrade from Vite 5.3.4 to Vite 8.x.
+**Goal (2026-11-21):** keep the shipped `vite ^6.0.0` (resolved 6.4.6) build
+green. The upgrade already landed in `fb95e56`; this is now a maintenance plan,
+not a pending major-version migration.
 
-**Key Changes in Vite 8:**
-- Improved build performance
-- Better HMR
-- Updated plugin API
+**What shipped with the Vite 6 upgrade:**
+- Build succeeds with Vite 6.4.6 and `@vitejs/plugin-react` 5.2.0
+- Dev server starts on `http://localhost:5173` with working HMR
+- All page routes render; G08 is the gate and production is NOT PROVEN
 
 **Checkpoints:**
-- CP-D1.5: Build succeeds with new Vite
-- CP-D1.6: Dev server starts and HMR works
-- CP-D1.7: All page routes render correctly
+- CP-D1.5: `cd frontend && npm run build` → exit 0 with captured output
+- CP-D1.6: `cd frontend && npm run dev` → server starts; HMR verified
+- CP-D1.7: `python3 scripts/ui_validate.py <dev-server>` → 24/24, 0 axe violations
+
+**Obsolete (2026-11-21):** earlier versions of this roadmap treated a further
+major jump as blocked by Node 18. Node is now v24.22.3, so that constraint is
+historical; any newer-major evaluation is a separate gated programme
+(`docs/MASTER-STRATEGY.md:759`).
 
 ### Part D-2: Generated Contracts
 

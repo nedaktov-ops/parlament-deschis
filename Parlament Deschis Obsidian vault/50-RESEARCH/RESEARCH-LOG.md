@@ -6,14 +6,15 @@ description: "Canonical dated investigation log with commit anchors, five-agent 
 status: active
 authority: canonical
 tags: [type/state, lifecycle/active, domain/research]
-source_paths: [docs/RESEARCH.md, docs/POST-INITIAL-AUDIT-2026-11-21.md, docs/GAP-ANALYSIS-2026-11-21.md, docs/COMPREHENSIVE-REVIEW-2026-11-21.md]
+source_paths: [docs/CONTINUATION-STRATEGY-2026-11-21.md, docs/RESEARCH.md, docs/POST-INITIAL-AUDIT-2026-11-21.md, docs/GAP-ANALYSIS-2026-11-21.md, docs/COMPREHENSIVE-REVIEW-2026-11-21.md]
 created: 2026-11-21
 updated: 2026-11-21
-source_commit: 6fd6028
-verified: 2026-11-21
+source_commit: 96e6fdd
 ---
 
 # Research log
+
+> **Addendum (2026-11-21):** Re-anchored 2026-11-21 from `docs/CONTINUATION-STRATEGY-2026-11-21.md` §0. Vault mirror: [CONTINUATION-STRATEGY](../20-DIRECTION/CONTINUATION-STRATEGY.md).
 
 This is the canonical **chronology and uncertainty register** for the vault.
 Source dispositions are in [SOURCE-RESEARCH](SOURCE-RESEARCH.md) and
@@ -31,11 +32,16 @@ derive from source; anything unproven is reported with a named resolver.
 
 | Anchor | Meaning |
 |---|---|
+| `96e6fdd` | **current HEAD — unpushed**; 8 commits ahead / 0 behind `origin/main`, branch `review/completion-20261121` |
 | `6b848f1` | `origin/main` and GitHub default branch; the state the live services were probed against |
 | `3eb3c0a` | local review commit: CI hook-order fix, canonical vote/ideology routes, accessibility repairs |
 | `221cf78` | local commit adding the six-agent gap analysis |
-| `6fd6028` | **current HEAD — unpushed**; adds the exhaustive post-initial audit. HEAD is **3 commits ahead** of `origin/main` and 0 behind |
-| `data-20261117-T213500` | published dataset pin (3,388 persons, 7,349 prepared memberships, 26 committee orgs) — unchanged by these docs-only commits |
+| `6fd6028` | historical audit commit — recorded HEAD at the 2026-11-21 post-initial audit, superseded by this re-anchor |
+| `data-20261117-T213500` | published dataset pin (3,388 persons, 7,349 prepared memberships, 26 committee orgs) — unchanged by the vault commits |
+
+Unpushed series, oldest first (8): `3eb3c0a`, `221cf78`, `6fd6028`, `a311382`,
+`537cef7`, `bf75556`, `bc4bee2`, `96e6fdd`. The five newest are vault mirror
+commits; the three oldest are the review/audit commits described above.
 
 ## Dated investigation log
 
@@ -70,8 +76,8 @@ derive from source; anything unproven is reported with a named resolver.
   open with 11 `cdep.ro` ConnectTimeout data-run failures.
 - **2026-11-21 — post-initial audit (five agents).** See provenance below.
   Adjudicated R1–R11 and produced the authoritative current-state summary.
-- **2026-11-21 — this snapshot.** Local HEAD `6fd6028`, three docs-only commits
-  above `origin/main` `6b848f1`; all 2026-11-21 fixes remain unpushed and
+- **2026-11-21 — this re-anchor.** Local HEAD `96e6fdd`, eight commits above
+  `origin/main` `6b848f1` (0 behind); all 2026-11-21 fixes remain unpushed and
   therefore absent from Vercel/Render.
 
 ## Five-agent post-initial audit — provenance
@@ -118,3 +124,11 @@ date, then mark the affected note's `verified` field and bump `updated`. Never
 silently rewrite a dated entry; add an addendum. Governance is defined in
 [MAINTENANCE-PROTOCOL](../00-START/MAINTENANCE-PROTOCOL.md) and note ownership
 in [SOURCE-MAP](../00-START/SOURCE-MAP.md).
+
+## Continuation strategy
+
+The five-agent continuation strategy is mirrored in
+[CONTINUATION-STRATEGY](../20-DIRECTION/CONTINUATION-STRATEGY.md), anchored on
+`docs/CONTINUATION-STRATEGY-2026-11-21.md` §0. It supersedes the older
+ahead/behind framing in this log; the superseded values survive only as dated
+historical context above.

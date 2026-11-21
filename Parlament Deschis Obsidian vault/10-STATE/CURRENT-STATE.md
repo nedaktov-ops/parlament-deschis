@@ -2,23 +2,25 @@
 id: state-current
 type: state
 title: Current State — Authoritative at HEAD
-description: What is true now at HEAD 6fd6028; local fixes are unpushed and production still serves the pre-fix release.
+description: What is true now at HEAD 96e6fdd; local fixes are unpushed and production still serves the pre-fix release.
 status: active
 authority: canonical
 tags: [type/state, lifecycle/active, domain/project]
-source_paths: [docs/POST-INITIAL-AUDIT-2026-11-21.md, docs/COMPREHENSIVE-REVIEW-2026-11-21.md, docs/GAP-ANALYSIS-2026-11-21.md]
+source_paths: [docs/CONTINUATION-STRATEGY-2026-11-21.md, docs/POST-INITIAL-AUDIT-2026-11-21.md, docs/COMPREHENSIVE-REVIEW-2026-11-21.md, docs/GAP-ANALYSIS-2026-11-21.md]
 created: 2026-11-21
 updated: 2026-11-21
-source_commit: 6fd6028
-verified: 2026-11-21
+source_commit: 96e6fdd
 ---
 
 # Current State — authoritative at HEAD
 
+> **Addendum (2026-11-21):** Re-anchored 2026-11-21 from `docs/CONTINUATION-STRATEGY-2026-11-21.md` §0. Vault mirror: [CONTINUATION-STRATEGY](../20-DIRECTION/CONTINUATION-STRATEGY.md).
+
 This is the authoritative "what is true now" note for the repository at HEAD
-`6fd6028` on branch `review/completion-20261121`. It is a hub: detailed
+`96e6fdd` on branch `review/completion-20261121`. It is a hub: detailed
 tracking lives in the linked notes, not duplicated here.
 
+- [CONTINUATION-STRATEGY](../20-DIRECTION/CONTINUATION-STRATEGY.md) — method, gates, wave status and session boundary.
 - [GAP-REGISTER](GAP-REGISTER.md) — open P0/P1/P2 gaps and next actions.
 - [CONTRADICTIONS](CONTRADICTIONS.md) — R1–R11 adjudications and NOT PROVEN items.
 - [RELEASE-AND-VERIFICATION](RELEASE-AND-VERIFICATION.md) — release pin, counts, gate commands.
@@ -42,7 +44,7 @@ tracking lives in the linked notes, not duplicated here.
 
 ## Local-only fixes (not deployed)
 
-HEAD `6fd6028` carries three unpushed commits that repair CI and the API but
+HEAD `96e6fdd` carries eight unpushed commits (see [GIT-POSITION](GIT-POSITION.md)) that repair CI and the API but
 are absent from Vercel/Render: the hooks-after-return fix in `Ideology.tsx`
 (CI RED root cause), canonical `/api/analytics/ideology` and
 `/api/votes/scorecard` routes with `meta`, calendar-aware vote date filters,
@@ -53,7 +55,7 @@ G-P0-03) and [GIT-POSITION](GIT-POSITION.md).
 
 ## Gates: local vs production
 
-| Gate | Local HEAD `6fd6028` | Production / CI on `main` |
+| Gate | Local HEAD `96e6fdd` | Production / CI on `main` |
 | --- | --- | --- |
 | pytest | 384 passed | not green on main (CI RED) |
 | ruff | clean | `audit` job green |

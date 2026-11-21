@@ -11,6 +11,40 @@
 
 ---
 
+## Status note (2026-11-21) — read before using this document
+
+This strategy document is a **design vision**, not a record of a verified
+release. Four classes of claim in the original text were false at the time of
+the 2026-11-21 audit and are superseded here:
+
+- **Conformance target.** The original "Accessibility First" principle named a
+  stricter-than-required conformance target. The governing standard is
+  **WCAG 2.2 AA** (`docs/POST-INITIAL-AUDIT-2026-11-21.md:98-100`;
+  `docs/CONTINUATION-STRATEGY-2026-11-21.md` §1 rule 1 and §4 W0.4). See
+  §Design Philosophy.
+- **Colour variant.** The original DashboardCard `color` union included one
+  accent token that is not in the approved palette. The frontend 10X strategy
+  (`docs/FRONTEND-UX-10X-STRATEGY.md:29,503`) forbids that accent family; the
+  approved tokens are `sky`, `emerald`, `amber`, `rose`, `cyan` on slate.
+  See §Component Library.
+- **Test gate.** The original Phase 6 and Quality Gates listed an `npm`-based
+  unit-test command that does not exist in `frontend/package.json` (scripts are
+  `dev`, `build`, `preview`, `lint` only). The real gates are `npm run lint`,
+  `npm run build` and `python3 scripts/ui_validate.py <dev-server>` (G03/G04/G08
+  in the continuation strategy).
+- **Rollback recipe.** The original emergency recipe used history-rewriting and
+  destructive commands. Every rollback procedure below is now additive or
+  revert-based per `docs/CONTINUATION-STRATEGY-2026-11-21.md` §1 rule 3 and §3.
+- **Completion claim.** "IMPLEMENTATION COMPLETE" below is split into
+  *code complete* and *verification incomplete*, with captured-output
+  requirements.
+
+Historical wording is preserved as evidence in
+`docs/POST-INITIAL-AUDIT-2026-11-21.md:98-100,224`. This note updates current
+claims without rewriting that record.
+
+---
+
 ## Design Philosophy
 
 ### Core Principles (Zero Wasted Space)
@@ -19,7 +53,7 @@
 3. **Hero Entrance** - Every section enters with staggered 150ms delays
 4. **Quiet Micro-interactions** - Subtle 200ms transitions on all interactive elements
 5. **Visual Weight Hierarchy** - Size, color, and position indicate importance
-6. **Accessibility First** - WCAG AAA compliance, screen reader navigation, keyboard-first
+6. **Accessibility First** - WCAG 2.2 AA compliance, screen reader navigation, keyboard-first (supersedes the stricter historical target; see status note)
 
 ### Color Palette
 - **Primary**: `sky-400` for interactive elements and links
@@ -81,7 +115,7 @@ Micro: 10px Light - Annotations
 - `value`: number | string - Main value display
 - `linkTo`: string - Target page URL
 - `searchParams`: Record<string, string> - Query parameters (date filter)
-- `color`: "sky" | "emerald" | "amber" | "rose" | "violet" | "cyan" - Theme variant
+- `color`: "sky" | "emerald" | "amber" | "rose" | "cyan" - Theme variant (approved palette tokens only; the historical accent token is superseded by the status note)
 - `className`: string - Additional CSS classes
 - `onClick`: function - Click handler
 
@@ -290,13 +324,22 @@ Raw API Data → Transformation Hooks → Visualization Components → Interacti
 
 **Checkpoint 5**: ✓ TypeScript passes, build succeeds
 
-### Phase 6: Verification (COMPLETED)
-- [x] `tsc --noEmit` passes ✓
-- [x] `npm run build` succeeds ✓
-- [ ] `npm test` passes
-- [ ] `python3 scripts/ui_validate.py <base>` shows 18 routes with no console errors and no axe violations. As of 2026-11-19 this check FAILS in production on 3 routes (`/`, `/party/PSD`, `/person/cb5ca84e-…`, React #310), so the box stays unticked until P0-1/P0-2 land and the command is re-run.
+### Phase 6: Verification (IN PROGRESS — not GREEN)
 
-**Checkpoint 6**: All quality gates pass
+- [x] `tsc --noEmit` passes ✓ (historical captured output; see §Build Status)
+- [x] `npm run build` succeeds ✓ (historical captured output; see §Build Status)
+- [ ] `cd frontend && npm run lint` — required gate G03; tick only with a fresh,
+      captured run attached to the verification record.
+- [ ] `python3 scripts/ui_validate.py <dev-server>` — required gate G08.
+      Historical captured output: 24/24 PASS locally, 23/24 against the live
+      proxy because `/api/analytics/ideology` returns 404
+      (`docs/POST-INITIAL-AUDIT-2026-11-21.md:100-103`). Production is NOT PROVEN;
+      this box stays unticked until P0-1/P0-2 land and a fresh run is captured.
+- [ ] `bash scripts/check-doc-truth.sh` — required gate G05; must print
+      `false-claims: 0` and exit 0 before this box can be ticked.
+
+**Checkpoint 6**: NOT GREEN until every box above has captured output attached.
+Do not treat a code-complete state as a passing verification.
 
 ### Phase 7: Additional Visualization Components
 - [x] TimelineStrip component
@@ -310,37 +353,39 @@ These additional components extend the dashboard with:
 
 ## Quality Gates
 
-### TypeScript
+These are the real gates declared in `frontend/package.json` (scripts: `dev`,
+`build`, `preview`, `lint`) and in `docs/CONTINUATION-STRATEGY-2026-11-21.md` §2
+(G03/G04/G05/G08). Every gate must pass with printed/captured output before a
+release claim or deployment. There is no unit-test script in `package.json`;
+the former coverage gate has been removed rather than replaced with a command
+that cannot run.
+
+### TypeScript + Lint (G03)
 ```bash
-npx tsc --noEmit
+cd frontend && npm run lint   # tsc --noEmit && eslint src --ext .ts,.tsx
 # Must pass with 0 errors
 ```
 
-### Build
+### Build (G04)
 ```bash
-npm run build
-# Must generate optimized chunks
+cd frontend && npm run build   # tsc -b && vite build
+# Must exit 0 and generate optimized chunks
 ```
 
-### Lint
+### Accessibility (G08)
 ```bash
-eslint src/
-# Must show 0 warnings
+python3 scripts/ui_validate.py <dev-server>
+# Must report 24/24 routes, 0 console errors, 0 axe violations
+# Live-proxy result is NOT PROVEN while /api/analytics/ideology 404s
 ```
 
-### Accessibility
+### Documentation truth (G05)
 ```bash
-python scripts/ui_validate.py
-# Must show 0 axe violations per page
+bash scripts/check-doc-truth.sh
+# Must print "false-claims: 0" and exit 0
 ```
 
-### Unit Tests
-```bash
-npm test -- --coverage
-# Coverage must be ≥ 85% for new components
-```
-
-### Performance
+### Performance (advisory — not a declared release gate)
 ```bash
 lighthouse http://localhost:5173
 # Performance score ≥ 90
@@ -352,40 +397,70 @@ lighthouse http://localhost:5173
 
 ## Rollback Strategy
 
-### Component Rollback
-```bash
-# If DashboardCard breaks
-git show HEAD~1 -- frontend/src/components/DashboardCard.tsx > /tmp/backup.tsx
-rm frontend/src/components/DashboardCard.tsx
-```
+**Policy (2026-11-21):** history is never rewritten. No hard resets, no force
+pushes, no branch deletion, and no tag moves or deletions. Every rollback lands
+as a new commit; backups are additive tags. Authority:
+`docs/CONTINUATION-STRATEGY-2026-11-21.md` §1 rule 3 and §3.
 
-### Page Rollback
+### Component Rollback (file-level restore)
+```bash
+# If DashboardCard breaks: restore the path, then LAND THE RESTORE AS A NEW COMMIT.
+git checkout <verified-tag> -- frontend/src/components/DashboardCard.tsx
+git add frontend/src/components/DashboardCard.tsx
+git commit -m "revert: restore DashboardCard.tsx from <verified-tag>"
+```
+`git checkout <tag> -- <path>` alone only edits the working tree; the new commit
+is what makes the rollback versioned and pushable with a normal push.
+
+### Page Rollback (file-level restore)
 ```bash
 # If LiveDashboard layout breaks
-git checkout HEAD~1 -- frontend/src/pages/LiveDashboard.tsx
+git checkout <verified-tag> -- frontend/src/pages/LiveDashboard.tsx
+git add frontend/src/pages/LiveDashboard.tsx
+git commit -m "revert: restore LiveDashboard.tsx from <verified-tag>"
 ```
 
-### API Rollback
+### API Rollback (file-level restore)
 ```bash
 # If dashboard stats endpoint breaks
-git checkout HEAD~1 -- backend/routers/api.py
+git checkout <verified-tag> -- backend/routers/api.py
+git add backend/routers/api.py
+git commit -m "revert: restore api.py from <verified-tag>"
 ```
 
-### Full Feature Rollback
+### Full Feature Rollback (commit-level)
 ```bash
-# Tag current state
+# Additive backup tag first — never move or delete an existing tag
 git tag dashboard-v1.0-complete
 
-# If critical failure, reset to baseline
-git reset --hard dashboard-baseline
-git push origin --force
+# Find the introducing commit(s), then revert each with a NEW commit
+git log --oneline -- frontend/src/pages/LiveDashboard.tsx
+git revert <sha>
 ```
+`git revert <sha>` is the only sanctioned way to undo a commit. It is followed
+by a normal `git push origin <branch>`; a force push is never used.
+
+### Dataset pin rollback
+`data/latest-release.txt` is the mutable pointer to an immutable dataset tag.
+To roll back a dataset release, create a NEW commit restoring the previous pin
+value:
+```bash
+git checkout <previous-pin-tag> -- data/latest-release.txt
+git add data/latest-release.txt
+git commit -m "revert: restore previous dataset release pin"
+```
+Never move, retag, rewrite, or delete the immutable dataset tag itself.
 
 ### Emergency Rollback Sequence
-1. `git push origin --delete fix/dashboard-complete`
-2. `git checkout main && git revert HEAD~1`
-3. `git push origin main`
-4. Verify deployment via health endpoint
+1. `git tag dashboard-emergency-pre-revert` — additive backup, before any change.
+2. `git checkout main` (or the affected branch); confirm `git status --short`.
+3. Undo the offending change with `git revert <sha>` — a new commit. For a
+   single-path restore use `git checkout <verified-tag> -- <path>`, then
+   `git add <path>` and a new commit (see above).
+4. For a dataset release, follow the "Dataset pin rollback" rule above.
+5. `git push origin main` — normal push only, never a force push.
+6. Verify deployment via the health endpoint and re-run G03/G04/G08.
+7. Leave the fix branch intact. Do not delete branches or move tags.
 
 ---
 
@@ -408,9 +483,16 @@ Before each merge, verify:
 
 ---
 
-## IMPLEMENTATION COMPLETE - FINAL STATUS
+## IMPLEMENTATION STATUS (2026-11-21) — CODE COMPLETE / VERIFICATION INCOMPLETE
 
-### ✅ All Tasks Completed
+> **Claim split.** *Code complete* means the files and endpoints in the table
+> below exist in the tree at the cited commits. It does **not** mean the quality
+> gates passed, the UI validator is green, or a deployment succeeded.
+> *Verification incomplete* means the gates in §Quality Gates and Phase 6 have
+> not all passed with captured output attached. No release or deployment claim
+> is made by this document.
+
+### Code complete — files present in tree (not a verification claim)
 
 | Component | Status | File |
 |-----------|--------|------|
@@ -427,31 +509,38 @@ Before each merge, verify:
 | Dashboard Stats API | ✅ | `backend/routers/api.py` (lines 907-996) |
 | LiveDashboard Redesign | ✅ | `frontend/src/pages/LiveDashboard.tsx` |
 
-### Git Commits
+> Each ✅ above is a *presence* marker for code, not a PASS marker for a gate.
+> Re-verify against the current tree before relying on it.
+
+### Git Commits (historical evidence, 2026-11-18/19)
 ```
 a77c27a feat: add additional visualization components for comprehensive dashboard
 731a3c0 feat: implement comprehensive dashboard with zero wasted vertical space
 fc79ef1 Previous commits
 ```
 
-### Build Status
+### Build Status (historical captured output — re-run required for a current claim)
 ```
 ✓ built in 7.40s
 ✓ 910 modules transformed
 ✓ TypeScript: 0 errors
 ```
+The block above is historical evidence, not a current PASS. A current claim
+requires a fresh, captured `cd frontend && npm run build` run.
 
-### Next Actions
-1. Deploy to staging environment
-2. Run `ui_validate.py` for accessibility testing
-3. Run Lighthouse for performance/SEO audit
-4. Manual QA on all visualization components
-5. Connect PartyComparisonMatrix to actual API data
+### Next Actions (blocked on captured verification output)
+1. Run `cd frontend && npm run lint` and capture output (G03).
+2. Run `cd frontend && npm run build` and capture output (G04).
+3. Run `python3 scripts/ui_validate.py <dev-server>` and capture 24/24 output (G08).
+4. Run `bash scripts/check-doc-truth.sh` and capture `false-claims: 0` (G05).
+5. Only after all four outputs are attached: staging deploy and manual QA.
+6. Connect PartyComparisonMatrix to actual API data (open code task).
 
 ---
 
 ## Next Action
 
-Begin Phase 6: Verification. Deploy to staging and run automated tests.
+Complete Phase 6 verification with captured output. Do not deploy on the
+"code complete" claim above: deployment is gated on G03/G04/G05/G08 being green.
 
 **Reference this document at each implementation stage to ensure alignment with the vision.**

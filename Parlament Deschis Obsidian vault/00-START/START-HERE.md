@@ -6,16 +6,17 @@ description: "The single first-read note: what is done, what is local-only, what
 status: active
 authority: canonical
 tags: [type/moc, lifecycle/active, domain/project]
-source_paths: [docs/POST-INITIAL-AUDIT-2026-11-21.md, docs/GAP-ANALYSIS-2026-11-21.md, docs/AUDIT-RESOLUTIONS-2026-11-21.md]
+source_paths: [docs/CONTINUATION-STRATEGY-2026-11-21.md, docs/POST-INITIAL-AUDIT-2026-11-21.md, docs/GAP-ANALYSIS-2026-11-21.md, docs/AUDIT-RESOLUTIONS-2026-11-21.md]
 created: 2026-11-21
 updated: 2026-11-21
-source_commit: 6fd6028
-verified: 2026-11-21
+source_commit: 96e6fdd
 ---
 
 # Parlament Deschis — agent entry point
 
-Read this note first. It is the canonical, date-stamped snapshot of the project as of **2026-11-21** at local HEAD `6fd6028`. Every claim below is qualified by scope: local repository, GitHub, or production (Vercel + Render). When in doubt, follow [MAINTENANCE-PROTOCOL](MAINTENANCE-PROTOCOL.md).
+> **Addendum (2026-11-21):** Re-anchored 2026-11-21 from `docs/CONTINUATION-STRATEGY-2026-11-21.md` §0. Vault mirror: [CONTINUATION-STRATEGY](../20-DIRECTION/CONTINUATION-STRATEGY.md).
+
+Read this note first. It is the canonical, date-stamped snapshot of the project as of **2026-11-21** at local HEAD `96e6fdd`. Every claim below is qualified by scope: local repository, GitHub, or production (Vercel + Render). When in doubt, follow [MAINTENANCE-PROTOCOL](MAINTENANCE-PROTOCOL.md).
 
 ## 30-second answer
 
@@ -26,13 +27,13 @@ Read this note first. It is the canonical, date-stamped snapshot of the project 
 
 ## Done (verified)
 
-Local gates are green at HEAD `6fd6028`: pytest 384 passed, ruff clean, lint 0 errors, build exit 0, strict audit 275 known / 0 new, doc-truth 0, and UI validation 24/24 locally with zero JavaScript errors and zero axe findings. Against the live API proxy the UI gate is 23/24 because the ideology endpoint 404s in production. Fixes F1–F11 are implemented and verified in the repository. See [RELEASE-AND-VERIFICATION](../10-STATE/RELEASE-AND-VERIFICATION.md) for the evidence trail.
+Local gates are green at HEAD `96e6fdd`: pytest 384 passed, ruff clean, lint 0 errors, build exit 0, strict audit 275 known / 0 new, doc-truth 0, and UI validation 24/24 locally with zero JavaScript errors and zero axe findings. Against the live API proxy the UI gate is 23/24 because the ideology endpoint 404s in production. Fixes F1–F11 are implemented and verified in the repository. See [RELEASE-AND-VERIFICATION](../10-STATE/RELEASE-AND-VERIFICATION.md) for the evidence trail.
 
 Published dataset: `data-20261117-T213500` — 3,388 persons, 7,349 prepared memberships (7,358 raw release asset), 1,217 group switches plus 785 party switches = 2,002 total switch events, 142 waves, and committee counts of 26 orgs / 23 active / 9 chairs.
 
 ## In progress / local-only
 
-Branch `review/completion-20261121` is 3 commits ahead of `origin/main` (`6b848f1`), 0 behind, and **nothing has been pushed**. CI is RED on `main` (the fixes that would make it green are local-only), and `main` has no branch protection. The local green is not the production state. See [GIT-POSITION](../10-STATE/GIT-POSITION.md).
+Branch `review/completion-20261121` is 8 commits ahead / 0 behind `origin/main` (`6b848f1`), and **nothing has been pushed**. The eight unpushed commits are listed in [GIT-POSITION](../10-STATE/GIT-POSITION.md). CI is RED on `main` (the fixes that would make it green are local-only), and `main` has no branch protection. The local green is not the production state. See [GIT-POSITION](../10-STATE/GIT-POSITION.md).
 
 ## Not done / blocked
 
@@ -46,6 +47,8 @@ Production has **no vote data** (live `/api/votes` reports total 0; the publishe
 4. Label the two switch definitions (1,217 group vs 2,002 group+party) and the two membership counts (7,349 prepared vs 7,358 raw asset) in docs and UI.
 5. Close the P1 vision gaps in dependency order (genealogy data, Senate profiles, multi-dimensional coverage, H3–H5 frontend states; drop or scope blog/donations).
 6. Refresh stale docs from the new live state, mirroring the licence/robots/version corrections already made.
+
+For the ordered five-agent continuation plan, gates and session boundary, see [CONTINUATION-STRATEGY](../20-DIRECTION/CONTINUATION-STRATEGY.md).
 
 ## Authority order
 
@@ -62,7 +65,7 @@ Enforced by [MAINTENANCE-PROTOCOL](MAINTENANCE-PROTOCOL.md) and the machine cont
 
 - **00-START** — [START-HERE](START-HERE.md) (this note)
 - **10-STATE** — [CURRENT-STATE](../10-STATE/CURRENT-STATE.md)
-- **20-DIRECTION** — [VISION](../20-DIRECTION/VISION.md)
+- **20-DIRECTION** — [CONTINUATION-STRATEGY](../20-DIRECTION/CONTINUATION-STRATEGY.md), [TASK-REGISTER](../20-DIRECTION/TASK-REGISTER.md), [VISION](../20-DIRECTION/VISION.md)
 - **30-SYSTEM** — [ARCHITECTURE](../30-SYSTEM/ARCHITECTURE.md)
 - **40-FRONTEND** — [DESIGN-CONTRACT](../40-FRONTEND/DESIGN-CONTRACT.md)
 - **50-RESEARCH** — [RESEARCH-LOG](../50-RESEARCH/RESEARCH-LOG.md)
@@ -71,4 +74,4 @@ Enforced by [MAINTENANCE-PROTOCOL](MAINTENANCE-PROTOCOL.md) and the machine cont
 
 ## Freshness & NOT PROVEN
 
-`as_of` **2026-11-21**, source commit `6fd6028`. Local green does **not** mean production green. The exact Vercel build commit is unknown (strongly inferred as `6b848f1`), and client-side rendering of SPA routes is unknown (SPA fallback is proven, route rendering is not). See [RESEARCH-LOG](../50-RESEARCH/RESEARCH-LOG.md).
+`as_of` **2026-11-21**, source commit `96e6fdd`. Local green does **not** mean production green. The exact Vercel build commit is unknown (strongly inferred as `6b848f1`), and client-side rendering of SPA routes is unknown (SPA fallback is proven, route rendering is not). See [RESEARCH-LOG](../50-RESEARCH/RESEARCH-LOG.md).
