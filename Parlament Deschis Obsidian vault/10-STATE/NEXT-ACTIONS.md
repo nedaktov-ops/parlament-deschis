@@ -62,3 +62,22 @@ Ordering rationale: #1 removes the only critical operational unknown (freshness)
 ## C. See also
 
 [START-HERE](../00-START/START-HERE.md) · [EXECUTION-LOG](EXECUTION-LOG-2026-11-21.md) · [GAP-REGISTER](GAP-REGISTER.md) · [TASK-REGISTER](../20-DIRECTION/TASK-REGISTER.md) · [CONTRADICTIONS](CONTRADICTIONS.md) · [RESEARCH-LOG](../50-RESEARCH/RESEARCH-LOG.md)
+
+## D. Execution results for items 1–9 (2026-11-21)
+
+| # | Outcome | Evidence |
+|---|---|---|
+| 1 | **PARTIAL — issue #14 stays OPEN.** Dispatched run `44909412878`: cache seed worked, collect/audit/prepare/release all succeeded, new release `data-44909412878-1` published. Pin step failed because branch protection blocks the bot's direct push (`GH006`). The new corpus has **no vote tables**, so pinning it would regress production; the vote release remains pinned. Owner options A–D recorded in `docs/DECISION-DATA-REFRESH-2026-11-21.md`. | run log + `gh release list` + live `/api/votes total=189` |
+| 2 | **DONE** — `/api/coverage/dimensions` documented in `docs/API.md`, CLI prints dimensions, 4 new tests; pytest 408. | PR #59 |
+| 3 | **DONE** — dated P-1 supersession notes on real-time/60 s claims in strategy docs; `check-doc-truth.sh` 0. | PR #59 |
+| 4 | **DECIDED: DROP** party genealogy — no licence-complete source declares an ID-addressable relation; Wikidata relations have zero references, Party Facts codebook says coding incomplete, PolPaL licence NOT PROVEN, SER-PROM ShareAlike. Report: `docs/DECISION-PARTY-GENEALOGY.md`. | PR #59 |
+| 5 | **DECIDED: HOLD** Senate historical profiles — 0 exact `senat_guid` identifiers, name-only auto-link is prohibited; copy-DB baseline and traseism SHA recorded in `docs/SENATE-PROFILE-IMPACT.md`. | PR #59 |
+| 6 | **DONE** — shared `EmptyState`/`LoadingState` wired to Mps/Committees/Parties; footer shows real dataset release tag; lint 0/0, build 0, UI 24/24. H4-A newsletter/social proof remains unimplemented (no backing data). | PR #59 |
+| 7 | **DONE (local) / DEFER (cron)** — load test: 900 requests, 0 errors, p95 297.6 ms (parties p99 505.4 ms noted); evidence in `docs/LOAD-TEST-EVIDENCE.md`. Vercel cron deferred: no Vercel Function exists, a cron would 404. Staging NOT PROVEN. | PR #59 |
+| 8 | **PARTIAL** — Vercel build commit now tied to `afd1944` via GitHub status; runtime write path probed (`POST /api/admin/poll` → 503 without token) but a true disposable-instance write probe remains NOT PROVEN; historic licence seeding and research date remain unresolvable. | master probes |
+| 9 | **DONE** — mirror maintained after every change: `vault_sync.py`, `vault_lint.py`, `check-doc-truth.sh` all green at each checkpoint. | vault checks |
+
+### Revised top priority after this pass
+
+1. Owner chooses option A/B/C/D for the data workflow pin (item 1) — the only remaining P0 operational unknown.
+2. Then: staging load test, H4-A newsletter/social polish (needs data source), and the two decision follow-throughs (genealogy relabelling, Senate hold monitoring).
