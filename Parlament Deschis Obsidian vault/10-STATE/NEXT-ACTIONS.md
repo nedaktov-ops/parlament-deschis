@@ -74,7 +74,7 @@ Exhaustive register: [ACTION-PLAN](../20-DIRECTION/ACTION-PLAN.md). Quick view: 
 | 5 | **DECIDED: HOLD** Senate historical profiles — 0 exact `senat_guid` identifiers, name-only auto-link is prohibited; copy-DB baseline and traseism SHA recorded in `docs/SENATE-PROFILE-IMPACT.md`. | PR #59 |
 | 6 | **DONE** — shared `EmptyState`/`LoadingState` wired to Mps/Committees/Parties; footer shows real dataset release tag; lint 0/0, build 0, UI 24/24. H4-A newsletter/social proof remains unimplemented (no backing data). | PR #59 |
 | 7 | **DONE (local) / DEFER (cron)** — load test: 900 requests, 0 errors, p95 297.6 ms (parties p99 505.4 ms noted); evidence in `docs/LOAD-TEST-EVIDENCE.md`. Vercel cron deferred: no Vercel Function exists, a cron would 404. Staging NOT PROVEN. | PR #59 |
-| 8 | **PARTIAL** — Vercel build commit now tied to `afd1944` via GitHub status; runtime write path probed (`POST /api/admin/poll` → 503 without token) but a true disposable-instance write probe remains NOT PROVEN; historic licence seeding and research date remain unresolvable. | master probes |
+| 8 | **PARTIAL → A-16 RESOLVED** — via the authenticated Vercel MCP, the production alias `parlament-deschis.vercel.app` maps to deployment `dpl_AR9EZfrmk6UzG8vkpp5gWC32BKev` and commit `e7c9ab9`. Runtime write probe still needs a disposable instance; historic licence seeding and research date remain unresolvable. | Vercel MCP `list_deployment_aliases` + `list_deployments` |
 | 9 | **DONE** — mirror maintained after every change: `vault_sync.py`, `vault_lint.py`, `check-doc-truth.sh` all green at each checkpoint. | vault checks |
 
 ### Revised top priority after this pass
