@@ -26,12 +26,16 @@ Directly observed at `96e6fdd`. Interpretation of the live state is in
 | Item | Value |
 | --- | --- |
 | Branch | `review/completion-20261121` |
-| HEAD | `96e6fdd` (full `96e6fdd5d75c3f7f51a6888a693eeca40e954674`) |
+| HEAD at logging | `f7a2325` (was `96e6fdd` when the eight-commit list below was frozen) |
 | `origin/main` / GitHub default | `6b848f1` |
-| Ahead / behind | **8 ahead / 0 behind** |
-| Remote branch containing HEAD | none — all eight commits are unpushed |
+| Ahead / behind at logging | **14 ahead / 0 behind** |
+| Remote branch containing HEAD | `origin/review/completion-20261121` — pushed; PR #48 OPEN, not merged |
 
-Unpushed commits, oldest first (8):
+The eight commits below were the original unpushed set; six more evidence
+commits followed (`7d1c438`, `39732cb`, `82ee278`, `b80b8e0`, `e46eab8`,
+`f7a2325`) and were pushed with them. See [ACTION-LOG](ACTION-LOG.md) §A.
+
+Commits in the original unpushed set, oldest first (8):
 
 | Commit | Summary |
 | --- | --- |

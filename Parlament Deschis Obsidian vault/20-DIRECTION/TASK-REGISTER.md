@@ -209,3 +209,19 @@ must never be renumbered into a stable ID.
 Local green gates (pytest, ruff, lint, build, strict audit 275 known / 0 new,
 doc-truth, UI 24/24) apply to the working tree at `6fd6028` only. They are
 not evidence that anything is deployed.
+
+## F. Dated addendum — Wave 0/1 completions (2026-11-21)
+
+Section E above was true when written. The following tasks now have printed
+evidence and are marked complete **for the local/PR scope only**; their
+production follow-ups remain open (see [ACTION-LOG](../10-STATE/ACTION-LOG.md)):
+
+| Task | Completion scope | Evidence |
+|---|---|---|
+| T-2026-001 (audit reports + doc-truth gate) | local, committed | `7d1c438`; `check-doc-truth.sh` false-claims: 0 |
+| T-2026-008 (Vite conflict / approval ticks) | local docs | `W0.5` in [ACTION-LOG](../10-STATE/ACTION-LOG.md); shipped `^6.0.0`, `fb95e56` |
+| T-2026-011/012 (push, PR, CI green) | GitHub PR #48 | branch pushed exit 0; `gh pr checks 48` 4/4 SUCCESS |
+| T-2026-013 (evidence recording) | local docs | `docs/GATE-EVIDENCE-2026-11-21.md`, `docs/BACKUP-EVIDENCE-2026-11-21.md` |
+
+**Still open:** T-2026-002…007, 009, 010, 014…018 and every owner/deploy step
+(W1.4–W1.7). Nothing in this addendum changes the stable IDs above.

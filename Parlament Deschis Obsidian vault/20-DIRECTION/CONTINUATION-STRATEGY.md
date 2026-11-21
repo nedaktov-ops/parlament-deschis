@@ -16,7 +16,7 @@ source_commit: 96e6fdd
 
 > **Addendum (2026-11-21):** Re-anchored 2026-11-21 from `docs/CONTINUATION-STRATEGY-2026-11-21.md` §0.
 
-This is a canonical, navigable mirror of `docs/CONTINUATION-STRATEGY-2026-11-21.md`. Start at [START-HERE](../00-START/START-HERE.md) for the current snapshot and use [TASK-REGISTER](TASK-REGISTER.md) for ordered next work. The six authority rules in [MAINTENANCE-PROTOCOL](../00-START/MAINTENANCE-PROTOCOL.md) apply here too.
+This is a canonical, navigable mirror of `docs/CONTINUATION-STRATEGY-2026-11-21.md`. Start at [START-HERE](../00-START/START-HERE.md) for the current snapshot, use [TASK-REGISTER](TASK-REGISTER.md) for ordered next work, and read [ACTION-LOG](../10-STATE/ACTION-LOG.md) for the completed/remaining record and ranked next steps. The six authority rules in [MAINTENANCE-PROTOCOL](../00-START/MAINTENANCE-PROTOCOL.md) apply here too.
 
 **Mandate.** No guessing, no assumptions, no presumptions. Every claim is backed by code, a command with printed output, a git fact, a live probe, or a cited source. If evidence is absent, record `NOT PROVEN` with a named resolver. Work is real, non-destructive, versioned on GitHub, and gated by evidence.
 

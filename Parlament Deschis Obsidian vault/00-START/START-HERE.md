@@ -33,7 +33,7 @@ Published dataset: `data-20261117-T213500` — 3,388 persons, 7,349 prepared mem
 
 ## In progress / local-only
 
-Branch `review/completion-20261121` is 8 commits ahead / 0 behind `origin/main` (`6b848f1`), and **nothing has been pushed**. The eight unpushed commits are listed in [GIT-POSITION](../10-STATE/GIT-POSITION.md). CI is RED on `main` (the fixes that would make it green are local-only), and `main` has no branch protection. The local green is not the production state. See [GIT-POSITION](../10-STATE/GIT-POSITION.md).
+Branch `review/completion-20261121` was pushed and PR [#48](https://github.com/nedaktov-ops/parlament-deschis/pull/48) is OPEN with all four required checks SUCCESS (`test`, `audit`, `docker`, `evidence-guards`). Local HEAD `f7a2325` is 14 commits ahead of `origin/main` (`6b848f1`). `main` is still RED and unprotected because the PR has not been merged, and nothing has been deployed — the local green is not the production state. Full detail: [GIT-POSITION](../10-STATE/GIT-POSITION.md) and [ACTION-LOG](../10-STATE/ACTION-LOG.md).
 
 ## Not done / blocked
 
@@ -41,12 +41,14 @@ Production has **no vote data** (live `/api/votes` reports total 0; the publishe
 
 ## How to move forward
 
-1. Push the branch, open a PR, get CI green on `main`, and enable required checks / branch protection.
-2. Deploy the backend first (canonical routes and universal `meta`), then the frontend (single-prefix API paths).
-3. Fix the `cdep.ro` fetch path in the data workflow and publish a release that contains the ingested votes.
-4. Label the two switch definitions (1,217 group vs 2,002 group+party) and the two membership counts (7,349 prepared vs 7,358 raw asset) in docs and UI.
-5. Close the P1 vision gaps in dependency order (genealogy data, Senate profiles, multi-dimensional coverage, H3–H5 frontend states; drop or scope blog/donations).
-6. Refresh stale docs from the new live state, mirroring the licence/robots/version corrections already made.
+1. **Owner:** merge the already-green PR #48, then enable branch protection with the four required checks.
+2. **Owner:** deploy the backend first (canonical routes and universal `meta`), then the frontend (single-prefix API paths).
+3. **Agent:** start the `cdep.ro` retry/cache/offline fix on a branch now — external lead time is the critical path to any data release.
+4. **Agent:** seed the licence register and per-dimension coverage, then publish a release containing vote data (owner triggers the release/deploy).
+5. **Agent:** label 1,217 group / 785 party / 2,002 total switches and 7,358 raw / 7,349 prepared memberships.
+6. **Owner + agent:** record policy decisions (60 s poll, CSP enforcement, blog/donations), then close the vision gaps in dependency order.
+
+The completed-action evidence and the full ranked list are in [ACTION-LOG](../10-STATE/ACTION-LOG.md).
 
 For the ordered five-agent continuation plan, gates and session boundary, see [CONTINUATION-STRATEGY](../20-DIRECTION/CONTINUATION-STRATEGY.md).
 
@@ -64,7 +66,7 @@ Enforced by [MAINTENANCE-PROTOCOL](MAINTENANCE-PROTOCOL.md) and the machine cont
 ## Note index
 
 - **00-START** — [START-HERE](START-HERE.md) (this note)
-- **10-STATE** — [CURRENT-STATE](../10-STATE/CURRENT-STATE.md)
+- **10-STATE** — [ACTION-LOG](../10-STATE/ACTION-LOG.md), [CURRENT-STATE](../10-STATE/CURRENT-STATE.md)
 - **20-DIRECTION** — [CONTINUATION-STRATEGY](../20-DIRECTION/CONTINUATION-STRATEGY.md), [TASK-REGISTER](../20-DIRECTION/TASK-REGISTER.md), [VISION](../20-DIRECTION/VISION.md)
 - **30-SYSTEM** — [ARCHITECTURE](../30-SYSTEM/ARCHITECTURE.md)
 - **40-FRONTEND** — [DESIGN-CONTRACT](../40-FRONTEND/DESIGN-CONTRACT.md)
