@@ -37,3 +37,11 @@ frontend/.vite/
 .playwright-mcp/
 *.png
 COMPLETION-CERTIFICATE.md
+
+# Obsidian — per-machine UI state only; vault Markdown stays tracked
+Parlament Deschis Obsidian vault/.obsidian/workspace.json
+Parlament Deschis Obsidian vault/.obsidian/workspace-mobile.json
+Parlament Deschis Obsidian vault/.obsidian/cache/
+Parlament Deschis Obsidian vault/.obsidian/plugins/
+Parlament Deschis Obsidian vault/.obsidian/*.log
+!Parlament Deschis Obsidian vault/**/*.md
