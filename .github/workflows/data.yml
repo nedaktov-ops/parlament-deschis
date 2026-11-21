@@ -86,6 +86,29 @@ jobs:
           restore-keys: |
             thirdparty-sources-
 
+      # A failed run saves an almost-empty cache entry (~270 B). The offline
+      # fallback cannot work from that. Seed it from the official page archive
+      # published alongside the pinned dataset release. This is only a seed:
+      # the strict gates below still decide success, and a missing asset is
+      # logged rather than silently converted into a green build.
+      - name: Seed cdep archive from pinned release when cache is empty
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          count=$(find data/cache/cdep -type f 2>/dev/null | wc -l)
+          echo "restored cdep cache files: $count"
+          if [ "$count" -lt 100 ]; then
+            tag=$(cat data/latest-release.txt)
+            mkdir -p /tmp/pd-cache-seed
+            if gh release download "$tag" --repo "$GITHUB_REPOSITORY" \
+                --pattern 'pd-cdep-cache.tar.gz' --dir /tmp/pd-cache-seed; then
+              tar xzf /tmp/pd-cache-seed/pd-cdep-cache.tar.gz -C data/cache
+              echo "seeded cdep cache files: $(find data/cache/cdep -type f | wc -l)"
+            else
+              echo "no cdep cache asset on $tag; offline fallback cannot be seeded"
+            fi
+          fi
+
       # `--strict` is intentional on both attempts (see the header notes).
       # `if ...; then ... else ... fi` is used instead of `|| true` / a silent
       # skip: a failed online build is *observed*, and if the offline rebuild
