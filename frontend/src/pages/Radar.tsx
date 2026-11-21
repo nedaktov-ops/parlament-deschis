@@ -87,6 +87,7 @@ export default function Radar() {
   if (votesQuery.isLoading || positionQueries.some((q) => q.isLoading)) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
+        <h1 className="sr-only">{t("view.radar.title", "Roll-call alignment matrix")}</h1>
         <Skeleton className="h-8 w-32" />
         <Skeleton className="mt-2 h-4 w-64" />
         <p className="mt-2 text-sm text-slate-500">{t("loading", "Loading…")}</p>
@@ -97,6 +98,7 @@ export default function Radar() {
   if (votesQuery.isError || positionQueries.some((q) => q.isError)) {
     return (
       <div className="text-red-400 text-sm py-6 text-center">
+        <h1 className="sr-only">{t("view.radar.title", "Roll-call alignment matrix")}</h1>
         {t("view.voturi.loadError", "Failed to load votes.")}
       </div>
     );
