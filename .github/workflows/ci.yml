@@ -73,6 +73,11 @@ jobs:
           context: .
           push: false
           tags: parlament-deschis:ci
+          # The Dockerfile uses a BuildKit secret for the GitHub releases API,
+          # so the shared-runner 60 req/hour anonymous allowance cannot 403
+          # the dataset download. No new secret values are introduced.
+          secrets: |
+            github_token=${{ secrets.GITHUB_TOKEN }}
 
       - name: Prove the image serves the tool
         run: |
