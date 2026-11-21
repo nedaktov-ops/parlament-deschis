@@ -1004,7 +1004,7 @@ untracked entries; no `.env`, no lockfile rewrite, no vault changes.
 | CP5 | After Step 5A | `node scripts/check_routes_nav.mjs` | `ROUTES total=24 nav_links=29 unlinked=0 deprecated=0` → `PASS: every route…` | 0 |
 | CP6 | After Step 6 G2 | `uv run pytest -q` | same pass count as the untouched baseline (no regressions) | 0 |
 | CP7 | Final | `node scripts/check_i18n_keys.mjs && node scripts/check_routes_nav.mjs && (cd frontend && npm run lint && npm run build)` | all PASS lines | 0 |
-| CP8 | UI (conditional) | `python3 scripts/ui_validate.py http://127.0.0.1:5174` | `UI VALIDATION PASS: 24 routes, 0 JS errors, 0 axe violations` | 0, or **NOT PROVEN** if axe/asset/server unavailable |
+| CP8 | UI (conditional) | `python3 scripts/ui_validate.py http://127.0.0.1:5174` | `UI VALIDATION PASS: 24 routes, zero JavaScript errors, 0 axe violations` | 0, or **NOT PROVEN** if axe/asset/server unavailable |
 
 `nav_links=22` = 16 existing `NavLink`s (`router.tsx:247-294`) + 6 new analytics
 links. Deprecated routes (if Step 5B is used) are counted separately in

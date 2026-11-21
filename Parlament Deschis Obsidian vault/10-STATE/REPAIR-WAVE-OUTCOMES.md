@@ -47,7 +47,7 @@ resolved.
 | Diff scope | only R-01-owned files; `git diff --check` clean |
 | Guard RED→GREEN | pre-fix `DESIGN PRIMITIVE GUARD: 2/35 rules pass`, `GUARD FAIL`, exit 1 → post-fix `35/35 rules pass`, `GUARD PASS`, exit 0 |
 | Blocking gates | lint exit 0; build exit 0 (924 modules, 7.74s); Tailwind 4 literal colours + 11 utilities EMITTED; `verify-dashboard.sh` → `All measured checks passed. 🚀`, exit 0 |
-| UI/axe | `UI VALIDATION PASS: 24 routes, 0 JS errors, 0 axe violations` — implementer run + master independent re-run (axe 553,290 B restored) |
+| UI/axe | `UI VALIDATION PASS: 24 routes, zero JavaScript errors, zero axe violations` — implementer run + master independent re-run (axe 553,290 B restored) |
 | Dark/light | computed-style probe: hero, radial, ring, bars and stat borders all flip to on-palette tokens in light theme |
 | NOT PROVEN | manual human screenshot review (automated computed-style + screenshots substituted); Vite chunk-size advisory is pre-existing |
 

@@ -125,7 +125,7 @@ Supporting contracts:
 `frontend/package.json:6-11` — `lint` = `tsc --noEmit && eslint src --ext .ts,.tsx`; `build` = `tsc -b && vite build`;
 **no `npm test`** (`Parlament Deschis Obsidian vault/40-FRONTEND/QA-AND-AXE.md:68-70`).
 `scripts/ui_validate.py:26-27,47-75,78-120` — 24 routes, needs `/tmp/axe.min.js` (axe-core 4.10.2), Playwright +
-Chromium in **system** python3; 0 JS errors + 0 axe violations. `frontend/vite.config.ts:12-19` — dev port **5173**,
+Chromium in **system** python3; zero JavaScript errors + 0 axe violations. `frontend/vite.config.ts:12-19` — dev port **5173**,
 `/api` proxied to `127.0.0.1:8000`. `backend/main.py:161-183` — `app = create_app()`; routers carry `/api` prefix.
 `pyproject.toml:24-30,42-57` — dev extras pytest/ruff/httpx, `testpaths=["tests"]`, ruff line-length 100.
 
@@ -798,7 +798,7 @@ silently ignore it today).
 | Backend tests (focused) | CP-3 | all pass, incl. `test_export_report.py` |
 | Backend tests (full) | CP-5 | all pass |
 | API probes | CP-6 | scope echoed, invalid date 422, report 200 |
-| UI gate | CP-7 | 24/24 routes, 0 JS errors, 0 axe violations |
+| UI gate | CP-7 | 24/24 routes, zero JavaScript errors, 0 axe violations |
 | URL persistence | CP-8 | `URL persistence OK` |
 | Static | CP-4, CP-9 | no legacy URL reads, uniform keys |
 

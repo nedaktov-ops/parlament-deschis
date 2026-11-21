@@ -955,7 +955,7 @@ cd /home/nedaktov/parlament-deschis/frontend && npx vite --host 127.0.0.1 --port
 cd /home/nedaktov/parlament-deschis && python3 scripts/ui_validate.py http://127.0.0.1:5174
 ```
 Expected final line:
-`UI VALIDATION PASS: 24 routes, 0 JS errors, 0 axe violations` · exit **0**.
+`UI VALIDATION PASS: 24 routes, zero JavaScript errors, 0 axe violations` · exit **0**.
 If `/tmp/axe.min.js` or Chromium is missing, print `NOT PROVEN` for this gate —
 **never** mark it PASS.
 
