@@ -51,7 +51,7 @@ export default function Ideology() {
     queryFn: () => ideology(year),
   });
 
-  const data = ideologyQuery.data?.data ?? [];
+  const data = useMemo(() => ideologyQuery.data?.data ?? [], [ideologyQuery.data]);
   const dataExists = ideologyQuery.data?.data_exists ?? false;
 
   // Group data by year for the year selector
@@ -72,44 +72,6 @@ export default function Ideology() {
         : data,
     [data, selectedYear],
   );
-
-  if (ideologyQuery.isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="mt-2 h-4 w-64" />
-        <p className="mt-2 text-sm text-slate-500">{t("loading", "Loading…")}</p>
-      </div>
-    );
-  }
-
-  if (ideologyQuery.isError) {
-    return (
-      <div className="text-red-400 text-sm py-6 text-center">
-        {t("view.voturi.loadError", "Failed to load votes.")}
-      </div>
-    );
-  }
-
-  if (!dataExists || filteredData.length === 0) {
-    return (
-      <div className="space-y-6">
-        <section className="py-2" data-enter>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100">
-            {t("view.ideology.title", "Ideological spatial map")}
-          </h1>
-          <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-3xl">
-            {t("view.ideology.intro", "Ideological positioning of parties (left-right, authoritarian-libertarian) based on CHES and PopuList data.")}
-          </p>
-        </section>
-        <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>
-          <div className="text-slate-500 text-sm py-12 text-center">
-            {t("empty.ideology", "Ideological data not yet available.")}
-          </div>
-        </section>
-      </div>
-    );
-  }
 
   // Build scatter plot data
   const scatterData = filteredData.map((d: IdeologyEntry) => ({
@@ -220,7 +182,45 @@ export default function Ideology() {
       window.removeEventListener("resize", onResize);
       chart.dispose();
     };
-  }, [filteredData, scatterData, colorMap]);
+  }, [filteredData, scatterData, colorMap, t]);
+
+  if (ideologyQuery.isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="mt-2 h-4 w-64" />
+        <p className="mt-2 text-sm text-slate-500">{t("loading", "Loading…")}</p>
+      </div>
+    );
+  }
+
+  if (ideologyQuery.isError) {
+    return (
+      <div className="text-red-400 text-sm py-6 text-center">
+        {t("view.voturi.loadError", "Failed to load votes.")}
+      </div>
+    );
+  }
+
+  if (!dataExists || filteredData.length === 0) {
+    return (
+      <div className="space-y-6">
+        <section className="py-2" data-enter>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100">
+            {t("view.ideology.title", "Ideological spatial map")}
+          </h1>
+          <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-3xl">
+            {t("view.ideology.intro", "Ideological positioning of parties (left-right, authoritarian-libertarian) based on CHES and PopuList data.")}
+          </p>
+        </section>
+        <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>
+          <div className="text-slate-500 text-sm py-12 text-center">
+            {t("empty.ideology", "Ideological data not yet available.")}
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

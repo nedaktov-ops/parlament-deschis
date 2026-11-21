@@ -81,6 +81,51 @@ def _parse_date(s: str | None, default: date) -> date:
         raise HTTPException(status_code=422, detail=f"invalid date: {s}") from exc
 
 
+def _analytics_meta(count: int) -> dict:
+    """Fresh provenance stamp carried by every analytics response.
+
+    ``generated_at`` is computed per request and is deliberately never
+    memoised: a cached payload must not freeze the timestamp. ``count`` is the
+    number of data rows actually returned, so an empty result reports 0 rather
+    than an invented figure.
+    """
+    return {"generated_at": datetime.now(UTC).isoformat(), "count": count}
+
+
+def _parse_vote_bound(value: str | None, param: str) -> date | None:
+    """Parse a vote date bound (ISO ``YYYY-MM-DD`` or published ``DD.MM.YYYY``).
+
+    An unparseable bound is a client error, not a filter that silently drops
+    every row — fail with 422 so the caller knows the query was rejected.
+    """
+    if not value:
+        return None
+    text = value.strip()
+    parsers = (
+        date.fromisoformat,
+        lambda s: datetime.strptime(s, "%d.%m.%Y").date(),
+    )
+    for parser in parsers:
+        try:
+            return parser(text)
+        except ValueError:
+            continue
+    raise HTTPException(
+        status_code=422,
+        detail=f"invalid {param}: {value!r} (expected YYYY-MM-DD or DD.MM.YYYY)",
+    )
+
+
+def _vote_day(vote_time: str | None) -> date | None:
+    """Extract the calendar day from a published ``DD.MM.YYYY HH:MM`` value."""
+    if not vote_time:
+        return None
+    try:
+        return datetime.strptime(vote_time.split(" ", 1)[0], "%d.%m.%Y").date()
+    except ValueError:
+        return None
+
+
 def _require_admin_token(
     token: str | None,
     operation: str = "admin operations",
@@ -385,10 +430,12 @@ def coverage_detailed(db: Session = Depends(get_db)):
 @router.get("/committees")
 @cache_result("committees")
 def committees(as_of: str | None = None, db: Session = Depends(get_db)):
-    """Committee list with active dated memberships, when committee data exists.
+    """Committees with at least one active dated membership on ``as_of``.
 
-    Committee tenures are not ingested yet, so the current corpus returns an
-    empty list instead of a fabricated composition or a missing-route error.
+    The corpus does carry dated committee chair/member tenures, so this endpoint
+    returns the committees active on the reference date (default: today).
+    Committees without an active tenure are omitted rather than returned with a
+    fabricated composition.
     """
     from sqlalchemy import or_, select
 
@@ -1065,7 +1112,8 @@ def votes_list(
 
     Empty table returns ``data_exists:false`` with ``data:[]`` — never 404/500.
     ``vote_time`` is published by cdep.ro as ``DD.MM.YYYY HH:MM``; ``from``/``to``
-    are therefore applied as string filters on that published value.
+    accept that format or ISO ``YYYY-MM-DD`` and are compared as calendar dates
+    (a raw string compare on ``DD.MM.YYYY`` is not chronological).
     """
     from sqlalchemy import select
 
@@ -1077,10 +1125,18 @@ def votes_list(
 
     rows = db.execute(stmt.order_by(Vote.vote_time.desc().nullslast())).scalars().all()
 
-    if from_date:
-        rows = [v for v in rows if v.vote_time and v.vote_time >= from_date]
-    if to_date:
-        rows = [v for v in rows if v.vote_time and v.vote_time <= to_date]
+    start = _parse_vote_bound(from_date, "from")
+    end = _parse_vote_bound(to_date, "to")
+    if start and end and end < start:
+        raise HTTPException(status_code=422, detail="to must be >= from")
+    if start or end:
+        rows = [
+            v
+            for v in rows
+            if (day := _vote_day(v.vote_time)) is not None
+            and (start is None or day >= start)
+            and (end is None or day <= end)
+        ]
 
     total = len(rows)
     data_exists = total > 0
@@ -1260,6 +1316,7 @@ def vote_cohesion(
         "data_exists": data_exists,
         "data": data,
         "denominator": "resolved positions in scope",
+        "meta": _analytics_meta(len(data)),
     }
 
 
@@ -1267,12 +1324,16 @@ def vote_cohesion(
 def vote_activity(
     chamber: str | None = Query(None, pattern=r"^(deputies|senate)$"),
     legislature: str | None = Query(None, pattern=r"^\d{4}$"),
-    from_date: str | None = Query(None, alias="from", description="Start date (ISO)"),
-    to_date: str | None = Query(None, alias="to", description="End date (ISO)"),
-    step_days: int = Query(30, ge=1, le=365),
+    from_date: str | None = Query(None, alias="from", description="Start date (ISO or DD.MM.YYYY)"),
+    to_date: str | None = Query(None, alias="to", description="End date (ISO or DD.MM.YYYY)"),
     db: Session = Depends(get_db),
 ):
-    """Roll-call vote activity over time buckets."""
+    """Roll-call vote activity, one bucket per published day.
+
+    ``from``/``to`` are applied to the published ``vote_time`` date. There is
+    deliberately no ``step_days`` parameter: the chart consumes daily buckets,
+    and an accepted-but-ignored granularity knob was a silent contract breach.
+    """
     from sqlalchemy import select
 
     stmt = select(
@@ -1288,6 +1349,19 @@ def vote_activity(
         stmt = stmt.where(Vote.legislature == legislature)
 
     rows = db.execute(stmt.order_by(Vote.vote_time)).all()
+
+    start = _parse_vote_bound(from_date, "from")
+    end = _parse_vote_bound(to_date, "to")
+    if start and end and end < start:
+        raise HTTPException(status_code=422, detail="to must be >= from")
+    if start or end:
+        rows = [
+            r
+            for r in rows
+            if (day := _vote_day(r[0])) is not None
+            and (start is None or day >= start)
+            and (end is None or day <= end)
+        ]
     data_exists = len(rows) > 0
 
     buckets: dict[str, dict[str, int]] = {}
@@ -1313,10 +1387,15 @@ def vote_activity(
         "data_exists": data_exists,
         "data": list(buckets.values()),
         "buckets": len(buckets),
+        "meta": _analytics_meta(len(buckets)),
     }
 
 
-@router.get("/api/votes/scorecard")
+@router.get("/votes/scorecard")
+# Legacy alias: the frontend client still prefixes this path with ``/api``.
+# Kept off the schema so OpenAPI advertises only the canonical single-prefix
+# route; remove once the client is updated (flagged to the master agent).
+@router.get("/api/votes/scorecard", include_in_schema=False)
 def vote_scorecard(
     chamber: str | None = Query(None, pattern=r"^(deputies|senate)$"),
     legislature: str | None = Query(None, pattern=r"^\d{4}$"),
@@ -1449,7 +1528,26 @@ def vote_scorecard(
     }
 
 
-@router.get("/api/analytics/ideology")
+# Starlette matches routes in declaration order. ``/votes/{vote_id}`` was
+# declared earlier, so it swallowed ``GET /api/votes/scorecard`` as a lookup
+# for ``vote_id="scorecard"`` (returning an empty detail payload instead of the
+# scorecard). Move the static path ahead of the dynamic one so the documented
+# URL resolves to the scorecard handler.
+_scorecard_route = next(
+    r
+    for r in router.routes
+    if getattr(r, "path", None) == "/api/votes/scorecard" and r.include_in_schema
+)
+_vote_detail_index = next(
+    i for i, r in enumerate(router.routes) if getattr(r, "path", None) == "/api/votes/{vote_id}"
+)
+router.routes.remove(_scorecard_route)
+router.routes.insert(_vote_detail_index, _scorecard_route)
+
+
+@router.get("/analytics/ideology")
+# Legacy alias for the frontend's double-prefixed path (see scorecard above).
+@router.get("/api/analytics/ideology", include_in_schema=False)
 def ideology_data(
     year: str | None = Query(None, pattern=r"^\d{4}$"),
     db: Session = Depends(get_db),
@@ -1484,10 +1582,13 @@ def ideology_data(
 
     rows = db.execute(stmt).all()
     if not rows:
+        # No CHES covariates in the corpus: report the absence honestly rather
+        # than inventing party positions, and keep meta.count at a real zero.
         return {
             "status": "ok",
             "data_exists": False,
             "data": [],
+            "meta": _analytics_meta(0),
         }
 
     data = []
@@ -1513,6 +1614,7 @@ def ideology_data(
         "status": "ok",
         "data_exists": True,
         "data": data,
+        "meta": _analytics_meta(len(data)),
     }
 
 

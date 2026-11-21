@@ -7,7 +7,7 @@ import Skeleton from "../components/ui/Skeleton";
 
 const CHOICE_COLOR: Record<string, string> = {
   yes: "#10b981", // emerald-500
-  no: "#ef4444", // rose-500
+  no: "#f87171", // red-400: rose-500 (#ef4444) is only 4.03:1 on the row background
   abstain: "#f59e0b", // amber-500
   not_voting: "#94a3b8", // slate-400
 };
@@ -122,7 +122,12 @@ export default function Radar() {
             {t("empty.rollcall", "Roll-call vote data is not yet available for this legislature.")}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div
+            className="overflow-x-auto"
+            tabIndex={0}
+            role="region"
+            aria-label={t("aria.votesScroll", "Scrollable table of plenary votes")}
+          >
             <table
               role="table"
               aria-label={t("aria.rollcallTable", "Table of plenary votes and each MP's position")}

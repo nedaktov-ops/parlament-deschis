@@ -1,5 +1,21 @@
 # R-D4.2: Frontend Error Tracking - Evidence Log
 
+> **Current-state correction (2026-11-21, Agent D completion-review audit).**
+> The original log below is preserved verbatim as a historical record, but its
+> central artifact claim is **verified false** and its PASS verdict is
+> **withdrawn**. Re-verification on 2026-11-21:
+>
+> - `frontend/src/hooks/` does not exist (`ls: No such file or directory`).
+> - `grep -RIn 'useErrorBoundary\|useErrorReporter' frontend/src` → 0 hits
+>   (exit 1).
+> - `git ls-files | grep -i errorboundary` → no tracked file.
+>
+> No shipped artifact implements the `useErrorBoundary` / `useErrorReporter`
+> hooks that this log claims to have added. The "PASS" verdict below is
+> therefore unsupported by evidence and must not be cited as proof that error
+> tracking exists. This is an annotation, not a rewrite of the original log;
+> re-implement the hooks and re-verify before restoring any PASS claim.
+
 ## Supervisor Validation
 
 ### File Ownership Check
@@ -42,3 +58,8 @@
 
 ## Verdict
 **PASS** - Error tracking infrastructure implemented with supervisor validation.
+
+> **Withdrawn (2026-11-21):** see the current-state correction at the top of
+> this file. The claimed `frontend/src/hooks/useErrorBoundary.ts` does not exist
+> in the working tree or in git, so this verdict has no shipped artifact behind
+> it and is not a valid evidence claim.

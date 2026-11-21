@@ -394,6 +394,7 @@ def cmd_ingest_votes(args) -> int:
 
     total_votes_seen = 0
     total_votes_written = 0
+    total_votes_backfilled = 0
     total_positions_seen = 0
     total_positions_written = 0
     total_unresolved = 0
@@ -494,6 +495,17 @@ def cmd_ingest_votes(args) -> int:
             else:
                 vote = existing
                 votes_written_this_run = 0
+                # A vote imported before snapshot hashing existed keeps a NULL
+                # hash forever: the dedup short-circuit never revisits it.
+                # Backfill from the bytes fetched in this run, using the same
+                # day-index hash as the create path, but never overwrite
+                # provenance that is already present. The audit's
+                # vote_evidence check requires every vote to be traceable.
+                if not existing.snapshot_hash:
+                    existing.snapshot_hash = day_hash
+                    total_votes_backfilled += 1
+                if not existing.source_url:
+                    existing.source_url = nominal_xml_res.url
 
             # Insert VotePositions
             positions_written_this_run = 0
@@ -535,6 +547,7 @@ def cmd_ingest_votes(args) -> int:
         print(f"  votes seen:           {total_votes_seen}")
         print(f"  positions seen:       {total_positions_seen}")
         print(f"  votes written:        {total_votes_written}")
+        print(f"  votes backfilled:     {total_votes_backfilled}")
         print(f"  positions written:    {total_positions_written}")
         print(f"  positions quarantined:{total_unresolved} (rejected: {total_rejected})")
     else:
@@ -543,6 +556,7 @@ def cmd_ingest_votes(args) -> int:
         print(f"  votes seen:           {total_votes_seen}")
         print(f"  positions seen:       {total_positions_seen}")
         print(f"  would write votes:    {total_votes_written}")
+        print(f"  would backfill votes: {total_votes_backfilled}")
         print(f"  would write positions:{total_positions_written}")
         print(f"  would quarantine:     {total_unresolved} (rejected: {total_rejected})")
 

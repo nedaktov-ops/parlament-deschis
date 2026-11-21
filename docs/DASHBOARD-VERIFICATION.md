@@ -1,13 +1,50 @@
 # Dashboard Implementation Verification Report
 
-**Date:** 2026-11-19
-**Status:** Evidence snapshot — **NOT deployment-ready**. The production UI
-validation gate is RED (3 of 18 routes crash with React #310). A prior version
-of this document declared deployment readiness while its own checklist was
-unticked and its production numbers were wrong; that claim is withdrawn.
+**Date:** 2026-11-19 (snapshot); current-state addendum 2026-11-21 below.
+**Status (as of the 2026-11-19 snapshot):** Evidence snapshot — **NOT
+deployment-ready**. The production UI validation gate was RED at that time
+(3 of 18 routes crashed with React #310). A prior version of this document
+declared deployment readiness while its own checklist was unticked and its
+production numbers were wrong; that claim is withdrawn. The 2026-11-21 addendum
+below records re-verified current values; this audit did **not** re-run the UI
+validator, so the current UI/axe gate is **NOT PROVEN** here.
 
 All numbers below come from commands re-run on 2026-11-19. Raw outputs are quoted
-so the figures can be re-checked rather than trusted.
+so the figures can be re-checked rather than trusted. They are preserved as a
+dated snapshot and are not silently rewritten — see §0 for the current state.
+
+---
+
+## 0. Current-state addendum (2026-11-21, read-only re-verification)
+
+The figures in §1 are an accurate **2026-11-19 snapshot**. Values verified live
+on 2026-11-21 (`curl -fsS .../api/dashboard/stats` and `.../api/health`,
+HTTP 200; release pin read from `data/latest-release.txt`):
+
+| Field | 2026-11-19 snapshot | Live 2026-11-21 | Source |
+|---|---:|---:|---|
+| `dataset.release_tag` | via `data/latest-release.txt` | `data-20261117-T213500` | `/api/health`, `data/latest-release.txt` |
+| `persons` | 3388 | 3388 | `/api/dashboard/stats` |
+| `memberships` | 7358 | **7349** | `/api/dashboard/stats`, `/api/health` |
+| `switches` | 2002 | 2002 | `/api/dashboard/stats` |
+| `committees` | 26 | 26 | `/api/dashboard/stats` |
+| `legislatures` | 20 | 20 | `/api/dashboard/stats` |
+| `parties` | 37 | 37 | `/api/dashboard/stats` |
+| `cross_chamber` | 39 | 39 | `/api/dashboard/stats` |
+| `coverage_score` | 100 | 100 | `/api/dashboard/stats` |
+
+The membership count drifted 7,358 → 7,349 after the snapshot; treat **7,349**
+as the live figure and 7,358 as historical. All other fields are unchanged.
+`computed_at` is regenerated per request (live 2026-11-21T07:47:58Z), as §1
+already notes.
+
+The §3 RED UI gate (3 routes, React #310) reflects the **pre-integration**
+2026-11-19 snapshot. The remediation ledger (`docs/remediation/STATE.md`,
+P0-1/P0-7 and Wave 3) records those crashes as subsequently fixed, with 18/18
+routes at zero JavaScript errors and zero axe violations on the integrated tree. This audit
+could not re-run `scripts/ui_validate.py` (no playwright/chromium here), so the
+**current** UI/axe state is **NOT PROVEN** by this addendum — do not read it as a
+current PASS claim, and do not treat the historical RED as a current failure.
 
 ---
 
