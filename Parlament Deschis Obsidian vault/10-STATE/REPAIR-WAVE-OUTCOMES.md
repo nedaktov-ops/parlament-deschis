@@ -69,6 +69,18 @@ resolved.
 
 ## W2 — Scope + counts + states (R-03, R-04, R-05) — **IN PROGRESS (R-03 PASS)**
 
+### R-04 — Count / definition honesty — **PASS**
+
+| Item | Evidence |
+|---|---|
+| Commit | `bde612d` — 29 files, 670 insertions / 222 deletions (1 new test) |
+| Scope | 29 R-04-owned files only; `git diff --check` clean; index.css/router/components/vault untouched |
+| Backup | `/tmp/opencode/R-04-20261121T201731Z`, SHA256SUMS `140001d3…`, 30 files all `OK` |
+| Blocking gates | ruff clean; pytest **419 passed**; lint 0; build exit 0; API probes `stats: 1217 0 1217`, `/coverage/summary` with `definitions`; UI gate 24/24, zero JavaScript errors, zero axe violations (master re-run) |
+| NOT PROVEN | pinned-release triple `1217 / 785 / 2002` (no pinned asset available locally; R1 definitional evidence only); `/traseism` in-browser label check (pre-existing redirect to `/`, source labels verified instead); null rebellion/loyalty branches unit-tested but not exercised by local data |
+
+**Decision:** R-04 PASS. Next: R-05 (shared states) — serial; edits `i18n.ts`, pages and components already touched by R-03/R-04.
+
 ### R-03 — Unified scope / as_of — **PASS**
 
 | Item | Evidence |
@@ -97,3 +109,4 @@ resolved.
 | 2026-11-21 | W1/R-01 | PASS | guard RED→GREEN, lint/build/Tailwind/verify-dashboard green, UI 24/24 zero axe (master re-run) | continue W1 with R-02 (layout/type) |
 | 2026-11-21 | W1 overall | AMBER | R-01 and R-02 owned gates PASS; 2 edge-probe rows are proven pre-existing (stale probe UUID, /grafice overflow) | proceed W2 with residuals tracked (grafice overflow -> R-08; probe UUID -> recipe maintenance) |
 | 2026-11-21 | W2/R-03 | PASS | ruff clean, pytest 412, lint/build green, API probes incl. 422, UI 24/24 zero axe (master re-run), URL persistence OK | continue W2 with R-04 (counts) |
+| 2026-11-21 | W2/R-04 | PASS | ruff clean, pytest 419, lint/build green, API probes 1217/1217/0, UI 24/24 zero axe (master re-run) | continue W2 with R-05 (states) |
