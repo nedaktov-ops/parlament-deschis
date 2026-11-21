@@ -55,7 +55,7 @@ export default function PartyTimeline() {
     queryFn: fetchTimeline,
   });
 
-  const rows = timeline.data?.data ?? [];
+  const rows = useMemo(() => timeline.data?.data ?? [], [timeline.data]);
   const gaps = timeline.data?.gaps;
   // Derive the dated-join total from the rows already fetched by this page.
   const datedJoins = rows.reduce((sum, p) => sum + p.dated_joins, 0);

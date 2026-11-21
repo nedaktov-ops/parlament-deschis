@@ -30,7 +30,7 @@ export default function CoverageView() {
     queryFn: () => api.coverage_detailed(),
   });
 
-  const rows = coverage.data ?? [];
+  const rows = useMemo(() => coverage.data ?? [], [coverage.data]);
   const totals = useMemo(() => {
     const totalMemberships = rows.reduce((sum, r) => sum + r.total_memberships, 0);
     const datedMemberships = rows.reduce(

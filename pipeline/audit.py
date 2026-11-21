@@ -38,9 +38,11 @@ from .db import (
     Membership,
     Organization,
     Person,
+    SourceLicense,
     Vote,
     VotePosition,
 )
+from .licenses import COMPATIBLE_LICENSES, REGISTER
 from .normalize import name_sort_key, normalize_name
 from .parse.cdep_group import parse_group_ledger, parse_group_list
 from .parse.cdep_roster import parse_roster
@@ -1129,6 +1131,55 @@ def check_vote_evidence(session: Session) -> list[Finding]:
     return findings
 
 
+def check_license_quarantine(session: Session) -> list[Finding]:
+    """Enforce the licence quarantine on the rows that are actually stored.
+
+    ``redistributable=1`` may only be set on a CC0, CC BY 4.0 or OGL-ROU-1.0
+    source. The database CHECK constraint covers the licence id, but it cannot
+    express two register-level rules that this check adds:
+
+    * a source declared cross-check-only in :mod:`pipeline.licenses` may never
+      be copied - notably ``vot_parlament``, whose CC BY 4.0 id passes the
+      constraint but which publishes with ``Content-Signal: ai-train=no``;
+    * a ShareAlike row may never be copied even if its id looks compatible.
+
+    An empty register is deliberately **not** a finding. The pinned release
+    asset predates the register (0 rows); reporting "not seeded" here would
+    make the reviewed strict baseline fail without detecting a quarantine
+    breach. Seeding is covered by the ``licenses-seed`` command and its
+    row-count gate; this check covers quarantine only. This mirrors
+    ``check_vote_evidence``, which reports nothing before votes are imported.
+
+    A correctly seeded register therefore returns no findings.
+    """
+    cross_check_only = {entry.source_name for entry in REGISTER if not entry.redistributable}
+    findings: list[Finding] = []
+    for row in session.scalars(select(SourceLicense)):
+        reasons: list[str] = []
+        if row.redistributable and row.license_id not in COMPATIBLE_LICENSES:
+            reasons.append(
+                f"licence {row.license_id!r} is not compatible with the CC BY 4.0 dataset"
+            )
+        if row.redistributable and row.source_name in cross_check_only:
+            reasons.append("source is declared cross-check-only in the licence register")
+        if row.redistributable and row.share_alike:
+            reasons.append("ShareAlike values may not be redistributed")
+        if reasons:
+            findings.append(
+                Finding(
+                    check="license_quarantine",
+                    severity="error",
+                    detail=f"{row.source_name}: {'; '.join(reasons)}",
+                    context={
+                        "source_name": row.source_name,
+                        "license_id": row.license_id,
+                        "redistributable": bool(row.redistributable),
+                    },
+                )
+            )
+    return findings
+
+
 CHECKS = {
     "mandate_coverage": check_mandate_coverage,
     "overlap": check_overlaps,
@@ -1141,6 +1192,7 @@ CHECKS = {
     "missing_start": check_missing_start,
     "batched_dates": check_batched_dates,
     "vote_evidence": check_vote_evidence,
+    "license_quarantine": check_license_quarantine,
 }
 
 

@@ -10,6 +10,7 @@ from pipeline.audit import (
     Finding,
     audit,
     check_index_reconciliation,
+    check_license_quarantine,
     check_mandate_coverage,
     check_roster_reconciliation,
     finding_fingerprint,
@@ -23,10 +24,12 @@ from pipeline.db import (
     Membership,
     Organization,
     Person,
+    SourceLicense,
     init_db,
     make_engine,
     make_session_factory,
 )
+from pipeline.licenses import ensure_source_licenses
 
 
 @pytest.fixture
@@ -158,6 +161,7 @@ def test_clean_database_has_no_audit_errors(session, monkeypatch):
         "missing_start",
         "batched_dates",
         "vote_evidence",
+        "license_quarantine",
     }
 
 
@@ -474,3 +478,43 @@ def test_non_strict_gate_never_fails(session, tmp_path, monkeypatch):
     _write_baseline(empty_baseline, [])
 
     assert _run_gate(db_path, empty_baseline, strict=False) == 0
+
+
+# --- W2.1: licence quarantine ------------------------------------------------
+# The pinned release corpus has 0 source_license rows, so this check must add
+# 0 findings there (both empty and correctly seeded registers are clean).
+
+
+def test_license_quarantine_is_clean_on_empty_and_seeded_register(session):
+    assert check_license_quarantine(session) == []
+    ensure_source_licenses(session)
+    assert check_license_quarantine(session) == []
+
+
+def test_license_quarantine_flags_a_cross_check_source_marked_redistributable(session):
+    ensure_source_licenses(session)
+    row = session.get(SourceLicense, "vot_parlament")
+    # CC BY 4.0 satisfies the DB CHECK constraint; the register still forbids it.
+    assert row.license_id == "CC-BY-4.0"
+    row.redistributable = True
+    session.commit()
+    findings = check_license_quarantine(session)
+    assert len(findings) == 1
+    assert findings[0].check == "license_quarantine"
+    assert findings[0].severity == "error"
+    assert "cross-check-only" in findings[0].detail
+
+
+def test_license_quarantine_flags_a_share_alike_row_marked_redistributable(session):
+    session.add(
+        SourceLicense(
+            source_name="forged_share_alike",
+            license_id="CC-BY-4.0",
+            redistributable=True,
+            share_alike=True,
+        )
+    )
+    session.commit()  # the DB constraint only checks licence_id
+    findings = check_license_quarantine(session)
+    assert len(findings) == 1
+    assert "ShareAlike" in findings[0].detail

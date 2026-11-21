@@ -24,6 +24,7 @@ from .db import (
     Membership,
     Organization,
     Person,
+    SourceLicense,
     get_session,
     init_db,
     make_engine,
@@ -31,6 +32,7 @@ from .db import (
 )
 from .export import write_export
 from .ingest import ingest_cdep_group_ledger, ingest_senator_profile, seed_key_events
+from .licenses import ensure_source_licenses
 from .parse.cdep_group import parse_group_ledger
 from .parse.cdep_votes import (
     chamber_for_cam,
@@ -70,9 +72,29 @@ def _get_legislature_dates(leg: str) -> tuple[date | None, date | None]:
 
 def cmd_init(args) -> int:
     session = get_session(args.db)
+    # The licence register is setup state: seed it before any data is written.
+    licenses = ensure_source_licenses(session)
     seed_key_events(session)
     session.commit()
-    print("Database initialized and legislature key events seeded.")
+    print(f"Database initialized; legislature key events and {licenses} licence rows seeded.")
+    return 0
+
+
+def cmd_licenses_seed(args) -> int:
+    """Seed the licence register into source_license (idempotent, local only).
+
+    No ``--apply`` gate: unlike the external-fetch ingesters, this only upserts
+    fixed rows into its own table, is safe to re-run, and touches no data that
+    a previous run did not already own. It follows ``init`` / ``coverage
+    --refresh`` (commit directly) rather than the dry-run ingesters.
+    """
+    session = get_session(args.db)
+    try:
+        written = ensure_source_licenses(session)  # commits internally
+        total = session.scalar(select(func.count()).select_from(SourceLicense))
+    finally:
+        session.close()
+    print(f"licence register seeded: {written} entries written, {total} rows in source_license")
     return 0
 
 
@@ -941,11 +963,17 @@ def cmd_build_corpus(args) -> int:
     init_db(engine)
     session = make_session_factory(engine)()
     try:
+        # data.yml builds data/parlament-real.db here, audits it, then runs
+        # scripts/prepare_db.py into the shipped data/parlament.db. Seeding
+        # before ingest_corpus is the last point at which the register is
+        # present in the DB that prepare_db.py copies into the release.
+        licence_rows = ensure_source_licenses(session)
         stats = ingest_corpus(session, corpus)
         session.commit()
     finally:
         session.close()
     print("corpus ingest:", stats)
+    print(f"licence register: {licence_rows} rows seeded")
 
     # Features 2 / 11: committees and switch waves are part of the shippable
     # corpus. The API serves a PINNED release database, so anything not built
@@ -1008,6 +1036,11 @@ def main(argv=None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("init", help="initialize DB + seed legislatures").set_defaults(fn=cmd_init)
+
+    sub.add_parser(
+        "licenses-seed",
+        help="seed the 15-entry licence register into source_license (idempotent)",
+    ).set_defaults(fn=cmd_licenses_seed)
 
     p_ingest = sub.add_parser("ingest", help="live polite ingest from cdep.ro/senat.ro")
     p_ingest.add_argument("--legislature", default="2024", help="legislature (e.g. 2024)")

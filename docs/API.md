@@ -356,6 +356,58 @@ endpoints documented above):
 | `GET /api/analytics/switch-leaderboard` | MPs ranked by switch count |
 | `GET /api/export/report` | Aggregated transparency report |
 
+## Count definitions
+
+Three published totals need a label before they are compared: two different
+"switch" definitions and two different "membership" artifacts. **These are
+definitional differences, not data bugs.** Counts come from the release pinned
+in `data/latest-release.txt`; read that file for the current tag rather than
+hard-coding one here.
+
+### Switch counts
+
+| Definition | Count | Where it is published |
+|---|---:|---|
+| Group switches (`switch_group`) | 1,217 | `GET /api/export/report`, `GET /api/traseism/summary` |
+| Party switches (`switch_party`) | 785 | Component of the dashboard total only; not a standalone published field |
+| All switch events (group + party) | 2,002 | `GET /api/dashboard/stats` → `switches` |
+
+`GET /api/dashboard/stats` counts **both** event types, so its `switches` value
+is **2,002** (1,217 group + 785 party). `GET /api/export/report` and
+`GET /api/traseism/summary` count **group switches only**, so they report
+**1,217**. Evidence from current source:
+
+- `backend/routers/api.py:1047-1049` — the stats query uses
+  `Event.type.in_(["switch_group", "switch_party"])`.
+- `backend/routers/exports.py:72` — the report total uses
+  `Event.type == "switch_group"`.
+
+The pinned release DB confirms the split: `switch_group=1217`,
+`switch_party=785` (sum 2,002), as recorded in
+`docs/AUDIT-RESOLUTIONS-2026-11-21.md` (R1).
+
+### Membership counts
+
+| Artifact | Count | Definition |
+|---|---:|---|
+| Raw release asset | 7,358 | Every membership row in the downloaded GitHub release asset named by `data/latest-release.txt` |
+| Prepared runtime DB | 7,349 | The same corpus after `scripts/prepare_db.py` removes 9 duplicate closed stints; this is what the served API reports at `GET /api/health` and `GET /api/dashboard/stats` |
+
+`scripts/prepare_db.py` collapses exact-duplicate membership stints (keeping
+the lowest id and repointing their evidence rows) so the fail-fast unique
+indexes can be created; the shipped corpus contained **9 duplicate closed
+stints**. Evidence: `scripts/prepare_db.py` (`_dedupe_memberships` and the
+`_create_partial_indexes` note) and the release pin in `data/latest-release.txt`.
+The current-state figure for the served API is 7,349; the 7,358 figure is the
+raw asset, not a contradictory count. This split is recorded in
+`docs/AUDIT-RESOLUTIONS-2026-11-21.md` (R2).
+
+> **Label note (2026-11-21):** These definitions supersede earlier unlabelled
+> figures in this reference and in the README. A bare "switches" or
+> "memberships" number in older prose did not say which definition it used;
+> the numbers were correct for their own artifact, only unlabelled. Always
+> use the definitions above when quoting them.
+
 ## Error responses
 
 All errors use plain FastAPI `HTTPException` JSON with

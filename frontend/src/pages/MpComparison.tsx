@@ -49,7 +49,7 @@ export default function MpComparison() {
     queryFn: () => fetchMps(""),
   });
 
-  const poolList = pool.data?.data ?? [];
+  const poolList = useMemo(() => pool.data?.data ?? [], [pool.data]);
 
   const setSearch = (i: number, value: string) => {
     setSearches((prev) => {

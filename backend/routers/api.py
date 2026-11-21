@@ -427,6 +427,20 @@ def coverage_detailed(db: Session = Depends(get_db)):
     return queries.get_coverage_detailed(db)
 
 
+@router.get("/coverage/dimensions")
+def coverage_dimensions(db: Session = Depends(get_db)):
+    """Honest per-scope coverage across mandates, votes and biographies.
+
+    The legacy ``/api/coverage`` responses describe mandates only. This view
+    reports each data dimension from the rows actually present, so a scope
+    whose mandates are ``full`` is never presented as having full votes or
+    biographies. It is additive: no legacy response shape is changed.
+    """
+    from pipeline.coverage import coverage_dimensions as _coverage_dimensions
+
+    return _coverage_dimensions(db)
+
+
 @router.get("/committees")
 @cache_result("committees")
 def committees(as_of: str | None = None, db: Session = Depends(get_db)):
