@@ -72,7 +72,7 @@ class CacheControlMiddleware(BaseHTTPMiddleware):
 # Security headers middleware (matches W2-E's vercel.json header block)
 # ---------------------------------------------------------------------------
 _SECURITY_HEADERS = {
-    "Content-Security-Policy-Report-Only": (
+    "Content-Security-Policy": (
         "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
     ),
     "X-Content-Type-Options": "nosniff",

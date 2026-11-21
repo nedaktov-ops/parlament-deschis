@@ -250,7 +250,8 @@ def test_security_headers_and_no_store_on_graphql(seeded_client):
     assert h.headers["x-frame-options"] == "DENY"
     assert h.headers["referrer-policy"] == "strict-origin-when-cross-origin"
     assert h.headers["permissions-policy"] == "camera=(), microphone=(), geolocation=()"
-    assert "default-src" in h.headers["content-security-policy-report-only"]
+    # P-2 (2026-11-21): the policy is now ENFORCED, not report-only.
+    assert "default-src" in h.headers["content-security-policy"]
 
     g = seeded_client.post("/graphql", json={"query": "{ persons(limit:1) { id } }"})
     assert "no-store" in g.headers["cache-control"]
