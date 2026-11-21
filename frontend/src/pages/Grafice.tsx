@@ -5,7 +5,7 @@ import { useScope } from "../hooks/useScope";
 import ScopeControls from "../components/ScopeControls";
 import { DataBar } from "../components/DataViz";
 import VoteActivityChart from "../components/VoteActivityChart";
-import Skeleton from "../components/ui/Skeleton";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 export default function Grafice() {
   const { t } = useTranslation();
@@ -25,21 +25,23 @@ export default function Grafice() {
   const cohesion = cohesionQuery.data?.data ?? [];
   const cohesionExists = cohesionQuery.data?.data_exists ?? false;
 
-  if (summaryQuery.isLoading || cohesionQuery.isLoading) {
+  const view = resolveViewState({
+    isLoading: summaryQuery.isLoading || cohesionQuery.isLoading,
+    isError: summaryQuery.isError || cohesionQuery.isError,
+    isEmpty: cohesionQuery.isSuccess && (!cohesionExists || cohesion.length === 0),
+  });
+  if (view !== "ready") {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="mt-2 h-4 w-64" />
-        <p className="mt-2 text-sm text-slate-500">{t("loading", "Loading…")}</p>
-      </div>
-    );
-  }
-
-  if (summaryQuery.isError || cohesionQuery.isError) {
-    return (
-      <div className="text-red-400 text-sm py-6 text-center">
-        {t("view.voturi.loadError", "Failed to load votes.")}
-      </div>
+      <AsyncState
+        view={view}
+        pageTitle={t("view.grafice.title", "Party cohesion & defection timeline")}
+        onRetry={() => {
+          void summaryQuery.refetch();
+          void cohesionQuery.refetch();
+        }}
+        errorLabel={t("view.grafice.loadError", "Cohesion and vote-activity data could not be loaded.")}
+        emptyTitle={t("empty.rollcall", "Roll-call vote data is not yet available for this legislature.")}
+      />
     );
   }
 
@@ -59,12 +61,7 @@ export default function Grafice() {
       </section>
 
       <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>
-        {!cohesionExists || cohesion.length === 0 ? (
-          <div className="text-slate-500 text-sm py-12 text-center">
-            {t("empty.rollcall", "Roll-call vote data is not yet available for this legislature.")}
-          </div>
-        ) : (
-          <>
+        <>
             <div className="overflow-x-auto">
               <table
                 role="table"
@@ -164,9 +161,8 @@ export default function Grafice() {
                   </div>
                 </div>
               </section>
-            )}
-          </>
-        )}
+          )}
+        </>
       </section>
 
       <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>

@@ -10,6 +10,7 @@ import CitationPopover from "../components/CitationPopover";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { Sparkline } from "../components/DataViz";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 function typeColor(type: string): string {
   switch (type) {
@@ -45,7 +46,7 @@ export function PersonDeepDive() {
   const summary = (e: EventItem) =>
     i18n.language === "en" ? e.summary_en || e.summary_ro : e.summary_ro || e.summary_en;
 
-  const p = person.data;
+  const p = person.data!;
   const personEvents = p?.events;
 
   // All hooks must be declared before any early return (React #310).
@@ -75,24 +76,20 @@ export function PersonDeepDive() {
     return out;
   }, [personEvents]);
 
-  if (person.isLoading) {
+  const view = resolveViewState({
+    isLoading: person.isLoading,
+    isError: person.isError,
+    isEmpty: person.isSuccess && !p,
+  });
+  if (view !== "ready") {
     return (
-      <div className="card p-4">
-        <h1 className="sr-only">{t("personDeepDive.title", "Parliamentary profile")}</h1>
-        <div className="text-slate-500 text-sm py-8">{t("loading")}</div>
-      </div>
-    );
-  }
-
-  if (person.isError || !p) {
-    return (
-      <div className="card p-4" role="alert">
-        <h1 className="sr-only">{t("personDeepDive.title", "Parliamentary profile")}</h1>
-        <p className="text-rose-200 text-sm py-4">{t("personLoadError")}</p>
-        <button type="button"className="btn bg-slate-700 hover:bg-slate-600" onClick={() => person.refetch()}>
-          {t("traseismRetry")}
-        </button>
-      </div>
+      <AsyncState
+        view={view}
+        pageTitle={t("personDeepDive.title", "Parliamentary profile")}
+        onRetry={() => void person.refetch()}
+        errorLabel={t("personLoadError")}
+        emptyTitle={t("person.empty", "There are no data for this member.")}
+      />
     );
   }
 

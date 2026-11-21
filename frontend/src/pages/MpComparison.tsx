@@ -7,6 +7,7 @@ import { useScope } from "../hooks/useScope";
 import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 interface CompareRow {
   label: string;
@@ -117,6 +118,23 @@ export default function MpComparison() {
       },
     ];
   }, [chosen, t]);
+
+  const view = resolveViewState({
+    isLoading: pool.isLoading,
+    isError: pool.isError,
+    isEmpty: pool.isSuccess && poolList.length === 0,
+  });
+  if (view !== "ready") {
+    return (
+      <AsyncState
+        view={view}
+        pageTitle={t("mpc.title", "MP Comparison")}
+        onRetry={() => void pool.refetch()}
+        errorLabel={t("mpc.loadError", "Failed to load MP list.")}
+        emptyTitle={t("mpc.pickTwo", "Pick at least two MPs to compare.")}
+      />
+    );
+  }
 
   const maxSwitches = Math.max(...chosen.map((c) => c.switches), 0);
   const maxCommittees = Math.max(...chosen.map((c) => c.committees), 0);
@@ -231,13 +249,6 @@ export default function MpComparison() {
         ))}
       </div>
 
-      {pool.isLoading && (
-        <div className="text-slate-500">{t("loading", "Loading…")}</div>
-      )}
-      {pool.isError && (
-        <div className="text-red-400">{t("mpc.loadError", "Failed to load MP list.")}</div>
-      )}
-
       {chosen.length >= 2 && (
         <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("mpc.title", "MP Comparison")}>
           <table className="min-w-full bg-slate-800 rounded-xl overflow-hidden data-table">
@@ -302,7 +313,7 @@ export default function MpComparison() {
         </div>
       )}
 
-      {chosen.length < 2 && !pool.isLoading && (
+      {chosen.length < 2 && (
         <div className="text-slate-500">
           {t("mpc.pickTwo", "Pick at least two MPs to compare.")}
         </div>

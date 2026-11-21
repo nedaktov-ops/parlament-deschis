@@ -15,6 +15,7 @@ import About from "../components/About";
 import SankeyFlow from "../components/SankeyFlow";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 /** In-repo methodology document (docs/METHODOLOGY.md). */
 const METHODOLOGY_URL =
@@ -100,33 +101,6 @@ function StatCard({
         {value}
       </div>
       {hint ? <div className="text-xs text-slate-500 mt-1">{hint}</div> : null}
-    </div>
-  );
-}
-
-function ErrorState({
-  message,
-  onRetry,
-}: {
-  message?: string;
-  onRetry?: () => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div
-      className="rounded-lg border border-rose-700/60 bg-rose-950/30 px-4 py-3"
-      role="alert"
-    >
-      <p className="text-sm text-rose-200">
-        {message ?? t("traseismLoadError")}
-      </p>
-      {onRetry ? (
-        <button type="button"onClick={onRetry}
-          className={`btn mt-2 bg-slate-700 hover:bg-slate-600 ${FOCUS}`}
-        >
-          {t("traseismRetry")}
-        </button>
-      ) : null}
     </div>
   );
 }
@@ -331,6 +305,12 @@ function SwitchLedger({
   const from = total === 0 ? 0 : page * PAGE_SIZE + 1;
   const to = Math.min((page + 1) * PAGE_SIZE, total);
 
+  const view = resolveViewState({
+    isLoading: query.isLoading,
+    isError: query.isError,
+    isEmpty: query.isSuccess && rows.length === 0,
+  });
+
   return (
     <section className="card p-4">
       <h2 className="font-semibold">{t("traseismLedgerTitle")}</h2>
@@ -338,13 +318,13 @@ function SwitchLedger({
         {t("traseismLedgerDesc")}
       </p>
 
-      {query.isLoading ? (
-        <div className="text-slate-500 text-sm py-6">{t("loading")}</div>
-      ) : query.isError ? (
-        <ErrorState onRetry={() => query.refetch()} />
-      ) : rows.length === 0 ? (
-        <div className="text-slate-500 text-sm py-6">{t("traseismNoRows")}</div>
-      ) : (
+      <AsyncState
+        view={view}
+        variant="inline"
+        onRetry={() => void query.refetch()}
+        errorLabel={t("traseismLoadError")}
+        emptyTitle={t("traseismNoRows")}
+      >
         <>
           <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("traseismLedgerCaption")}>
             <table className="w-full data-table border-collapse">
@@ -437,9 +417,9 @@ function SwitchLedger({
                 {t("traseismNextPage")}
               </button>
             </div>
-          </div>
-        </>
-      )}
+            </div>
+          </>
+      </AsyncState>
     </section>
   );
 }
@@ -608,6 +588,11 @@ function SwitchWavesSection({
   });
 
   const rows = (waves.data ?? []).slice(0, 10);
+  const view = resolveViewState({
+    isLoading: waves.isLoading,
+    isError: waves.isError,
+    isEmpty: waves.isSuccess && rows.length === 0,
+  });
 
   return (
     <section className="card p-4">
@@ -618,17 +603,13 @@ function SwitchWavesSection({
           "Periods where affiliation changes clustered (30-day windows, 3+ switches). Election and coalition triggers are annotated when the corpus records them.",
         )}
       </p>
-      {waves.isLoading ? (
-        <div className="text-slate-500 text-sm py-4">{t("loading")}</div>
-      ) : waves.isError ? (
-        <div className="text-red-400 text-sm py-4">
-          {t("waves.error", "Failed to load waves.")}
-        </div>
-      ) : rows.length === 0 ? (
-        <div className="text-slate-500 text-sm py-4">
-          {t("waves.empty", "No waves detected for this scope.")}
-        </div>
-      ) : (
+      <AsyncState
+        view={view}
+        variant="inline"
+        onRetry={() => void waves.refetch()}
+        errorLabel={t("waves.error", "Failed to load waves.")}
+        emptyTitle={t("waves.empty", "No waves detected for this scope.")}
+      >
         <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("waves.title", "Switch waves")}>
           <table className="min-w-full text-sm data-table">
             <thead>
@@ -660,7 +641,7 @@ function SwitchWavesSection({
             </tbody>
           </table>
         </div>
-      )}
+      </AsyncState>
     </section>
   );
 }
@@ -710,9 +691,22 @@ export function Traseism() {
     return [...years].sort((a, b) => b.localeCompare(a));
   }, [meta.data, overview.data]);
 
-  const scope = summary.data;
+  const scope = summary.data!;
   const coverageKey = completenessKey(scope?.coverage?.completeness ?? "none");
   const hasRecord = coverageKey !== "none";
+
+  const summaryView = resolveViewState({
+    // A disabled query reports isLoading=false but isPending=true; treat that
+    // as loading so the ready branch never sees an undefined summary.
+    isLoading: summary.isPending && !summary.isError,
+    isError: summary.isError,
+    isEmpty: summary.isSuccess && !scope,
+  });
+  const overviewView = resolveViewState({
+    isLoading: overview.isLoading,
+    isError: overview.isError,
+    isEmpty: overview.isSuccess && (overview.data?.length ?? 0) === 0,
+  });
 
   return (
     <div className="space-y-6">
@@ -832,13 +826,12 @@ export function Traseism() {
         </div>
       </section>
 
-      {summary.isLoading ? (
-        <div className="card p-4">
-          <div className="text-slate-500 text-sm py-8">{t("loading")}</div>
-        </div>
-      ) : summary.isError || !scope ? (
-        <ErrorState onRetry={() => summary.refetch()} />
-      ) : (
+      <AsyncState
+        view={summaryView}
+        onRetry={() => void summary.refetch()}
+        errorLabel={t("traseismLoadError")}
+      >
+        {scope ? (
         <>
           <CoverageBanner coverage={scope.coverage} />
 
@@ -913,20 +906,23 @@ export function Traseism() {
 
           <SwitchWavesSection chamber={chamber} legislature={legislature} scopeKey={routeScope.scopeKey} />
         </>
-      )}
+        ) : null}
+      </AsyncState>
 
       <section className="card p-4">
         <h2 className="font-semibold">{t("traseismAllScopes")}</h2>
         <p className="text-sm text-slate-400 mt-1 mb-3">
           {t("traseismAllScopesDesc")}
         </p>
-        {overview.isLoading ? (
-          <div className="text-slate-500 text-sm py-4">{t("loading")}</div>
-        ) : overview.isError ? (
-          <ErrorState onRetry={() => overview.refetch()} />
-        ) : (
+        <AsyncState
+          view={overviewView}
+          variant="inline"
+          onRetry={() => void overview.refetch()}
+          errorLabel={t("traseismLoadError")}
+          emptyTitle={t("noData")}
+        >
           <ScopesOverview rows={overview.data ?? []} />
-        )}
+        </AsyncState>
       </section>
 
       <section className="card p-4">

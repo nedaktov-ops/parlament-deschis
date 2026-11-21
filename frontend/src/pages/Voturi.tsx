@@ -5,9 +5,8 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { api, votesForScope, type VoteRow } from "../api/client";
 import { useScope } from "../hooks/useScope";
 import ScopeControls from "../components/ScopeControls";
-import ErrorState from "../components/ErrorState";
 import RollCallTable from "../components/RollCallTable";
-import Skeleton from "../components/ui/Skeleton";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 export default function Voturi() {
   const { t } = useTranslation();
@@ -42,23 +41,19 @@ export default function Voturi() {
     setSelectedVoteId(nativeVoteId);
   };
 
-  if (votesQuery.isLoading) {
+  const view = resolveViewState({
+    isLoading: votesQuery.isLoading,
+    isError: votesQuery.isError,
+    isEmpty: votesQuery.isSuccess && votes.length === 0,
+  });
+  if (view !== "ready") {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="mt-2 h-4 w-64" />
-        <p className="mt-2 text-sm text-slate-400">
-          {t("loading", "Loading…")}
-        </p>
-      </div>
-    );
-  }
-
-  if (votesQuery.isError) {
-    return (
-      <ErrorState
-        message={t("view.voturi.loadError", "Failed to load votes.")}
+      <AsyncState
+        view={view}
+        pageTitle={t("view.voturi.title", "Roll-call votes")}
         onRetry={() => void votesQuery.refetch()}
+        errorLabel={t("view.voturi.loadError", "Failed to load votes.")}
+        emptyTitle={t("view.voturi.empty", "No roll-call votes recorded for this scope.")}
       />
     );
   }

@@ -8,6 +8,7 @@ import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { Sparkline } from "../components/DataViz";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 interface PartySpan {
   party: string;
@@ -85,6 +86,23 @@ export default function PartyTimeline() {
       }).length,
     );
   }, [rows]);
+
+  const view = resolveViewState({
+    isLoading: timeline.isLoading,
+    isError: timeline.isError,
+    isEmpty: timeline.isSuccess && rows.length === 0,
+  });
+  if (view !== "ready") {
+    return (
+      <AsyncState
+        view={view}
+        pageTitle={t("ptimeline.title", "Party Timeline")}
+        onRetry={() => void timeline.refetch()}
+        errorLabel={t("ptimeline.loadError", "Failed to load the timeline.")}
+        emptyTitle={t("ptimeline.empty", "No dated party spans.")}
+      />
+    );
+  }
 
   return (
     <div className="py-6">
@@ -182,15 +200,6 @@ export default function PartyTimeline() {
         </div>
       )}
 
-      {timeline.isLoading && (
-        <div className="text-slate-500">{t("loading", "Loading…")}</div>
-      )}
-      {timeline.isError && (
-        <div className="text-red-400">
-          {t("ptimeline.loadError", "Failed to load the timeline.")}
-        </div>
-      )}
-
       {rows.length > 0 && (
         <div
           className="bg-slate-800 rounded-lg p-4 overflow-x-auto max-w-full"
@@ -259,10 +268,6 @@ export default function PartyTimeline() {
             </span>
           </div>
         </div>
-      )}
-
-      {rows.length === 0 && !timeline.isLoading && !timeline.isError && (
-        <div className="text-slate-500">{t("ptimeline.empty", "No dated party spans.")}</div>
       )}
 
       <div className="mt-6 bg-slate-800/50 rounded p-4 text-sm text-slate-400">

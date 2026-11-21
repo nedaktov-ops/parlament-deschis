@@ -6,6 +6,7 @@ import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { Sparkline, ProgressRing } from "../components/DataViz";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 const LEGISLATURES = [
   "1990",
@@ -47,6 +48,23 @@ export default function Demographics() {
   const avgAge = totals?.population_avg_age ?? null;
   const medianAge = totals?.population_median_age ?? null;
   const coveragePct = totals?.coverage_pct ?? null;
+
+  const view = resolveViewState({
+    isLoading: shift.isLoading,
+    isError: shift.isError,
+    isEmpty: shift.isSuccess && rows.length === 0,
+  });
+  if (view !== "ready") {
+    return (
+      <AsyncState
+        view={view}
+        pageTitle={t("demographics.title", "Demographics: Age per Party")}
+        onRetry={() => void shift.refetch()}
+        errorLabel={t("demographics.error", "Failed to load demographics.")}
+        emptyTitle={t("demographics.empty", "No birth-date data available for this scope.")}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -123,15 +141,6 @@ export default function Demographics() {
         <ScopeControls showDate showLegislature note={t("scope.note.chamber")} />
       </div>
 
-      {shift.isLoading && (
-        <div className="text-slate-500">{t("loading", "Loading…")}</div>
-      )}
-      {shift.isError && (
-        <div className="text-red-400">
-          {t("demographics.error", "Failed to load demographics.")}
-        </div>
-      )}
-
       {rows.length > 0 && (
         <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("demographics.title", "Demographics: Age per Party")}>
           <table className="min-w-full bg-slate-800 rounded-xl overflow-hidden data-table">
@@ -184,15 +193,6 @@ export default function Demographics() {
               })}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {rows.length === 0 && !shift.isLoading && !shift.isError && (
-        <div className="text-slate-500">
-          {t(
-            "demographics.empty",
-            "No birth-date data available for this scope.",
-          )}
         </div>
       )}
 

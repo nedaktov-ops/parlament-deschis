@@ -7,8 +7,7 @@ import { useScope } from "../hooks/useScope";
 import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
-import LoadingState from "../components/LoadingState";
-import EmptyState from "../components/EmptyState";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 const PAGE_SIZE = 60;
 
@@ -46,6 +45,12 @@ export default function Mps() {
   const total = cards.data?.total ?? null;
   const canPrev = offset > 0;
   const canNext = total !== null ? offset + rows.length < total : false;
+
+  const view = resolveViewState({
+    isLoading: cards.isLoading,
+    isError: cards.isError,
+    isEmpty: cards.isSuccess && rows.length === 0,
+  });
 
   return (
     <div className="space-y-6">
@@ -136,15 +141,13 @@ export default function Mps() {
         </button>
       </form>
 
-      {cards.isLoading && (
-        <LoadingState label={t("loading", "Loading…")} />
-      )}
-      {cards.isError && (
-        <div className="text-red-300 bg-red-900/20 border border-red-800/60 rounded-lg p-4">
-          {t("mps.loadError", "Failed to load MPs.")}
-        </div>
-      )}
-
+      <AsyncState
+        view={view}
+        variant="inline"
+        onRetry={() => void cards.refetch()}
+        errorLabel={t("mps.loadError", "Failed to load MPs.")}
+        emptyTitle={t("mps.empty", "No persons match this search.")}
+      >
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {rows.map((m) => (
           <div
@@ -181,9 +184,7 @@ export default function Mps() {
         ))}
       </div>
 
-      {rows.length === 0 && !cards.isLoading && !cards.isError && (
-        <EmptyState title={t("mps.empty", "No persons match this search.")} />
-      )}
+      </AsyncState>
 
       <div className="mt-6 flex items-center gap-4">
         <button

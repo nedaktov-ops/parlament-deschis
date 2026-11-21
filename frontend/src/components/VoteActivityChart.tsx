@@ -13,7 +13,7 @@ import {
 import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsOption } from "echarts";
 import { api, type ActivityBucket } from "../api/client";
-import ErrorState from "./ErrorState";
+import AsyncState, { resolveViewState } from "./ui/AsyncState";
 
 echarts.use([
   BarChart,
@@ -168,6 +168,11 @@ export default function VoteActivityChart({
   }, [buckets, t, activityQuery.isError]);
 
   const empty = buckets.length === 0;
+  const view = resolveViewState({
+    isLoading: activityQuery.isLoading,
+    isError: activityQuery.isError,
+    isEmpty: activityQuery.isSuccess && empty,
+  });
 
   return (
     <div className="card p-4 flex flex-col">
@@ -176,43 +181,30 @@ export default function VoteActivityChart({
           {t("view.grafice.activityTitle", "Roll-call vote activity over time")}
         </h2>
       </div>
-      {activityQuery.isError ? (
-        <ErrorState
-          message={t("view.grafice.activityLoadError", "Failed to load vote activity.")}
-          onRetry={() => void activityQuery.refetch()}
-        />
-      ) : (
-        <>
-          <div className="relative h-[300px]">
-            <div
-              ref={containerRef}
-              className="absolute inset-0"
-              role="img"
-              aria-label={
-                t("view.grafice.activityTitle", "Roll-call vote activity over time")
-              }
-            />
-            {activityQuery.isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center text-slate-300 text-sm pointer-events-none">
-                {t("loading")}
-              </div>
-            )}
-            {!activityQuery.isLoading && empty && (
-              <div className="absolute inset-0 flex items-center justify-center text-slate-300 text-sm pointer-events-none">
-                {t("view.grafice.activityEmpty", "No vote activity recorded yet.")}
-              </div>
-            )}
-          </div>
-          {!empty && (
-            <div className="mt-3 text-xs text-slate-400">
-              {t(
-                "view.grafice.activityNote",
-                "Daily roll-call vote counts with yes/no/abstain breakdown. Data from the official cdep.ro feed.",
-              )}
-            </div>
+      <AsyncState
+        view={view}
+        variant="inline"
+        onRetry={() => void activityQuery.refetch()}
+        errorLabel={t("view.grafice.activityLoadError", "Failed to load vote activity.")}
+        emptyTitle={t("view.grafice.activityEmpty", "No vote activity recorded yet.")}
+      >
+        <div className="relative h-[300px]">
+          <div
+            ref={containerRef}
+            className="absolute inset-0"
+            role="img"
+            aria-label={
+              t("view.grafice.activityTitle", "Roll-call vote activity over time")
+            }
+          />
+        </div>
+        <div className="mt-3 text-xs text-slate-400">
+          {t(
+            "view.grafice.activityNote",
+            "Daily roll-call vote counts with yes/no/abstain breakdown. Data from the official cdep.ro feed.",
           )}
-        </>
-      )}
+        </div>
+      </AsyncState>
     </div>
   );
 }

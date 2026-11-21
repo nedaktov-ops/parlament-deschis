@@ -7,6 +7,7 @@ import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { ProgressRing } from "../components/DataViz";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 function completenessClass(value: string): string {
   if (value === "full") return "bg-emerald-900/50 text-emerald-300";
@@ -51,10 +52,10 @@ export default function CoverageView() {
   });
   const totals = useMemo(
     () => ({
-      totalMemberships: summary.data?.totals.memberships ?? null,
-      datedMemberships: summary.data?.totals.memberships_dated ?? null,
-      totalSwitches: summary.data?.totals.switches_all ?? null,
-      sourcedSwitches: summary.data?.totals.switches_sourced ?? null,
+      totalMemberships: summary.data?.totals?.memberships ?? null,
+      datedMemberships: summary.data?.totals?.memberships_dated ?? null,
+      totalSwitches: summary.data?.totals?.switches_all ?? null,
+      sourcedSwitches: summary.data?.totals?.switches_sourced ?? null,
     }),
     [summary.data],
   );
@@ -69,26 +70,22 @@ export default function CoverageView() {
   const fullPct = rows.length > 0 ? (fullCount / rows.length) * 100 : 0;
   const partialPct = rows.length > 0 ? (partialCount / rows.length) * 100 : 0;
   // R-04: derived by the backend from raw counts; null at a zero denominator.
-  const overallPct: number | null = summary.data?.percentages.dated ?? null;
+  const overallPct: number | null = summary.data?.percentages?.dated ?? null;
 
-  if (coverage.isLoading) {
+  const view = resolveViewState({
+    isLoading: coverage.isLoading,
+    isError: coverage.isError,
+    isEmpty: coverage.isSuccess && rows.length === 0,
+  });
+  if (view !== "ready") {
     return (
-      <div className="card p-4">
-        <div className="text-slate-500 text-sm py-8">{t("loading")}</div>
-      </div>
-    );
-  }
-
-  if (coverage.isError) {
-    return (
-      <div className="card p-4">
-        <div role="alert" className="text-rose-200 text-sm py-8">
-          {t("coverageLoadError")}
-          <button type="button"className="ml-3 underline" onClick={() => coverage.refetch()}>
-            {t("traseismRetry")}
-          </button>
-        </div>
-      </div>
+      <AsyncState
+        view={view}
+        pageTitle={t("coverageTitle")}
+        onRetry={() => void coverage.refetch()}
+        errorLabel={t("coverageLoadError")}
+        emptyTitle={t("coverage.empty", "There are no coverage records for this scope.")}
+      />
     );
   }
 

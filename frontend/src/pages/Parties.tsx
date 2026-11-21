@@ -5,8 +5,8 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { api } from "../api/client";
 import { useScope } from "../hooks/useScope";
 import ScopeControls from "../components/ScopeControls";
-import LoadingState from "../components/LoadingState";
 import EmptyState from "../components/EmptyState";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 export default function Parties() {
   const { t } = useTranslation();
@@ -35,6 +35,12 @@ export default function Parties() {
         p.name.toLowerCase().includes(needle),
     );
   }, [parties, q]);
+
+  const view = resolveViewState({
+    isLoading: partiesQuery.isLoading,
+    isError: partiesQuery.isError,
+    isEmpty: partiesQuery.isSuccess && parties.length === 0,
+  });
 
   const goToParty = (shortName: string) => {
     navigate({ to: "/party/$shortName", params: { shortName }, search: scope.searchFor() });
@@ -74,20 +80,18 @@ export default function Parties() {
           </div>
         </div>
 
-        {partiesQuery.isLoading && (
-          <LoadingState label={t("loading", "Loading…")} />
-        )}
-        {partiesQuery.isError && (
-          <div className="text-red-400 text-sm py-6">
-            {t("parties.loadError", "Failed to load parties.")}
-          </div>
-        )}
-
-        {!partiesQuery.isLoading && !partiesQuery.isError && filtered.length === 0 && (
+        <AsyncState
+          view={view}
+          variant="inline"
+          onRetry={() => void partiesQuery.refetch()}
+          errorLabel={t("parties.loadError", "Failed to load parties.")}
+          emptyTitle={t("parties.empty", "No parties match this search.")}
+        >
+        {filtered.length === 0 && (
           <EmptyState title={t("parties.empty", "No parties match this search.")} />
         )}
 
-        {!partiesQuery.isLoading && !partiesQuery.isError && filtered.length > 0 && (
+        {filtered.length > 0 && (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm data-table">
               <thead>
@@ -131,9 +135,10 @@ export default function Parties() {
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
+              </table>
+            </div>
         )}
+        </AsyncState>
       </section>
     </div>
   );

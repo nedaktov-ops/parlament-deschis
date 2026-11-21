@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { generationalShift } from "../../api/client";
 import AgeDistributionRadial from "../AgeDistributionRadial";
-import Skeleton from "./Skeleton";
+import AsyncState, { resolveViewState } from "./AsyncState";
 
 /** Age-distribution radial chart, aggregated across every legislature. */
 export default function AgeDistributionSection() {
@@ -12,13 +12,6 @@ export default function AgeDistributionSection() {
     queryFn: () => generationalShift(undefined),
   });
 
-  if (shift.isLoading) {
-    return <Skeleton className="h-64 w-full" />;
-  }
-  if (shift.isError) {
-    return <div className="text-red-400 text-sm">{t("ageDistributionError")}</div>;
-  }
-
   const cohorts = (shift.data?.data ?? []).map((row) => ({
     label: row.party,
     count: row.mps_with_birth_dates,
@@ -26,12 +19,26 @@ export default function AgeDistributionSection() {
   }));
   const total = cohorts.reduce((sum, cohort) => sum + cohort.count, 0);
 
+  const view = resolveViewState({
+    isLoading: shift.isLoading,
+    isError: shift.isError,
+    isEmpty: shift.isSuccess && cohorts.length === 0,
+  });
+
   return (
-    <div className="bg-slate-800/30 rounded-xl p-4">
-      <h3 className="text-sm font-semibold text-slate-300 mb-2">
-        {t("ageDistribution")}
-      </h3>
-      <AgeDistributionRadial cohorts={cohorts} totalAge={total} width={250} height={250} />
-    </div>
+    <AsyncState
+      view={view}
+      variant="inline"
+      onRetry={() => void shift.refetch()}
+      errorLabel={t("ageDistributionError")}
+      emptyTitle={t("ageDistribution.empty")}
+    >
+      <div className="bg-slate-800/30 rounded-xl p-4">
+        <h3 className="text-sm font-semibold text-slate-300 mb-2">
+          {t("ageDistribution")}
+        </h3>
+        <AgeDistributionRadial cohorts={cohorts} totalAge={total} width={250} height={250} />
+      </div>
+    </AsyncState>
   );
 }

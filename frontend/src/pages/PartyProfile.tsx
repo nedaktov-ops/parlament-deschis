@@ -9,6 +9,7 @@ import PersonDrawer from "../components/PersonDrawer";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { Sparkline } from "../components/DataViz";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 function formatCount(value: number | null): string {
   return value === null ? "—" : value.toLocaleString();
@@ -57,26 +58,30 @@ export function PartyProfile() {
       .map(([, c]) => c);
   }, [movements.data]);
 
-  if (party.isLoading) {
+  const view = resolveViewState({
+    isLoading: party.isLoading,
+    isError: party.isError,
+    isEmpty: party.isSuccess && !party.data,
+  });
+  if (view !== "ready") {
     return (
-      <div className="card p-4">
-        <div className="text-slate-500 text-sm py-8">{t("loading")}</div>
-      </div>
+      <AsyncState
+        view={view}
+        pageTitle={t("party", "Party")}
+        onRetry={() => void party.refetch()}
+        errorLabel={t("partyLoadError")}
+        emptyTitle={t("partyProfile.empty", "There are no data for this party.")}
+      />
     );
   }
 
-  if (party.isError || !party.data) {
-    return (
-      <div className="card p-4" role="alert">
-        <p className="text-rose-200 text-sm py-4">{t("partyLoadError")}</p>
-        <button type="button"className="btn bg-slate-700 hover:bg-slate-600" onClick={() => party.refetch()}>
-          {t("traseismRetry")}
-        </button>
-      </div>
-    );
-  }
+  const p = party.data!;
 
-  const p = party.data;
+  const movementsView = resolveViewState({
+    isLoading: movements.isLoading,
+    isError: movements.isError,
+    isEmpty: movements.isSuccess && (movements.data?.length ?? 0) === 0,
+  });
 
   // R-04: backend null means "no dated data", not zero. Never fabricate a sum.
   const totalSwitches =
@@ -159,18 +164,13 @@ export function PartyProfile() {
       {/* Section 4: Recent movements (existing) */}
       <div className="card p-4">
         <h2 className="font-semibold mb-3">{t("recentMovements")}</h2>
-        {movements.isLoading ? (
-          <div role="status" className="text-slate-300 text-sm py-4">{t("loading")}</div>
-        ) : movements.isError ? (
-          <div role="alert" className="text-rose-200 text-sm py-4">
-            {t("electoralLoadError")}
-            <button type="button" className="ml-3 underline" onClick={() => movements.refetch()}>
-              {t("traseismRetry")}
-            </button>
-          </div>
-        ) : movements.data?.length === 0 ? (
-          <div className="text-slate-300 text-sm py-4">{t("noData")}</div>
-        ) : (
+        <AsyncState
+          view={movementsView}
+          variant="inline"
+          onRetry={() => void movements.refetch()}
+          errorLabel={t("electoralLoadError")}
+          emptyTitle={t("noData")}
+        >
           <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
             {movements.data?.map((m) => (
               <button type="button" key={m.id}
@@ -195,7 +195,7 @@ export function PartyProfile() {
               </button>
             ))}
           </div>
-        )}
+        </AsyncState>
       </div>
 
       <PersonDrawer personId={personId} onClose={closePerson} />

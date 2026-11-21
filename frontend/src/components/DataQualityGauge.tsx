@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { StateView, type ViewState } from "./ui/AsyncState";
 
 export interface CoverageRow {
   chamber: string;
@@ -21,12 +23,17 @@ export interface DataQualityGaugeProps {
   // width and height are not currently used but kept for future extensibility
   width?: number;
   height?: number;
+  view?: ViewState;
+  onRetry?: () => void;
 }
 
 export default function DataQualityGauge({
   coverageData,
+  view,
+  onRetry,
   // width and height intentionally unused for now
 }: DataQualityGaugeProps) {
+  const { t } = useTranslation();
   const stats = useMemo(() => {
     if (!coverageData?.length) return null;
     
@@ -54,14 +61,25 @@ export default function DataQualityGauge({
     };
   }, [coverageData]);
 
+  if (view && view !== "ready") {
+    return (
+      <StateView
+        view={view}
+        variant="inline"
+        onRetry={onRetry}
+        errorLabel={t("dashboard.loadError")}
+        emptyTitle={t("state.empty.dataQuality")}
+      />
+    );
+  }
+
   if (!stats) {
     return (
-      <div className="w-full bg-slate-800/30 rounded-xl p-4 overflow-hidden">
-        <div className="text-xs text-slate-400 mb-2">Data Quality</div>
-        <div className="flex items-center justify-center h-32 text-slate-500">
-          Loading...
-        </div>
-      </div>
+      <StateView
+        view="empty"
+        variant="inline"
+        emptyTitle={t("state.empty.dataQuality")}
+      />
     );
   }
 

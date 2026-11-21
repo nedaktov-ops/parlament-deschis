@@ -6,6 +6,7 @@ import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { Sparkline } from "../components/DataViz";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 interface NamedEvent {
   date: string;
@@ -55,6 +56,23 @@ export default function Coalitions() {
     return { breakup: b, formation: last, days };
   });
 
+  const view = resolveViewState({
+    isLoading: waves.isLoading,
+    isError: waves.isError,
+    isEmpty: waves.isSuccess && all.length === 0,
+  });
+  if (view !== "ready") {
+    return (
+      <AsyncState
+        view={view}
+        pageTitle={t("coalitions.title", "Coalition Stability")}
+        onRetry={() => void waves.refetch()}
+        errorLabel={t("coalitions.loadError", "Failed to load wave data.")}
+        emptyTitle={t("coalitions.noBreakups", "No coalition breakups recorded.")}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <ScopeControls showChamber showLegislature note={t("scope.note.waves")} />
@@ -72,18 +90,7 @@ export default function Coalitions() {
                   "Government formations, coalition breakups and party congresses that coincide with detected switch waves. Each event is a burst of affiliation change the corpus links to a named political moment.",
                 )}
               </p>
-              {waves.isLoading && (
-                <div className="text-slate-500" role="status" aria-live="polite">
-                  {t("loading", "Loading…")}
-                </div>
-              )}
-              {waves.isError && (
-                <div className="text-rose-400" role="alert">
-                  {t("coalitions.loadError", "Failed to load wave data.")}
-                </div>
-              )}
-              {!waves.isLoading && !waves.isError && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
                   <InfoStat
                     label={t("coalitions.statWaves", "Total waves")}
                     value={all.length}
@@ -103,16 +110,14 @@ export default function Coalitions() {
                     label={t("coalitions.statCongresses", "Congresses")}
                     value={congresses.length}
                     accent="rose"
-                  />
-                </div>
-              )}
+                />
+              </div>
             </div>
             <div className="w-full md:w-auto max-w-[260px]">
               <HeroGraphic variant="wave" className="mx-auto" />
             </div>
           </div>
-          {!waves.isLoading && !waves.isError && (
-            <>
+          <>
               <div className="mt-8 flex items-center gap-4" data-moment>
                 <span className="moment-value block">
                   {all.length}
@@ -134,9 +139,8 @@ export default function Coalitions() {
                     color="stroke-sky-400"
                   />
                 </div>
-              )}
-            </>
-          )}
+            )}
+          </>
         </div>
       </section>
 
@@ -222,7 +226,7 @@ export default function Coalitions() {
               </span>
             </div>
           ))}
-          {formations.length === 0 && !waves.isLoading && (
+          {formations.length === 0 && (
             <div className="text-slate-500">
               {t("coalitions.noFormations", "No formations recorded.")}
             </div>
@@ -245,7 +249,7 @@ export default function Coalitions() {
               </span>
             </div>
           ))}
-          {congresses.length === 0 && !waves.isLoading && (
+          {congresses.length === 0 && (
             <div className="text-slate-500">
               {t("coalitions.noCongresses", "No congresses recorded.")}
             </div>

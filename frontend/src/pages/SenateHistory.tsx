@@ -5,6 +5,7 @@ import { useScope } from "../hooks/useScope";
 import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 interface CoverageRow {
   chamber: string;
@@ -51,6 +52,23 @@ export default function SenateHistory() {
     (r) => r.chamber === "senate" &&
       (!scope.legislature || r.legislature === scope.legislature),
   );
+
+  const view = resolveViewState({
+    isLoading: coverage.isLoading,
+    isError: coverage.isError,
+    isEmpty: coverage.isSuccess && allRows.length === 0,
+  });
+  if (view !== "ready") {
+    return (
+      <AsyncState
+        view={view}
+        pageTitle={t("senate.history", "Senate Historical Coverage")}
+        onRetry={() => void coverage.refetch()}
+        errorLabel={t("senate.history.loadError", "Senate historical coverage could not be loaded.")}
+        emptyTitle={t("senate.history.noData", "No coverage data available")}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -166,13 +184,6 @@ export default function SenateHistory() {
                 <td className="px-4 py-3 text-slate-400 text-sm">{row.note ?? "—"}</td>
               </tr>
             ))}
-            {allRows.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
-                  {t("senate.history.noData", "No coverage data available")}
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>

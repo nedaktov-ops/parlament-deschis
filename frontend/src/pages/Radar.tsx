@@ -5,7 +5,7 @@ import { api, votesForScope, type VotePositionRow } from "../api/client";
 import { useScope } from "../hooks/useScope";
 import ScopeControls from "../components/ScopeControls";
 import PartyAgreementMatrix from "../components/PartyAgreementMatrix";
-import Skeleton from "../components/ui/Skeleton";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 const CHOICE_COLOR: Record<string, string> = {
   yes: "#10b981", // emerald-500
@@ -87,23 +87,23 @@ export default function Radar() {
     return { parties: Array.from(parties).sort(), votes, cells };
   }, [votes, positionsData]);
 
-  if (votesQuery.isLoading || positionQueries.some((q) => q.isLoading)) {
+  const view = resolveViewState({
+    isLoading: votesQuery.isLoading || positionQueries.some((q) => q.isLoading),
+    isError: votesQuery.isError || positionQueries.some((q) => q.isError),
+    isEmpty: votesQuery.isSuccess && (!dataExists || votes.length === 0 || matrix.parties.length === 0),
+  });
+  if (view !== "ready") {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <h1 className="sr-only">{t("view.radar.title", "Roll-call alignment matrix")}</h1>
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="mt-2 h-4 w-64" />
-        <p className="mt-2 text-sm text-slate-500">{t("loading", "Loading…")}</p>
-      </div>
-    );
-  }
-
-  if (votesQuery.isError || positionQueries.some((q) => q.isError)) {
-    return (
-      <div className="text-red-400 text-sm py-6 text-center">
-        <h1 className="sr-only">{t("view.radar.title", "Roll-call alignment matrix")}</h1>
-        {t("view.voturi.loadError", "Failed to load votes.")}
-      </div>
+      <AsyncState
+        view={view}
+        pageTitle={t("view.radar.title", "Roll-call alignment matrix")}
+        onRetry={() => {
+          void votesQuery.refetch();
+          positionQueries.forEach((q) => void q.refetch());
+        }}
+        errorLabel={t("view.radar.loadError", "The roll-call alignment matrix could not be loaded.")}
+        emptyTitle={t("empty.rollcall", "Roll-call vote data is not yet available for this legislature.")}
+      />
     );
   }
 
@@ -126,12 +126,7 @@ export default function Radar() {
       </section>
 
       <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>
-        {!dataExists || votes.length === 0 || matrix.parties.length === 0 ? (
-          <div className="text-slate-500 text-sm py-12 text-center">
-            {t("empty.rollcall", "Roll-call vote data is not yet available for this legislature.")}
-          </div>
-        ) : (
-          <div
+        <div
             className="overflow-x-auto"
             tabIndex={0}
             role="region"
@@ -198,9 +193,8 @@ export default function Radar() {
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
-        )}
+          </table>
+        </div>
       </section>
 
       <section className="text-xs text-slate-500 mt-2 max-w-3xl">

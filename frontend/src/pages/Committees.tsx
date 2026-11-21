@@ -15,6 +15,7 @@ import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import LoadingState from "../components/LoadingState";
 import EmptyState from "../components/EmptyState";
+import { StateView } from "../components/ui/AsyncState";
 
 function fmtDate(value: string | null): string {
   if (!value) return "—";
@@ -111,9 +112,12 @@ function CommitteeCard({
       {open && (
         <div className="border-t border-slate-700 overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={committee.name}>
           {members.isError && (
-            <div className="px-4 py-3 text-red-400 text-sm">
-              {t("committees.loadError", "Failed to load members.")}
-            </div>
+            <StateView
+              view="error"
+              variant="inline"
+              onRetry={() => void members.refetch()}
+              errorLabel={t("committees.loadError", "Failed to load members.")}
+            />
           )}
           {members.data && members.data.members.length > 0 && (
             <table className="min-w-full text-sm data-table">
@@ -345,18 +349,24 @@ export default function Committees() {
       )}
 
       {control.isError && (
-        <div className="mb-6 text-amber-400 text-sm">
-          {t("control.loadError", "Committee control data unavailable.")}
-        </div>
+        <StateView
+          view="error"
+          variant="inline"
+          onRetry={() => void control.refetch()}
+          errorLabel={t("control.loadError", "Committee control data unavailable.")}
+        />
       )}
 
       {list.isLoading && (
         <LoadingState label={t("loading", "Loading…")} />
       )}
       {list.isError && (
-        <div className="text-red-400">
-          {t("committees.loadError", "Failed to load committees.")}
-        </div>
+        <StateView
+          view="error"
+          variant="inline"
+          onRetry={() => void list.refetch()}
+          errorLabel={t("committees.loadError", "Failed to load committees.")}
+        />
       )}
 
       <div className="space-y-2">

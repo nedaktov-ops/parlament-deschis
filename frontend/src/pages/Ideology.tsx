@@ -18,7 +18,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ideology, type IdeologyEntry } from "../api/client";
 import { useScope } from "../hooks/useScope";
 import ScopeControls from "../components/ScopeControls";
-import Skeleton from "../components/ui/Skeleton";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 echarts.use([ScatterChart, GridComponent, LegendComponent, TooltipComponent, ToolboxComponent, CanvasRenderer]);
 
@@ -201,42 +201,20 @@ export default function Ideology() {
     };
   }, [filteredData, scatterData, colorMap, t]);
 
-  if (ideologyQuery.isLoading) {
+  const view = resolveViewState({
+    isLoading: ideologyQuery.isLoading,
+    isError: ideologyQuery.isError,
+    isEmpty: ideologyQuery.isSuccess && (!dataExists || filteredData.length === 0),
+  });
+  if (view !== "ready") {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="mt-2 h-4 w-64" />
-        <p className="mt-2 text-sm text-slate-500">{t("loading", "Loading…")}</p>
-      </div>
-    );
-  }
-
-  if (ideologyQuery.isError) {
-    return (
-      <div className="text-red-400 text-sm py-6 text-center">
-        {t("view.voturi.loadError", "Failed to load votes.")}
-      </div>
-    );
-  }
-
-  if (!dataExists || filteredData.length === 0) {
-    return (
-      <div className="space-y-6">
-        <ScopeControls note={t("scope.note.ideology")} />
-        <section className="py-2" data-enter>
-          <h1 className="page-title">
-            {t("view.ideology.title", "Ideological spatial map")}
-          </h1>
-          <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-3xl">
-            {t("view.ideology.intro", "Ideological positioning of parties (left-right, authoritarian-libertarian) based on CHES and PopuList data.")}
-          </p>
-        </section>
-        <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>
-          <div className="text-slate-500 text-sm py-12 text-center">
-            {t("empty.ideology", "Ideological data not yet available.")}
-          </div>
-        </section>
-      </div>
+      <AsyncState
+        view={view}
+        pageTitle={t("view.ideology.title", "Ideological spatial map")}
+        onRetry={() => void ideologyQuery.refetch()}
+        errorLabel={t("view.ideology.loadError", "The ideological map could not be loaded.")}
+        emptyTitle={t("empty.ideology", "Ideological data not yet available.")}
+      />
     );
   }
 

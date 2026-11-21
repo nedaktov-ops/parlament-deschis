@@ -6,7 +6,7 @@ import { api, type ScorecardEntry } from "../api/client";
 import { useScope } from "../hooks/useScope";
 import ScopeControls from "../components/ScopeControls";
 import { DataBar, type DataBarTone } from "../components/DataViz";
-import Skeleton from "../components/ui/Skeleton";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 // Thresholds preserved from the previous loyalty-colour helper; intermediate
 // green/yellow steps collapse into the two on-palette semantic tones (success / warning).
@@ -39,23 +39,22 @@ export default function Topuri() {
   ]);
   const dataExists = scorecardQuery.data?.data_exists ?? false;
 
-  if (scorecardQuery.isLoading) {
+  const view = resolveViewState({
+    isLoading: scorecardQuery.isLoading,
+    isError: scorecardQuery.isError,
+    isEmpty: scorecardQuery.isSuccess && (!dataExists || entries.length === 0),
+  });
+  if (view !== "ready") {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <h1 className="sr-only">{t("view.topuri.title", "MP behavioural scorecard")}</h1>
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="mt-2 h-4 w-64" />
-        <p className="mt-2 text-sm text-slate-500">{t("loading", "Loading…")}</p>
-      </div>
-    );
-  }
-
-  if (scorecardQuery.isError) {
-    return (
-      <div className="text-red-400 text-sm py-6 text-center">
-        <h1 className="sr-only">{t("view.topuri.title", "MP behavioural scorecard")}</h1>
-        {t("view.voturi.loadError", "Failed to load votes.")}
-      </div>
+      <AsyncState
+        view={view}
+        pageTitle={t("view.topuri.title", "MP behavioural scorecard")}
+        onRetry={() => void scorecardQuery.refetch()}
+        errorLabel={t("view.topuri.loadError", "The behavioural scorecard could not be loaded.")}
+        emptyTitle={dataExists
+          ? t("topuri.empty", "No behavioural data available yet for the selected scope.")
+          : t("empty.rollcall", "Roll-call vote data is not yet available for this legislature.")}
+      />
     );
   }
 
@@ -93,27 +92,7 @@ export default function Topuri() {
           </div>
         </div>
 
-        {scorecardQuery.isLoading && (
-          <div className="text-slate-500 text-sm py-6">
-            {t("loading", "Loading…")}
-          </div>
-        )}
-        {scorecardQuery.isError && (
-          <div className="text-red-400 text-sm py-6">
-            {t("view.voturi.loadError", "Failed to load votes.")}
-          </div>
-        )}
-
-        {!scorecardQuery.isLoading && !scorecardQuery.isError && entries.length === 0 && (
-          <div className="text-slate-500 text-sm py-6 text-center">
-            {dataExists
-              ? t("topuri.empty", "No behavioural data available yet for the selected scope.")
-              : t("empty.rollcall", "Roll-call vote data is not yet available for this legislature.")}
-          </div>
-        )}
-
-        {!scorecardQuery.isLoading && !scorecardQuery.isError && entries.length > 0 && (
-          <>
+        <>
           <div className="overflow-x-auto">
             <table
               role="table"
@@ -189,9 +168,8 @@ export default function Topuri() {
                 participation: scorecardQuery.data?.data[0]?.denominators.participation ?? "—",
               },
             )}
-          </p>
-          </>
-        )}
+        </p>
+        </>
       </section>
 
       <section className="text-xs text-slate-500 mt-2 max-w-3xl">

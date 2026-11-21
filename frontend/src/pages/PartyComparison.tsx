@@ -11,6 +11,7 @@ import {
   type GenerationalShiftEntry,
   type CommitteeControlParty,
 } from "../api/client";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 interface PartyRow {
   id: string;
@@ -123,6 +124,27 @@ export default function PartyComparison() {
     ];
   }, [a, b, ageMap, chairMap, t]);
 
+  const view = resolveViewState({
+    isLoading: parties.isLoading || ages.isLoading || control.isLoading,
+    isError: parties.isError || ages.isError || control.isError,
+    isEmpty: parties.isSuccess && partyList.length === 0,
+  });
+  if (view !== "ready") {
+    return (
+      <AsyncState
+        view={view}
+        pageTitle={t("compare.title", "Party Comparison")}
+        onRetry={() => {
+          void parties.refetch();
+          void ages.refetch();
+          void control.refetch();
+        }}
+        errorLabel={t("compare.loadError", "Failed to load parties.")}
+        emptyTitle={t("compare.empty", "There are no parties to compare in this release.")}
+      />
+    );
+  }
+
   const selectClass =
     "bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200";
 
@@ -178,15 +200,6 @@ export default function PartyComparison() {
           </select>
         </label>
       </div>
-
-      {parties.isLoading && (
-        <div className="text-slate-500">{t("loading", "Loading…")}</div>
-      )}
-      {parties.isError && (
-        <div className="text-red-400">
-          {t("compare.loadError", "Failed to load parties.")}
-        </div>
-      )}
 
       {a && b && (
         <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("compare.title", "Party Comparison")}>

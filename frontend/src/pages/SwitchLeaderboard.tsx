@@ -6,6 +6,7 @@ import { useScope } from "../hooks/useScope";
 import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 function fmtDate(value: string | null): string {
   if (!value) return "—";
@@ -35,6 +36,23 @@ export default function SwitchLeaderboard() {
   const totalSwitches = rows.reduce((sum, row) => sum + row.switch_count, 0);
   const uniqueSwitchers = rows.length;
   const topSwitcherCount = rows.length > 0 ? rows[0].switch_count : 0;
+
+  const view = resolveViewState({
+    isLoading: leaderboard.isLoading,
+    isError: leaderboard.isError,
+    isEmpty: leaderboard.isSuccess && rows.length === 0,
+  });
+  if (view !== "ready") {
+    return (
+      <AsyncState
+        view={view}
+        pageTitle={t("leaderboard.title", "Party Switching Leaderboard")}
+        onRetry={() => void leaderboard.refetch()}
+        errorLabel={t("leaderboard.error", "Failed to load leaderboard.")}
+        emptyTitle={t("leaderboard.empty", "No switch data available for this scope.")}
+      />
+    );
+  }
 
   return (
     <div className="py-6">
@@ -101,15 +119,6 @@ export default function SwitchLeaderboard() {
         <p role="note" className="mb-4 text-amber-300 text-sm">
           {t("leaderboard.scope.note")}
         </p>
-      )}
-
-      {leaderboard.isLoading && (
-        <div className="text-slate-500">{t("loading", "Loading…")}</div>
-      )}
-      {leaderboard.isError && (
-        <div className="text-red-400">
-          {t("leaderboard.error", "Failed to load leaderboard.")}
-        </div>
       )}
 
       {rows.length > 0 && (
@@ -194,12 +203,6 @@ export default function SwitchLeaderboard() {
               ))}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {rows.length === 0 && !leaderboard.isLoading && !leaderboard.isError && (
-        <div className="text-slate-500">
-          {t("leaderboard.empty", "No switch data available for this scope.")}
         </div>
       )}
 

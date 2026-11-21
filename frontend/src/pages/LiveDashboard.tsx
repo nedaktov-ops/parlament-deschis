@@ -12,6 +12,7 @@ import DataQualityGauge from "../components/DataQualityGauge";
 import DashboardHeader from "../components/ui/DashboardHeader";
 import AgeDistributionSection from "../components/ui/AgeDistributionSection";
 import Skeleton from "../components/ui/Skeleton";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 import type { SwitchWaveData } from "../components/SwitchTimeline";
 import { localISODate } from "../utils/date";
 
@@ -55,6 +56,37 @@ export function LiveDashboard() {
   const committeeData = committeeControlQuery.data?.data;
   const crossChamberData = crossChamberQuery.data?.data ?? [];
 
+  const statsView = resolveViewState({
+    isLoading: dashboardStats.isLoading,
+    isError: dashboardStats.isError,
+    isEmpty: dashboardStats.isSuccess && !stats,
+  });
+  const partiesView = resolveViewState({
+    isLoading: partiesData.isLoading,
+    isError: partiesData.isError,
+    isEmpty: partiesData.isSuccess && parties.length === 0,
+  });
+  const committeeView = resolveViewState({
+    isLoading: committeeControlQuery.isLoading,
+    isError: committeeControlQuery.isError,
+    isEmpty: committeeControlQuery.isSuccess && !committeeData,
+  });
+  const coverageView = resolveViewState({
+    isLoading: coverageDetailed.isLoading,
+    isError: coverageDetailed.isError,
+    isEmpty: coverageDetailed.isSuccess && (coverageDetailed.data ?? []).length === 0,
+  });
+  const crossView = resolveViewState({
+    isLoading: crossChamberQuery.isLoading,
+    isError: crossChamberQuery.isError,
+    isEmpty: crossChamberQuery.isSuccess && crossChamberData.length === 0,
+  });
+  const wavesView = resolveViewState({
+    isLoading: switchWavesQuery.isLoading,
+    isError: switchWavesQuery.isError,
+    isEmpty: switchWavesQuery.isSuccess && waves.length === 0,
+  });
+
   const openParty = (shortName: string) => {
     navigate({
       to: "/party/$shortName",
@@ -94,6 +126,12 @@ export function LiveDashboard() {
               <p className="text-sm sm:text-base text-slate-300/90 max-w-2xl leading-relaxed">{t("dashboardIntro")}</p>
               
               {/* Key Metrics as DashboardCards - zero wasted space */}
+              <AsyncState
+                view={statsView}
+                variant="inline"
+                onRetry={() => void dashboardStats.refetch()}
+                errorLabel={t("dashboard.loadError")}
+              >
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 pt-2">
                 <DashboardCard
                   title={t("dashboardStatPersons", "Members of Parliament")}
@@ -141,6 +179,7 @@ export function LiveDashboard() {
                   color="rose"
                 />
               </div>
+              </AsyncState>
             </div>
             <div className="lg:col-span-5 lg:pt-1">
               <HeroGraphic variant="overview" className="mx-auto" />
@@ -166,19 +205,30 @@ export function LiveDashboard() {
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100 mb-4 sm:mb-5">{t("partyEcosystem", "Party Ecosystem")}</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 lg:items-start">
-            <PartyListTable
-              parties={parties}
-              onPartyClick={openParty}
-              onViewAll={() => navigate({ to: "/parties", search: scope.searchFor({ date: clamped }) })}
-            />
+            <AsyncState
+              view={partiesView}
+              variant="inline"
+              onRetry={() => void partiesData.refetch()}
+              errorLabel={t("dashboard.loadError")}
+            >
+              <PartyListTable
+                parties={parties}
+                onPartyClick={openParty}
+                onViewAll={() => navigate({ to: "/parties", search: scope.searchFor({ date: clamped }) })}
+              />
+            </AsyncState>
             <div className="grid grid-cols-1 gap-4">
               <CommitteeControl
-                data={committeeData ?? { as_of: clamped, total_committees: 0, parties: [], chairs: [] }}
+                data={committeeData}
                 totalCommittees={stats?.committees ?? 0}
                 onChairClick={(chair) => chair.chair_person_id && openPerson(chair.chair_person_id)}
+                view={committeeView}
+                onRetry={() => void committeeControlQuery.refetch()}
               />
               <DataQualityGauge
                 coverageData={coverageDetailed.data ?? []}
+                view={coverageView}
+                onRetry={() => void coverageDetailed.refetch()}
               />
               <AgeDistributionSection />
             </div>
@@ -191,6 +241,7 @@ export function LiveDashboard() {
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100 mb-4 sm:mb-5">{t("deepDiveViews", "Deep Dive Views")}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
+            <AsyncState view={partiesView} variant="inline" onRetry={() => void partiesData.refetch()} errorLabel={t("dashboard.loadError")}>
             <Suspense fallback={<Skeleton className="h-64 w-full" />}>
               <PartyNetwork
                 parties={parties.slice(0, 10)}
@@ -199,6 +250,8 @@ export function LiveDashboard() {
                 onViewAll={() => navigate({ to: "/mps", search: scope.searchFor({ date: clamped }) })}
               />
             </Suspense>
+            </AsyncState>
+            <AsyncState view={wavesView} variant="inline" onRetry={() => void switchWavesQuery.refetch()} errorLabel={t("dashboard.loadError")}>
             <Suspense fallback={<Skeleton className="h-64 w-full" />}>
               <SwitchTimeline
                 waves={waveData}
@@ -206,12 +259,15 @@ export function LiveDashboard() {
                 onWaveClick={() => navigate({ to: "/traseism", search: scope.searchFor({ date: clamped, chamber: "deputies", legislature: undefined }) })}
               />
             </Suspense>
+            </AsyncState>
+            <AsyncState view={crossView} variant="inline" onRetry={() => void crossChamberQuery.refetch()} errorLabel={t("dashboard.loadError")}>
             <Suspense fallback={<Skeleton className="h-64 w-full" />}>
               <CrossChamberFlow
                 data={crossChamberData}
                 onPersonClick={openPerson}
               />
             </Suspense>
+            </AsyncState>
           </div>
         </div>
       </section>

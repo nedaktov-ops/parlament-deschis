@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { useNavigate } from "@tanstack/react-router";
 import { useScope } from "../hooks/useScope";
 import { localISODate } from "../utils/date";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 export function InstitutionalView() {
   const { t } = useTranslation();
@@ -19,6 +20,17 @@ export function InstitutionalView() {
   const crossChamber = useQuery({
     queryKey: ["cross-chamber", asOf, ...scope.scopeKey],
     queryFn: () => api.crossChamber(asOf),
+  });
+
+  const committeeView = resolveViewState({
+    isLoading: committees.isLoading,
+    isError: committees.isError,
+    isEmpty: committees.isSuccess && (committees.data?.length ?? 0) === 0,
+  });
+  const crossView = resolveViewState({
+    isLoading: crossChamber.isLoading,
+    isError: crossChamber.isError,
+    isEmpty: crossChamber.isSuccess && (crossChamber.data?.data.length ?? 0) === 0,
   });
 
   return (
@@ -47,18 +59,13 @@ export function InstitutionalView() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="card p-4">
             <h2 className="font-semibold mb-3">{t("committeeControl")}</h2>
-            {committees.isError ? (
-              <div role="alert" className="text-rose-200 text-sm">
-                {t("institutionalLoadError")}
-                <button type="button"className="ml-3 underline" onClick={() => committees.refetch()}>
-                  {t("traseismRetry")}
-                </button>
-              </div>
-            ) : committees.isLoading ? (
-              <div className="text-slate-500 text-sm">{t("loading")}</div>
-            ) : committees.data?.length === 0 ? (
-              <div className="text-slate-500 text-sm">{t("committeeDataUnavailable")}</div>
-            ) : (
+            <AsyncState
+              view={committeeView}
+              variant="inline"
+              onRetry={() => void committees.refetch()}
+              errorLabel={t("institutionalLoadError")}
+              emptyTitle={t("committeeDataUnavailable")}
+            >
               <div className="space-y-2">
                 {committees.data?.map(c => (
                   <div key={c.id} className="bg-slate-800/50 rounded p-2">
@@ -66,7 +73,7 @@ export function InstitutionalView() {
                   </div>
                 ))}
               </div>
-            )}
+            </AsyncState>
           </div>
 
           <div className="card p-4">
@@ -77,18 +84,13 @@ export function InstitutionalView() {
 
         <div className="card p-4">
           <h2 className="font-semibold mb-3">{t("crossChamberMPs")}</h2>
-          {crossChamber.isError ? (
-            <div role="alert" className="text-rose-200 text-sm">
-              {t("institutionalLoadError")}
-              <button type="button"className="ml-3 underline" onClick={() => crossChamber.refetch()}>
-                {t("traseismRetry")}
-              </button>
-            </div>
-          ) : crossChamber.isLoading ? (
-            <div className="text-slate-500 text-sm">{t("loading")}</div>
-          ) : crossChamber.data?.data.length === 0 ? (
-            <div className="text-slate-500 text-sm">{t("crossChamberNoData")}</div>
-          ) : (
+          <AsyncState
+            view={crossView}
+            variant="inline"
+            onRetry={() => void crossChamber.refetch()}
+            errorLabel={t("institutionalLoadError")}
+            emptyTitle={t("crossChamberNoData")}
+          >
             <>
               <p className="text-sm text-slate-400 mb-3" aria-live="polite">
                 {t("crossChamberCount", { count: crossChamber.data?.count ?? 0 })}
@@ -121,7 +123,7 @@ export function InstitutionalView() {
                 </table>
               </div>
             </>
-          )}
+          </AsyncState>
         </div>
       </div>
 
