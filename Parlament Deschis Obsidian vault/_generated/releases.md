@@ -2,14 +2,14 @@
 id: GEN-RELEASES
 type: reference
 title: "Generated release inventory"
-description: "Sorted git tags and the pinned release marker at HEAD."
+description: "Sorted git tags and the pinned release marker at the source commit."
 status: active
 authority: mirror
 tags: [type/reference, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py, data/latest-release.txt]
-created: 2026-11-21T10:41:14+02:00
-updated: 2026-11-21T10:41:14+02:00
-source_commit: 6fd60285cd81ec1a291129f5a4e4dc3a90fc25cf
+created: 2026-11-21T11:05:21+02:00
+updated: 2026-11-21T11:05:21+02:00
+source_commit: 537cef7c63921fd311c26d3dd27cae98f7649648
 generated: true
 generator: scripts/vault_sync.py
 ---
@@ -18,7 +18,7 @@ generator: scripts/vault_sync.py
 
 # Generated release inventory
 
-Pinned release (`data/latest-release.txt` at HEAD): `data-20261117-T213500`.
+Pinned release (`data/latest-release.txt` at the source commit): `data-20261117-T213500`.
 Tags: 20.
 
 Tags are listed in sorted order. One historical tag is shown under a stable

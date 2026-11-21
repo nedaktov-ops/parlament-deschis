@@ -2,14 +2,14 @@
 id: GEN-ROUTES
 type: reference
 title: "Generated API route inventory"
-description: "HTTP route decorators extracted from the backend entry points at HEAD."
+description: "HTTP route decorators extracted from the backend entry points at the source commit."
 status: active
 authority: mirror
 tags: [type/reference, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py, backend/routers/api.py, backend/main.py]
-created: 2026-11-21T10:41:14+02:00
-updated: 2026-11-21T10:41:14+02:00
-source_commit: 6fd60285cd81ec1a291129f5a4e4dc3a90fc25cf
+created: 2026-11-21T11:05:21+02:00
+updated: 2026-11-21T11:05:21+02:00
+source_commit: 537cef7c63921fd311c26d3dd27cae98f7649648
 generated: true
 generator: scripts/vault_sync.py
 ---
@@ -18,7 +18,7 @@ generator: scripts/vault_sync.py
 
 # Generated API route inventory
 
-Extracted from the HEAD versions of `backend/routers/api.py` and `backend/main.py`.
+Extracted from the source-commit versions of `backend/routers/api.py` and `backend/main.py`.
 
 Route decorators found: 49.
 

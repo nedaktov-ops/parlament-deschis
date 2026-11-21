@@ -2,14 +2,14 @@
 id: GEN-TESTS
 type: reference
 title: "Generated test inventory"
-description: "Tracked test files and their test-function counts at HEAD."
+description: "Tracked test files and their test-function counts at the source commit."
 status: active
 authority: mirror
 tags: [type/reference, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py, tests/]
-created: 2026-11-21T10:41:14+02:00
-updated: 2026-11-21T10:41:14+02:00
-source_commit: 6fd60285cd81ec1a291129f5a4e4dc3a90fc25cf
+created: 2026-11-21T11:05:21+02:00
+updated: 2026-11-21T11:05:21+02:00
+source_commit: 537cef7c63921fd311c26d3dd27cae98f7649648
 generated: true
 generator: scripts/vault_sync.py
 ---
@@ -18,7 +18,7 @@ generator: scripts/vault_sync.py
 
 # Generated test inventory
 
-Counts come from the HEAD versions of tracked files under `tests/`.
+Counts come from the source-commit versions of tracked files under `tests/`.
 
 - Python test files: 47; `def test_` definitions: 343.
 - Bats test files: 0; `@test` cases: 0.
