@@ -67,7 +67,19 @@ resolved.
 
 **Decision:** R-01 PASS. Next: R-02 (layout/type) — serial, same `index.css` ownership now transferred to call-site-only edits per CO-1. W1 remains IN PROGRESS until R-02 lands.
 
-## W2 — Scope + counts + states (R-03, R-04, R-05) — **IN PROGRESS (R-03 PASS)**
+## W2 — Scope + counts + states (R-03, R-04, R-05) — **PASS**
+
+### R-05 — Shared async state system — **PASS**
+
+| Item | Evidence |
+|---|---|
+| Commit | `3e6cf3e` — 33 files, 971 insertions / 655 deletions (2 new) |
+| Scope | 33 R-05-owned files; `git diff --check` clean; R-03 scope keys and R-04 count keys preserved (i18n additions only) |
+| Blocking gates | tsc/lint/build exit 0; `I18N PARITY PASS`; UI gate 24/24, zero JavaScript errors, zero axe violations (master re-run); `STATE PROBE PASS: 9 routes × 3 scenarios, 0 failures` (master re-run); doc-truth 0 |
+| Implementation repairs | two failures reproduced then fixed to green: Traseism undefined `scope` under disabled query (`TS18048`), probe route glob aborting the app bundle |
+| NOT PROVEN | P2 component sweep deferred (RollCallTable, PersonDrawer, Search, SankeyFlow, LiveFeed, TimelineChart, About); production/mobile/touch/print behaviour and visual contrast not measured |
+
+**W2 decision: PASS.** All three recipes landed with every blocking gate green and master re-verification. Residuals are explicitly scoped to later waves (P2 component state sweep → W4/R-06; `/grafice` overflow → W3/R-08). Most effective next step: W3/R-08 feature honesty, which owns the `/grafice` residual and the remaining label/proxy defects.
 
 ### R-04 — Count / definition honesty — **PASS**
 
@@ -110,3 +122,4 @@ resolved.
 | 2026-11-21 | W1 overall | AMBER | R-01 and R-02 owned gates PASS; 2 edge-probe rows are proven pre-existing (stale probe UUID, /grafice overflow) | proceed W2 with residuals tracked (grafice overflow -> R-08; probe UUID -> recipe maintenance) |
 | 2026-11-21 | W2/R-03 | PASS | ruff clean, pytest 412, lint/build green, API probes incl. 422, UI 24/24 zero axe (master re-run), URL persistence OK | continue W2 with R-04 (counts) |
 | 2026-11-21 | W2/R-04 | PASS | ruff clean, pytest 419, lint/build green, API probes 1217/1217/0, UI 24/24 zero axe (master re-run) | continue W2 with R-05 (states) |
+| 2026-11-21 | W2 overall | PASS | R-03/R-04/R-05 all blocking gates green, master re-verified; residuals scoped to W3/W4 | proceed W3/R-08 (feature honesty + grafice overflow) |
