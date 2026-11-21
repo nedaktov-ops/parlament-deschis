@@ -2,15 +2,15 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, type ScorecardEntry } from "../api/client";
-import { DataBar } from "../components/DataViz";
+import { DataBar, type DataBarTone } from "../components/DataViz";
 import Skeleton from "../components/ui/Skeleton";
 
-const LOYALTY_COLOR = (pct: number) => {
-  if (pct >= 90) return "#10b981"; // emerald
-  if (pct >= 70) return "#22c55e"; // green
-  if (pct >= 50) return "#eab308"; // yellow
-  if (pct >= 30) return "#f59e0b"; // amber
-  return "#ef4444"; // rose
+// Thresholds preserved from the previous loyalty-colour helper; intermediate
+// green/yellow steps collapse into the two on-palette semantic tones (success / warning).
+const LOYALTY_TONE = (pct: number): DataBarTone => {
+  if (pct >= 50) return "success";
+  if (pct >= 30) return "warning";
+  return "danger";
 };
 
 export default function Topuri() {
@@ -143,7 +143,7 @@ export default function Topuri() {
                     </td>
                     <td className="py-2.5 pr-4 text-right">
                       <div className="flex items-center gap-2">
-                        <DataBar value={e.loyalty_pct} max={100} color={LOYALTY_COLOR(e.loyalty_pct)} />
+                        <DataBar value={e.loyalty_pct} max={100} tone={LOYALTY_TONE(e.loyalty_pct)} />
                         <span className="text-slate-300 tabular-nums w-8">
                           {e.loyalty_pct}%
                         </span>

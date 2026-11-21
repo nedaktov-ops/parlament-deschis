@@ -48,18 +48,28 @@ export function Sparkline({
   );
 }
 
+export type DataBarTone = "accent" | "success" | "warning" | "danger" | "info";
+
 export interface DataBarProps {
   value: number;
   max: number;
   label?: string;
-  color?: string;
+  tone?: DataBarTone;
 }
+
+const DATA_BAR_TONE: Record<DataBarTone, string> = {
+  accent: "data-bar-fill--accent",
+  success: "data-bar-fill--success",
+  warning: "data-bar-fill--warning",
+  danger: "data-bar-fill--danger",
+  info: "data-bar-fill--info",
+};
 
 export function DataBar({
   value,
   max,
   label,
-  color = "bg-sky-400/70",
+  tone = "accent",
 }: DataBarProps) {
   const width = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
 
@@ -71,9 +81,9 @@ export function DataBar({
           <span className="font-mono text-slate-100">{value}</span>
         </div>
       )}
-      <div className="h-1.5 w-full rounded-full bg-slate-700/40 overflow-hidden">
+      <div className="data-bar">
         <div
-          className={`h-full rounded-full origin-left transition-all duration-300 ${color}`}
+          className={`data-bar-fill ${DATA_BAR_TONE[tone]}`}
           style={{ width: `${width}%` }}
         />
       </div>
@@ -95,7 +105,10 @@ export function ProgressRing({
   size = 60,
 }: ProgressRingProps) {
   const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
-  const circumference = 2 * Math.PI * 24;
+  // r=22 + strokeWidth/2=2 lands exactly on the 48-unit viewBox edge;
+  // the old r=24 clipped half the stroke.
+  const radius = 22;
+  const circumference = 2 * Math.PI * radius;
   const offset = circumference - (pct / 100) * circumference;
 
   return (
@@ -107,11 +120,14 @@ export function ProgressRing({
       aria-label={`${pct}% complete`}
       className={`rotate-[-90deg] ${color}`}
     >
-      <circle cx="24" cy="24" r="24" fill="none" stroke="slate-700/40" strokeWidth="4" />
       <circle
-        cx="24"
-        cy="24"
-        r="24"
+        cx="24" cy="24" r={radius}
+        fill="none"
+        stroke="rgb(var(--slate-700) / 0.4)"
+        strokeWidth="4"
+      />
+      <circle
+        cx="24" cy="24" r={radius}
         fill="none"
         stroke="currentColor"
         strokeWidth="4"
@@ -121,12 +137,11 @@ export function ProgressRing({
         className="transition-all duration-500 ease-out"
       />
       <text
-        x="24"
-        y="28"
+        x="24" y="28"
         textAnchor="middle"
         fontSize="10"
         fontFamily="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
-        fill="slate-200"
+        fill="rgb(var(--slate-200))"
       >
         {Math.round(pct)}%
       </text>
@@ -146,7 +161,7 @@ export function StatBadge({
   color = "text-slate-400",
 }: StatBadgeProps) {
   return (
-    <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800/50 border border-slate-700/50">
+    <span className="badge">
       <span className={`w-2 h-2 shrink-0 rounded-full ${color.replace("text-", "bg-")}`} />
       <span className={`text-xs ${color}`}>{number}</span>
       <span className="text-xs text-slate-500">{label}</span>

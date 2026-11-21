@@ -97,7 +97,7 @@ export default function Grafice() {
                       </td>
                       <td className="py-2.5 pr-4 text-right">
                         <div className="flex items-center gap-2">
-                          <DataBar value={c.yes_pct} max={100} color="#10b981" />
+                          <DataBar value={c.yes_pct} max={100} tone="success" />
                           <span className="text-slate-300 tabular-nums w-8">
                             {c.yes_pct}%
                           </span>
@@ -105,7 +105,7 @@ export default function Grafice() {
                       </td>
                       <td className="py-2.5 pr-4 text-right">
                         <div className="flex items-center gap-2">
-                          <DataBar value={c.no_pct} max={100} color="#ef4444" />
+                          <DataBar value={c.no_pct} max={100} tone="danger" />
                           <span className="text-slate-300 tabular-nums w-8">
                             {c.no_pct}%
                           </span>
@@ -113,7 +113,7 @@ export default function Grafice() {
                       </td>
                       <td className="py-2.5 pr-4 text-right">
                         <div className="flex items-center gap-2">
-                          <DataBar value={c.abstain_pct} max={100} color="#f59e0b" />
+                          <DataBar value={c.abstain_pct} max={100} tone="warning" />
                           <span className="text-slate-300 tabular-nums w-8">
                             {c.abstain_pct}%
                           </span>
