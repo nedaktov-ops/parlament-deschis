@@ -24,7 +24,7 @@ tracked source was edited by this agent.
 | G05 | `bash scripts/check-doc-truth.sh` | 0 | `false-claims: 0` | **PASS** | 2026-11-21T11:45:54+02:00 |
 | G06 | `.venv/bin/python -m pipeline.cli --db data/parlament-real.db audit-corpus --strict --baseline data/reference/corpus-audit-baseline.json` | 0 | `275 known errors, 0 new errors, 0 resolved baseline findings, 0 baseline findings not evaluated` | **PASS** | 2026-11-21T11:45:56+02:00 |
 | G07 | `node scripts/check_livefeed_props.mjs` | 0 | `PASS: LiveFeed props (legislature=2024, chamber=senate) reach queryFn and queryKey` | **PASS** | 2026-11-21T11:46:10+02:00 |
-| G08 | `python3 scripts/ui_validate.py http://127.0.0.1:5180` | 0 | `UI VALIDATION PASS: 24 routes, 0 JS errors, 0 axe violations` | **PASS** | 2026-11-21T11:47:13+02:00 |
+| G08 | `python3 scripts/ui_validate.py http://127.0.0.1:5180` | 0 | `UI VALIDATION PASS: 24 routes, zero JavaScript errors, zero axe violations` | **PASS** | 2026-11-21T11:47:13+02:00 |
 | G09a | `python3 scripts/vault_sync.py --check` | 0 | `vault_sync --check: clean — 5 generated notes match the source commit` | **PASS** | 2026-11-21T11:46:15+02:00 |
 | G09b | `python3 scripts/vault_lint.py` | 0 | `VAULT LINT PASS: 41 notes, all links/frontmatter/vocabularies clean` | **PASS** | 2026-11-21T11:46:15+02:00 |
 | G10 | `git diff --check` | 0 | *(empty output, 0 bytes)* | **PASS** | 2026-11-21T11:46:19+02:00 |
@@ -192,7 +192,7 @@ EXIT CODE: 0
 
 --- details ---
 
-UI VALIDATION PASS: 24 routes, 0 JS errors, 0 axe violations
+UI VALIDATION PASS: 24 routes, zero JavaScript errors, zero axe violations
 EXIT CODE: 0
 ```
 G08 was a real browser run (`scripts/ui_validate.py` via Playwright/Chromium
