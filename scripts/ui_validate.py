@@ -92,8 +92,15 @@ async def check_route(browser, name: str, route: str) -> dict:
     nav_error = None
     try:
         await page.goto(BASE + route, wait_until="load", timeout=30_000)
-        # Let react-query fetches + lazy chunks settle.
-        await page.wait_for_timeout(2_500)
+        # Let react-query fetches + lazy chunks settle. Vote-heavy routes issue
+        # many parallel position queries, so a fixed short wait used to scan
+        # their loading state and report a false h1/axe failure. Prefer network
+        # idle, then a bounded settle; never skip the check on timeout.
+        try:
+            await page.wait_for_load_state("networkidle", timeout=10_000)
+        except Exception:  # noqa: BLE001 - fall through to the fixed settle
+            pass
+        await page.wait_for_timeout(4_000)
         # The page must show real content, not an error boundary.
         body_text = (await page.inner_text("body")) or ""
         if not body_text.strip():
