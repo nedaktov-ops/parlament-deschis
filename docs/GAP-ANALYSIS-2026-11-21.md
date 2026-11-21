@@ -5,10 +5,12 @@
 D: frontend design contract), one verified GitHub state read-only (E), one probed
 Vercel + Render read-only (F). The master agent independently cross-checked the
 decisive claims. No file in the product tree was edited by the fleet; no deploy,
-workflow trigger or GitHub mutation was performed. Every GitHub-side claim in the
-docs was **confirmed** by Agent E; no claim was contradicted.
+workflow trigger or GitHub mutation was performed. GitHub-side claims were
+**confirmed** by Agent E; the post-initial audit later corrected one claim here
+about the `ci.yml` branch filter (see `AUDIT-RESOLUTIONS-2026-11-21.md`).
 
-**Snapshot.** Local HEAD `3eb3c0a` (branch `review/completion-20261121`, unpushed);
+**Snapshot.** Local HEAD `221cf78` (branch `review/completion-20261121`, unpushed);
+the review above was taken at `3eb3c0a` and the gap analysis was committed at `221cf78`;
 `origin/main` and GitHub default branch `6b848f1`; probe window 2026-11-21
 ~08:20–08:23 UTC.
 
@@ -37,7 +39,7 @@ blueprint supersedes it again. The newest state document is
 
 - One-way pipeline: polite fetch → SHA-256 fragments → parse → identity resolution → bitemporal tenures → events → as-of API → static React dashboard; runtime read-only, DB baked into the image. (`docs/ARCHITECTURE.md:3-10`; `docs/DEPLOYMENT.md:11-19`)
 - API: ~48 OpenAPI paths, three distinct committee counts (26 orgs / 23 with active memberships / 9 with a chair), REST + GraphQL, token-protected admin poll. (`docs/API.md:159-171,341-357`)
-- Gates: strict audit **275 known / 0 new**; UI validation widened to **24 routes, 0 JS errors, 0 axe**; pytest 384 passed; doc-truth 0. (`docs/COMPREHENSIVE-REVIEW-2026-11-21.md:49-59`)
+- Gates: strict audit **275 known / 0 new**; UI validation widened to **24 routes, zero JavaScript errors, zero axe violations**; pytest 384 passed; doc-truth 0. (`docs/COMPREHENSIVE-REVIEW-2026-11-21.md:49-59`)
 - Dataset pin `data-20261117-T213500`; 3,388 persons / **7,349** memberships live. (`docs/COMPREHENSIVE-REVIEW-2026-11-21.md:25`)
 - Declared residuals: issue #14 (11 failed data runs from `cdep.ro` ConnectTimeout), no branch protection on `main`, deployment lag, party genealogy 0 links, Senate historical profile ingest deferred, analytics `meta` not universal, cache TTL 300 s vs SPEC 1 h. (`docs/COMPREHENSIVE-REVIEW-2026-11-21.md:68-91`; `docs/METHODOLOGY.md:316-318,500`)
 
@@ -51,8 +53,8 @@ blueprint supersedes it again. The newest state document is
 - `main` has **no branch protection** (HTTP 404; no rulesets). Two open PRs (#29, #9, #6) have failing CI checks and are still mergeable — the absence of enforcement is observable.
 - Issue #14 **open** with 11 failed data runs; its body records only "release not published", while run `44729831051`'s log proves `requests.exceptions.ConnectTimeout` to `www.cdep.ro` in "Collect and ingest".
 - Open PRs: 9 (8 dependabot, 1 deploy-sync), ages 1–6 days.
-- Latest GitHub release `data-20261117-T213500` matches the local pin. Nuance: at the tag itself the pin read `data-20261117-T060923`; the marker was updated after the release was published. The pinned asset (sha256 `7298ffd1…`) has **18 tables and no `vote` / `vote_position` / `vote_import_run` table**.
-- Minor doc/config mismatch: `docs/DEPLOYMENT.md:71` claims `push: branches: [main]`, but `ci.yml` has a bare `push:` with no branch filter (and also runs on PRs).
+- Latest GitHub release `data-20261117-T213500` matches the local pin. Nuance: at the tag itself the pin read an earlier, superseded tag; the marker was updated after the release was published. The pinned asset (sha256 `7298ffd1…`) has **18 tables and no `vote` / `vote_position` / `vote_import_run` table**.
+- `docs/DEPLOYMENT.md:71` matches `ci.yml:3-5`: `push` is filtered to `branches: [main]` and CI also runs on PRs and `workflow_dispatch`. (An earlier version of this analysis incorrectly claimed a bare `push:` with no filter; corrected after re-reading the file.)
 
 ### Vercel (frontend)
 - `GET /` 200, serves `index.html` (940 B) with assets `/assets/index-D61EXxHz.js` and `/assets/index-4FXD2Kh9.css`; JS 503,825 B, immutable cache, served from Vercel cache.
@@ -64,7 +66,7 @@ blueprint supersedes it again. The newest state document is
 ### Render (API)
 - `/api/health` 200: release `data-20261117-T213500`, persons 3,388, memberships 7,349, sources `never_run`; `/health/live` and `/health/ready` 200.
 - `/dashboard/stats` 200: switches 2,002, committees 26, legislatures 20, parties 37, cross_chamber 39, coverage 100 — but `/export/report` and `/traseism/summary` both say switches **1,217** (one dataset, two live numbers).
-- `/api/votes` → `data_exists:false, total:0` — **no vote data in production**, confirming the 10× "highest-value move" is not actually shipped to users.
+- `/api/votes` → `data_exists:false, total:0` — **no vote data in production**, confirming the 10× "highest-value move" is not actually shipped to users. Scope note: the local, gitignored working databases *do* hold votes (`data/parlament-real.db` 177 votes / 28,800 positions; `data/parlament.db` 52 votes / 7,127 positions), but they have never been released. "No vote data" always refers to the published corpus only.
 - `/api/analytics/ideology` → **404**; legacy `/api/api/analytics/ideology` → 200 without `meta`.
 - `/api/votes/scorecard` → 200 but wrong handler (`data:null`, shadowed by `/votes/{vote_id}`); legacy `/api/api/votes/scorecard` → votes-list shape.
 - Live `/openapi.json` has 48 paths including the legacy double-prefixed routes and **zero** occurrences of `meta` / `generated_at` / `count` — decisive proof the deployed backend is pre-fix.

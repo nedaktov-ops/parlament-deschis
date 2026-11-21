@@ -40,7 +40,7 @@ no data rewrites, no weakened gates, no fabricated values.
 | F8 | Doc-truth gate RED | `281\.ro` bare-token pattern flagged 37 legitimate research/licence statements | Pattern narrowed to precise false assertions; all other 15 strings preserved | clean 0, seeded-false 5 → exit 1 |
 | F9 | Documentation truth | `EVIDENCE.md` claimed a file that does not exist; stale pin/tag/UI-gate claims; `docs/API.md` had no vote/ideology endpoints | Historical snapshots preserved + dated current-state corrections; 8 endpoints documented | `check-doc-truth.sh` → false-claims: 0 |
 | F10 | UI gate coverage | Only 18 original routes scanned; 6 newest routes untested | 6 routes added (`/parties`, `/Voturi`, `/radar`, `/grafice`, `/topuri`, `/ideology`) | 24 routes scanned |
-| F11 | Accessibility regressions found by the widened gate | `nested-interactive` on dashboard cards, duplicate `landmark-unique` label on `/committees`, `color-contrast` + `scrollable-region-focusable` on `/radar` | Native `<Link>`/`button` instead of role+keyboard shim; unique i18n label; red-400 (5.48:1); focusable labelled region | `ui_validate.py` → **24/24, 0 JS errors, 0 axe violations** |
+| F11 | Accessibility regressions found by the widened gate | `nested-interactive` on dashboard cards, duplicate `landmark-unique` label on `/committees`, `color-contrast` + `scrollable-region-focusable` on `/radar` | Native `<Link>`/`button` instead of role+keyboard shim; unique i18n label; red-400 (5.48:1); focusable labelled region | `ui_validate.py` → **24/24, zero JavaScript errors, zero axe violations** |
 
 ---
 
@@ -53,7 +53,7 @@ frontend: npm run lint           0 errors, 7 pre-existing warnings    EXIT 0
 frontend: npm run build          ✓ built in 9.36s                     EXIT 0
 audit-corpus --strict (README DB) 275 known errors, 0 new              EXIT 0
 bash scripts/check-doc-truth.sh  false-claims: 0                       EXIT 0
-python3 scripts/ui_validate.py   24/24 routes, 0 JS errors, 0 axe      EXIT 0
+python3 scripts/ui_validate.py   24/24 routes, zero JS errors, zero axe EXIT 0
 workflow YAML parse              5/5 parsed                            EXIT 0
 git diff --check                 clean                                 EXIT 0
 ```
