@@ -16,9 +16,11 @@ source_commit: 96e6fdd
 
 > **Addendum (2026-11-21):** Re-anchored 2026-11-21 from `docs/CONTINUATION-STRATEGY-2026-11-21.md` §0. Vault mirror: [CONTINUATION-STRATEGY](../20-DIRECTION/CONTINUATION-STRATEGY.md).
 
-This is the authoritative "what is true now" note for the repository at HEAD
-`96e6fdd` on branch `review/completion-20261121`. It is a hub: detailed
-tracking lives in the linked notes, not duplicated here.
+This is the authoritative "what is true now" note. At the 2026-11-21 execution
+close, `main` is `ad34bde` and production serves release
+`data-20261121-votes-001` with 189 live votes. It is a hub: detailed tracking
+lives in the linked notes, not duplicated here. See the dated
+[EXECUTION-LOG](EXECUTION-LOG-2026-11-21.md) for the owner-gate evidence.
 
 - [CONTINUATION-STRATEGY](../20-DIRECTION/CONTINUATION-STRATEGY.md) — method, gates, wave status and session boundary.
 - [GAP-REGISTER](GAP-REGISTER.md) — open P0/P1/P2 gaps and next actions.
@@ -28,8 +30,9 @@ tracking lives in the linked notes, not duplicated here.
 
 ## Production snapshot
 
-- Live release pin `data-20261117-T213500` — matches the local pin and the
-  latest GitHub release (see [RELEASE-AND-VERIFICATION](RELEASE-AND-VERIFICATION.md)).
+- Live release pin `data-20261121-votes-001` (sha256 `eabdb857…`) — matches the
+  latest GitHub release and contains 189 roll-call votes / 24,682 positions.
+  Historical pin `data-20261117-T213500` was superseded on 2026-11-21.
 - Published corpus: **3,388 persons**, **7,349 prepared memberships** (the raw
   release asset holds 7,358; nine duplicate closed stints are removed by
   `prepare_db.py`). Sources status `never_run`.
