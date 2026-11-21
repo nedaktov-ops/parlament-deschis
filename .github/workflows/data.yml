@@ -53,9 +53,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5 (annotated tag, dereferenced via ls-remote)
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v5 (annotated tag, dereferenced via ls-remote)
         with:
           enable-cache: true
 
@@ -66,7 +66,7 @@ jobs:
       # pages are most needed. Separate always() save steps below fix that.
       - name: Restore the official cdep page archive
         id: page-cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: data/cache/cdep
           key: cdep-pages-${{ github.run_id }}-${{ github.run_attempt }}
@@ -79,7 +79,7 @@ jobs:
       # official corpus rebuild, and a cdep outage cannot evict civic caches.
       - name: Restore the third-party source cache
         id: thirdparty-cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: data/wikidata_cache.db
           key: thirdparty-sources-${{ github.run_id }}-${{ github.run_attempt }}
@@ -137,7 +137,7 @@ jobs:
 
       - name: Save the official cdep page archive (even on failure)
         if: always()
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: data/cache/cdep
           key: cdep-pages-${{ github.run_id }}-${{ github.run_attempt }}
@@ -146,7 +146,7 @@ jobs:
       # so a fresh runner cannot fail the save step.
       - name: Save the third-party source cache (even on failure)
         if: always() && hashFiles('data/wikidata_cache.db') != ''
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: data/wikidata_cache.db
           key: thirdparty-sources-${{ github.run_id }}-${{ github.run_attempt }}
@@ -166,7 +166,7 @@ jobs:
           echo "tag=data-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
 
       - name: Publish the validated dataset
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           tag_name: ${{ steps.release.outputs.tag }}
           name: Dataset ${{ steps.release.outputs.tag }}
@@ -276,7 +276,7 @@ jobs:
 
       - name: Close failure issue on success
         if: success()
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const title = "Automated dataset refresh/deployment failure";
@@ -302,7 +302,7 @@ jobs:
 
       - name: Report refresh or deployment failure
         if: failure()
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           DATASET_RELEASE_TAG: ${{ steps.release.outputs.tag }}
         with:
