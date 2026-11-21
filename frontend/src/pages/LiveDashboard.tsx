@@ -2,7 +2,8 @@ import { lazy, Suspense, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, committeeControl, switchWaves } from "../api/client";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
+import { useScope } from "../hooks/useScope";
 import HeroGraphic from "../components/HeroGraphic";
 import DashboardCard from "../components/DashboardCard";
 import PartyListTable from "../components/PartyListTable";
@@ -24,15 +25,15 @@ const TODAY = localISODate();
 export function LiveDashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate({ from: "/" });
-  const search = useSearch({ from: "/", select: s => s.date });
-  const asOf = search ?? TODAY;
+  const scope = useScope();
+  const asOf = scope.date;
 
   const meta = useQuery({ queryKey: ["meta"], queryFn: api.meta });
-  const dashboardStats = useQuery({ queryKey: ["dashboard-stats", asOf], queryFn: () => api.dashboardStats(asOf) });
+  const dashboardStats = useQuery({ queryKey: ["dashboard-stats", asOf, ...scope.scopeKey], queryFn: () => api.dashboardStats(asOf) });
   const partiesData = useQuery({ queryKey: ["parties"], queryFn: api.parties });
   const switchWavesQuery = useQuery({ queryKey: ["switch-waves"], queryFn: () => switchWaves() });
-  const committeeControlQuery = useQuery({ queryKey: ["committee-control", asOf], queryFn: () => committeeControl(undefined, asOf) });
-  const crossChamberQuery = useQuery({ queryKey: ["cross-chamber", asOf], queryFn: () => api.crossChamber(asOf) });
+  const committeeControlQuery = useQuery({ queryKey: ["committee-control", asOf, ...scope.scopeKey], queryFn: () => committeeControl(scope.legislature, asOf) });
+  const crossChamberQuery = useQuery({ queryKey: ["cross-chamber", asOf, ...scope.scopeKey], queryFn: () => api.crossChamber(asOf) });
   const coverageDetailed = useQuery({ queryKey: ["coverage-detailed"], queryFn: api.coverage_detailed });
 
   const { min } = useMemo(() => {
@@ -58,7 +59,7 @@ export function LiveDashboard() {
     navigate({
       to: "/party/$shortName",
       params: { shortName },
-      search: { date: clamped },
+      search: scope.searchFor({ date: clamped }),
     });
   };
 
@@ -66,7 +67,7 @@ export function LiveDashboard() {
     navigate({
       to: "/person/$id",
       params: { id },
-      search: { date: clamped },
+      search: scope.searchFor({ date: clamped }),
     });
   };
 
@@ -168,7 +169,7 @@ export function LiveDashboard() {
             <PartyListTable
               parties={parties}
               onPartyClick={openParty}
-              onViewAll={() => navigate({ to: "/parties", search: { date: clamped } })}
+              onViewAll={() => navigate({ to: "/parties", search: scope.searchFor({ date: clamped }) })}
             />
             <div className="grid grid-cols-1 gap-4">
               <CommitteeControl
@@ -195,14 +196,14 @@ export function LiveDashboard() {
                 parties={parties.slice(0, 10)}
                 edges={[]}
                 onNodeClick={openParty}
-                onViewAll={() => navigate({ to: "/mps", search: { date: clamped } })}
+                onViewAll={() => navigate({ to: "/mps", search: scope.searchFor({ date: clamped }) })}
               />
             </Suspense>
             <Suspense fallback={<Skeleton className="h-64 w-full" />}>
               <SwitchTimeline
                 waves={waveData}
                 legislatures={meta.data?.legislatures ?? {}}
-                onWaveClick={() => navigate({ to: "/traseism", search: { date: clamped, chamber: "deputies", legislature: undefined } })}
+                onWaveClick={() => navigate({ to: "/traseism", search: scope.searchFor({ date: clamped, chamber: "deputies", legislature: undefined }) })}
               />
             </Suspense>
             <Suspense fallback={<Skeleton className="h-64 w-full" />}>

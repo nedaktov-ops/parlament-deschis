@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import { useParams, useSearch } from "@tanstack/react-router";
+import { useParams } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import PersonDrawer from "../components/PersonDrawer";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
@@ -15,20 +17,20 @@ function formatCount(value: number | null): string {
 export function PartyProfile() {
   const { t } = useTranslation();
   const params = useParams({ from: "/party/$shortName" });
-  const search = useSearch({ from: "/party/$shortName", select: s => s.date });
+  const scope = useScope();
   const shortName = params.shortName;
-  const asOf = search;
+  const asOf = scope.date;
   const [personId, setPersonId] = useState<string | null>(null);
   const closePerson = useCallback(() => setPersonId(null), []);
 
   const party = useQuery({
-    queryKey: ["party", shortName, asOf],
+    queryKey: ["party", shortName, asOf, ...scope.scopeKey],
     queryFn: () => api.partyProfile(shortName, asOf),
     enabled: !!shortName,
   });
 
   const movements = useQuery({
-    queryKey: ["party-movements", shortName, asOf],
+    queryKey: ["party-movements", shortName, asOf, ...scope.scopeKey],
     queryFn: () => api.partyMovements(shortName, asOf),
     enabled: !!shortName,
   });
@@ -81,6 +83,7 @@ export function PartyProfile() {
 
   return (
     <div className="space-y-6">
+      <ScopeControls showDate />
       {/* Section 1: Hero — fills the first screen alone */}
       <section className="hero-section" data-enter>
         <div>

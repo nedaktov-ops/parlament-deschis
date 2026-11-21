@@ -1,26 +1,31 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { api, type VoteRow } from "../api/client";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { api, votesForScope, type VoteRow } from "../api/client";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import ErrorState from "../components/ErrorState";
 import RollCallTable from "../components/RollCallTable";
 import Skeleton from "../components/ui/Skeleton";
 
 export default function Voturi() {
   const { t } = useTranslation();
-  const [query, setQuery] = useState<string>("");
-  const [selectedVoteId, setSelectedVoteId] = useState<string | null>(null);
+  const scope = useScope();
+  const navigate = useNavigate({ from: "/Voturi" });
+  // Search text and the selected vote are URL-backed so a deep link opens the
+  // exact vote and back/forward steps through the filter (FN-7).
+  const local = useSearch({ from: "/Voturi", select: (s) => s as Record<string, unknown> });
+  const query = typeof local.query === "string" ? local.query : "";
+  const selectedVoteId = typeof local.selectedVoteId === "string" ? local.selectedVoteId : null;
+  const setQuery = (value: string) => navigate({ search: scope.searchFor({ query: value || undefined }) });
+  const setSelectedVoteId = (value: string | null) =>
+    navigate({ search: scope.searchFor({ selectedVoteId: value ?? undefined }) });
 
-  // Title search is client-side only; keeping `query` in the key would refetch
-  // the identical /votes?limit=100 URL on every keystroke.
+  // Title search stays client-side; only the API-supported scope enters the key.
   const votesQuery = useQuery({
-    queryKey: ["votes"],
-    queryFn: () =>
-      api.votes({
-        chamber: undefined,
-        legislature: undefined,
-        limit: 100,
-      }),
+    queryKey: ["votes", ...scope.scopeKey],
+    queryFn: () => api.votes(votesForScope(scope, { limit: 100 })),
   });
 
   const votes = useMemo(() => votesQuery.data?.data ?? [], [votesQuery.data]);
@@ -60,6 +65,10 @@ export default function Voturi() {
 
   return (
     <div className="space-y-6">
+      <ScopeControls
+        showDate showChamber showLegislature
+        note={t("scope.note.votesUpTo", { date: scope.date })}
+      />
       <section className="py-2" data-enter>
         <h1 className="page-title">
           {t("view.voturi.title", "Roll-call votes")}

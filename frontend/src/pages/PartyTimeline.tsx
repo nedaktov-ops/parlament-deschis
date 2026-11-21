@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link, useSearch } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { get } from "../api/client";
-import { localISODate } from "../utils/date";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { Sparkline } from "../components/DataViz";
@@ -47,11 +48,10 @@ function fetchTimeline(): Promise<PartyTimelineResponse> {
 
 export default function PartyTimeline() {
   const { t } = useTranslation();
-  const search = useSearch({ strict: false }) as { date?: string };
-  const date = search?.date;
+  const scope = useScope();
 
   const timeline = useQuery({
-    queryKey: ["party-timeline"],
+    queryKey: ["party-timeline", ...scope.scopeKey],
     queryFn: fetchTimeline,
   });
 
@@ -88,6 +88,7 @@ export default function PartyTimeline() {
 
   return (
     <div className="py-6">
+      <ScopeControls note={t("scope.note.partyTimeline")} />
       {/* H2-O Hero section — fills the first screen alone */}
       <section className="hero-section" data-enter>
         <div>
@@ -105,7 +106,7 @@ export default function PartyTimeline() {
               <p className="text-sm">
                 <Link
                   to="/parties"
-                  search={{ date: date ?? localISODate() }}
+                  search={scope.searchFor()}
                   className="text-sky-400 hover:underline"
                 >
                   {t("ptimeline.viewAllParties", "View all parties →")}

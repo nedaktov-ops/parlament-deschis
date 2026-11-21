@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { ProgressRing } from "../components/DataViz";
@@ -24,13 +26,23 @@ function fmtDate(value: string | null | undefined): string {
 
 export default function CoverageView() {
   const { t } = useTranslation();
+  const scope = useScope();
 
   const coverage = useQuery({
-    queryKey: ["coverage-detailed"],
+    queryKey: ["coverage-detailed", ...scope.scopeKey],
     queryFn: () => api.coverage_detailed(),
   });
 
-  const rows = useMemo(() => coverage.data ?? [], [coverage.data]);
+  // Chamber/legislature are client-side row filters on a data-availability
+  // matrix; the endpoint itself takes no scope params.
+  const rows = useMemo(
+    () => (coverage.data ?? []).filter(
+      (r) =>
+        (!scope.chamber || r.chamber === scope.chamber) &&
+        (!scope.legislature || r.legislature === scope.legislature),
+    ),
+    [coverage.data, scope.chamber, scope.legislature],
+  );
   const totals = useMemo(() => {
     const totalMemberships = rows.reduce((sum, r) => sum + r.total_memberships, 0);
     const datedMemberships = rows.reduce(
@@ -88,6 +100,7 @@ export default function CoverageView() {
 
   return (
     <div className="space-y-6">
+      <ScopeControls showChamber showLegislature note={t("scope.note.coverage")} />
       {/* Section 1: Hero — fills the first screen alone */}
       <section className="hero-section" data-enter>
         <div>

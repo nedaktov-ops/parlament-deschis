@@ -4,6 +4,7 @@ import { get } from "../api/client";
 import HeroGraphic from "../components/HeroGraphic";
 import { InfoStat } from "../components/InfoStat";
 import { Sparkline, ProgressRing } from "../components/DataViz";
+import ScopeControls from "../components/ScopeControls";
 
 interface ReportTopSwitcher {
   person_id: string;
@@ -103,6 +104,8 @@ export default function Report() {
 
   return (
     <div className="py-6 print:p-0">
+      {/* Deliberately unscoped endpoint (exports.py); honest disclosure only. */}
+      <ScopeControls note={t("scope.note.report", { generated_at: d?.generated_at ?? "—" })} />
       <div
         className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 lg:gap-10 mb-8 sm:mb-10 print:mb-4 print:block"
         data-enter

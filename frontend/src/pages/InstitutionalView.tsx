@@ -1,22 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
+import { useScope } from "../hooks/useScope";
 import { localISODate } from "../utils/date";
 
 export function InstitutionalView() {
   const { t } = useTranslation();
   const navigate = useNavigate({ from: "/institutional" });
-  const search = useSearch({ from: "/institutional", select: s => s.date });
-  const asOf = search;
+  const scope = useScope();
+  const asOf = scope.date;
   const today = localISODate();
 
   const committees = useQuery({
-    queryKey: ["committees", asOf],
+    queryKey: ["committees", asOf, ...scope.scopeKey],
     queryFn: () => api.committees(asOf),
   });
   const crossChamber = useQuery({
-    queryKey: ["cross-chamber", asOf],
+    queryKey: ["cross-chamber", asOf, ...scope.scopeKey],
     queryFn: () => api.crossChamber(asOf),
   });
 
@@ -36,7 +37,7 @@ export function InstitutionalView() {
             max={today}
             onChange={(event) => {
               if (event.target.value) {
-                navigate({ search: { date: event.target.value }, replace: true });
+                navigate({ search: scope.searchFor({ date: event.target.value }), replace: true });
               }
             }}
             className="bg-slate-800 border border-slate-600 rounded-md px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"

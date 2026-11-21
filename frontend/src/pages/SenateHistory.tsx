@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 
@@ -33,9 +35,10 @@ function formatDate(value: string | null): string {
 
 export default function SenateHistory() {
   const { t } = useTranslation();
+  const scope = useScope();
 
   const coverage = useQuery({
-    queryKey: ["coverage-detailed"],
+    queryKey: ["coverage-detailed", ...scope.scopeKey],
     queryFn: () => api.coverage_detailed(),
   });
 
@@ -43,10 +46,15 @@ export default function SenateHistory() {
 
   // Never fall back to all-chamber rows: deputy data must not be presented
   // under a Senate heading. If Senate coverage is empty, the table says so.
-  const allRows = rows.filter((r) => r.chamber === "senate");
+  // Legislature is a client-side row filter persisted in the URL.
+  const allRows = rows.filter(
+    (r) => r.chamber === "senate" &&
+      (!scope.legislature || r.legislature === scope.legislature),
+  );
 
   return (
     <div className="space-y-6">
+      <ScopeControls showLegislature note={t("scope.note.coverage")} />
       <section className="hero-section" data-enter>
         <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">

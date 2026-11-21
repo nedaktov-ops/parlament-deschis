@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 // Modular ECharts: register only what this chart needs.
@@ -14,7 +14,10 @@ import {
 import { CanvasRenderer } from "echarts/renderers";
 import type { ECharts } from "echarts/core";
 import type { EChartsOption } from "echarts";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ideology, type IdeologyEntry } from "../api/client";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import Skeleton from "../components/ui/Skeleton";
 
 echarts.use([ScatterChart, GridComponent, LegendComponent, TooltipComponent, ToolboxComponent, CanvasRenderer]);
@@ -43,12 +46,20 @@ const PARTY_COLORS = [
 
 export default function Ideology() {
   const { t } = useTranslation();
-
-  const [year, setYear] = useState<string | undefined>(undefined);
+  const scope = useScope();
+  const navigate = useNavigate({ from: "/ideology" });
+  // CHES survey year is a distinct URL param, never a mapped as_of date.
+  const yearSearch = useSearch({
+    from: "/ideology",
+    select: (s) => (s as Record<string, unknown>).chesYear,
+  });
+  const chesYear = typeof yearSearch === "string" ? yearSearch : undefined;
+  const setYear = (value: string | undefined) =>
+    navigate({ search: scope.searchFor({ chesYear: value }) });
 
   const ideologyQuery = useQuery({
-    queryKey: ["ideology", year],
-    queryFn: () => ideology(year),
+    queryKey: ["ideology", chesYear, ...scope.scopeKey],
+    queryFn: () => ideology(chesYear),
   });
 
   const data = useMemo(() => ideologyQuery.data?.data ?? [], [ideologyQuery.data]);
@@ -64,7 +75,7 @@ export default function Ideology() {
   }, [data]);
 
   // Filter data by selected year (show latest year by default)
-  const selectedYear = year || (years.length > 0 ? String(years[0]) : undefined);
+  const selectedYear = chesYear || (years.length > 0 ? String(years[0]) : undefined);
   const filteredData = useMemo(
     () =>
       selectedYear
@@ -205,6 +216,7 @@ export default function Ideology() {
   if (!dataExists || filteredData.length === 0) {
     return (
       <div className="space-y-6">
+        <ScopeControls note={t("scope.note.ideology")} />
         <section className="py-2" data-enter>
           <h1 className="page-title">
             {t("view.ideology.title", "Ideological spatial map")}
@@ -224,6 +236,7 @@ export default function Ideology() {
 
   return (
     <div className="space-y-6">
+      <ScopeControls note={t("scope.note.ideology")} />
       <section className="py-2" data-enter>
         <h1 className="page-title">
           {t("view.ideology.title", "Ideological spatial map")}

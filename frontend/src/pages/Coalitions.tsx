@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { switchWaves, type SwitchWave } from "../api/client";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { Sparkline } from "../components/DataViz";
@@ -26,10 +28,11 @@ function toNamedEvents(waves: SwitchWave[], triggerType: string): NamedEvent[] {
 
 export default function Coalitions() {
   const { t } = useTranslation();
+  const scope = useScope();
 
   const waves = useQuery({
-    queryKey: ["switch-waves-all"],
-    queryFn: () => switchWaves(),
+    queryKey: ["switch-waves-all", ...scope.scopeKey],
+    queryFn: () => switchWaves(scope.chamber, scope.legislature),
   });
 
   const all = waves.data ?? [];
@@ -54,6 +57,7 @@ export default function Coalitions() {
 
   return (
     <div className="space-y-6">
+      <ScopeControls showChamber showLegislature note={t("scope.note.waves")} />
       {/* Section 1: Hero — fills the first screen alone (H2-G recipe). */}
       <section className="hero-section" data-enter>
         <div>

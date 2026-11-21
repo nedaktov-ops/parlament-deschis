@@ -2,25 +2,11 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
-import { get } from "../api/client";
+import { mpsCards, type MpCard } from "../api/client";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
-import { localISODate } from "../utils/date";
-
-interface MpCard {
-  id: string;
-  name: string;
-  birth_date: string | null;
-  age: number | null;
-  party: string | null;
-  switches: number;
-  committees: number;
-}
-
-interface MpsResponse {
-  status: string;
-  data: MpCard[];
-}
 
 interface CompareRow {
   label: string;
@@ -28,14 +14,9 @@ interface CompareRow {
   highlight?: boolean;
 }
 
-function fetchMps(q: string): Promise<MpsResponse> {
-  const params = new URLSearchParams({ limit: "200", sort: "name" });
-  if (q) params.set("q", q);
-  return get<MpsResponse>(`/mps?${params.toString()}`);
-}
-
 export default function MpComparison() {
   const { t } = useTranslation();
+  const scope = useScope();
   const [searches, setSearches] = useState<string[]>(["", "", ""]);
   const [selected, setSelected] = useState<(MpCard | null)[]>([
     null,
@@ -43,10 +24,13 @@ export default function MpComparison() {
     null,
   ]);
 
-  // Load a wide pool once; selection is client-side over the pool.
+  // Load a wide pool; selection is client-side over the pool.
   const pool = useQuery({
-    queryKey: ["mps-pool"],
-    queryFn: () => fetchMps(""),
+    queryKey: ["mps-pool", ...scope.scopeKey],
+    queryFn: () => mpsCards({
+      limit: 200, sort: "name",
+      asOf: scope.date, chamber: scope.chamber, legislature: scope.legislature,
+    }),
   });
 
   const poolList = useMemo(() => pool.data?.data ?? [], [pool.data]);
@@ -139,6 +123,7 @@ export default function MpComparison() {
 
   return (
     <div className="space-y-6">
+      <ScopeControls showDate showChamber showLegislature note={t("scope.note.mpc")} />
       <section className="hero-section" data-enter>
         <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
@@ -191,7 +176,7 @@ export default function MpComparison() {
                 <Link
                   to="/person/$id"
                   params={{ id: selected[i]!.id }}
-                  search={{ date: localISODate() }}
+                  search={scope.searchFor()}
                   className="text-slate-100 font-semibold hover:text-sky-300 hover:underline"
                 >
                   {selected[i]!.name}

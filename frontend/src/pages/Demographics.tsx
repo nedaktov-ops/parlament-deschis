@@ -1,7 +1,8 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { generationalShift, type GenerationalShiftEntry } from "../api/client";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { Sparkline, ProgressRing } from "../components/DataViz";
@@ -21,11 +22,11 @@ const LEGISLATURES = [
 
 export default function Demographics() {
   const { t } = useTranslation();
-  const [legislature, setLegislature] = useState<string>("");
+  const scope = useScope();
 
   const shift = useQuery({
-    queryKey: ["generational-shift", legislature],
-    queryFn: () => generationalShift(legislature || undefined),
+    queryKey: ["generational-shift", scope.legislature, scope.date, ...scope.scopeKey],
+    queryFn: () => generationalShift(scope.legislature, scope.date),
   });
 
   const rows = shift.data?.data ?? [];
@@ -128,23 +129,8 @@ export default function Demographics() {
         </div>
       </section>
 
-      {/* Legislature selector (unchanged). */}
       <div className="mb-6">
-        <label className="flex flex-col gap-1 text-sm text-slate-400 max-w-xs">
-          {t("demographics.filter.legislature", "Legislature")}
-          <select
-            value={legislature}
-            onChange={(e) => setLegislature(e.target.value)}
-            className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200"
-          >
-            <option value="">{t("demographics.filter.all", "Current / all")}</option>
-            {LEGISLATURES.map((leg) => (
-              <option key={leg} value={leg}>
-                {leg}
-              </option>
-            ))}
-          </select>
-        </label>
+        <ScopeControls showDate showLegislature note={t("scope.note.chamber")} />
       </div>
 
       {shift.isLoading && (

@@ -1,46 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link } from "@tanstack/react-router";
-import { get } from "../api/client";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { mpsCards } from "../api/client";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import LoadingState from "../components/LoadingState";
 import EmptyState from "../components/EmptyState";
-import { localISODate } from "../utils/date";
-
-interface MpCard {
-  id: string;
-  name: string;
-  birth_date: string | null;
-  age: number | null;
-  party: string | null;
-  switches: number;
-  committees: number;
-}
-
-interface MpsResponse {
-  status: string;
-  data: MpCard[];
-  offset: number;
-  limit: number;
-}
 
 const PAGE_SIZE = 60;
-
-function fetchMps(
-  q: string,
-  sort: string,
-  offset: number,
-): Promise<MpsResponse> {
-  const params = new URLSearchParams({
-    limit: String(PAGE_SIZE),
-    offset: String(offset),
-    sort,
-  });
-  if (q) params.set("q", q);
-  return get<MpsResponse>(`/mps?${params.toString()}`);
-}
 
 function switchBadge(n: number): string {
   if (n === 0) return "bg-slate-700 text-slate-300";
@@ -50,23 +20,35 @@ function switchBadge(n: number): string {
 
 export default function Mps() {
   const { t } = useTranslation();
-  const [query, setQuery] = useState<string>("");
-  const [submitted, setSubmitted] = useState<string>("");
-  const [sort, setSort] = useState<string>("name");
-  const [offset, setOffset] = useState<number>(0);
+  const scope = useScope();
+  const navigate = useNavigate({ from: "/mps" });
+  // q / sort / offset are URL-backed so deep links and back/forward restore them.
+  const local = useSearch({ from: "/mps", select: (s) => s as Record<string, unknown> });
+  const submitted = typeof local.q === "string" ? local.q : "";
+  const sort = typeof local.sort === "string" ? local.sort : "name";
+  const offset = Number(local.offset) || 0;
+  const [query, setQuery] = useState<string>(submitted);
+  useEffect(() => setQuery(submitted), [submitted]);
+  const setSearchParam = (patch: Record<string, unknown>) =>
+    navigate({ search: scope.searchFor(patch) });
 
   const cards = useQuery({
-    queryKey: ["mps", submitted, sort, offset],
-    queryFn: () => fetchMps(submitted, sort, offset),
+    queryKey: ["mps", ...scope.scopeKey, submitted, sort, offset],
+    queryFn: () => mpsCards({
+      q: submitted, sort, offset, limit: PAGE_SIZE,
+      asOf: scope.date, chamber: scope.chamber, legislature: scope.legislature,
+    }),
     placeholderData: (prev) => prev,
   });
 
   const rows = cards.data?.data ?? [];
+  const total = cards.data?.total ?? 0;
   const canPrev = offset > 0;
-  const canNext = rows.length === PAGE_SIZE;
+  const canNext = total > 0 ? offset + rows.length < total : rows.length === PAGE_SIZE;
 
   return (
     <div className="space-y-6">
+      <ScopeControls showDate showChamber showLegislature note={t("scope.note.age")} />
       <section className="hero-section" data-enter>
         <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
@@ -83,7 +65,7 @@ export default function Mps() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
             <InfoStat
               label={t("mpsTotalMps", "Total MPs")}
-              value={rows.length}
+              value={total}
               accent="sky"
             />
             <InfoStat
@@ -104,7 +86,7 @@ export default function Mps() {
           </div>
           <div className="mt-8 flex items-center gap-4" data-moment>
             <span className="moment-value block">
-              {rows.length}
+              {total}
             </span>
             <span className="text-sm text-slate-400">
               {t("mpsTotalMpsLabel", "members of parliament in corpus")}
@@ -116,8 +98,7 @@ export default function Mps() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          setSubmitted(query.trim());
-          setOffset(0);
+          setSearchParam({ q: query.trim() || undefined, offset: 0 });
         }}
         className="flex flex-wrap gap-4 mb-6 items-end bg-slate-800/40 border border-slate-700/60 rounded-lg p-4"
       >
@@ -135,10 +116,7 @@ export default function Mps() {
           {t("mps.sort", "Sort by")}
           <select
             value={sort}
-            onChange={(e) => {
-              setSort(e.target.value);
-              setOffset(0);
-            }}
+            onChange={(e) => setSearchParam({ sort: e.target.value, offset: 0 })}
             className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
           >
             <option value="name">{t("mps.sort.name", "Name")}</option>
@@ -175,7 +153,7 @@ export default function Mps() {
             <Link
               to="/person/$id"
               params={{ id: m.id }}
-              search={{ date: localISODate() }}
+              search={scope.searchFor()}
               className="link-hover text-slate-100 font-semibold text-lg leading-snug hover:text-sky-300 block focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 rounded-sm"
             >
               {m.name}
@@ -210,7 +188,7 @@ export default function Mps() {
         <button
           type="button"
           disabled={!canPrev}
-          onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
+          onClick={() => setSearchParam({ offset: Math.max(0, offset - PAGE_SIZE) })}
           className="bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-slate-200 px-4 py-2 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
         >
           {t("mps.prev", "Previous")}
@@ -221,7 +199,7 @@ export default function Mps() {
         <button
           type="button"
           disabled={!canNext}
-          onClick={() => setOffset((o) => o + PAGE_SIZE)}
+          onClick={() => setSearchParam({ offset: offset + PAGE_SIZE })}
           className="bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-slate-200 px-4 py-2 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
         >
           {t("mps.next", "Next")}

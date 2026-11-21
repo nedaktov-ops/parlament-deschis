@@ -1,20 +1,20 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { api } from "../api/client";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import LoadingState from "../components/LoadingState";
 import EmptyState from "../components/EmptyState";
-import { localISODate } from "../utils/date";
-
-const TODAY = localISODate();
 
 export default function Parties() {
   const { t } = useTranslation();
+  const scope = useScope();
   const navigate = useNavigate({ from: "/parties" });
-  const search = useSearch({ from: "/parties", select: (s) => s.date });
-  const asOf = search ?? TODAY;
-  const [q, setQ] = useState("");
+  const qSearch = useSearch({ from: "/parties", select: (s) => (s as Record<string, unknown>).q });
+  const q = typeof qSearch === "string" ? qSearch : "";
+  const setQ = (value: string) => navigate({ search: scope.searchFor({ q: value || undefined }) });
 
   const partiesQuery = useQuery({
     queryKey: ["parties"],
@@ -37,7 +37,7 @@ export default function Parties() {
   }, [parties, q]);
 
   const goToParty = (shortName: string) => {
-    navigate({ to: "/party/$shortName", params: { shortName }, search: { date: asOf } });
+    navigate({ to: "/party/$shortName", params: { shortName }, search: scope.searchFor() });
   };
 
   return (
@@ -52,12 +52,7 @@ export default function Parties() {
             "All parties in the corpus (from the public dataset). Click a party to open its profile for the selected date.",
           )}
         </p>
-        <p className="mt-2 text-xs text-slate-500 max-w-3xl">
-          {t(
-            "parties.scopeNote",
-            "This list is corpus-wide (not filtered by legislature/chamber in this view).",
-          )}
-        </p>
+        <ScopeControls note={t("scope.note.parties")} />
       </section>
 
       <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>

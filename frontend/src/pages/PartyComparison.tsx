@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link, useSearch } from "@tanstack/react-router";
-import { localISODate } from "../utils/date";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import {
   api,
   generationalShift,
@@ -33,10 +34,14 @@ function fmtInt(v: number): string {
 
 export default function PartyComparison() {
   const { t } = useTranslation();
-  const search = useSearch({ strict: false }) as { date?: string };
-  const date = search?.date;
-  const [partyA, setPartyA] = useState<string>("PSD");
-  const [partyB, setPartyB] = useState<string>("PNL");
+  const scope = useScope();
+  const navigate = useNavigate({ from: "/compare" });
+  // Page-local comparison selection is URL-backed too (FN-7).
+  const local = useSearch({ from: "/compare", select: (s) => s as Record<string, unknown> });
+  const partyA = typeof local.partyA === "string" ? local.partyA : "PSD";
+  const partyB = typeof local.partyB === "string" ? local.partyB : "PNL";
+  const setPartyA = (value: string) => navigate({ search: scope.searchFor({ partyA: value }) });
+  const setPartyB = (value: string) => navigate({ search: scope.searchFor({ partyB: value }) });
 
   const parties = useQuery({
     queryKey: ["parties"],
@@ -44,13 +49,13 @@ export default function PartyComparison() {
   });
 
   const ages = useQuery({
-    queryKey: ["generational-shift"],
-    queryFn: () => generationalShift(),
+    queryKey: ["generational-shift", scope.legislature, scope.date, ...scope.scopeKey],
+    queryFn: () => generationalShift(scope.legislature, scope.date),
   });
 
   const control = useQuery({
-    queryKey: ["committee-control"],
-    queryFn: () => committeeControl(),
+    queryKey: ["committee-control", scope.legislature, scope.date, ...scope.scopeKey],
+    queryFn: () => committeeControl(scope.legislature, scope.date),
   });
 
   const partyList = parties.data?.data ?? [];
@@ -123,6 +128,7 @@ export default function PartyComparison() {
 
   return (
     <div className="py-6">
+      <ScopeControls showDate showLegislature note={t("scope.note.parties")} />
       <h1 className="page-title mb-2">
         {t("compare.title", "Party Comparison")}
       </h1>
@@ -135,7 +141,7 @@ export default function PartyComparison() {
       <p className="text-sm mb-6">
         <Link
           to="/parties"
-          search={{ date: date ?? localISODate() }}
+          search={scope.searchFor()}
           className="text-sky-400 hover:underline"
         >
           {t("compare.viewAllParties", "View all parties →")}

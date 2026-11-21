@@ -9,7 +9,8 @@ import {
   type CommitteeListItem,
   type CommitteeMember,
 } from "../api/client";
-import { localISODate } from "../utils/date";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import LoadingState from "../components/LoadingState";
@@ -22,13 +23,14 @@ function fmtDate(value: string | null): string {
 
 function MemberRow({ member }: { member: CommitteeMember }) {
   const { t } = useTranslation();
+  const scope = useScope();
   return (
     <tr className="hover:bg-slate-700/40">
       <th scope="row" className="px-3 py-2 font-normal text-left">
         <Link
           to="/person/$id"
           params={{ id: member.person_id }}
-          search={{ date: localISODate() }}
+          search={scope.searchFor()}
           className="text-sky-400 hover:text-sky-300 hover:underline"
         >
           {member.name}
@@ -65,11 +67,12 @@ function CommitteeCard({
   onMembersLoaded?: (committeeId: string, totalCount: number) => void;
 }) {
   const { t } = useTranslation();
+  const scope = useScope();
   const [open, setOpen] = useState(false);
 
   const members = useQuery({
-    queryKey: ["committee-members", committee.id],
-    queryFn: () => committeeMembers(committee.id),
+    queryKey: ["committee-members", committee.id, ...scope.scopeKey],
+    queryFn: () => committeeMembers(committee.id, scope.date),
     enabled: open,
   });
 
@@ -156,22 +159,24 @@ function CommitteeCard({
 
 export default function Committees() {
   const { t } = useTranslation();
-  const [chamber, setChamber] = useState<string>("");
+  const scope = useScope();
   const [totalMembers, setTotalMembers] = useState(0);
   const countedCommittees = useRef<Set<string>>(new Set());
 
   const list = useQuery({
-    queryKey: ["committees"],
-    queryFn: () => committees(),
+    queryKey: ["committees", scope.date, ...scope.scopeKey],
+    queryFn: () => committees(scope.date),
   });
 
   const control = useQuery({
-    queryKey: ["committee-control"],
-    queryFn: () => committeeControl(),
+    queryKey: ["committee-control", scope.legislature, scope.date, ...scope.scopeKey],
+    queryFn: () => committeeControl(scope.legislature, scope.date),
   });
 
+  // Chamber is a client-side filter of the returned list (the endpoint has no
+  // chamber param); it is persisted in the URL through useScope.
   const rows = (list.data ?? []).filter(
-    (c) => !chamber || c.chamber === chamber,
+    (c) => !scope.chamber || c.chamber === scope.chamber,
   );
 
   const controlData = control.data?.status === "ok" ? control.data.data : null;
@@ -197,6 +202,7 @@ export default function Committees() {
 
   return (
     <div className="py-6 print:p-0">
+      <ScopeControls showDate showChamber showLegislature note={t("scope.note.committees")} />
       <div
         className="flex flex-wrap items-start justify-between gap-3 mb-6 print:mb-3"
         data-enter
@@ -320,7 +326,7 @@ export default function Committees() {
                       <Link
                         to="/person/$id"
                         params={{ id: c.chair_person_id }}
-                        search={{ date: localISODate() }}
+                        search={scope.searchFor()}
                         className="text-sky-400 hover:text-sky-300 hover:underline"
                       >
                         {c.chair}
@@ -343,21 +349,6 @@ export default function Committees() {
           {t("control.loadError", "Committee control data unavailable.")}
         </div>
       )}
-
-      <div className="mb-6">
-        <label className="flex flex-col gap-1 text-sm text-slate-400 max-w-xs">
-          {t("committees.filter.chamber", "Chamber")}
-          <select
-            value={chamber}
-            onChange={(e) => setChamber(e.target.value)}
-            className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200"
-          >
-            <option value="">{t("committees.filter.all", "All")}</option>
-            <option value="deputies">{t("deputies", "Deputies")}</option>
-            <option value="senate">{t("senate", "Senate")}</option>
-          </select>
-        </label>
-      </div>
 
       {list.isLoading && (
         <LoadingState label={t("loading", "Loading…")} />

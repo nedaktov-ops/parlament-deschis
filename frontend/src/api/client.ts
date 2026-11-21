@@ -83,6 +83,7 @@ export interface PersonDetail {
   committee_memberships?: Membership[];
   events: EventItem[];
   evidence: EvidenceItem[];
+  as_of?: string | null;
 }
 
 export interface PersonSummary {
@@ -380,6 +381,50 @@ export interface VotesFilters {
   offset?: number;
 }
 
+export interface MpCard {
+  id: string;
+  name: string;
+  birth_date: string | null;
+  age: number | null;
+  party: string | null;
+  switches: number;
+  committees: number;
+}
+export interface MpsResponse {
+  status: string;
+  data: MpCard[];
+  offset: number;
+  limit: number;
+  total: number;
+  scope: { as_of: string | null; chamber: string | null; legislature: string | null };
+}
+export interface MpsQuery {
+  q?: string; sort?: string; offset?: number; limit?: number;
+  chamber?: string; legislature?: string; asOf?: string;
+}
+export function mpsCards(query: MpsQuery = {}): Promise<MpsResponse> {
+  const p = new URLSearchParams();
+  if (query.q) p.set("q", query.q);
+  if (query.sort) p.set("sort", query.sort);
+  if (query.offset !== undefined) p.set("offset", String(query.offset));
+  if (query.limit !== undefined) p.set("limit", String(query.limit));
+  if (query.chamber) p.set("chamber", query.chamber);
+  if (query.legislature) p.set("legislature", query.legislature);
+  if (query.asOf) p.set("as_of", query.asOf);
+  return get<MpsResponse>(`/mps${p.toString() ? `?${p.toString()}` : ""}`);
+}
+
+/** Map a route scope to /votes' supported parameters (date ⇒ upper bound). */
+export function votesForScope(scope: { date: string; chamber?: string; legislature?: string },
+                              extra: VotesFilters = {}): VotesFilters {
+  return {
+    chamber: scope.chamber,
+    legislature: scope.legislature,
+    to: scope.date,              // "votes up to <date>" — label it that way in the UI
+    ...extra,                    // caller may override limit/offset/from/to
+  };
+}
+
 const BASE = "/api";
 
 export async function get<T>(path: string): Promise<T> {
@@ -415,7 +460,8 @@ export const api = {
     get<PersonSummary[]>(
       `/persons?q=${encodeURIComponent(q)}${chamber ? `&chamber=${chamber}` : ""}`,
     ),
-  person: (id: string) => get<PersonDetail>(`/persons/${encodeURIComponent(id)}`),
+  person: (id: string, asOf?: string) =>
+    get<PersonDetail>(`/persons/${encodeURIComponent(id)}${asOf ? `?as_of=${encodeURIComponent(asOf)}` : ""}`),
   personHistory: (id: string) =>
     get<PersonHistoryResponse>(`/persons/${encodeURIComponent(id)}/history`),
   partyProfile: (shortName: string, asOf: string) =>

@@ -1,7 +1,9 @@
 import { useMemo } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { api, type VotePositionRow } from "../api/client";
+import { api, votesForScope, type VotePositionRow } from "../api/client";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import PartyAgreementMatrix from "../components/PartyAgreementMatrix";
 import Skeleton from "../components/ui/Skeleton";
 
@@ -21,10 +23,11 @@ interface PartyVoteCell {
 
 export default function Radar() {
   const { t } = useTranslation();
+  const scope = useScope();
 
   const votesQuery = useQuery({
-    queryKey: ["radar-votes"],
-    queryFn: () => api.votes({ chamber: undefined, legislature: undefined, limit: 30 }),
+    queryKey: ["radar-votes", ...scope.scopeKey],
+    queryFn: () => api.votes(votesForScope(scope, { limit: 30 })),
   });
 
   const votes = useMemo(() => votesQuery.data?.data ?? [], [votesQuery.data]);
@@ -106,6 +109,10 @@ export default function Radar() {
 
   return (
     <div className="space-y-6">
+      <ScopeControls
+        showDate showChamber showLegislature
+        note={t("scope.note.votesUpTo", { date: scope.date })}
+      />
       <section className="py-2" data-enter>
         <h1 className="page-title">
           {t("view.radar.title", "Roll-call alignment matrix")}
@@ -200,6 +207,11 @@ export default function Radar() {
         <p>
           {t("view.radar.note", "Each cell shows how many MPs of a party voted a given way in a roll-call vote. Colour = dominant party choice; number = count of MPs with that choice.")}
         </p>
+        {votes.some((v) => v.positions_incomplete) && (
+          <p role="note" className="mt-2">
+            {t("scope.note.positionsIncomplete")}
+          </p>
+        )}
       </section>
 
       <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>

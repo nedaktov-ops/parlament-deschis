@@ -3,6 +3,8 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { api, type EventItem } from "../api/client";
 import { useParams } from "@tanstack/react-router";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import MembershipGantt from "../components/MembershipGantt";
 import CitationPopover from "../components/CitationPopover";
 import HeroGraphic from "../components/HeroGraphic";
@@ -31,11 +33,12 @@ function typeColor(type: string): string {
 export function PersonDeepDive() {
   const { t, i18n } = useTranslation();
   const params = useParams({ from: "/person/$id" });
+  const scope = useScope();
   const personId = params.id;
 
   const person = useQuery({
-    queryKey: ["person", personId],
-    queryFn: () => api.person(personId),
+    queryKey: ["person", personId, ...scope.scopeKey],
+    queryFn: () => api.person(personId, scope.date),
     enabled: !!personId,
   });
 
@@ -106,6 +109,7 @@ export function PersonDeepDive() {
 
   return (
     <div className="space-y-6">
+      <ScopeControls showDate note={t("scope.note.person")} />
       {/* Section 1: Hero — MP biography graphic, fills the first screen alone */}
       <section className="hero-section" data-enter>
         <div>

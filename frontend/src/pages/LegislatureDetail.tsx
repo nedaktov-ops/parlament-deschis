@@ -2,7 +2,8 @@ import { Suspense, lazy } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
+import { useScope } from "../hooks/useScope";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { localISODate } from "../utils/date";
@@ -13,9 +14,9 @@ export function LegislatureDetail() {
   const { t } = useTranslation();
   const navigate = useNavigate({ from: "/legislature/$year" });
   const params = useParams({ from: "/legislature/$year" });
-  const search = useSearch({ from: "/legislature/$year", select: s => s.date });
+  const scope = useScope();
   const year = params.year;
-  const asOf = search;
+  const asOf = scope.date;
 
   const meta = useQuery({ queryKey: ["meta"], queryFn: api.meta });
   const leg = meta.data?.legislatures?.[year];
@@ -27,13 +28,14 @@ export function LegislatureDetail() {
   const selectedDate = asOf
     ? asOf < start ? start : asOf > end ? end : asOf
     : start;
+  const chamberFilter = scope.chamber ?? "deputies";
   const chamber = useQuery({
-    queryKey: ["chamber", "deputies", selectedDate],
-    queryFn: () => api.chamber("deputies", selectedDate),
+    queryKey: ["chamber", chamberFilter, selectedDate, ...scope.scopeKey],
+    queryFn: () => api.chamber(chamberFilter, selectedDate),
   });
   const movements = useQuery({
-    queryKey: ["leg-movements", year, start, selectedDate],
-    queryFn: () => api.movements({ from: start, to: selectedDate, limit: 1000 }),
+    queryKey: ["leg-movements", year, start, selectedDate, ...scope.scopeKey],
+    queryFn: () => api.movements({ chamber: scope.chamber, from: start, to: selectedDate, limit: 1000 }),
   });
 
   if (meta.isError) {
@@ -158,7 +160,7 @@ export function LegislatureDetail() {
                         navigate({
                           to: "/person/$id",
                           params: { id: m.person.id },
-                          search: { date: selectedDate },
+                          search: scope.searchFor({ date: selectedDate }),
                         });
                       }
                     }}

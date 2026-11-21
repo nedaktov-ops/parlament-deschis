@@ -1,7 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { api, type ScorecardEntry } from "../api/client";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import { DataBar, type DataBarTone } from "../components/DataViz";
 import Skeleton from "../components/ui/Skeleton";
 
@@ -15,12 +18,20 @@ const LOYALTY_TONE = (pct: number): DataBarTone => {
 
 export default function Topuri() {
   const { t } = useTranslation();
-  const [minVotes, setMinVotes] = useState(1);
+  const scope = useScope();
+  const navigate = useNavigate({ from: "/topuri" });
+  const minVotesRaw = useSearch({
+    from: "/topuri",
+    select: (s) => Number((s as Record<string, unknown>).minVotes ?? 1),
+  });
+  const minVotes = Number.isFinite(minVotesRaw) ? Math.max(0, minVotesRaw) : 1;
+  const setMinVotes = (value: number) =>
+    navigate({ search: scope.searchFor({ minVotes: value }) });
 
   const scorecardQuery = useQuery({
-    queryKey: ["topuri-scorecard", minVotes],
+    queryKey: ["topuri-scorecard", minVotes, ...scope.scopeKey],
     queryFn: () =>
-      api.scorecard(undefined, undefined, 100, 0, minVotes),
+      api.scorecard(scope.legislature, scope.chamber, 100, 0, minVotes),
   });
 
   const entries = useMemo(() => scorecardQuery.data?.data ?? [], [
@@ -50,6 +61,7 @@ export default function Topuri() {
 
   return (
     <div className="space-y-6">
+      <ScopeControls showChamber showLegislature note={t("scope.note.scorecard")} />
       <section className="py-2" data-enter>
         <h1 className="page-title">
           {t("view.topuri.title", "MP behavioural scorecard")}

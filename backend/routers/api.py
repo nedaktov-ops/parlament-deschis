@@ -281,6 +281,9 @@ def mps_cards(
     limit: int = Query(60, ge=1, le=200),
     offset: int = Query(0, ge=0),
     sort: str = Query("name", pattern="^(name|age|switches|committees)$"),
+    as_of: str | None = Query(None, description="Reference date (ISO format)"),
+    chamber: str | None = Query(None, pattern="^(deputies|senate)$"),
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
     db: Session = Depends(get_db),
 ):
     """MP biography cards (Feature 8): person + party + switches + committees.
@@ -290,32 +293,59 @@ def mps_cards(
     recorded birth date. Read-only over existing tables; persons without a
     birth date show age as null rather than a guess.
     """
-    from sqlalchemy import func, select
+    from sqlalchemy import func, or_, select
 
     from pipeline.db import Event, Membership, Organization, Person
+
+    ref_date = _parse_date(as_of, date.today()) if as_of else None
 
     base = select(Person.id, Person.canonical_name, Person.birth_date)
     if q:
         base = base.where(Person.normalized_name.like(f"%{q.lower()}%"))
 
-    # Aggregates over the whole corpus, grouped by person.
-    switches = (
-        select(Event.person_id, func.count(Event.id).label("n"))
-        .where(Event.type == "switch_group")
-        .group_by(Event.person_id)
-        .subquery()
+    # Scope: persons who actually held a membership in the requested scope.
+    if chamber or legislature or ref_date:
+        scoped = select(Membership.person_id).where(Membership.start_date.is_not(None))
+        if ref_date:
+            scoped = scoped.where(
+                Membership.start_date <= ref_date,
+                or_(Membership.end_date.is_(None), Membership.end_date > ref_date),
+            )
+        if chamber:
+            scoped = scoped.where(Membership.chamber == chamber)
+        if legislature:
+            scoped = scoped.where(Membership.legislature == legislature)
+        base = base.where(Person.id.in_(scoped))
+
+    # Aggregates over the corpus (or the requested scope), grouped by person.
+    switches_q = select(Event.person_id, func.count(Event.id).label("n")).where(
+        Event.type == "switch_group"
     )
-    committees = (
+    if ref_date:
+        switches_q = switches_q.where(Event.event_date <= ref_date)
+    if chamber:
+        switches_q = switches_q.where(Event.chamber == chamber)
+    if legislature:
+        switches_q = switches_q.where(Event.legislature == legislature)
+    switches = switches_q.group_by(Event.person_id).subquery()
+    committees_q = (
         select(Membership.person_id, func.count(func.distinct(Membership.org_id)).label("n"))
         .join(Organization, Organization.id == Membership.org_id)
         .where(Organization.classification == "committee")
-        .group_by(Membership.person_id)
-        .subquery()
     )
+    if ref_date:
+        committees_q = committees_q.where(
+            Membership.start_date <= ref_date,
+            or_(Membership.end_date.is_(None), Membership.end_date > ref_date),
+        )
+    if chamber:
+        committees_q = committees_q.where(Organization.chamber == chamber)
+    committees = committees_q.group_by(Membership.person_id).subquery()
+
     # Most recent party affiliation: latest group membership carrying a party.
     # ROW_NUMBER dedupes to one row per person so the outer join cannot
     # multiply biography cards.
-    latest_party = (
+    party_q = (
         select(
             Membership.person_id,
             Organization.short_name.label("party"),
@@ -328,8 +358,17 @@ def mps_cards(
         )
         .join(Organization, Organization.id == Membership.on_behalf_of_id)
         .where(Organization.classification == "party")
-        .subquery()
     )
+    if ref_date:
+        party_q = party_q.where(
+            Membership.start_date <= ref_date,
+            or_(Membership.end_date.is_(None), Membership.end_date > ref_date),
+        )
+    if chamber:
+        party_q = party_q.where(Membership.chamber == chamber)
+    if legislature:
+        party_q = party_q.where(Membership.legislature == legislature)
+    latest_party = party_q.subquery()
 
     stmt = (
         base.add_columns(
@@ -349,6 +388,7 @@ def mps_cards(
         stmt = stmt.order_by(Person.birth_date.asc().nullslast(), Person.canonical_name)
     else:
         stmt = stmt.order_by(Person.canonical_name)
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     stmt = stmt.offset(offset).limit(limit)
 
     today = date.today()
@@ -372,7 +412,18 @@ def mps_cards(
                 "committees": n_committees,
             }
         )
-    return {"status": "ok", "data": cards, "offset": offset, "limit": limit}
+    return {
+        "status": "ok",
+        "data": cards,
+        "offset": offset,
+        "limit": limit,
+        "total": total,
+        "scope": {
+            "as_of": ref_date.isoformat() if ref_date else None,
+            "chamber": chamber,
+            "legislature": legislature,
+        },
+    }
 
 
 @router.get("/persons/{person_id}/history")
@@ -385,8 +436,8 @@ def person_history(person_id: str, db: Annotated[Session, Depends(get_db)]):
 
 @router.get("/persons/{person_id}")
 @cache_result("person")
-def person(person_id: str, db: Session = Depends(get_db)):
-    data = queries.get_person(db, person_id)
+def person(person_id: str, as_of: str | None = None, db: Session = Depends(get_db)):
+    data = queries.get_person(db, person_id, _parse_date(as_of, date.today()) if as_of else None)
     if data is None:
         raise HTTPException(status_code=404, detail="person not found")
     return data

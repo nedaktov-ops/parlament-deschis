@@ -1,21 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, traseismSummary } from "../api/client";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import { DataBar } from "../components/DataViz";
 import VoteActivityChart from "../components/VoteActivityChart";
 import Skeleton from "../components/ui/Skeleton";
 
 export default function Grafice() {
   const { t } = useTranslation();
+  const scope = useScope();
 
   const summaryQuery = useQuery({
-    queryKey: ["grafice-summary"],
-    queryFn: () => traseismSummary("2024", "deputies"),
+    queryKey: ["grafice-summary", ...scope.scopeKey],
+    queryFn: () => traseismSummary(scope.legislature ?? "2024", scope.chamber ?? "deputies"),
   });
 
   const cohesionQuery = useQuery({
-    queryKey: ["grafice-cohesion"],
-    queryFn: () => api.voteCohesion("deputies", "2024"),
+    queryKey: ["grafice-cohesion", ...scope.scopeKey],
+    queryFn: () => api.voteCohesion(scope.chamber, scope.legislature),
   });
 
   const summary = summaryQuery.data;
@@ -42,6 +45,7 @@ export default function Grafice() {
 
   return (
     <div className="space-y-6">
+      <ScopeControls showChamber showLegislature note={t("scope.note.cohesion")} />
       <section className="py-2" data-enter>
         <h1 className="page-title">
           {t("view.grafice.title", "Party cohesion & defection timeline")}
@@ -166,7 +170,7 @@ export default function Grafice() {
       </section>
 
       <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>
-        <VoteActivityChart chamber="deputies" legislature="2024" />
+        <VoteActivityChart chamber={scope.chamber ?? "deputies"} legislature={scope.legislature ?? "2024"} />
       </section>
 
       <section className="text-xs text-slate-500 mt-2 max-w-3xl">

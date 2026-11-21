@@ -1,24 +1,11 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { switchLeaderboard, type SwitchLeaderboardEntry } from "../api/client";
-import { localISODate } from "../utils/date";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
-
-const LEGISLATURES = [
-  "1990",
-  "1992",
-  "1996",
-  "2000",
-  "2004",
-  "2008",
-  "2012",
-  "2016",
-  "2020",
-  "2024",
-];
 
 function fmtDate(value: string | null): string {
   if (!value) return "—";
@@ -27,12 +14,19 @@ function fmtDate(value: string | null): string {
 
 export default function SwitchLeaderboard() {
   const { t } = useTranslation();
-  const [legislature, setLegislature] = useState<string>("");
-  const [limit, setLimit] = useState<number>(20);
+  const scope = useScope();
+  const navigate = useNavigate({ from: "/leaderboard" });
+  // Page-local filter lives in the URL too (FN-7); scope reads stay in useScope.
+  const rawLimit = useSearch({
+    from: "/leaderboard",
+    select: (s) => Number((s as Record<string, unknown>).limit ?? 20),
+  });
+  const limit = [10, 20, 50, 100].includes(rawLimit) ? rawLimit : 20;
+  const setLimit = (value: number) => navigate({ search: scope.searchFor({ limit: value }) });
 
   const leaderboard = useQuery({
-    queryKey: ["switch-leaderboard", legislature, limit],
-    queryFn: () => switchLeaderboard(limit, legislature || undefined),
+    queryKey: ["switch-leaderboard", scope.legislature, scope.chamber, limit, ...scope.scopeKey],
+    queryFn: () => switchLeaderboard(limit, scope.legislature, scope.chamber),
   });
 
   const rows = leaderboard.data?.data ?? [];
@@ -80,22 +74,8 @@ export default function SwitchLeaderboard() {
               </div>
             </div>
             <div className="w-full lg:w-72 shrink-0">
-              <div className="flex gap-4 flex-wrap">
-                <label className="flex flex-col gap-1 text-sm text-slate-400">
-                  {t("leaderboard.filter.legislature", "Legislature")}
-                  <select
-                    value={legislature}
-                    onChange={(e) => setLegislature(e.target.value)}
-                    className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200"
-                  >
-                    <option value="">{t("leaderboard.filter.all", "All")}</option>
-                    {LEGISLATURES.map((leg) => (
-                      <option key={leg} value={leg}>
-                        {leg}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              <div className="flex flex-col gap-4">
+                <ScopeControls showChamber showLegislature />
                 <label className="flex flex-col gap-1 text-sm text-slate-400">
                   {t("leaderboard.filter.limit", "Show top")}
                   <select
@@ -116,7 +96,7 @@ export default function SwitchLeaderboard() {
         </div>
       </section>
 
-      {legislature && (
+      {scope.legislature && (
         <p role="note" className="mb-4 text-amber-300 text-sm">
           {t("leaderboard.scope.note")}
         </p>
@@ -167,7 +147,7 @@ export default function SwitchLeaderboard() {
                     <Link
                       to="/person/$id"
                       params={{ id: row.person_id }}
-                      search={{ date: localISODate() }}
+                      search={scope.searchFor()}
                       className="text-sky-400 hover:text-sky-300 hover:underline"
                     >
                       {row.name}

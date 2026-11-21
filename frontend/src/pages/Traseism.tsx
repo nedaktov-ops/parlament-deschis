@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { useRouter, useSearch } from "@tanstack/react-router";
+import { useScope } from "../hooks/useScope";
 import {
   api,
   traseismOverview,
@@ -301,9 +301,11 @@ function PartyNetTable({ scope }: { scope: TraseismScope }) {
 function SwitchLedger({
   legislature,
   chamber,
+  scopeKey,
 }: {
   legislature: string;
   chamber: string;
+  scopeKey: readonly [string, string, string];
 }) {
   const { t } = useTranslation();
   const [page, setPage] = useState(0);
@@ -313,7 +315,7 @@ function SwitchLedger({
   }, [legislature, chamber]);
 
   const query = useQuery({
-    queryKey: ["traseism-switches", legislature, chamber, page],
+    queryKey: ["traseism-switches", legislature, chamber, page, ...scopeKey],
     queryFn: () =>
       traseismSwitches({
         legislature,
@@ -593,13 +595,15 @@ function ScopesOverview({ rows }: { rows: TraseismScope[] }) {
 function SwitchWavesSection({
   chamber,
   legislature,
+  scopeKey,
 }: {
   chamber: string;
   legislature: string;
+  scopeKey: readonly [string, string, string];
 }) {
   const { t } = useTranslation();
   const waves = useQuery({
-    queryKey: ["switch-waves", chamber, legislature],
+    queryKey: ["switch-waves", chamber, legislature, ...scopeKey],
     queryFn: () => switchWaves(chamber, legislature),
   });
 
@@ -663,39 +667,36 @@ function SwitchWavesSection({
 
 export function Traseism() {
   const { t } = useTranslation();
-  const router = useRouter();
-  const search = useSearch({ from: "/traseism" });
+  const routeScope = useScope();
   const [aboutOpen, setAboutOpen] = useState(false);
 
-  const chamber = search.chamber === "senate" ? "senate" : "deputies";
+  const chamber = routeScope.chamber ?? "deputies";
   const meta = useQuery({ queryKey: ["meta"], queryFn: api.meta });
   const matchingLegislature = Object.entries(meta.data?.legislatures ?? {})
     .filter(([, term]) =>
       term.start !== null &&
-      term.start <= search.date &&
-      (term.end === null || term.end >= search.date),
+      term.start <= routeScope.date &&
+      (term.end === null || term.end >= routeScope.date),
     )
     .sort((a, b) => (b[1].start ?? "").localeCompare(a[1].start ?? ""))[0]?.[0];
-  const legislature = search.legislature ?? matchingLegislature ?? "2024";
+  const legislature = routeScope.legislature ?? matchingLegislature ?? "2024";
 
+  const routeLegislature = routeScope.legislature;
+  const setRouteScope = routeScope.setScope;
   useEffect(() => {
-    if (!search.legislature && matchingLegislature) {
-      router.navigate({
-        to: "/traseism",
-        search: { ...search, legislature: matchingLegislature },
-        replace: true,
-      });
+    if (!routeLegislature && matchingLegislature) {
+      setRouteScope({ legislature: matchingLegislature });
     }
-  }, [matchingLegislature, router, search]);
+  }, [matchingLegislature, routeLegislature, setRouteScope]);
 
   const overview = useQuery({
-    queryKey: ["traseism-overview"],
+    queryKey: ["traseism-overview", ...routeScope.scopeKey],
     queryFn: traseismOverview,
   });
   const summary = useQuery({
-    queryKey: ["traseism-summary", legislature, chamber],
+    queryKey: ["traseism-summary", legislature, chamber, ...routeScope.scopeKey],
     queryFn: () => traseismSummary(legislature, chamber),
-    enabled: Boolean(search.legislature || meta.data || meta.isError),
+    enabled: Boolean(routeScope.legislature || meta.data || meta.isError),
   });
 
   const legislatureOptions = useMemo(() => {
@@ -712,10 +713,6 @@ export function Traseism() {
   const scope = summary.data;
   const coverageKey = completenessKey(scope?.coverage?.completeness ?? "none");
   const hasRecord = coverageKey !== "none";
-
-  const setScope = (next: { chamber?: string; legislature?: string }) => {
-    router.navigate({ to: "/traseism", search: { ...search, ...next } });
-  };
 
   return (
     <div className="space-y-6">
@@ -769,6 +766,7 @@ export function Traseism() {
 
       <section className="card p-4 sm:p-5" aria-labelledby="traseism-scope-heading">
         <h2 id="traseism-scope-heading" className="font-semibold text-lg sm:text-xl mb-4 tracking-tight">{t("traseismScopeTitle")}</h2>
+        <p role="note" className="text-xs text-slate-400 mb-4 max-w-2xl">{t("scope.note.traseism")}</p>
         <div className="flex flex-wrap items-end gap-5 sm:gap-6">
           <div className="min-w-0">
             <div
@@ -786,7 +784,7 @@ export function Traseism() {
                 <button
                   type="button"
                   key={c}
-                  onClick={() => setScope({ chamber: c })}
+                  onClick={() => routeScope.setScope({ chamber: c })}
                   aria-pressed={chamber === c}
                   className={`btn btn-hover ${
                     chamber === c
@@ -809,7 +807,7 @@ export function Traseism() {
             <select
               id="traseism-legislature"
               value={legislature}
-              onChange={(e) => setScope({ legislature: e.target.value })}
+              onChange={(e) => routeScope.setScope({ legislature: e.target.value })}
               className={`bg-slate-800 border border-slate-700 rounded-md px-3 py-1.5 text-sm min-w-[8rem] ${FOCUS}`}
             >
               {legislatureOptions.map((year) => (
@@ -907,9 +905,9 @@ export function Traseism() {
             </>
           ) : null}
 
-          <SwitchLedger legislature={legislature} chamber={chamber} />
+          <SwitchLedger legislature={legislature} chamber={chamber} scopeKey={routeScope.scopeKey} />
 
-          <SwitchWavesSection chamber={chamber} legislature={legislature} />
+          <SwitchWavesSection chamber={chamber} legislature={legislature} scopeKey={routeScope.scopeKey} />
         </>
       )}
 
