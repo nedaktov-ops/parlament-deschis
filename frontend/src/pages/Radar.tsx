@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, type VotePositionRow } from "../api/client";
+import PartyAgreementMatrix from "../components/PartyAgreementMatrix";
 import Skeleton from "../components/ui/Skeleton";
 
 const CHOICE_COLOR: Record<string, string> = {
@@ -192,6 +193,10 @@ export default function Radar() {
         <p>
           {t("view.radar.note", "Each cell shows how many MPs of a party voted a given way in a roll-call vote. Colour = dominant party choice; number = count of MPs with that choice.")}
         </p>
+      </section>
+
+      <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>
+        <PartyAgreementMatrix votes={votes} positionsByVote={positionsData} />
       </section>
     </div>
   );

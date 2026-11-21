@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, traseismSummary } from "../api/client";
 import { DataBar } from "../components/DataViz";
+import VoteActivityChart from "../components/VoteActivityChart";
 import Skeleton from "../components/ui/Skeleton";
 
 export default function Grafice() {
@@ -162,6 +163,10 @@ export default function Grafice() {
             )}
           </>
         )}
+      </section>
+
+      <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>
+        <VoteActivityChart chamber="deputies" legislature="2024" />
       </section>
 
       <section className="text-xs text-slate-500 mt-2 max-w-3xl">
