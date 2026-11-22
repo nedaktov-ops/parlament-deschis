@@ -1225,7 +1225,26 @@ Authorisation (GREEN only — reproduce verbatim):
 `sha256sum -c` all exited 0 (`pre.bundle / pre.sha / pre.status / worktree.tgz: OK`).
 One backup shared by the two atomic evidence commits (L-04+L-05 precedent).
 
-_Evidence results, gates and verdict pending._
+### Code evidence — L-21 (CI required checks)
+
+`gh run list --repo nedaktov-ops/parlament-deschis --branch repair/links-base
+--limit 20` exited 0 with **no output**: no CI runs exist for the repair branch.
+A control query without the branch filter showed recent successful CI runs on
+`main` and older branches — different commits, not evidence for this branch.
+Raw capture `/tmp/opencode/w10-ci-checks.txt`. All four required checks are
+**NOT PROVEN**; resolver "owner opens a PR from `repair/links-base`". Full note:
+[CI-REQUIRED-CHECKS](../60-EVIDENCE/CI-REQUIRED-CHECKS-2026-11-22.md).
+No workflow edited, no PR opened.
+
+**Browser evidence:** N/A — GitHub CLI query. Gates (cwd repo root):
+`python3 scripts/vault_lint.py` → `VAULT LINT PASS: 71 notes` exit 0;
+`python3 scripts/vault_sync.py --check` → clean exit 0;
+`bash scripts/check-doc-truth.sh` → `false-claims: 0` exit 0;
+`git diff --check` → no output exit 0.
+
+L-22 evidence note: [CONSOLE-CAPTURES](../60-EVIDENCE/CONSOLE-CAPTURES-2026-11-22.md).
+
+_L-22 result and verdict pending._
 
 ## See also
 
