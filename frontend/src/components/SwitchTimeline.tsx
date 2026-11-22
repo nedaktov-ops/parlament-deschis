@@ -227,7 +227,7 @@ export default function SwitchTimeline({
             } as SwitchWaveData)
           }
         >
-          View all →
+          {t("common.viewAll", "View all →")}
         </button>
       </div>
     </div>
