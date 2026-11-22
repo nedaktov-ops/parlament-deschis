@@ -1217,6 +1217,16 @@ Authorisation (GREEN only — reproduce verbatim):
   "Integration authorised: wave W9 is GREEN on the evidence cited above; the lead may merge repair/links-w9 into repair/links-base with git merge --ff-only."
 ```
 
+## Wave W10 — CI evidence and console captures (L-21, L-22)
+
+**Code evidence — entry:** branch `repair/links-w10`, entry HEAD
+`a0c6fe76e08e054f87c9763c61c3b82743992dfa`, clean tree. Backup ROOT
+`/tmp/opencode/backups/link-repair/W10`; `git bundle verify`, `tar -tzf` and
+`sha256sum -c` all exited 0 (`pre.bundle / pre.sha / pre.status / worktree.tgz: OK`).
+One backup shared by the two atomic evidence commits (L-04+L-05 precedent).
+
+_Evidence results, gates and verdict pending._
+
 ## See also
 
 [CLICK-INVESTIGATION-JOURNEY](CLICK-INVESTIGATION-JOURNEY-2026-11-22.md) ·
