@@ -866,7 +866,35 @@ Romanian "Voturi minime" label and contains no stray "Minimum votes" / "View
 all" English strings. The three localized "Vezi toate →" buttons were verified
 in source only (no raw capture for them) — code evidence, not a browser claim.
 
-Verdict pending supervisor.
+### Supervisor sign-off (§F template)
+
+```text
+WAVE SIGN-OFF
+Wave ID:            W4
+Recipes:            L-12 (NO-CHANGE), L-13, L-14
+Entry HEAD/branch:  129986e4bdbfd512fb4aebdcb66cffaecb379cf5 / repair/links-base (W4 :842-845; W4 backup pre.sha re-read)
+Backup ROOT:        /tmp/opencode/backups/link-repair/W4
+Manifest evidence:  git bundle verify exit 0, tar -tzf exit 0, sha256sum -c exit 0 (W4 :843-845) — supervisor re-ran all three: four OK lines, "The bundle records a complete history", tar exit 0; pre.sha matches entry HEAD
+Diff (name-only):   exactly six authorized code paths (W4 :849-855; supervisor re-ran git diff --name-only 4510d9ce..HEAD -- frontend/): Hemicycle.tsx, Topuri.tsx, SwitchTimeline.tsx, PartyNetwork.tsx, PartyListTable.tsx, i18n.ts. i18n.ts touched by L-13 alone (git log on that path returns aa5a358 only), matching strategy §4.1 sole-owner register. Extra journey/_generated paths are mandated vault write-back and regeneration (STRAT §10), not an R1 breach.
+Checkpoint SHAs:    e494c89 (L-12 NO-CHANGE comment), aa5a358 (L-13), 258186f (L-14), 7411f80 (evidence). Code commit messages carry recipe ID, evidence anchor, gates and rollback SHA. L-12 followed the decision procedure at REC L-12 :368-380: the one-line comment cites the equivalent native <button> path; supervisor verified the committed comment and that no seat semantics were changed.
+Gates (cmd/exit):   all exit 0 — lint, build, npm run i18n:check (ro=731/en=731, 0 missing/asymmetric/duplicate; exactly 3 symmetric keys: filter.minVotes, filter.minVotesPlaceholder, common.viewAll — verified in the i18n diff by supervisor), check_routes_nav.mjs 24/22/0, vault lint 66, sync clean, doc-truth 0, git diff --check (W4 :856-860). Supervisor re-ran routes, i18n, vault lint, sync --check, doc-truth and diff --check: all exit 0. Build not re-run (writes dist); recorded log examined. main/origin/main still 88112168237e5c37841b785dccd2375f6cc40115; worktree clean.
+Browser evidence:   separate titled section W4 :862-867. Supervisor read the raw capture /tmp/opencode/w4-browser-labels.json: /topuri?date=2026-11-22 has hasRoMinVotes true, strayEnglish false. The three "Vezi toate →" buttons are explicitly source-verified only, not claimed as browser evidence (W4 :866-867) — honest per §E; no new console error or broken route observed. Local dev only; no production or axe claim.
+Code evidence:      W4 :842-860 plus supervisor re-read of the i18n key diff and the L-12 comment commit.
+Acceptance items:   all PASS · 0 AMBER/NOT PROVEN — L-12 documented NO-CHANGE with code citations and no keyboard trap; L-13 zero hardcoded English labels (browser capture PASS); L-14 no remaining literal in the three component files (source/grep verified). No runtime-only claim is made for the three View-all buttons.
+Verdict:            GREEN
+
+Citations (exact note/section or file:line for every judgement):
+  - This note, W4 §Code evidence :842-860, §Browser evidence :862-867.
+  - Recipes L-12 :361-380 (decision procedure), L-13 :384-398, L-14 :402-417; strategy §2.8 :55-57 (honest no-change), §2.2, §4.1 :93-99, §5, §6 :129-156, §10; supervision protocol §C (G1-G8), §D, §E.
+  - Supervisor read-only re-verification (2026-11-22): branch/HEAD, 6-path code diff, sole i18n owner, three symmetric keys, NO-CHANGE comment commit, backup manifest/bundle/tar, six re-run gates, browser JSON capture, main/origin/main unchanged, clean worktree.
+  - Non-blocking note: the W4 browser section does not state console error/warn status explicitly; future waves should record it, as done in W1/W2.
+
+Required remediations (owner: lead; each must be closed before next verdict):
+  - none
+
+Authorisation (GREEN only — reproduce verbatim, filling the braces):
+  "Integration authorised: wave W4 is GREEN on the evidence cited above; the lead may merge repair/links-w4 into repair/links-base with git merge --ff-only."
+```
 
 ## Wave W5 — dead controls
 
