@@ -716,8 +716,39 @@ Browser re-test captures (local dev, supplementary):
   "Parlamentari — Parlament Deschis". **V5 card + other-control items PASS.**
 - `list_console_messages` (error/warn): no console messages found. **V5 console item PASS.**
 
-The two W2 acceptance items that were FAIL are now PASS on the V5 captures.
-W2B integration and W2 verdict pending supervisor.
+The two W2 acceptance items that were FAIL are now PASS on the V5 captures
+(footer → `/traseism`, wave click → `/traseism` with wave date). W2B is integrated
+into `repair/links-w2` by fast-forward; supervisor sign-off follows.
+
+### Supervisor sign-off (§F template)
+
+```text
+WAVE SIGN-OFF
+Wave ID:            W2 (including emergency sub-wave W2B / recipe L-18)
+Recipes:            L-03; L-04+L-05 (one agent, two commits); L-06; L-18 in W2B (frontend-developer)
+Entry HEAD/branch:  W2: 1fa34b127ced496778a0c60caf110fd32e62953d / repair/links-base (W2 :615-622; W2 pre.sha re-read). W2B: 1167d8a7de21d0e6e699dc5a1ef36727db365f8e / repair/links-w2 (W2 :685; W2B pre.sha re-read)
+Backup ROOT:        /tmp/opencode/backups/link-repair/W2 and /tmp/opencode/backups/link-repair/W2B
+Manifest evidence:  both bundles: git bundle verify exit 0, tar -tzf exit 0, sha256sum -c exit 0 (W2 :624-631; W2B :685-689) — supervisor re-ran all six: four OK lines per manifest, "complete history" for both bundles, tar exit 0 both; pre.sha values match the two entry HEADs
+Diff (name-only):   W2 entry..624e159 = exactly 8 code paths (W2 :642-644); W2B entry..3a49f25 = useScope.ts only (W2 :692-697); full 0613198..HEAD = 9 code paths (supervisor re-ran) plus the mandated journey note and five regenerated _generated/* notes (STRAT §10; AGENTS regenerate-only) — no R1 code-scope breach. i18n.ts owner in W2 is L-03 only, as registered.
+Checkpoint SHAs:    L-03 11538c8; L-04 b739c95; L-05 9e22d94; L-06 624e159; L-18 3a49f25; evidence commits 1167d8a (W2 RED finding), ed20fa9 (supervisor escalation), 8c6ad8e (W2B result). W2B ff-only integration confirmed by linear git log (no merge commit); main and origin/main still 88112168237e5c37841b785dccd2375f6cc40115; worktree clean.
+Gates (cmd/exit):   all exit 0 — npm run lint, npm run build, npm run i18n:check (ro=725/en=725, 0 missing/asymmetric/duplicate), check_routes_nav.mjs 24/22/0, vault lint 66, vault_sync --check clean, doc-truth false-claims: 0, git diff --check (W2 :644-648; W2B :699-702; logs w2-*.txt / w2b-*.txt). Supervisor re-ran routes (24/22/0), i18n, vault lint, sync --check, doc-truth and diff --check: all exit 0. Build not re-run by supervisor (writes dist); recorded build logs examined.
+Browser evidence:   separate titled sections W2 :652-670 and W2B :704-717. V5 captures verified by supervisor: /tmp/opencode/w2b-browser-footer.json ends on /traseism?date=2024-06-01&legislature=2020, title "Traseism", marker "spa", aria-current on Traseism; /tmp/opencode/w2b-browser-wave.json ends on /traseism?date=2016-02-01&chamber=deputies&legislature=2012, title "Traseism", marker "spa"; /tmp/opencode/w2b-browser-scope-control.json shows card SPA to /mps?date=2024-06-01 and that the subsequent scope interaction stayed on /mps (chamber-fill result "…&chamber=deputies" recorded at W2 :713-716); console error/warn list empty (:717). Local dev only; no production or axe claim.
+Code evidence:      V2/V3 verified by supervisor re-read: useScope.ts:2 useLocation import; :38-39 `from:"/"` type anchor retained plus `location` captured; :53 `to: location.pathname`; :57-65 functional search updater preserved; :66 replace:false preserved; :69 deps [navigate, location.pathname]; :36-37 false comment corrected. Root cause at old :38/:51-65 and Traseism.tsx:678-682.
+Acceptance items:   all PASS. Formerly-FAIL item 1 "footer link reaches /traseism with scope" → PASS on w2b-browser-footer.json (previously FAIL at :663-670); formerly-FAIL item 2 "wave click reaches /traseism with wave date" → PASS on w2b-browser-wave.json (previously FAIL at :663-670). L-03 label/URL, L-04 card, L-06 bounds and i18n parity PASS per gates and browser captures.
+Verdict:            GREEN
+
+Citations (exact note/section or file:line for every judgement):
+  - This note, W2 §Code evidence :613-650, §Browser evidence W2 :652-670, §Supervisor ruling :672-681, §W2B entry/backup/L-18 :683-720.
+  - Recipes L-03/L-04/L-05/L-06 and emergency L-18; strategy §2.5 :48-49, §4 :83-84, §5, §6, §9 :183-189, §10; supervision protocol §C (G1-G8, R1, R2, A2), §D, §E, §I (V1-V6).
+  - Supervisor read-only re-verification (2026-11-22): branch/HEAD, linear ff-only history, 9-path code diff, both pre.sha files, both manifests/bundles/tars, six re-run gates, useScope.ts:1-76, all three W2B browser JSON captures, main/origin/main unchanged, clean worktree.
+  - Non-blocking evidence note: the chamber-fill URL at W2 :715 is recorded in the wave note without a separate raw file; the route-preservation property is corroborated by afterScope.url in w2b-browser-scope-control.json. Future waves should attach a dedicated raw capture for each scope-control assertion.
+
+Required remediations (owner: lead; each must be closed before next verdict):
+  - none
+
+Authorisation (GREEN only — reproduce verbatim, filling the braces):
+  "Integration authorised: wave W2 is GREEN on the evidence cited above; the lead may merge repair/links-w2 into repair/links-base with git merge --ff-only."
+```
 
 ## Wave W3 — honest controls
 
