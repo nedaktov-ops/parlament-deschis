@@ -41,8 +41,6 @@ export interface StateViewProps {
   onRetry?: () => void;
   emptyTitle?: string;
   emptyDescription?: string;
-  emptyCtaLabel?: string;
-  onEmptyCta?: () => void;
   className?: string;
 }
 
@@ -58,8 +56,6 @@ export function StateView({
   onRetry,
   emptyTitle,
   emptyDescription,
-  emptyCtaLabel,
-  onEmptyCta,
   className,
 }: StateViewProps) {
   const { t } = useTranslation();
@@ -86,8 +82,6 @@ export function StateView({
         <EmptyState
           title={emptyTitle ?? t("state.empty.title")}
           description={emptyDescription ?? t("state.empty.description")}
-          ctaLabel={emptyCtaLabel}
-          onCta={onEmptyCta}
           className={className}
         />
       )}

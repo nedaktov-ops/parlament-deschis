@@ -2,8 +2,6 @@ export interface EmptyStateProps {
   icon?: React.ReactNode;      // Decorative SVG icon (defaults to a magnifier)
   title: string;              // Heading text
   description?: string;       // Optional supporting text
-  ctaLabel?: string;          // Optional button label
-  onCta?: () => void;         // Optional button handler
   className?: string;         // Optional CSS class
 }
 
@@ -23,8 +21,6 @@ export default function EmptyState({
   ),
   title,
   description,
-  ctaLabel,
-  onCta,
   className,
 }: EmptyStateProps) {
   return (
@@ -38,16 +34,6 @@ export default function EmptyState({
         <p className="text-sm text-slate-400 text-center max-w-xs">
           {description}
         </p>
-      )}
-      {onCta && ctaLabel && (
-        <button
-          type="button"
-          onClick={onCta}
-          className="btn btn-hover min-h-11 mt-4 bg-slate-700 hover:bg-slate-600"
-          aria-label={ctaLabel}
-        >
-          {ctaLabel}
-        </button>
       )}
     </div>
   );
