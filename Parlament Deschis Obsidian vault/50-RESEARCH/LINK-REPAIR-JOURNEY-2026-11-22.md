@@ -959,7 +959,24 @@ Recipe L-16. **Code evidence — entry:** branch `repair/links-base`, HEAD
 `/tmp/opencode/backups/link-repair/W6`; `git bundle verify`, `tar -tzf` and
 `sha256sum -c` all exited 0 (`pre.bundle / pre.sha / pre.status / worktree.tgz: OK`).
 
-_Implementation, gates and verdict pending._
+Implementation: commit `9a7b0aeb76748d30298045297a7c25ecdecf423a`, diff exactly
+`scripts/check_routes_nav.mjs` and `scripts/ui_state_probe.py`.
+`check_routes_nav.mjs` now counts four source patterns (NavLink 22 + literal
+`to=` 24 + `navigate({to})` 1 + native `href="/"` 0) → `nav_links=47`, up from
+22; `unlinked=0`, exit 0. `ui_state_probe.py` now clicks the retry button and
+asserts a new `/api/` request (fallback: error-state transition).
+
+Gates all exit 0: lint, build, i18n:check, `node scripts/check_routes_nav.mjs`
+(24/47/0), `python3 -m py_compile scripts/ui_state_probe.py`, vault lint PASS 66,
+sync clean, doc-truth 0, `git diff --check` 0.
+
+**Browser/runtime evidence:** the agent served `frontend/dist` with
+`vite preview` on `127.0.0.1:5180` and ran `python3 scripts/ui_state_probe.py` →
+`STATE PROBE PASS: 9 routes × 3 scenarios, 0 failures`. Focused confirmation:
+retry click produced a new API request (`api_requests_before_click=5`,
+`after_click=6`, `NEW_API_REQUEST_ON_CLICK=True`). This is a runtime observation
+of the guard script, not a product UI claim; no axe/network-reachability claim
+is made. Verdict pending supervisor.
 
 ## Wave W7 — integration and owner hand-off
 
