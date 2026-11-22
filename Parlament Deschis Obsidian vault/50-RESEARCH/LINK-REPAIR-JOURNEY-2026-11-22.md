@@ -1010,7 +1010,65 @@ Authorisation (GREEN only — reproduce verbatim, filling the braces):
 
 ## Wave W7 — integration and owner hand-off
 
-_Recipe L-17. No merge to main and no deploy without explicit owner decision._
+Recipe L-17. **Code evidence — entry:** branch `repair/links-base` after all
+GREEN waves integrated `--ff-only`, HEAD
+`967191fe33e45e3e39e2177bd0054cbdbac5f0f9`, clean tree. Backup ROOT
+`/tmp/opencode/backups/link-repair/W7`; `git bundle verify`, `tar -tzf` and
+`sha256sum -c` all exited 0 (`pre.bundle / pre.sha / pre.status / worktree.tgz: OK`).
+
+### Full gate replay on the integrated branch
+
+Raw output: `/tmp/opencode/w7-gate-replay.txt`. All exits 0:
+
+| Command | Result |
+|---|---|
+| `cd frontend && npm run lint` | `tsc --noEmit && eslint src --ext .ts,.tsx`, no errors |
+| `cd frontend && npm run build` | ✓ built in 9.10 s (pre-existing chunk advisory) |
+| `cd frontend && npm run i18n:check` | ro=731 / en=731, 0 missing / asymmetric / duplicate |
+| `node scripts/check_routes_nav.mjs` | `ROUTES total=24 nav_links=47 unlinked=0 deprecated=0` PASS |
+| `python3 -m py_compile scripts/ui_state_probe.py` | exit 0 |
+| `python3 scripts/vault_lint.py` | PASS: 66 notes |
+| `python3 scripts/vault_sync.py --check` | clean — 5 generated notes match source commit |
+| `bash scripts/check-doc-truth.sh` | `false-claims: 0` |
+| `git diff --check` | exit 0 |
+
+`pytest`, the strict corpus audit and Docker build were **NOT RUN** in this
+programme (frontend-only change); resolver: CI required checks on a PR. They are
+not claimed as passes.
+
+### Programme summary
+
+- Branches integrated: `repair/links-w1`, `repair/links-w2` (+ emergency
+  `repair/links-w2b`), `repair/links-w3`, `repair/links-w4`, `repair/links-w5`,
+  `repair/links-w6`, all `--ff-only`, producing a linear history of 40 additive
+  commits from `main@8811216` to `repair/links-base@967191f`.
+- Recipes delivered: L-01…L-16 plus emergency L-18; L-12 recorded as a
+  NO-CHANGE decision; L-15 partially executed with two recorded follow-ups.
+- Confirmed defects fixed: Ideology "All years"; dead Compare MPs link; footer
+  native anchors + label/URL inconsistency; dashboard card scope; wave-click
+  target; pagination bounds; the pre-existing `useScope` route-loss bug found
+  in W2; page-local vote search honesty; vote-position truncation disclosure;
+  chair no-op; nested-interactive provenance link; party defaults; untranslated
+  labels; dead controls; and the weakened verification guards.
+- Backups for every wave are in `/tmp/opencode/backups/link-repair/W0…W7`, each
+  with a verified bundle, worktree archive and SHA-256 manifest. Rollback is
+  additive `git revert <checkpoint-sha>`; no reset, force-push, tag move or
+  history rewrite was used.
+
+### Browser evidence
+
+No new browser pass in W7; the wave replays the previously captured evidence
+from W1–W4 and W6. No new claim is made.
+
+### Owner decision (NOT taken by this programme)
+
+`main` and `origin/main` remain at `8811216…`; **no merge to main, no PR merge,
+no deployment and no branch-protection change** was performed. The owner must
+decide whether to open a PR from `repair/links-base` and let the four required
+CI checks (`test`, `audit`, `docker`, `evidence-guards`) run, and whether to
+deploy afterwards. Push status and final supervisor verdict are recorded below.
+
+_Push result and final supervisor verdict pending._
 
 ## See also
 
