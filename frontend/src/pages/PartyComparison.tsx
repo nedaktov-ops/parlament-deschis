@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
@@ -12,6 +12,7 @@ import {
   type CommitteeControlParty,
 } from "../api/client";
 import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
+import TooltipText from "../components/ui/TooltipText";
 
 interface PartyRow {
   id: string;
@@ -35,6 +36,7 @@ function fmtInt(v: number): string {
 
 export default function PartyComparison() {
   const { t } = useTranslation();
+  const tipId = useId().replace(/:/g, "");
   const scope = useScope();
   const navigate = useNavigate({ from: "/compare" });
   // Page-local comparison selection is URL-backed too (FN-7).
@@ -232,14 +234,14 @@ export default function PartyComparison() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700">
-              {metrics.map((m) => (
-                <tr key={m.label} className="hover:bg-slate-700/50">
+              {metrics.map((m, index) => (
+                <tr key={m.label}>
                   <th scope="row" className="px-4 py-3 text-slate-400 font-normal text-left">{m.label}</th>
                   <td
-                    className={`px-4 py-3 text-center font-semibold ${
+                    className={`relative group px-4 py-3 text-center font-semibold ${
                       m.higherIsBetter === "a" ? "text-emerald-300" : "text-slate-200"
                     }`}
-                    title={m.a === "—" ? t("compare.chairsUnavailable", "No dated chair data in corpus → unavailable, not zero") : undefined}
+                    aria-describedby={m.a === "—" ? `${tipId}-a-${index}` : undefined}
                   >
                     {m.a}
                     {m.higherIsBetter === "a" && (
@@ -248,12 +250,17 @@ export default function PartyComparison() {
                         <span aria-hidden="true">▲</span>
                       </span>
                     )}
+                    {m.a === "—" ? (
+                      <TooltipText id={`${tipId}-a-${index}`}>
+                        {t("compare.chairsUnavailable", "No dated chair data in corpus → unavailable, not zero")}
+                      </TooltipText>
+                    ) : null}
                   </td>
                   <td
-                    className={`px-4 py-3 text-center font-semibold ${
+                    className={`relative group px-4 py-3 text-center font-semibold ${
                       m.higherIsBetter === "b" ? "text-emerald-300" : "text-slate-200"
                     }`}
-                    title={m.b === "—" ? t("compare.chairsUnavailable", "No dated chair data in corpus → unavailable, not zero") : undefined}
+                    aria-describedby={m.b === "—" ? `${tipId}-b-${index}` : undefined}
                   >
                     {m.b}
                     {m.higherIsBetter === "b" && (
@@ -262,6 +269,11 @@ export default function PartyComparison() {
                         <span aria-hidden="true">▲</span>
                       </span>
                     )}
+                    {m.b === "—" ? (
+                      <TooltipText id={`${tipId}-b-${index}`}>
+                        {t("compare.chairsUnavailable", "No dated chair data in corpus → unavailable, not zero")}
+                      </TooltipText>
+                    ) : null}
                   </td>
                 </tr>
               ))}

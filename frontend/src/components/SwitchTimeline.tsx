@@ -1,4 +1,7 @@
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { activateOnKey } from "../utils/a11y";
+import TooltipText from "./ui/TooltipText";
 
 export interface SwitchWaveData {
   id: string;
@@ -32,6 +35,8 @@ export default function SwitchTimeline({
   onWaveClick,
   height = 120,
 }: SwitchTimelineProps) {
+  const { t } = useTranslation();
+  const uid = useId().replace(/:/g, "");
   const timelineData = useMemo(() => {
     const sortedLegs = Object.values(legislatures)
       .filter(l => l.start)
@@ -139,9 +144,16 @@ export default function SwitchTimeline({
                 height={barHeight}
                 fill="rgba(236, 72, 153, 0.6)"
                 opacity={intensity}
+                role="button"
+                tabIndex={0}
+                aria-label={t("a11y.switchWave", "Switch wave on {{date}}: {{count}} switches", { count: wave.switch_count, date: wave.start_date ?? "" })}
+                aria-describedby={`${uid}-wave-${wave.id}`}
                 onClick={() => onWaveClick?.(wave)}
-                className="cursor-pointer hover:opacity-100 transition-opacity"
-              />
+                onKeyDown={(e) => activateOnKey(e, () => onWaveClick?.(wave))}
+                className="cursor-pointer hover:opacity-100 transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
+              >
+                <title>{`${wave.start_date ?? "unknown date"}: ${wave.switch_count} switches`}</title>
+              </rect>
               <text
                 x={x + barWidth + 4}
                 y={idx * (barHeight + barSpacing) + barHeight / 2 + 3}
@@ -154,18 +166,24 @@ export default function SwitchTimeline({
           );
         })}
         </svg>
+        {activeWaves.map((wave) => (
+          <TooltipText key={wave.id} id={`${uid}-wave-${wave.id}`}>
+            {`${wave.start_date ?? "unknown date"}: ${wave.switch_count} switches`}
+          </TooltipText>
+        ))}
       </div>
       
       <div className="mt-2 flex justify-between text-xs">
         <span className="text-slate-500">
           {waves.length} events
         </span>
-        <span 
-          className="text-sky-400 cursor-pointer" 
+        <button
+          type="button"
+          className="btn-hover min-h-11 text-sky-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
           onClick={() => onWaveClick?.({id: 'all', label: null, start_date: null, end_date: null, switch_count: timelineData.totalSwiches, trigger_type: null, legislature: null, chamber: null} as SwitchWaveData)}
         >
           View all →
-        </span>
+        </button>
       </div>
     </div>
   );

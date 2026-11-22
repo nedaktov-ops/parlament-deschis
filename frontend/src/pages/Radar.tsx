@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, votesForScope, type VotePositionRow } from "../api/client";
@@ -6,6 +6,7 @@ import { useScope } from "../hooks/useScope";
 import ScopeControls from "../components/ScopeControls";
 import PartyAgreementMatrix from "../components/PartyAgreementMatrix";
 import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
+import TooltipText from "../components/ui/TooltipText";
 
 const CHOICE_COLOR: Record<string, string> = {
   yes: "#10b981", // emerald-500
@@ -23,6 +24,7 @@ interface PartyVoteCell {
 
 export default function Radar() {
   const { t } = useTranslation();
+  const tipId = useId().replace(/:/g, "");
   const scope = useScope();
 
   // R-08: discover data-bearing scopes from the API (W8), never hardcode
@@ -174,25 +176,28 @@ export default function Radar() {
                   <th className="py-2.5 pr-4 font-medium" scope="col">
                     {t("filter.party", "Party")}
                   </th>
-                  {matrix.votes.map((v) => (
+                  {matrix.votes.map((v, vIdx) => (
                     <th
                       key={v.native_vote_id}
-                      className="py-2.5 pr-4 font-medium text-center text-slate-400 border-b border-slate-700"
+                      className="relative group py-2.5 pr-4 font-medium text-center text-slate-400 border-b border-slate-700"
                       scope="col"
-                      title={v.title_raw ?? ""}
+                      aria-describedby={v.title_raw ? `${tipId}-vote-title-${vIdx}` : undefined}
                     >
                       {v.vote_time?.split(" ")[0] ?? "—"}
+                      {v.title_raw ? (
+                        <TooltipText id={`${tipId}-vote-title-${vIdx}`}>{v.title_raw}</TooltipText>
+                      ) : null}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {matrix.parties.map((party) => (
+                {matrix.parties.map((party, partyIdx) => (
                   <tr key={party} className="border-b border-slate-700/40">
                     <td className="py-2.5 pr-4 text-slate-200 font-medium">
                       {party}
                     </td>
-                    {matrix.votes.map((vote) => {
+                    {matrix.votes.map((vote, voteIdx) => {
                       const cell = matrix.cells.get(`${party}|${vote.native_vote_id}`);
                       const choice = cell?.choice ?? null;
                       const count = cell?.count ?? 0;
@@ -201,8 +206,8 @@ export default function Radar() {
                       return (
                         <td
                           key={vote.native_vote_id}
-                          className="py-2.5 pr-4 text-center border-b border-slate-700/40"
-                          title={`${party}: ${choice ?? "—"} ${count}/${total} (${pct}%)`}
+                          className="relative group py-2.5 pr-4 text-center border-b border-slate-700/40"
+                          aria-describedby={`${tipId}-cell-${partyIdx}-${voteIdx}`}
                           style={{
                             backgroundColor: choice
                               ? CHOICE_COLOR[choice as keyof typeof CHOICE_COLOR] + "20"
@@ -216,6 +221,9 @@ export default function Radar() {
                           ) : (
                             <span className="text-xs text-slate-600">—</span>
                           )}
+                          <TooltipText id={`${tipId}-cell-${partyIdx}-${voteIdx}`}>
+                            {`${party}: ${choice ?? "—"} ${count}/${total} (${pct}%)`}
+                          </TooltipText>
                         </td>
                       );
                     })}

@@ -39,7 +39,11 @@ ZERO = re.compile(r"^\s*0+(?:[.,]0+)?%?\s*$")
 
 def _empty_body(path: str) -> str:
     # These endpoints return a bare array; others wrap in {data: []}.
-    if "/coverage/detailed" in path or "/analytics/switch-waves" in path:
+    if (
+        "/coverage/detailed" in path
+        or "/coverage/dimensions" in path
+        or "/analytics/switch-waves" in path
+    ):
         return "[]"
     return '{"status":"ok","data":[],"data_exists":false,"count":0}'
 

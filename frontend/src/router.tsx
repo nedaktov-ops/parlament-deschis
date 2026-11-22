@@ -250,7 +250,7 @@ function RootLayout() {
           </div>
         </div>
         <div className="relative">
-        <nav className="flex gap-1 border-b border-slate-700 px-4 sm:px-6 lg:px-8 overflow-x-auto" aria-label={t("mainNavigation")}>
+        <nav className="flex gap-1 border-b border-slate-700 px-4 sm:px-6 lg:px-8 overflow-x-auto" tabIndex={0} aria-label={t("mainNavigation")}>
           <NavLink to="/" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("overview")}
           </NavLink>

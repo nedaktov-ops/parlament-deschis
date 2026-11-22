@@ -175,7 +175,7 @@ export default function SenateHistory() {
           </thead>
           <tbody className="divide-y divide-slate-700">
             {allRows.map((row: CoverageRow) => (
-              <tr key={`${row.chamber}-${row.legislature}`} className="hover:bg-slate-700/50">
+              <tr key={`${row.chamber}-${row.legislature}`}>
                 <th scope="row" className="px-4 py-3 text-slate-200 font-normal text-left">{row.legislature ?? "—"}</th>
                 <td className="px-4 py-3 text-slate-300">
                   {formatDate(row.period_start)} — {formatDate(row.period_end)}

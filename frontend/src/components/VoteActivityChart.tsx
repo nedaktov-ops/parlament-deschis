@@ -14,6 +14,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsOption } from "echarts";
 import { api, type ActivityBucket } from "../api/client";
 import AsyncState, { resolveViewState } from "./ui/AsyncState";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 
 echarts.use([
   BarChart,
@@ -46,6 +47,7 @@ export default function VoteActivityChart({
   legislature,
 }: VoteActivityChartProps) {
   const { t } = useTranslation();
+  const reducedMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const activityQuery = useQuery({
@@ -64,12 +66,6 @@ export default function VoteActivityChart({
     if (!el || activityQuery.isError) return;
     const chart = echarts.init(el);
 
-    // ECharts animates on canvas; the global CSS reduced-motion rule does not
-    // reach it, so opt out explicitly when the user asks for less motion.
-    const reduceMotion =
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
     const dates = buckets.map((b) => b.date);
     const totalVotes = buckets.map((b) => finite(b.votes));
     const yesVotes = buckets.map((b) => finite(b.yes));
@@ -78,7 +74,7 @@ export default function VoteActivityChart({
 
     const option: EChartsOption = {
       backgroundColor: "transparent",
-      animation: !reduceMotion,
+      animation: !reducedMotion,
       tooltip: {
         trigger: "axis",
         backgroundColor: "#0f172a",
@@ -165,7 +161,7 @@ export default function VoteActivityChart({
       window.removeEventListener("resize", onResize);
       chart.dispose();
     };
-  }, [buckets, t, activityQuery.isError]);
+  }, [buckets, t, activityQuery.isError, reducedMotion]);
 
   const empty = buckets.length === 0;
   const view = resolveViewState({

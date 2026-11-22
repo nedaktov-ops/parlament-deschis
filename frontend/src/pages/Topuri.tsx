@@ -137,7 +137,7 @@ export default function Topuri() {
         </div>
 
         <>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("view.topuri.title", "Top MPs")}>
             <table
               role="table"
               aria-label="MP behavioural scorecard: loyalty, rebellion and participation per MP"

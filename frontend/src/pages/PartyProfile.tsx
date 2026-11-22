@@ -171,7 +171,7 @@ export function PartyProfile() {
           errorLabel={t("electoralLoadError")}
           emptyTitle={t("noData")}
         >
-          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1" tabIndex={0} role="region" aria-label={t("recentMovements", "Recent movements")}>
             {movements.data?.map((m) => (
               <button type="button" key={m.id}
                 onClick={() => m.person && setPersonId(m.person.id)}

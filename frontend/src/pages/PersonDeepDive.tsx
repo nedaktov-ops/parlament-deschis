@@ -187,7 +187,7 @@ export function PersonDeepDive() {
           {p.events.length === 0 ? (
             <div className="text-slate-500 text-sm py-4">{t("noData")}</div>
           ) : (
-            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1" tabIndex={0} role="region" aria-label={t("events", "Events")}>
               {p.events.map((e) => (
                 <div key={e.id} className="bg-slate-800/40 rounded-md p-2">
                   <div className="flex items-center gap-2 text-xs">
@@ -224,7 +224,7 @@ export function PersonDeepDive() {
               "Dated committee tenures from the official cdep.ro ledgers (separate from party/group membership).",
             )}
           </p>
-          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1" tabIndex={0} role="region" aria-label={t("committeeService", "Committee service")}>
             {(p.committee_memberships ?? []).map((m) => (
               <div key={m.id} className="bg-slate-800/40 rounded-md p-2">
                 <div className="text-sm">

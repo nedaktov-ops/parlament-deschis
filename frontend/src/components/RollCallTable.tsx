@@ -101,7 +101,7 @@ export default function RollCallTable({ voteId }: RollCallTableProps) {
           {data.map((p: VotePositionRow) => (
             <tr
               key={p.person_id}
-              className="border-b border-slate-700/40 hover:bg-slate-800/40"
+              className="border-b border-slate-700/40"
             >
               <td className="py-2.5 pr-4 text-slate-200">
                 {p.name_raw || t("mpc.unknown", "unknown")}

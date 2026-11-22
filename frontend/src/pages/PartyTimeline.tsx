@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
@@ -9,6 +9,7 @@ import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { Sparkline } from "../components/DataViz";
 import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
+import TooltipText from "../components/ui/TooltipText";
 
 interface PartySpan {
   party: string;
@@ -49,6 +50,7 @@ function fetchTimeline(): Promise<PartyTimelineResponse> {
 
 export default function PartyTimeline() {
   const { t } = useTranslation();
+  const tipId = useId().replace(/:/g, "");
   const scope = useScope();
 
   const timeline = useQuery({
@@ -221,7 +223,7 @@ export default function PartyTimeline() {
           </div>
 
           <div className="space-y-1.5 min-w-[720px]">
-            {rows.map((p) => {
+            {rows.map((p, idx) => {
               const start = yearOf(p.first_join);
               const end = yearOf(p.last_join);
               if (start === null) return null;
@@ -232,19 +234,24 @@ export default function PartyTimeline() {
               return (
                 <div key={p.party} className="flex items-center gap-3">
                   <span
-                    className="w-24 shrink-0 text-sm text-slate-300 text-right truncate"
-                    title={p.name}
+                    className="relative group w-24 shrink-0 text-sm text-slate-300 text-right truncate"
+                    aria-describedby={`${tipId}-party-${idx}`}
                   >
                     {p.party}
+                    <TooltipText id={`${tipId}-party-${idx}`}>{p.name}</TooltipText>
                   </span>
                   <div className="relative flex-1 h-5 bg-slate-900/60 rounded">
                     <div
-                      className={`absolute inset-y-1 rounded ${
+                      className={`group absolute inset-y-1 rounded ${
                         ongoing ? "bg-sky-500" : "bg-slate-500"
                       }`}
                       style={{ left: `${left}%`, width: `${width}%` }}
-                      title={`${p.first_join} → ${p.last_join} (${p.dated_joins} dated joins)`}
-                    />
+                      aria-describedby={`${tipId}-span-${idx}`}
+                    >
+                      <TooltipText id={`${tipId}-span-${idx}`}>
+                        {`${p.first_join} → ${p.last_join} (${p.dated_joins} dated joins)`}
+                      </TooltipText>
+                    </div>
                   </div>
                   <span className="w-40 shrink-0 text-xs text-slate-500 font-mono">
                     {p.first_join} → {p.last_join}

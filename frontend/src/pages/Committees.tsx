@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback, useEffect } from "react";
+import { useState, useRef, useMemo, useCallback, useEffect, useId } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
@@ -10,6 +10,7 @@ import {
   type CommitteeMember,
 } from "../api/client";
 import { useScope } from "../hooks/useScope";
+import TooltipText from "../components/ui/TooltipText";
 import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
@@ -26,7 +27,7 @@ function MemberRow({ member }: { member: CommitteeMember }) {
   const { t } = useTranslation();
   const scope = useScope();
   return (
-    <tr className="hover:bg-slate-700/40">
+    <tr className="">
       <th scope="row" className="px-3 py-2 font-normal text-left">
         <Link
           to="/person/$id"
@@ -163,6 +164,7 @@ function CommitteeCard({
 
 export default function Committees() {
   const { t } = useTranslation();
+  const tipId = useId().replace(/:/g, "");
   const scope = useScope();
   const [totalMembers, setTotalMembers] = useState(0);
   const countedCommittees = useRef<Set<string>>(new Set());
@@ -282,17 +284,21 @@ export default function Committees() {
           </p>
           <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("control.table", "Committee control table")}>
             <div className="space-y-2 mb-4">
-              {controlData.parties.map((p) => (
+              {controlData.parties.map((p, idx) => (
                 <div key={p.party} className="flex items-center gap-3">
                   <span className="w-24 text-sm text-slate-300 shrink-0">
                     {p.party}
                   </span>
                   <div className="bg-slate-700 rounded-full h-4 flex-1 min-w-[120px]">
                     <div
-                      className="bg-sky-500 rounded-full h-4"
+                      className="relative group bg-sky-500 rounded-full h-4"
                       style={{ width: `${p.share_pct}%` }}
-                      title={`${p.chairs} / ${controlData.total_committees}`}
-                    />
+                      aria-describedby={`${tipId}-share-${idx}`}
+                    >
+                      <TooltipText id={`${tipId}-share-${idx}`}>
+                        {`${p.chairs} / ${controlData.total_committees}`}
+                      </TooltipText>
+                    </div>
                   </div>
                   <span className="w-20 text-sm text-slate-400 text-right shrink-0">
                     {p.chairs} ({p.share_pct}%)
@@ -324,7 +330,7 @@ export default function Committees() {
               </thead>
               <tbody className="divide-y divide-slate-700/60">
                 {controlData.chairs.map((c) => (
-                  <tr key={c.committee_id} className="hover:bg-slate-700/40">
+                  <tr key={c.committee_id} className="">
                     <th scope="row" className="px-3 py-2 text-slate-300 font-normal text-left">{c.committee}</th>
                     <td className="px-3 py-2">
                       <Link

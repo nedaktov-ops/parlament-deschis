@@ -186,7 +186,7 @@ export function LegislatureDetail() {
               {movements.data?.length === 1000 && (
                 <p role="note" className="text-amber-200 text-sm mb-2">{t("displayedMaxMovements")}</p>
               )}
-              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1" tabIndex={0} role="region" aria-label={t("recentMovements", "Recent movements")}>
                 {movements.data?.slice(0, 20).map((m) => (
                   <button type="button"key={m.id}disabled={!m.person}
                     onClick={() => {

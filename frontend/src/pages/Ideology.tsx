@@ -19,6 +19,7 @@ import { ideology, type IdeologyEntry } from "../api/client";
 import { useScope } from "../hooks/useScope";
 import ScopeControls from "../components/ScopeControls";
 import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 
 echarts.use([ScatterChart, GridComponent, LegendComponent, TooltipComponent, ToolboxComponent, CanvasRenderer]);
 
@@ -46,6 +47,7 @@ const PARTY_COLORS = [
 
 export default function Ideology() {
   const { t } = useTranslation();
+  const reducedMotion = useReducedMotion();
   const scope = useScope();
   const navigate = useNavigate({ from: "/ideology" });
   // CHES survey year is a distinct URL param, never a mapped as_of date.
@@ -128,6 +130,7 @@ export default function Ideology() {
 
     const option: EChartsOption = {
       backgroundColor: "transparent",
+      animation: !reducedMotion,
       tooltip: {
         trigger: "item",
         formatter: (params: any) => {
@@ -203,7 +206,7 @@ export default function Ideology() {
       window.removeEventListener("resize", onResize);
       chart.dispose();
     };
-  }, [filteredData, scatterData, colorMap, t]);
+  }, [filteredData, scatterData, colorMap, t, reducedMotion]);
 
   const view = resolveViewState({
     isLoading: ideologyQuery.isLoading,
@@ -274,7 +277,7 @@ export default function Ideology() {
         <h2 className="text-lg font-semibold text-slate-100 mb-3">
           {t("view.ideology.legend_title", "Party positions")}
         </h2>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("view.ideology.title", "Ideology")}>
           <table className="min-w-full text-sm data-table">
             <thead>
               <tr className="text-left text-slate-400 border-b border-slate-700">
@@ -299,7 +302,7 @@ export default function Ideology() {
               {filteredData.map((d: IdeologyEntry) => (
                 <tr
                   key={`${d.party_name}-${d.survey_year}`}
-                  className="border-b border-slate-700/40 hover:bg-slate-800/40"
+                  className="border-b border-slate-700/40"
                 >
                   <td className="py-2.5 pr-4 text-slate-200 font-medium">
                     {d.party_name}

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 export interface CrossChamberPerson {
   person_id: string;
@@ -21,6 +22,7 @@ export default function CrossChamberFlow({
   onPersonClick,
   // width and height intentionally unused for now
 }: CrossChamberFlowProps) {
+  const { t } = useTranslation();
   const stats = useMemo(() => {
     const deputies = data.filter(d => d.chambers.includes('deputies')).length;
     const senate = data.filter(d => d.chambers.includes('senate')).length;
@@ -67,22 +69,26 @@ export default function CrossChamberFlow({
       {/* Flow visualization */}
       <div className="relative h-8 mb-3">
         {/* Deputies bar */}
-        <div 
-          className="absolute left-0 top-0 h-full bg-sky-400/40 rounded-l-lg cursor-pointer"
+        <button
+          type="button"
+          aria-label={t("a11y.crossChamberDeputies", "Show deputies")}
+          className="absolute left-0 top-0 h-full bg-sky-400/40 rounded-l-lg cursor-pointer btn-hover min-h-11"
           style={{ width: `${deputiesPct}%` }}
           onClick={() => onPersonClick?.(data[0]?.person_id || '')}
         />
         
         {/* Senate bar */}
-        <div 
-          className="absolute left-0 top-0 h-full bg-rose-400/40 rounded-r-lg cursor-pointer"
+        <button
+          type="button"
+          aria-label={t("a11y.crossChamberSenate", "Show senators")}
+          className="absolute left-0 top-0 z-10 h-full bg-rose-400/40 rounded-r-lg cursor-pointer btn-hover min-h-11"
           style={{ width: `${senatePct}%` }}
           onClick={() => onPersonClick?.(data[0]?.person_id || '')}
         />
         
         {/* Both indicator */}
         {stats.total > 0 && (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <span className="text-xs font-bold text-slate-100">
               {stats.both} in both
             </span>
@@ -112,10 +118,11 @@ export default function CrossChamberFlow({
           <div className="text-xs text-slate-400 mb-2">Cross-chamber MPs</div>
           <div className="space-y-1 max-h-32 overflow-y-auto" tabIndex={0} aria-label="List of MPs serving in both chambers">
             {topMembers.map((member) => (
-              <div
+              <button
+                type="button"
                 key={member.person_id}
                 onClick={() => onPersonClick?.(member.person_id)}
-                className="flex items-center justify-between p-1 rounded hover:bg-slate-700/30 cursor-pointer"
+                className="flex w-full items-center justify-between p-1 rounded hover:bg-slate-700/30 cursor-pointer btn-hover min-h-11"
               >
                 <span className="text-xs text-slate-300 truncate">
                   {member.name}
@@ -128,7 +135,7 @@ export default function CrossChamberFlow({
                     <span className="text-xs bg-rose-400/20 px-1 rounded">S</span>
                   )}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>

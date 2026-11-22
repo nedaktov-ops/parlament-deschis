@@ -92,7 +92,7 @@ export default function Parties() {
         )}
 
         {filtered.length > 0 && (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("parties.title", "Parties")}>
             <table className="min-w-full text-sm data-table">
               <thead>
                 <tr className="text-left text-slate-400 border-b border-slate-700">

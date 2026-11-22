@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useScope } from "../hooks/useScope";
@@ -16,6 +16,7 @@ import SankeyFlow from "../components/SankeyFlow";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
+import TooltipText from "../components/ui/TooltipText";
 
 /** In-repo methodology document (docs/METHODOLOGY.md). */
 const METHODOLOGY_URL =
@@ -94,11 +95,16 @@ function StatCard({
   hint?: string;
   title?: string;
 }) {
+  const tipId = useId().replace(/:/g, "");
   return (
     <div className="bg-slate-800/50 rounded-xl p-4">
       <div className="text-slate-500 text-xs">{label}</div>
-      <div className="text-2xl font-bold text-slate-100" title={title}>
+      <div
+        className="relative group text-2xl font-bold text-slate-100"
+        aria-describedby={title ? `${tipId}-stat` : undefined}
+      >
         {value}
+        {title ? <TooltipText id={`${tipId}-stat`}>{title}</TooltipText> : null}
       </div>
       {hint ? <div className="text-xs text-slate-500 mt-1">{hint}</div> : null}
     </div>
@@ -179,7 +185,7 @@ function MatrixTable({ scope }: { scope: TraseismScope }) {
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row} className="border-t border-slate-700/60 row-hover">
+            <tr key={row} className="border-t border-slate-700/60">
               <th scope="row" className="py-1.5 pr-3 text-left font-medium text-slate-200">
                 {row}
               </th>
@@ -242,7 +248,7 @@ function PartyNetTable({ scope }: { scope: TraseismScope }) {
             return (
               <tr
                 key={row.party}
-                className="border-t border-slate-700/60 align-top row-hover"
+                className="border-t border-slate-700/60 align-top"
               >
                 <th scope="row" className="py-1.5 pr-3 text-left font-medium text-slate-200">
                   {row.party}
@@ -282,6 +288,7 @@ function SwitchLedger({
   scopeKey: readonly [string, string, string];
 }) {
   const { t } = useTranslation();
+  const tipId = useId().replace(/:/g, "");
   const [page, setPage] = useState(0);
 
   useEffect(() => {
@@ -352,7 +359,7 @@ function SwitchLedger({
                 {rows.map((row, index) => (
                   <tr
                     key={`${row.person_id}-${row.date ?? "nd"}-${index}`}
-                    className="border-t border-slate-700/60 align-top row-hover"
+                    className="border-t border-slate-700/60 align-top"
                   >
                     <td className="py-1.5 pr-3 text-slate-200">{row.name}</td>
                     <td className="py-1.5 pr-3 text-slate-300">
@@ -362,12 +369,8 @@ function SwitchLedger({
                       {row.to_group ?? "—"}
                     </td>
                     <td
-                      className="py-1.5 pr-3 font-mono text-slate-300"
-                      title={
-                        row.precision
-                          ? t("traseismPrecisionLabel", { value: row.precision })
-                          : undefined
-                      }
+                      className="relative group py-1.5 pr-3 font-mono text-slate-300"
+                      aria-describedby={row.precision ? `${tipId}-precision-${index}` : undefined}
                     >
                       {row.date ? (
                         <>
@@ -377,6 +380,11 @@ function SwitchLedger({
                       ) : (
                         "—"
                       )}
+                      {row.precision ? (
+                        <TooltipText id={`${tipId}-precision-${index}`}>
+                          {t("traseismPrecisionLabel", { value: row.precision })}
+                        </TooltipText>
+                      ) : null}
                     </td>
                     <td className="py-1.5">
                       {row.source_url ? (
@@ -523,7 +531,7 @@ function ScopesOverview({ rows }: { rows: TraseismScope[] }) {
             return (
               <tr
                 key={`${row.chamber}-${row.legislature}`}
-                className="border-t border-slate-700/60 align-top row-hover"
+                className="border-t border-slate-700/60 align-top"
               >
                 <td className="py-1.5 pr-3 text-slate-200">
                   {chamberLabel(row.chamber, t)}
@@ -623,7 +631,7 @@ function SwitchWavesSection({
             </thead>
             <tbody>
               {rows.map((w) => (
-                <tr key={w.id} className="border-b border-slate-700/50 row-hover">
+                <tr key={w.id} className="border-b border-slate-700/50">
                   <th scope="row" className="py-2 pr-4 text-slate-300 font-normal text-left">
                     {w.start_date ?? "?"} → {w.end_date ?? "?"}
                   </th>

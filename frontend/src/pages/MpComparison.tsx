@@ -270,7 +270,7 @@ export default function MpComparison() {
             </thead>
             <tbody className="divide-y divide-slate-700">
               {rows.map((row) => (
-                <tr key={row.label} className="hover:bg-slate-700/50">
+                <tr key={row.label}>
                   <th scope="row" className="px-4 py-3 text-slate-400 font-normal text-left">{row.label}</th>
                   {row.values.map((v, idx) => (
                     <td

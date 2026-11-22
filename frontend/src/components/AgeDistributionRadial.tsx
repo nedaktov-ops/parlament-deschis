@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { KeyboardEvent } from "react";
+import { activateOnKey } from "../utils/a11y";
 
 export interface CohortData {
   label: string;
@@ -100,16 +101,14 @@ export default function AgeDistributionRadial({
                     tabIndex: 0,
                     "aria-label": `Show details for ${slice.label} cohort`,
                     onClick: () => onCohortClick?.(slice),
-                    onKeyDown: (e: KeyboardEvent<SVGPathElement>) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        onCohortClick?.(slice);
-                      }
-                    },
-                    className: "cursor-pointer hover:opacity-100 transition-opacity",
+                    onKeyDown: (e: KeyboardEvent<SVGPathElement>) =>
+                      activateOnKey(e, () => onCohortClick?.(slice)),
+                    className: "cursor-pointer hover:opacity-100 transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400",
                   }
                 : {})}
-            />
+            >
+              <title>{`${slice.label}: ${slice.count} (avg ${slice.avgAge.toFixed(1)})`}</title>
+            </path>
           ))}
           <circle
             cx={centerX} cy={centerY} r={(avgAge / 100) * radius}

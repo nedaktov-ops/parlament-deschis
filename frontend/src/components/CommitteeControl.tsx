@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { StateView, type ViewState } from "./ui/AsyncState";
 
@@ -39,6 +39,7 @@ export default function CommitteeControl({
   // width parameter kept for API consistency
 }: CommitteeControlProps) {
   const { t } = useTranslation();
+  const uid = useId().replace(/:/g, "");
   const parties = useMemo(() => data?.parties ?? [], [data]);
   const chairs = useMemo(() => data?.chairs ?? [], [data]);
 
@@ -93,8 +94,11 @@ export default function CommitteeControl({
                 <span className="text-xs w-8 text-slate-400">
                   {party.party}
                 </span>
-                <div 
-                  className="relative flex-1 h-3 rounded-full bg-slate-700/30 overflow-hidden cursor-pointer"
+                <button
+                  type="button"
+                  aria-label={t("a11y.committeeChair", "Show chair for {{party}}", { party: party.party })}
+                  aria-describedby={`${uid}-share-${index}`}
+                  className="relative flex-1 h-11 rounded-full bg-slate-700/30 overflow-hidden cursor-pointer btn-hover"
                   onClick={() => chairForParty && onChairClick?.(chairForParty)}
                 >
                   <div
@@ -109,12 +113,12 @@ export default function CommitteeControl({
                     className="absolute right-0 top-0 h-full w-2 rounded-r-full"
                     style={{ backgroundColor: getPartyColor(party.party, index) }}
                   />
-                </div>
+                </button>
                 <span className="text-xs w-10 text-right text-slate-300">
                   {party.chairs}
                 </span>
               </div>
-              <div className="text-xs text-slate-500 text-right">
+              <div id={`${uid}-share-${index}`} className="text-xs text-slate-500 text-right">
                 {percentage.toFixed(1)}%
               </div>
             </div>

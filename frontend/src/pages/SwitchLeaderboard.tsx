@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
@@ -7,6 +8,7 @@ import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
+import TooltipText from "../components/ui/TooltipText";
 
 function fmtDate(value: string | null): string {
   if (!value) return "—";
@@ -15,6 +17,7 @@ function fmtDate(value: string | null): string {
 
 export default function SwitchLeaderboard() {
   const { t } = useTranslation();
+  const tipId = useId().replace(/:/g, "");
   const scope = useScope();
   const navigate = useNavigate({ from: "/leaderboard" });
   // Page-local filter lives in the URL too (FN-7); scope reads stay in useScope.
@@ -151,7 +154,7 @@ export default function SwitchLeaderboard() {
             </thead>
             <tbody className="divide-y divide-slate-700">
               {rows.map((row: SwitchLeaderboardEntry, index: number) => (
-                <tr key={row.person_id} className="hover:bg-slate-700/50">
+                <tr key={row.person_id}>
                   <th scope="row" className="px-4 py-3 text-slate-500 font-normal text-left">{index + 1}</th>
                   <td className="px-4 py-3">
                     <Link
@@ -170,7 +173,7 @@ export default function SwitchLeaderboard() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <span
-                      className={`inline-block px-2 py-1 rounded text-sm font-semibold ${
+                      className={`relative group inline-block px-2 py-1 rounded text-sm font-semibold ${
                         row.loyalty_score === null
                           ? "bg-slate-700/40 text-slate-400"
                           : row.loyalty_score >= 70
@@ -179,15 +182,18 @@ export default function SwitchLeaderboard() {
                               ? "bg-amber-900/40 text-amber-300"
                               : "bg-red-900/40 text-red-300"
                       }`}
-                      title={t("leaderboard.loyalty.denominators", {
-                        switches: row.loyalty_inputs.switch_count,
-                        events: row.loyalty_inputs.total_events_in_scope,
-                        years: row.loyalty_inputs.tenure_years,
-                        weight: row.loyalty_inputs.tenure_weight ?? "—",
-                        status: row.loyalty_status,
-                      })}
+                      aria-describedby={`${tipId}-loyalty-${index}`}
                     >
                       {row.loyalty_score === null ? "—" : row.loyalty_score}
+                      <TooltipText id={`${tipId}-loyalty-${index}`}>
+                        {t("leaderboard.loyalty.denominators", {
+                          switches: row.loyalty_inputs.switch_count,
+                          events: row.loyalty_inputs.total_events_in_scope,
+                          years: row.loyalty_inputs.tenure_years,
+                          weight: row.loyalty_inputs.tenure_weight ?? "—",
+                          status: row.loyalty_status,
+                        })}
+                      </TooltipText>
                     </span>
                   </td>
                   <td className="px-4 py-3 text-slate-400 text-sm">

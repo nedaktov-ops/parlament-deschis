@@ -14,6 +14,8 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { ECharts } from "echarts/core";
 import type { EChartsOption, LineSeriesOption } from "echarts";
 import { api, type OrgBrief } from "../api/client";
+import RetryButton from "./RetryButton";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 
 echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
 
@@ -42,6 +44,7 @@ export default function TimelineChart({
   groups?: OrgBrief[];
 }) {
   const { t } = useTranslation();
+  const reducedMotion = useReducedMotion();
   const chartId = useId();
   const [chamber, setChamber] = useState<"deputies" | "senate">("deputies");
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -132,6 +135,7 @@ export default function TimelineChart({
     });
     return {
       backgroundColor: "transparent",
+      animation: !reducedMotion,
       color: FALLBACK_COLORS,
       grid: { left: 8, right: 16, top: 34, bottom: 8, containLabel: true },
       tooltip: {
@@ -169,7 +173,7 @@ export default function TimelineChart({
       },
       series,
     };
-  }, [data, groupNames, colorMap, t]);
+  }, [data, groupNames, colorMap, t, reducedMotion]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -230,9 +234,7 @@ export default function TimelineChart({
         {timeline.isError && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-ink/90 text-center px-4">
             <p role="alert" className="text-rose-200 text-sm">{t("timelineLoadError")}</p>
-            <button type="button"className="btn bg-slate-700 hover:bg-slate-600" onClick={() => timeline.refetch()}>
-              {t("traseismRetry")}
-            </button>
+            <RetryButton onRetry={() => timeline.refetch()} />
           </div>
         )}
         {!timeline.isLoading && empty && (

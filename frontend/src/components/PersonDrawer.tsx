@@ -1,9 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, type EventItem } from "../api/client";
 import CitationPopover from "./CitationPopover";
 import MembershipGantt from "./MembershipGantt";
+import RetryButton from "./RetryButton";
+import TooltipText from "./ui/TooltipText";
 
 function typeColor(type: string): string {
   switch (type) {
@@ -32,6 +34,7 @@ export default function PersonDrawer({
   onClose: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const tipId = useId().replace(/:/g, "");
   const drawerRef = useRef<HTMLElement>(null);
   const person = useQuery({
     queryKey: ["person", personId],
@@ -119,23 +122,22 @@ export default function PersonDrawer({
         {person.isError && (
           <div className="p-5 text-rose-200 text-sm" role="alert">
             {t("personLoadError")}
-            <button type="button"className="ml-3 underline" onClick={() => person.refetch()}>
-              {t("traseismRetry")}
-            </button>
+            <RetryButton onRetry={() => person.refetch()} className="ml-3" />
           </div>
         )}
 
         {p && (
           <div className="p-5 space-y-6">
             <div className="flex flex-wrap gap-1.5">
-              {p.identifiers.map((id) => (
+              {p.identifiers.map((id, idx) => (
                 <span
                   key={`${id.scheme}-${id.identifier}-${id.legislature}`}
-                  className="text-xs bg-slate-800 rounded px-1.5 py-0.5 text-slate-400 font-mono"
-                  title={t("identifiers")}
+                  className="relative group text-xs bg-slate-800 rounded px-1.5 py-0.5 text-slate-400 font-mono"
+                  aria-describedby={`${tipId}-id-${idx}`}
                 >
                   {id.scheme}:{id.identifier}
                   {id.legislature ? ` (${id.legislature})` : ""}
+                  <TooltipText id={`${tipId}-id-${idx}`}>{t("identifiers")}</TooltipText>
                 </span>
               ))}
               {p.wikidata_qid && (

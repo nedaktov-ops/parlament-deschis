@@ -189,7 +189,7 @@ export default function LiveFeed({
           </ul>
         </div>
       )}
-      <div className="overflow-y-auto flex-1 space-y-2 max-h-[420px] pr-1">
+      <div className="overflow-y-auto flex-1 space-y-2 max-h-[420px] pr-1" tabIndex={0} role="region" aria-label={t("liveFeed", "Live feed")}>
         {events.isLoading && <div className="text-slate-500 text-sm">{t("loading")}</div>}
         {events.isError && (
           <div className="text-rose-200 text-sm" role="alert">

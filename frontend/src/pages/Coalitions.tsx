@@ -174,7 +174,7 @@ export default function Coalitions() {
               </thead>
               <tbody className="divide-y divide-slate-700">
                 {spans.map(({ breakup, formation, days }) => (
-                  <tr key={breakup.waveId} className="hover:bg-slate-700/50">
+                  <tr key={breakup.waveId}>
                     <th scope="row" className="px-4 py-3 text-slate-200 font-normal text-left">{breakup.name}</th>
                     <td className="px-4 py-3 text-slate-300">{breakup.date}</td>
                     <td className="px-4 py-3 text-right">

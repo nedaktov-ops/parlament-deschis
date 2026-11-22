@@ -167,7 +167,7 @@ export default function Demographics() {
               {rows.map((row: GenerationalShiftEntry) => {
                 const width = ((row.avg_age - minAge) / span) * 100;
                 return (
-                  <tr key={row.party} className="hover:bg-slate-700/50">
+                  <tr key={row.party}>
                     <th scope="row" className="px-4 py-3 text-slate-200 font-medium text-left">
                       {row.party}
                     </th>

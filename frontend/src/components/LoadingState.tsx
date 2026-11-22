@@ -1,3 +1,5 @@
+import RetryButton from "./RetryButton";
+
 export interface LoadingStateProps {
   label?: string;
   description?: string;
@@ -42,14 +44,12 @@ export default function LoadingState({
         <p className="text-xs text-slate-400 text-center max-w-xs">{description}</p>
       )}
       {onRetry && retryLabel && (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="btn btn-hover min-h-11 mt-4 bg-slate-700 hover:bg-slate-600"
-          aria-label={retryLabel}
-        >
-          {retryLabel}
-        </button>
+        <RetryButton
+          onRetry={onRetry}
+          label={retryLabel}
+          ariaLabel={retryLabel}
+          className="mt-4"
+        />
       )}
     </div>
   );

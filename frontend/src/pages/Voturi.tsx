@@ -227,7 +227,7 @@ export default function Voturi() {
                 {filtered.map((v: VoteRow) => (
                   <tr
                     key={v.native_vote_id}
-                    className="border-b border-slate-700/40 hover:bg-slate-800/40"
+                    className="border-b border-slate-700/40"
                   >
                     <td className="py-2.5 pr-4 text-slate-200 tabular-nums">
                       {v.vote_time ?? "—"}

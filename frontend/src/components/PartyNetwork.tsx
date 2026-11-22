@@ -1,4 +1,7 @@
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { activateOnKey } from "../utils/a11y";
+import TooltipText from "./ui/TooltipText";
 
 interface PartyNode {
   id: string;
@@ -28,6 +31,8 @@ export default function PartyNetwork({
   onNodeClick,
   onViewAll,
 }: PartyNetworkProps) {
+  const { t } = useTranslation();
+  const uid = useId().replace(/:/g, "");
   const nodes = useMemo(() => {
     return parties.map((p, i) => ({
       ...p,
@@ -48,6 +53,7 @@ export default function PartyNetwork({
         style={{ minHeight: "160px" }}
       >
         {nodes.length > 0 ? (
+          <>
           <svg
             viewBox="0 0 500 160"
             fill="none"
@@ -56,9 +62,15 @@ export default function PartyNetwork({
             {nodes.map((node) => (
               <g
                 key={node.id}
-                className="cursor-pointer"
+                role="button"
+                tabIndex={0}
+                aria-label={t("a11y.partyNode", "Party {{party}}: {{members}} members", { party: node.short_name, members: node.total_members })}
+                aria-describedby={`${uid}-node-${node.id}`}
+                className="cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
                 onClick={() => onNodeClick?.(node.short_name || node.id)}
+                onKeyDown={(e) => activateOnKey(e, () => onNodeClick?.(node.short_name || node.id))}
               >
+                <title>{`${node.short_name}: ${node.total_members} members`}</title>
                 <circle
                   cx={node.x}
                   cy={node.y}
@@ -118,6 +130,12 @@ export default function PartyNetwork({
               );
             })}
           </svg>
+          {nodes.map((node) => (
+            <TooltipText key={node.id} id={`${uid}-node-${node.id}`}>
+              {`${node.short_name}: ${node.total_members} members`}
+            </TooltipText>
+          ))}
+          </>
         ) : (
           <div className="flex items-center justify-center h-full text-slate-500 text-sm">
             Loading network data...
@@ -128,9 +146,13 @@ export default function PartyNetwork({
         <span className="text-slate-500">Nodes: {nodes.length}</span>
         <span className="text-slate-500">Edges: {edges.length}</span>
         {onViewAll && (
-          <span className="text-sky-400 ml-auto cursor-pointer" onClick={onViewAll}>
+          <button
+            type="button"
+            className="btn-hover min-h-11 ml-auto text-sky-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
+            onClick={onViewAll}
+          >
             View all →
-          </span>
+          </button>
         )}
       </div>
     </div>

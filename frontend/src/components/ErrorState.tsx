@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import RetryButton from "./RetryButton";
 
 export interface ErrorStateProps {
   message?: string;
@@ -35,14 +36,12 @@ export default function ErrorState({
         <p className="text-xs text-slate-400 text-center max-w-xs">{description}</p>
       )}
       {onRetry && (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="btn btn-hover min-h-11 mt-4 bg-slate-700 hover:bg-slate-600"
-          aria-label={t("retry", "Retry")}
-        >
-          {t("retry", "Retry")}
-        </button>
+        <RetryButton
+          onRetry={onRetry}
+          label={t("retry", "Retry")}
+          ariaLabel={t("retry", "Retry")}
+          className="mt-4"
+        />
       )}
     </div>
   );
