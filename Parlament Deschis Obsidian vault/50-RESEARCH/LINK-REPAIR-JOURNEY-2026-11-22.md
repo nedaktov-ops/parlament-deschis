@@ -1159,6 +1159,15 @@ Authorisation (GREEN only — reproduce verbatim):
   "Integration authorised: wave W8 is GREEN on the evidence cited above; the lead may merge repair/links-w8 into repair/links-base with git merge --ff-only."
 ```
 
+## Wave W9 — production `/ideology` behaviour (L-20)
+
+**Code evidence — entry:** branch `repair/links-w9`, entry HEAD
+`e60959beb0cd72ca3a4c0f99deb040fd9d8ccf3e`, clean tree. Backup ROOT
+`/tmp/opencode/backups/link-repair/W9`; `git bundle verify`, `tar -tzf` and
+`sha256sum -c` all exited 0 (`pre.bundle / pre.sha / pre.status / worktree.tgz: OK`).
+
+_Production observation, evidence note and verdict pending._
+
 ## See also
 
 [CLICK-INVESTIGATION-JOURNEY](CLICK-INVESTIGATION-JOURNEY-2026-11-22.md) ·
