@@ -1106,6 +1106,16 @@ Authorisation (GREEN only — reproduce verbatim with the W7 adaptation):
   "Integration authorised: wave W7 is GREEN on the evidence cited above; no further integration step; owner decision pending."
 ```
 
+## Wave W8 — external URL reachability (L-19)
+
+**Code evidence — entry:** branch `repair/links-w8`, entry HEAD
+`b193af6ce3ba08e367e7f0522ed74c20a6d12f3d`, clean tree. Backup ROOT
+`/tmp/opencode/backups/link-repair/W8`; `git bundle verify`, `tar -tzf` and
+`sha256sum -c` all exited 0 (`pre.bundle / pre.sha / pre.status / worktree.tgz: OK`).
+Commands used the expanded-path procedure from STRATEGY §5.
+
+_Probe result, evidence note and verdict pending._
+
 ## See also
 
 [CLICK-INVESTIGATION-JOURNEY](CLICK-INVESTIGATION-JOURNEY-2026-11-22.md) ·
