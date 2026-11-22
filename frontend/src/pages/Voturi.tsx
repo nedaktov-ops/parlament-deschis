@@ -7,6 +7,7 @@ import { useScope } from "../hooks/useScope";
 import ScopeControls from "../components/ScopeControls";
 import RollCallTable from "../components/RollCallTable";
 import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
+import ProvenanceStamp from "../components/ProvenanceStamp";
 
 export default function Voturi() {
   const { t } = useTranslation();
@@ -56,6 +57,12 @@ export default function Voturi() {
       legislature: active?.legislature ?? undefined,
     }),
     enabled: scopeProbe.isSuccess,
+  });
+
+  const voteDetailQuery = useQuery({
+    queryKey: ["vote-detail", selectedVoteId],
+    queryFn: () => api.voteDetail(selectedVoteId!),
+    enabled: Boolean(selectedVoteId),
   });
 
   const votes = useMemo(() => votesQuery.data?.data ?? [], [votesQuery.data]);
@@ -338,6 +345,13 @@ export default function Voturi() {
           >
             {t("view.voturi.backToList", "← Back to votes list")}
           </button>
+          {voteDetailQuery.data && (
+            <ProvenanceStamp
+              sourceUrl={voteDetailQuery.data.source_url}
+              snapshotHash={voteDetailQuery.data.snapshot_hash}
+              note={voteDetailQuery.data.truth_contract_version}
+            />
+          )}
           <RollCallTable voteId={selectedVoteId} />
         </section>
       )}

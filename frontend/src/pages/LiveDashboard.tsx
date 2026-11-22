@@ -15,6 +15,7 @@ import Skeleton from "../components/ui/Skeleton";
 import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 import type { SwitchWaveData } from "../components/SwitchTimeline";
 import { localISODate } from "../utils/date";
+import LiveFeed from "../components/LiveFeed";
 
 // Heavy visualisations load only when the dashboard is opened.
 const PartyNetwork = lazy(() => import("../components/PartyNetwork"));
@@ -240,7 +241,7 @@ export function LiveDashboard() {
       <section className="pb-8 sm:pb-10" data-enter>
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100 mb-4 sm:mb-5">{t("deepDiveViews", "Deep Dive Views")}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
             <AsyncState view={partiesView} variant="inline" onRetry={() => void partiesData.refetch()} errorLabel={t("dashboard.loadError")}>
             <Suspense fallback={<Skeleton className="h-64 w-full" />}>
               <PartyNetwork
@@ -267,6 +268,13 @@ export function LiveDashboard() {
                 onPersonClick={openPerson}
               />
             </Suspense>
+            </AsyncState>
+            <AsyncState view={partiesView} variant="inline" onRetry={() => void partiesData.refetch()} errorLabel={t("dashboard.loadError")}>
+            <LiveFeed
+              legislature="2024"
+              chamber="senate"
+              onSelect={(id) => navigate({ to: "/person/$id", params: { id }, search: scope.searchFor({ date: clamped }) })}
+            />
             </AsyncState>
           </div>
         </div>

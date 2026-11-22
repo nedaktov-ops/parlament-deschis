@@ -199,6 +199,11 @@ export default function PartyTimeline() {
               { pred: gaps.predecessor_links, diss: gaps.dissolution_dates },
             )}
           </p>
+          {gaps.note && (
+            <p className="mt-2 text-xs text-amber-200/80">
+              <span className="font-semibold">{t("prov.note")}: </span>{gaps.note}
+            </p>
+          )}
         </div>
       )}
 

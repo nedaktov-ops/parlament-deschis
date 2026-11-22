@@ -11,6 +11,7 @@ import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { Sparkline } from "../components/DataViz";
 import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
+import ProvenanceStamp from "../components/ProvenanceStamp";
 
 function typeColor(type: string): string {
   switch (type) {
@@ -206,6 +207,12 @@ export function PersonDeepDive() {
                       {e.to_org?.short_name || e.to_org?.name || "—"}
                     </div>
                   )}
+                  <ProvenanceStamp
+                    sourceUrl={e.source_url}
+                    confidence={e.confidence}
+                    precision={e.precision}
+                    note={e.reason}
+                  />
                 </div>
               ))}
             </div>
@@ -236,16 +243,7 @@ export function PersonDeepDive() {
                 <div className="text-xs text-slate-500 mt-0.5">
                   {m.start_date ?? "—"} → {m.end_date ?? "present"}
                 </div>
-                {m.source_url && (
-                  <a
-                    href={m.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-sky-400 hover:underline"
-                  >
-                    {t("source", "source")} ↗
-                  </a>
-                )}
+                <ProvenanceStamp sourceUrl={m.source_url} precision={[m.start_precision, m.end_precision].filter(Boolean).join(" / ") || null} />
               </div>
             ))}
           </div>

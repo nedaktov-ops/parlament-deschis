@@ -333,6 +333,12 @@ export default function Ideology() {
             "Source: CHES, EUI archive (hdl.handle.net/1814/69975), CC BY 4.0. Parties are matched by Party Facts ID; PopuList is excluded (licence UNVERIFIED).",
           )}
         </p>
+        {ideologyQuery.data?.meta && (
+          <p className="mt-1">
+            {t("datasetPublished", "Published: {{date}}", { date: ideologyQuery.data.meta.generated_at })}
+            {" · "}{ideologyQuery.data.meta.count}
+          </p>
+        )}
         {omittedCount > 0 && (
           <p role="note" className="mt-1">
             {t("view.ideology.omitted", "{{n}} party-wave(s) omitted from the plot: at least one CHES axis is missing. Missing values are shown as — in the table, never as 0.", { n: omittedCount })}

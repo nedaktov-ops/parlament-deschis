@@ -17,6 +17,7 @@ import InfoStat from "../components/InfoStat";
 import LoadingState from "../components/LoadingState";
 import EmptyState from "../components/EmptyState";
 import { StateView } from "../components/ui/AsyncState";
+import ProvenanceStamp from "../components/ProvenanceStamp";
 
 function fmtDate(value: string | null): string {
   if (!value) return "—";
@@ -56,6 +57,12 @@ function MemberRow({ member }: { member: CommitteeMember }) {
             {t("committees.former", "former")}
           </span>
         )}
+      </td>
+      <td className="px-3 py-2">
+        <ProvenanceStamp
+          sourceUrl={member.source_url}
+          precision={[member.start_precision, member.end_precision].filter(Boolean).join(" / ") || null}
+        />
       </td>
     </tr>
   );
@@ -142,6 +149,7 @@ function CommitteeCard({
                   <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">
                     {t("committees.col.status", "Status")}
                   </th>
+                  <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">{t("source")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/60">

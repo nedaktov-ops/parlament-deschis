@@ -10,6 +10,7 @@ import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { Sparkline } from "../components/DataViz";
 import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
+import ProvenanceStamp from "../components/ProvenanceStamp";
 
 function formatCount(value: number | null): string {
   return value === null ? "—" : value.toLocaleString();
@@ -192,6 +193,12 @@ export function PartyProfile() {
                   {m.person?.name ?? "—"}:
                   {m.from_org?.short_name ?? "—"} → {m.to_org?.short_name ?? "—"}
                 </div>
+                <ProvenanceStamp
+                  sourceUrl={m.source_url}
+                  confidence={m.confidence}
+                  precision={m.precision}
+                  note={m.reason}
+                />
               </button>
             ))}
           </div>

@@ -278,6 +278,10 @@ export interface PartyMovementResponse {
   to_org: OrgBrief | null;
   summary_ro: string | null;
   summary_en: string | null;
+  precision: string | null;
+  reason: string | null;
+  confidence: string;
+  source_url: string | null;
 }
 
 export interface PartyTimelineResponse {

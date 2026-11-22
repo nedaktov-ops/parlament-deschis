@@ -207,8 +207,14 @@ function RootLayout() {
     else if (path === "/coalitions") label = t("nav.coalitions", "Coalitions");
     else if (path === "/mps") label = t("nav.mps", "MPs");
     else if (path === "/report") label = t("nav.report", "Report");
-    else if (path === "/parties") label = t("nav.parties", "Parties");
+    else if (path === "/parties") label = t("nav.parties");
     else if (path === "/party-timeline") label = t("nav.partyTimeline", "Timeline");
+    else if (path === "/compare-mps") label = t("nav.compareMps");
+    else if (path === "/Voturi") label = t("nav.voturi");
+    else if (path === "/radar") label = t("nav.radar");
+    else if (path === "/grafice") label = t("nav.grafice");
+    else if (path === "/topuri") label = t("nav.topuri");
+    else if (path === "/ideology") label = t("nav.ideology");
     else if (path === "/institutional") label = t("institutional");
     else if (path === "/coverage") label = t("coverage");
     else if (path === "/senate-history") label = t("nav.senateHistory", t("senate"));
@@ -299,6 +305,15 @@ function RootLayout() {
           <NavLink to="/party/PSD" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("party")}
           </NavLink>
+        </nav>
+        <nav className="flex flex-wrap gap-1 border-b border-slate-700/60 px-4 py-1"
+             aria-label={t("nav.analytics", "Vote analytics")}>
+          <NavLink to="/compare-mps" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">{t("nav.compareMps", "Compare MPs")}</NavLink>
+          <NavLink to="/Voturi"      activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">{t("nav.voturi", "Votes")}</NavLink>
+          <NavLink to="/radar"       activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">{t("nav.radar", "Vote radar")}</NavLink>
+          <NavLink to="/grafice"     activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">{t("nav.grafice", "Charts")}</NavLink>
+          <NavLink to="/topuri"      activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">{t("nav.topuri", "Vote rankings")}</NavLink>
+          <NavLink to="/ideology"    activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">{t("nav.ideology", "Ideology")}</NavLink>
         </nav>
         <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-ink to-transparent" />
         </div>

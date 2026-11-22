@@ -938,14 +938,23 @@ export function Traseism() {
         <p className="text-sm text-slate-400 mt-2 leading-relaxed">
           {t("traseismMethodologyBody")}
         </p>
-        <a
-          href={METHODOLOGY_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`inline-block mt-3 text-sm text-sky-400 hover:text-sky-300 hover:underline ${FOCUS}`}
-        >
-          {t("traseismMethodologyLink")} ↗
-        </a>
+        <div className="flex flex-wrap gap-2 mt-3">
+          <a
+            href={METHODOLOGY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`inline-block text-sm text-sky-400 hover:text-sky-300 hover:underline ${FOCUS}`}
+          >
+            {t("traseismMethodologyLink")} ↗
+          </a>
+          <button
+            type="button"
+            onClick={() => setAboutOpen(true)}
+            className={`inline-block text-sm text-sky-400 hover:text-sky-300 hover:underline ${FOCUS}`}
+          >
+            {t("traseismAboutButton")}
+          </button>
+        </div>
       </section>
 
       <About open={aboutOpen} onClose={() => setAboutOpen(false)} />

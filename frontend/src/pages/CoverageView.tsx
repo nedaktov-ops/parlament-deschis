@@ -287,6 +287,9 @@ export default function CoverageView() {
                   <th scope="col" className="py-1 pr-3 font-medium text-right">
                     {t("lastRefresh")}
                   </th>
+                  <th scope="col" className="py-1 pr-3 font-medium text-right">
+                    {t("prov.note")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -328,6 +331,9 @@ export default function CoverageView() {
                       </td>
                       <td className="py-1.5 pr-3 font-mono text-slate-300 text-right">
                         {fmtDate(row.last_refresh)}
+                      </td>
+                      <td className="py-1.5 pr-3 text-xs text-slate-400 text-right">
+                        {row.note ?? "—"}
                       </td>
                     </tr>
                   );
