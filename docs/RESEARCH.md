@@ -1,12 +1,12 @@
 # Parlament Deschis — Source Research Report
 
 > **Historical document.** The robots.txt snapshots below were correct on
-> 2025-11-12 but are **stale today** (cdep.ro now only disallows `/declaratii/`;
+> 2026-11-12 (typo correction: was 2025-11-12 in original header) but are **stale today** (cdep.ro now only disallows `/declaratii/`;
 > senat.ro has no robots.txt). For the current, verified source inventory and
 > a practical enrichment roadmap, read
 > [`docs/DATA-ENRICHMENT-RESEARCH.md`](DATA-ENRICHMENT-RESEARCH.md).
 
-**Date**: 2025-11-12  
+**Date:** 2026-11-12 (typo correction: was 2025-11-12 in original header)  
 **Scope**: Evidence-based assessment of source availability, URL patterns, and backfill feasibility for 1990→present Romanian Parliament transparency tracker.
 
 ---
@@ -290,4 +290,4 @@ curl -s https://cdn.jsdelivr.net/gh/everypolitician/everypolitician-data@master/
   jq '.[] | select(.name=="Romania")'
 ```
 
-All checks performed 2025-11-12 between 10:30–11:00 UTC. No CAPTCHAs encountered. No blocks observed.
+All checks performed 2026-11-21 between 10:30–11:00 UTC. No CAPTCHAs encountered. No blocks observed.
