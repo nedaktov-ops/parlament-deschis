@@ -284,7 +284,7 @@ export function LiveDashboard() {
                     <SwitchTimeline
                       waves={waveData}
                       legislatures={meta.data?.legislatures ?? {}}
-                      onWaveClick={() => navigate({ to: "/traseism", search: scope.searchFor({ date: clamped, chamber: "deputies", legislature: undefined }) })}
+                      onWaveClick={(wave) => navigate({ to: "/traseism", search: scope.searchFor({ date: wave?.start_date ?? clamped, chamber: "deputies", legislature: undefined }) })}
                     />
                   </Suspense>
                 </AsyncState>
