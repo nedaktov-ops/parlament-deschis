@@ -607,7 +607,33 @@ Authorisation (GREEN only — reproduce verbatim, filling the braces):
 
 ## Wave W2 — navigation and scope integrity
 
-_Recipes L-03…L-06._
+Recipes L-03 (footer navigation + shared project URL), L-04+L-05 (dashboard card
+scope + wave click, one agent / two commits), L-06 (pagination bounds).
+
+### Code evidence — entry and backup (before first edit)
+
+```console
+$ git branch --show-current
+repair/links-base
+$ git rev-parse HEAD
+1fa34b127ced496778a0c60caf110fd32e62953d
+$ git status --short
+(empty)
+```
+
+Backup ROOT `/tmp/opencode/backups/link-repair/W2`. Commands are identical to W1
+with `W1` replaced by `W2` (fully expanded absolute paths, no ellipses):
+`git bundle create …/W2/pre.bundle --all`, `git rev-parse HEAD > …/W2/pre.sha`,
+`git status --porcelain > …/W2/pre.status`, `tar -czf …/W2/worktree.tgz -C
+/home/nedaktov/parlament-deschis --exclude=.git --exclude=node_modules
+--exclude=.venv --exclude=.next --exclude=dist .`, `sha256sum … > SHA256SUMS`,
+then `git bundle verify`, `tar -tzf` and `sha256sum -c`. All three verifications
+exited 0: `pre.bundle: OK`, `pre.sha: OK`, `pre.status: OK`, `worktree.tgz: OK`.
+
+### Implementation, gates and browser evidence
+
+_Pending agent returns: checkpoint SHAs, diff, gate output, browser captures,
+acceptance table, supervisor verdict._
 
 ## Wave W3 — honest controls
 
