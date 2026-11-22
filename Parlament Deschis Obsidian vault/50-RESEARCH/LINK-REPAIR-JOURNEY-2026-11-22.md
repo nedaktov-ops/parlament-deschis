@@ -752,7 +752,17 @@ Authorisation (GREEN only — reproduce verbatim, filling the braces):
 
 ## Wave W3 — honest controls
 
-_Recipes L-07…L-11._
+Recipes L-07 (Voturi page-local search), L-08 (vote position source links),
+L-09 (chair button), L-10 (PartyProfile nested interactive), L-11 (party
+comparison defaults). Sole W3 i18n owner: L-07 (three keys).
+
+**Code evidence — entry:** branch `repair/links-base`, HEAD
+`bab425db28618df46eff08f2245ce89b231ee88d`, clean tree. Backup ROOT
+`/tmp/opencode/backups/link-repair/W3`; `git bundle verify`, `tar -tzf` and
+`sha256sum -c` all exit 0 (`pre.bundle: OK`, `pre.sha: OK`, `pre.status: OK`,
+`worktree.tgz: OK`). Commands are the expanded-path procedure from W1/W2.
+
+_Implementation, gates, browser evidence, acceptance table and verdict pending._
 
 ## Wave W4 — accessibility, labels, URLs
 
