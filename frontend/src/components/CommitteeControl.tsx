@@ -98,7 +98,7 @@ export default function CommitteeControl({
                 <button
                   type="button"
                   disabled={!canOpenChair}
-                  aria-label={canOpenChair ? undefined : t("committee.noChair")}
+                  aria-label={canOpenChair ? t("a11y.committeeChair", "Show chair for {{party}}", { party: party.party }) : t("committee.noChair")}
                   aria-describedby={`${uid}-share-${index}`}
                   className="relative flex-1 h-11 rounded-full bg-slate-700/30 overflow-hidden cursor-pointer btn-hover"
                   onClick={() => chairForParty && onChairClick?.(chairForParty)}
