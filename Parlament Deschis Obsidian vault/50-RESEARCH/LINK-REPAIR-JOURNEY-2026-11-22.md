@@ -920,7 +920,37 @@ routes PASS, vault lint PASS 66, sync clean, doc-truth 0, `git diff --check` 0.
 
 **Browser evidence:** no browser pass — this wave removes only unreachable
 code, so there is no clickable control whose runtime behaviour could change.
-No browser claim is made. Verdict pending supervisor.
+No browser claim is made.
+
+### Supervisor sign-off (§F template)
+
+```text
+WAVE SIGN-OFF
+Wave ID:            W5
+Recipes:            L-15 (dead-control cleanup; two sub-items explicitly declined as out-of-scope and recorded as follow-ups)
+Entry HEAD/branch:  24984e23d9ddcc584025068b1fcc89a9b5da5020 / repair/links-base (W5 :901-904; W5 backup pre.sha re-read)
+Backup ROOT:        /tmp/opencode/backups/link-repair/W5
+Manifest evidence:  git bundle verify exit 0, tar -tzf exit 0, sha256sum -c exit 0 (W5 :902-904) — supervisor re-ran all three: four OK lines, "The bundle records a complete history", tar exit 0; pre.sha matches entry HEAD
+Diff (name-only):   exactly four authorized paths (W5 :906-919; supervisor re-ran git diff --name-status ccf01a44..HEAD -- frontend/): M DashboardCard.tsx, M LoadingState.tsx, D PartyComparisonMatrix.tsx, D TimeSlider.tsx. No i18n change (i18n.ts read-only in W5 as registered); mps.compareLink keys retained at i18n.ts:521 and :1274 (supervisor grep). EmptyState.tsx and AgeDistributionSection.tsx were left untouched within the agent's exclusive list; AgeDistributionRadial.tsx is outside it. Extra journey/_generated paths are mandated vault write-back (STRAT §10), not an R1 breach.
+Checkpoint SHAs:    3e3cd99efa6999f81369304c918cfb043eb583fc (L-15), b157055faa0a8f90ff1513f05664d049fb80b6b8 (evidence). Message carries recipe ID, evidence anchor, gates and rollback SHA ccf01a44.
+Gates (cmd/exit):   all exit 0 — lint, build, npm run i18n:check (ro=731/en=731, 0 missing/asymmetric/duplicate), check_routes_nav.mjs 24/22/0, vault lint 66, sync clean, doc-truth 0, git diff --check (W5 :917-919). Supervisor re-ran routes, i18n, vault lint, sync --check, doc-truth and diff --check: all exit 0. Build not re-run (writes dist); recorded log examined. main/origin/main still 88112168237e5c37841b785dccd2375f6cc40115; worktree clean.
+Browser evidence:   no browser pass claimed (W5 :921-923). G6 permits this because the wave has no browser-dependent criterion: only unreachable code was removed, so no clickable control's runtime behaviour could change. Supervisor re-ran importer greps: PartyComparisonMatrix and TimeSlider have zero source importers (safe deletion); DashboardCard still imported by LiveDashboard; EmptyState still imported by Committees/Parties/AsyncState; AgeDistributionRadial imported by AgeDistributionSection — no importer broken.
+Code evidence:      W5 :901-919; supervisor re-read of the diff and importer greps. Scope discipline (§E) is good: the agent declined EmptyState CTA (AsyncState.tsx:89-90 forwarding is outside its exclusive list) and the AgeDistributionRadial arc plumbing (file outside its exclusive list), recording both as follow-ups rather than exceeding scope or breaking the type gate.
+Acceptance items:   all PASS · 0 AMBER/NOT PROVEN — L-15 "no importer broken" (zero-importer greps + build + routes gates) and "no live control removed" (only dead branches removed; declined items untouched and recorded). The two declined sub-items are NOT claimed as fixed.
+Verdict:            GREEN
+
+Citations (exact note/section or file:line for every judgement):
+  - This note, W5 §Code evidence/implementation :901-919, §Browser evidence :921-923.
+  - Recipe L-15 :421-446 (exclusive list, importer-grep step, read-only i18n, acceptance); strategy §2.8 :55-57 (honest no-change), §4 W5 row :79 (i18n read-only), §5, §6, §10; supervision protocol §C (G1-G8, G6), §D, §E.
+  - Supervisor read-only re-verification (2026-11-22): branch/HEAD, 4-path diff, importer greps for all five symbols, i18n key retention, backup manifest/bundle/tar, six re-run gates, main/origin/main unchanged, clean worktree.
+  - Non-blocking note: future browser sections should state console error/warn status explicitly; W5 legitimately claims no browser pass.
+
+Required remediations (owner: lead; each must be closed before next verdict):
+  - none (the declined EmptyState and AgeDistributionRadial sub-items are recorded follow-ups, not defects in this wave)
+
+Authorisation (GREEN only — reproduce verbatim, filling the braces):
+  "Integration authorised: wave W5 is GREEN on the evidence cited above; the lead may merge repair/links-w5 into repair/links-base with git merge --ff-only."
+```
 
 ## Wave W6 — regression guards
 
