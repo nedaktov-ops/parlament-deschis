@@ -7,9 +7,9 @@ status: active
 authority: mirror
 tags: [type/source-map, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py]
-created: 2026-11-22T19:18:42+02:00
-updated: 2026-11-22T19:18:42+02:00
-source_commit: 77fa2526906eae2fe35c6bff0ce78bf2256de876
+created: 2026-11-22T21:28:07+02:00
+updated: 2026-11-22T21:28:07+02:00
+source_commit: 943f4bf00fe191a1d60542676d9f5029bc00a672
 generated: true
 generator: scripts/vault_sync.py
 ---
@@ -24,7 +24,7 @@ Derived from `git ls-tree -r --name-only <source-commit>`. Counts are recursive 
 |---|---:|---|
 | `.github` | 6 | CI workflows, issue templates and automation. |
 | `.nedcode` | 2 | Project files (purpose not mapped). |
-| `Parlament Deschis Obsidian vault` | 62 | Project files (purpose not mapped). |
+| `Parlament Deschis Obsidian vault` | 76 | Project files (purpose not mapped). |
 | `backend` | 13 | FastAPI backend: API routers, services and database access. |
 | `data` | 7 | Datasets, release markers and generated database artifacts. |
 | `docker` | 1 | Container build and deployment support files. |
@@ -35,6 +35,6 @@ Derived from `git ls-tree -r --name-only <source-commit>`. Counts are recursive 
 | `tests` | 85 | Python test suite and fixtures. |
 
 Root-level tracked files: 16.
-Total tracked files: 409.
+Total tracked files: 423.
 
 Regenerate with `scripts/vault_sync.py`.

@@ -499,10 +499,82 @@ history", 203 refs); `tar -tzf` exit 0; `sha256sum -c` exit 0 with
 `pre.bundle: OK`, `pre.sha: OK`, `pre.status: OK`, `worktree.tgz: OK`.
 Full raw outputs are in `/tmp/opencode/backups/link-repair/W1/`.
 
-### Implementation, gates and browser evidence
+### Code evidence — implementation and gates
 
-_Pending agent return: checkpoint SHAs, diff, gate commands/exit codes, browser
-result with raw capture path, acceptance table, supervisor verdict._
+Implementation agent: `minimal-change-engineer`, two atomic commits on
+`repair/links-w1`:
+
+| Recipe | SHA | Subject |
+|---|---|---|
+| L-01 | `12cab48cf6c3c095850275a9d642666dca727fea` | `fix(ideology): L-01 make "All years" persistent …` |
+| L-02 | `943f4bf00fe191a1d60542676d9f5029bc00a672` | `fix(mps): L-02 render Compare MPs link …` |
+
+Diff from entry `e919b677..HEAD` is exactly two paths:
+`frontend/src/pages/Ideology.tsx`, `frontend/src/pages/Mps.tsx`.
+`git diff --name-only` and `git status --short` were empty after the commits.
+
+Code verification by lead: `ALL_YEARS` declared in `Ideology.tsx:49`;
+query function at `:65` passes `undefined` for `all` (the mandatory S-10 step,
+so `year=all` never reaches `api.py:1747`'s `^\d{4}$` validator); `selectedYear`
+at `:81-85` and the `value`/`onChange`/option at `:253-257` use the sentinel;
+query key unchanged at `:64`. `Mps.tsx:144-148` renders `<Link to="/compare-mps"
+search={scope.searchFor()}>` with `t("mps.compareLink", …)`; `i18n.ts` unchanged.
+
+Gate outputs (all exit 0):
+
+```console
+$ cd /home/nedaktov/parlament-deschis/frontend && npm run lint
+> tsc --noEmit && eslint src --ext .ts,.tsx        [no errors]
+$ cd /home/nedaktov/parlament-deschis/frontend && npm run build
+✓ 940 modules transformed … ✓ built in 8.75s       [exit 0]
+$ node scripts/check_routes_nav.mjs
+ROUTES total=24 nav_links=22 unlinked=0 deprecated=0
+PASS: every route is nav-reachable or formally deprecated   [exit 0]
+$ node scripts/check_i18n_keys.mjs
+PASS: i18n key diff clean (0 missing, 0 asymmetric, 0 duplicate) [exit 0]
+$ python3 scripts/vault_lint.py
+VAULT LINT PASS: 66 notes, all links/frontmatter/vocabularies clean  [exit 0]
+$ python3 scripts/vault_sync.py --check
+clean — 5 generated notes match the source commit          [exit 0, after regeneration]
+$ bash scripts/check-doc-truth.sh
+false-claims: 0                                             [exit 0]
+$ git diff --check                                          [exit 0, no output]
+```
+
+`vault_sync.py` regenerated the five `_generated/*` notes against source commit
+`943f4bf…`; this was a regeneration, never a hand-edit.
+
+### Browser evidence (supplementary, local dev server)
+
+Raw captures: `/tmp/opencode/w1-browser-ideology.json`,
+`/tmp/opencode/w1-browser-mps.json`, `/tmp/opencode/w1-browser-mps-specific.json`.
+Scope: Chrome DevTools on `http://127.0.0.1:5188` only; no production or axe claims.
+
+- `/ideology?date=2026-11-22`: options were `all / 2024 / 2019 / 2014 / 2010 /
+  2006 / 2002`; after selecting `all`, URL became `…&chesYear=all`, select value
+  stayed `all`, and the table rendered **38 rows across 6 distinct years**
+  (2019, 2024, 2006, 2010, 2014, 2002). This is the B1 defect fixed.
+- `/mps?date=2026-11-22`: two anchors target `/compare-mps` — the pre-existing
+  nav link ("Compară parlamentari") and the **new** card link
+  ("Compară parlamentarii →"). Clicking the new one reached
+  `/compare-mps?date=2026-11-22`, title "Compară parlamentari — Parlament
+  Deschis", with `window.__w1marker` surviving → SPA navigation. The first
+  attempt accidentally clicked the nav link; it was repeated with a link-text
+  discriminator and the false lead is recorded here, not claimed as a defect.
+- `list_console_messages` (error/warn) after the clicks: **no console messages found**.
+
+### Acceptance table
+
+| Criterion | Evidence | Result |
+|---|---|---|
+| "All years" persists in URL and renders all waves | browser ideology capture | PASS |
+| API receives no `year=all` | `Ideology.tsx:65` code + 200 OK render with 6 years | PASS |
+| Compare MPs link visible and navigates with scope | browser MPS specific capture | PASS |
+| i18n parity unchanged | `check_i18n_keys.mjs` exit 0 | PASS |
+| Diff ⊆ exclusive file list | `{Ideology.tsx, Mps.tsx}` | PASS |
+| No new console errors | console capture | PASS |
+
+Verdict: pending supervisor sign-off.
 
 ## Wave W2 — navigation and scope integrity
 
