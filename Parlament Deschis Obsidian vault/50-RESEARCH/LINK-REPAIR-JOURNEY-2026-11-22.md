@@ -762,7 +762,46 @@ comparison defaults). Sole W3 i18n owner: L-07 (three keys).
 `sha256sum -c` all exit 0 (`pre.bundle: OK`, `pre.sha: OK`, `pre.status: OK`,
 `worktree.tgz: OK`). Commands are the expanded-path procedure from W1/W2.
 
-_Implementation, gates, browser evidence, acceptance table and verdict pending._
+### Code evidence — implementation and gates
+
+Two agents, six commits on `repair/links-w3`:
+
+| Recipe | SHA | Files |
+|---|---|---|
+| L-07 | `85bdd81514b90c05e360170bd14a931cee836a86` | `Voturi.tsx`, `i18n.ts` |
+| L-08 | `3f965aa87621caca47ea675e92ede33afd91492b` | `RollCallTable.tsx` |
+| L-11 | `1f2cdc80219de266a2fc409bb2b1c2d0621eab24` | `PartyComparison.tsx` |
+| L-09 | `74e7997fd28452395e0c1118dc5dc797360f3bc3` | `CommitteeControl.tsx` |
+| L-10 | `7ccfd26fe7f3f860c099e02da7254ace59a6fbd8` | `PartyProfile.tsx` |
+| L-09 follow-up | `944e67dd8c2a075c20dad252e4dd28d74e81def2` | `CommitteeControl.tsx` |
+
+The follow-up closed a regression the L-09 agent itself detected: its first
+patch set `aria-label={canOpenChair ? undefined : t("committee.noChair")}`,
+removing the accessible name of enabled chair buttons (WCAG 4.1.2). It now
+restores `t("a11y.committeeChair", { party })` in the true branch. Diff from
+W3 entry `037934b2..HEAD` is exactly the six authorized paths above.
+
+Gates all exit 0: `npm run lint`, `npm run build` (941 modules, pre-existing
+chunk warning), `npm run i18n:check` (ro=728/en=728, 0 missing/asymmetric/
+duplicate, `used=655` after the follow-up), `check_routes_nav.mjs` PASS, vault
+lint PASS 66, sync check clean after regeneration against `944e67dd`, doc-truth
+0, `git diff --check` 0. Exactly three i18n keys were added (both locales):
+`view.voturi.searchHint`, `vote.positionsTruncated`, `committee.noChair`.
+
+### Browser evidence (supplementary, local dev)
+
+- `/tmp/opencode/w3-browser-voturi.json` — `/Voturi?date=2026-11-22` renders the
+  new page-local search hint in Romanian. PASS.
+- `/tmp/opencode/w3-browser-partyprofile.json` — `/party/PSD?date=2026-11-22`:
+  `document.querySelectorAll('button a')` returned an empty list, so the
+  provenance link is no longer nested inside a button. PASS.
+
+Not browser-verified in this wave: `POSITION_LIMIT=500` truncation note
+(needs a vote with >100 positions — resolver: live payload), party-default
+correction (data-dependent), chair disabled label (component-level). These are
+code-verified only and remain AMBER/NOT PROVEN for runtime.
+
+Verdict pending supervisor.
 
 ## Wave W4 — accessibility, labels, URLs
 
