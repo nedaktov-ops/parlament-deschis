@@ -898,7 +898,12 @@ Authorisation (GREEN only — reproduce verbatim, filling the braces):
 
 ## Wave W5 — dead controls
 
-_Recipe L-15._
+Recipe L-15. **Code evidence — entry:** branch `repair/links-base`, HEAD
+`24984e23d9ddcc584025068b1fcc89a9b5da5020`, clean tree. Backup ROOT
+`/tmp/opencode/backups/link-repair/W5`; `git bundle verify`, `tar -tzf` and
+`sha256sum -c` all exited 0 (`pre.bundle / pre.sha / pre.status / worktree.tgz: OK`).
+
+_Implementation, gates, browser evidence and verdict pending._
 
 ## Wave W6 — regression guards
 
