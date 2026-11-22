@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 // Modular ECharts: register only what this chart needs.
@@ -14,8 +14,12 @@ import {
 import { CanvasRenderer } from "echarts/renderers";
 import type { ECharts } from "echarts/core";
 import type { EChartsOption } from "echarts";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ideology, type IdeologyEntry } from "../api/client";
-import Skeleton from "../components/ui/Skeleton";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 
 echarts.use([ScatterChart, GridComponent, LegendComponent, TooltipComponent, ToolboxComponent, CanvasRenderer]);
 
@@ -43,12 +47,21 @@ const PARTY_COLORS = [
 
 export default function Ideology() {
   const { t } = useTranslation();
-
-  const [year, setYear] = useState<string | undefined>(undefined);
+  const reducedMotion = useReducedMotion();
+  const scope = useScope();
+  const navigate = useNavigate({ from: "/ideology" });
+  // CHES survey year is a distinct URL param, never a mapped as_of date.
+  const yearSearch = useSearch({
+    from: "/ideology",
+    select: (s) => (s as Record<string, unknown>).chesYear,
+  });
+  const chesYear = typeof yearSearch === "string" ? yearSearch : undefined;
+  const setYear = (value: string | undefined) =>
+    navigate({ search: scope.searchFor({ chesYear: value }) });
 
   const ideologyQuery = useQuery({
-    queryKey: ["ideology", year],
-    queryFn: () => ideology(year),
+    queryKey: ["ideology", chesYear, ...scope.scopeKey],
+    queryFn: () => ideology(chesYear),
   });
 
   const data = useMemo(() => ideologyQuery.data?.data ?? [], [ideologyQuery.data]);
@@ -64,7 +77,7 @@ export default function Ideology() {
   }, [data]);
 
   // Filter data by selected year (show latest year by default)
-  const selectedYear = year || (years.length > 0 ? String(years[0]) : undefined);
+  const selectedYear = chesYear || (years.length > 0 ? String(years[0]) : undefined);
   const filteredData = useMemo(
     () =>
       selectedYear
@@ -73,16 +86,26 @@ export default function Ideology() {
     [data, selectedYear],
   );
 
-  // Build scatter plot data
-  const scatterData = filteredData.map((d: IdeologyEntry) => ({
-    value: [d.lrgen ?? 0, d.galtan ?? 0, d.eu_position ?? 0],
-    name: d.party_name,
-    partyfacts_id: d.partyfacts_id,
-    survey_year: d.survey_year,
-    eu_position: d.eu_position,
-    antielite_salience: d.antielite_salience,
-    people_vs_elite: d.people_vs_elite,
-  }));
+  // Build scatter plot data.
+  // R-04: parties without a published score are omitted, not plotted at zero;
+  // R-08: only finite, complete CHES triples enter the plot.
+  const AXIS_KEYS = ["lrgen", "galtan", "eu_position"] as const;
+  const hasAxes = (
+    d: IdeologyEntry,
+  ): d is IdeologyEntry & { lrgen: number; galtan: number; eu_position: number } =>
+    AXIS_KEYS.every((k) => typeof d[k] === "number" && Number.isFinite(d[k]));
+  const plottedData = filteredData.filter(hasAxes);
+  const omittedCount = filteredData.length - plottedData.length;
+
+  const scatterData = plottedData.map((d) => ({
+      value: [d.lrgen, d.galtan, d.eu_position],
+      name: d.party_name,
+      partyfacts_id: d.partyfacts_id,
+      survey_year: d.survey_year,
+      eu_position: d.eu_position,
+      antielite_salience: d.antielite_salience,
+      people_vs_elite: d.people_vs_elite,
+    }));
 
   const colorMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -107,6 +130,7 @@ export default function Ideology() {
 
     const option: EChartsOption = {
       backgroundColor: "transparent",
+      animation: !reducedMotion,
       tooltip: {
         trigger: "item",
         formatter: (params: any) => {
@@ -115,11 +139,11 @@ export default function Ideology() {
             `<div style="padding: 8px">`,
             `<div style="font-weight: bold">${d.name}</div>`,
             `<div>Year: ${d.survey_year}</div>`,
-            `<div>Left-Right: ${(d.value[0] ?? 0).toFixed(2)}</div>`,
-            `<div>GAL-TAN: ${(d.value[1] ?? 0).toFixed(2)}</div>`,
-            `<div>EU Position: ${(d.value[2] ?? 0).toFixed(2)}</div>`,
-            `<div>Anti-Elite: ${(d.antielite_salience ?? 0).toFixed(2)}</div>`,
-            `<div>People vs Elite: ${(d.people_vs_elite ?? 0).toFixed(2)}</div>`,
+            `<div>Left-Right: ${d.value[0].toFixed(2)}</div>`,
+            `<div>GAL-TAN: ${d.value[1].toFixed(2)}</div>`,
+            `<div>EU Position: ${d.value[2].toFixed(2)}</div>`,
+            `<div>Anti-Elite: ${d.antielite_salience == null ? "—" : d.antielite_salience.toFixed(2)}</div>`,
+            `<div>People vs Elite: ${d.people_vs_elite == null ? "—" : d.people_vs_elite.toFixed(2)}</div>`,
             `</div>`,
           ].join("");
         },
@@ -182,54 +206,36 @@ export default function Ideology() {
       window.removeEventListener("resize", onResize);
       chart.dispose();
     };
-  }, [filteredData, scatterData, colorMap, t]);
+  }, [filteredData, scatterData, colorMap, t, reducedMotion]);
 
-  if (ideologyQuery.isLoading) {
+  const view = resolveViewState({
+    isLoading: ideologyQuery.isLoading,
+    isError: ideologyQuery.isError,
+    isEmpty: ideologyQuery.isSuccess && (!dataExists || filteredData.length === 0),
+  });
+  if (view !== "ready") {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="mt-2 h-4 w-64" />
-        <p className="mt-2 text-sm text-slate-500">{t("loading", "Loading…")}</p>
-      </div>
-    );
-  }
-
-  if (ideologyQuery.isError) {
-    return (
-      <div className="text-red-400 text-sm py-6 text-center">
-        {t("view.voturi.loadError", "Failed to load votes.")}
-      </div>
-    );
-  }
-
-  if (!dataExists || filteredData.length === 0) {
-    return (
-      <div className="space-y-6">
-        <section className="py-2" data-enter>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100">
-            {t("view.ideology.title", "Ideological spatial map")}
-          </h1>
-          <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-3xl">
-            {t("view.ideology.intro", "Ideological positioning of parties (left-right, authoritarian-libertarian) based on CHES and PopuList data.")}
-          </p>
-        </section>
-        <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>
-          <div className="text-slate-500 text-sm py-12 text-center">
-            {t("empty.ideology", "Ideological data not yet available.")}
-          </div>
-        </section>
-      </div>
+      <AsyncState
+        view={view}
+        pageTitle={t("view.ideology.title", "Ideological spatial map")}
+        onRetry={() => void ideologyQuery.refetch()}
+        errorLabel={t("view.ideology.loadError", "The ideological map could not be loaded.")}
+        emptyTitle={dataExists
+          ? t("view.ideology.noYear", "No CHES wave is available for the selected year.")
+          : t("empty.ideology", "Ideological data not yet available.")}
+      />
     );
   }
 
   return (
     <div className="space-y-6">
+      <ScopeControls note={t("scope.note.ideology")} />
       <section className="py-2" data-enter>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100">
+        <h1 className="page-title">
           {t("view.ideology.title", "Ideological spatial map")}
         </h1>
         <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-3xl">
-          {t("view.ideology.intro", "Ideological positioning of parties (left-right, authoritarian-libertarian) based on CHES and PopuList data.")}
+          {t("view.ideology.intro", "Party positions from CHES expert-survey scores (0–10 axes: left-right, GAL-TAN, EU). PopuList is NOT ingested in this corpus and is not used here.")}
         </p>
       </section>
 
@@ -262,14 +268,17 @@ export default function Ideology() {
         <div className="h-[500px] w-full">
           <div ref={containerRef} id="ideology-chart" className="h-full w-full" />
         </div>
+        <p role="note" className="mt-2 text-xs text-slate-400">
+          {t("view.ideology.scoresNote", "Parties without a published CHES score are omitted, not plotted at zero.")}
+        </p>
       </section>
 
       <section className="bg-slate-800/30 rounded-xl p-4 sm:p-5" data-enter>
         <h2 className="text-lg font-semibold text-slate-100 mb-3">
           {t("view.ideology.legend_title", "Party positions")}
         </h2>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("view.ideology.title", "Ideology")}>
+          <table className="min-w-full text-sm data-table">
             <thead>
               <tr className="text-left text-slate-400 border-b border-slate-700">
                 <th className="py-2.5 pr-4 font-medium" scope="col">
@@ -293,7 +302,7 @@ export default function Ideology() {
               {filteredData.map((d: IdeologyEntry) => (
                 <tr
                   key={`${d.party_name}-${d.survey_year}`}
-                  className="border-b border-slate-700/40 hover:bg-slate-800/40"
+                  className="border-b border-slate-700/40"
                 >
                   <td className="py-2.5 pr-4 text-slate-200 font-medium">
                     {d.party_name}
@@ -302,13 +311,13 @@ export default function Ideology() {
                     {d.survey_year}
                   </td>
                   <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
-                    {(d.lrgen ?? 0).toFixed(2)}
+                    {d.lrgen == null || !Number.isFinite(d.lrgen) ? "—" : d.lrgen.toFixed(2)}
                   </td>
                   <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
-                    {(d.galtan ?? 0).toFixed(2)}
+                    {d.galtan == null || !Number.isFinite(d.galtan) ? "—" : d.galtan.toFixed(2)}
                   </td>
                   <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
-                    {(d.eu_position ?? 0).toFixed(2)}
+                    {d.eu_position == null || !Number.isFinite(d.eu_position) ? "—" : d.eu_position.toFixed(2)}
                   </td>
                 </tr>
               ))}
@@ -318,20 +327,25 @@ export default function Ideology() {
       </section>
 
       <section className="text-xs text-slate-500 mt-2 max-w-3xl">
-        <p>
-          {t("view.ideology.note", "Ideological data not yet ingested. No figures or invented axes shown.")}
+        <p role="note">
+          {t(
+            "view.ideology.provenance",
+            "Source: CHES, EUI archive (hdl.handle.net/1814/69975), CC BY 4.0. Parties are matched by Party Facts ID; PopuList is excluded (licence UNVERIFIED).",
+          )}
         </p>
-        <p>
-          {t("view.ideology.sources", "Planned sources:")}{" "}
-          <span className="text-slate-300">
-            CHES (Chapel Hill Expert Survey), Party Facts.
-          </span>
-        </p>
-        <p>
-          {t("view.ideology.licence", "Licence-gated:")}{" "}
-          <span className="text-slate-300">
-            CC BY 4.0 (CHES), CC0 (Party Facts).
-          </span>
+        {ideologyQuery.data?.meta && (
+          <p className="mt-1">
+            {t("datasetPublished", "Published: {{date}}", { date: ideologyQuery.data.meta.generated_at })}
+            {" · "}{ideologyQuery.data.meta.count}
+          </p>
+        )}
+        {omittedCount > 0 && (
+          <p role="note" className="mt-1">
+            {t("view.ideology.omitted", "{{n}} party-wave(s) omitted from the plot: at least one CHES axis is missing. Missing values are shown as — in the table, never as 0.", { n: omittedCount })}
+          </p>
+        )}
+        <p className="mt-1">
+          {t("view.ideology.licence", "CHES: CC BY 4.0.")}
         </p>
       </section>
     </div>

@@ -27,11 +27,27 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev --locked
 
+      - name: Download latest published dataset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: uv run python scripts/download_dataset.py data/parlament.db
+
       - name: Lint
         run: uv run ruff check pipeline backend scripts tests
 
       - name: Test
+        env:
+          # backend.config resolves DB_PATH at import time; without this the
+          # tests fall back to the gitignored data/parlament-real.db, which is
+          # absent in CI, and the corpus-backed fixtures see an empty schema.
+          PARLAMENT_DB: ${{ github.workspace }}/data/parlament.db
         run: uv run pytest -q
+
+      - name: i18n key diff
+        run: node scripts/check_i18n_keys.mjs
+
+      - name: Route/nav reachability guard
+        run: node scripts/check_routes_nav.mjs
 
       - name: Frontend lint, type-check and build
         working-directory: frontend

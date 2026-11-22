@@ -1,29 +1,42 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
+import { useScope } from "../hooks/useScope";
 import { localISODate } from "../utils/date";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 export function InstitutionalView() {
   const { t } = useTranslation();
   const navigate = useNavigate({ from: "/institutional" });
-  const search = useSearch({ from: "/institutional", select: s => s.date });
-  const asOf = search;
+  const scope = useScope();
+  const asOf = scope.date;
   const today = localISODate();
 
   const committees = useQuery({
-    queryKey: ["committees", asOf],
+    queryKey: ["committees", asOf, ...scope.scopeKey],
     queryFn: () => api.committees(asOf),
   });
   const crossChamber = useQuery({
-    queryKey: ["cross-chamber", asOf],
+    queryKey: ["cross-chamber", asOf, ...scope.scopeKey],
     queryFn: () => api.crossChamber(asOf),
+  });
+
+  const committeeView = resolveViewState({
+    isLoading: committees.isLoading,
+    isError: committees.isError,
+    isEmpty: committees.isSuccess && (committees.data?.length ?? 0) === 0,
+  });
+  const crossView = resolveViewState({
+    isLoading: crossChamber.isLoading,
+    isError: crossChamber.isError,
+    isEmpty: crossChamber.isSuccess && (crossChamber.data?.data.length ?? 0) === 0,
   });
 
   return (
     <div className="space-y-4">
       <div className="card p-4">
-        <h1 className="text-2xl font-bold mb-3">{t("institutionalView")}</h1>
+        <h1 className="page-title mb-3">{t("institutionalView")}</h1>
         <p className="text-sm text-slate-400 mb-4">{t("institutionalViewDesc")}</p>
         <div className="mb-4">
           <label htmlFor="institutional-as-of" className="block text-xs text-slate-300 mb-1">
@@ -36,7 +49,7 @@ export function InstitutionalView() {
             max={today}
             onChange={(event) => {
               if (event.target.value) {
-                navigate({ search: { date: event.target.value }, replace: true });
+                navigate({ search: scope.searchFor({ date: event.target.value }), replace: true });
               }
             }}
             className="bg-slate-800 border border-slate-600 rounded-md px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
@@ -46,18 +59,13 @@ export function InstitutionalView() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="card p-4">
             <h2 className="font-semibold mb-3">{t("committeeControl")}</h2>
-            {committees.isError ? (
-              <div role="alert" className="text-rose-200 text-sm">
-                {t("institutionalLoadError")}
-                <button type="button"className="ml-3 underline" onClick={() => committees.refetch()}>
-                  {t("traseismRetry")}
-                </button>
-              </div>
-            ) : committees.isLoading ? (
-              <div className="text-slate-500 text-sm">{t("loading")}</div>
-            ) : committees.data?.length === 0 ? (
-              <div className="text-slate-500 text-sm">{t("committeeDataUnavailable")}</div>
-            ) : (
+            <AsyncState
+              view={committeeView}
+              variant="inline"
+              onRetry={() => void committees.refetch()}
+              errorLabel={t("institutionalLoadError")}
+              emptyTitle={t("committeeDataUnavailable")}
+            >
               <div className="space-y-2">
                 {committees.data?.map(c => (
                   <div key={c.id} className="bg-slate-800/50 rounded p-2">
@@ -65,29 +73,24 @@ export function InstitutionalView() {
                   </div>
                 ))}
               </div>
-            )}
+            </AsyncState>
           </div>
 
           <div className="card p-4">
             <h2 className="font-semibold mb-3">{t("bureauComposition")}</h2>
-            <div className="text-slate-500 text-sm">{t("bureauDataUnavailable")}</div>
+            <p className="text-sm text-slate-400" role="note">{t("bureauGap")}</p>
           </div>
         </div>
 
         <div className="card p-4">
           <h2 className="font-semibold mb-3">{t("crossChamberMPs")}</h2>
-          {crossChamber.isError ? (
-            <div role="alert" className="text-rose-200 text-sm">
-              {t("institutionalLoadError")}
-              <button type="button"className="ml-3 underline" onClick={() => crossChamber.refetch()}>
-                {t("traseismRetry")}
-              </button>
-            </div>
-          ) : crossChamber.isLoading ? (
-            <div className="text-slate-500 text-sm">{t("loading")}</div>
-          ) : crossChamber.data?.data.length === 0 ? (
-            <div className="text-slate-500 text-sm">{t("crossChamberNoData")}</div>
-          ) : (
+          <AsyncState
+            view={crossView}
+            variant="inline"
+            onRetry={() => void crossChamber.refetch()}
+            errorLabel={t("institutionalLoadError")}
+            emptyTitle={t("crossChamberNoData")}
+          >
             <>
               <p className="text-sm text-slate-400 mb-3" aria-live="polite">
                 {t("crossChamberCount", { count: crossChamber.data?.count ?? 0 })}
@@ -99,7 +102,7 @@ export function InstitutionalView() {
                 role="region"
                 aria-label={t("crossChamberTableCaption")}
               >
-                <table className="w-full text-sm text-left">
+                <table className="w-full text-sm text-left data-table">
                   <caption className="sr-only">{t("crossChamberTableCaption")}</caption>
                   <thead>
                     <tr className="border-b border-slate-700 text-slate-300">
@@ -120,7 +123,7 @@ export function InstitutionalView() {
                 </table>
               </div>
             </>
-          )}
+          </AsyncState>
         </div>
       </div>
 

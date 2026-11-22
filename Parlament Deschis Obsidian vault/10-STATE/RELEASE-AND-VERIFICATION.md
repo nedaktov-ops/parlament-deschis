@@ -8,9 +8,9 @@ authority: derived
 tags: [type/reference, lifecycle/active, domain/ops]
 source_paths: [docs/COMPREHENSIVE-REVIEW-2026-11-21.md, docs/AUDIT-RESOLUTIONS-2026-11-21.md, docs/POST-INITIAL-AUDIT-2026-11-21.md]
 created: 2026-11-21
-updated: 2026-11-21
+updated: 2026-11-22
 source_commit: 6fd6028
-verified: 2026-11-21
+verified: 2026-11-22
 ---
 
 # Release pin and verification gates
@@ -113,3 +113,26 @@ git diff --check
 
 CI on `main` is RED despite these local results because the fixes are
 unpushed — see [GIT-POSITION](GIT-POSITION.md).
+
+## Addendum (2026-11-22) — commit and deployment parity
+
+- Local commit `efdbba71705d154767754766b4d4e8b6fe0603a6` contains the repair
+  waves, legislature slider and Deep Dive redesign. Gates at that tree:
+  `npm run lint` 0, `npm run i18n:check` 724/724 clean, `npm run build` 0,
+  `pytest -q` 431 passed, all `scripts/check-*` guards 0, `vault_lint.py` pass.
+- GitHub `origin/main` and the Vercel production deployment both still point at
+  `618849af13d65db89c4ce585954cdd0edc79a7a8`; the Vercel alias serves bundle
+  `/assets/index-DjwGQole.js`, which lacks the new section markers.
+- Render health is HTTP 200 / `status ok`, but reports `persons=3381`,
+  `memberships=6614`, release `data-20261121-votes-001` versus local
+  `3388` / `7349` / `null`. Render's deployed SHA is NOT PROVEN without a
+  Render API token.
+- Therefore the local preview is **not identical** to GitHub, Vercel or Render.
+  Do not treat local green as production green. Full evidence and the ordered
+  next steps are in
+  [DEEP-DIVE-REDESIGN-2026-11-22](../50-RESEARCH/DEEP-DIVE-REDESIGN-2026-11-22.md).
+- **Update (same day):** branch pushed, PR #73 opened, and two CI fixes landed
+  (`99f40d3`, `a20c419`). At head `a20c419` the required checks `test`, `audit`,
+  `docker`, `evidence-guards` are all SUCCESS in GitHub Actions. PR is
+  `MERGEABLE` but blocked by the one approving review required on `main`; no
+  merge, Vercel production deploy or Render deploy has happened yet.

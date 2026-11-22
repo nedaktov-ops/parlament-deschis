@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link, useSearch } from "@tanstack/react-router";
-import { localISODate } from "../utils/date";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import {
   api,
   generationalShift,
@@ -10,6 +11,8 @@ import {
   type GenerationalShiftEntry,
   type CommitteeControlParty,
 } from "../api/client";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
+import TooltipText from "../components/ui/TooltipText";
 
 interface PartyRow {
   id: string;
@@ -33,10 +36,15 @@ function fmtInt(v: number): string {
 
 export default function PartyComparison() {
   const { t } = useTranslation();
-  const search = useSearch({ strict: false }) as { date?: string };
-  const date = search?.date;
-  const [partyA, setPartyA] = useState<string>("PSD");
-  const [partyB, setPartyB] = useState<string>("PNL");
+  const tipId = useId().replace(/:/g, "");
+  const scope = useScope();
+  const navigate = useNavigate({ from: "/compare" });
+  // Page-local comparison selection is URL-backed too (FN-7).
+  const local = useSearch({ from: "/compare", select: (s) => s as Record<string, unknown> });
+  const partyA = typeof local.partyA === "string" ? local.partyA : "PSD";
+  const partyB = typeof local.partyB === "string" ? local.partyB : "PNL";
+  const setPartyA = (value: string) => navigate({ search: scope.searchFor({ partyA: value }) });
+  const setPartyB = (value: string) => navigate({ search: scope.searchFor({ partyB: value }) });
 
   const parties = useQuery({
     queryKey: ["parties"],
@@ -44,13 +52,13 @@ export default function PartyComparison() {
   });
 
   const ages = useQuery({
-    queryKey: ["generational-shift"],
-    queryFn: () => generationalShift(),
+    queryKey: ["generational-shift", scope.legislature, scope.date, ...scope.scopeKey],
+    queryFn: () => generationalShift(scope.legislature, scope.date),
   });
 
   const control = useQuery({
-    queryKey: ["committee-control"],
-    queryFn: () => committeeControl(),
+    queryKey: ["committee-control", scope.legislature, scope.date, ...scope.scopeKey],
+    queryFn: () => committeeControl(scope.legislature, scope.date),
   });
 
   const partyList = parties.data?.data ?? [];
@@ -106,8 +114,8 @@ export default function PartyComparison() {
       },
       {
         label: t("compare.chairs", "Committee chairs"),
-        a: chairsA ? `${chairsA.chairs} (${chairsA.share_pct}%)` : "0",
-        b: chairsB ? `${chairsB.chairs} (${chairsB.share_pct}%)` : "0",
+        a: chairsA ? `${chairsA.chairs} (${chairsA.share_pct}%)` : "—",
+        b: chairsB ? `${chairsB.chairs} (${chairsB.share_pct}%)` : "—",
         higherIsBetter:
           (chairsA?.chairs ?? 0) === (chairsB?.chairs ?? 0)
             ? null
@@ -118,12 +126,34 @@ export default function PartyComparison() {
     ];
   }, [a, b, ageMap, chairMap, t]);
 
+  const view = resolveViewState({
+    isLoading: parties.isLoading || ages.isLoading || control.isLoading,
+    isError: parties.isError || ages.isError || control.isError,
+    isEmpty: parties.isSuccess && partyList.length === 0,
+  });
+  if (view !== "ready") {
+    return (
+      <AsyncState
+        view={view}
+        pageTitle={t("compare.title", "Party Comparison")}
+        onRetry={() => {
+          void parties.refetch();
+          void ages.refetch();
+          void control.refetch();
+        }}
+        errorLabel={t("compare.loadError", "Failed to load parties.")}
+        emptyTitle={t("compare.empty", "There are no parties to compare in this release.")}
+      />
+    );
+  }
+
   const selectClass =
     "bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200";
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-100 mb-2">
+    <div className="py-6">
+      <ScopeControls showDate showLegislature note={t("scope.note.parties")} />
+      <h1 className="page-title mb-2">
         {t("compare.title", "Party Comparison")}
       </h1>
       <p className="text-slate-400 mb-2">
@@ -135,7 +165,7 @@ export default function PartyComparison() {
       <p className="text-sm mb-6">
         <Link
           to="/parties"
-          search={{ date: date ?? localISODate() }}
+          search={scope.searchFor()}
           className="text-sky-400 hover:underline"
         >
           {t("compare.viewAllParties", "View all parties →")}
@@ -173,24 +203,15 @@ export default function PartyComparison() {
         </label>
       </div>
 
-      {parties.isLoading && (
-        <div className="text-slate-500">{t("loading", "Loading…")}</div>
-      )}
-      {parties.isError && (
-        <div className="text-red-400">
-          {t("compare.loadError", "Failed to load parties.")}
-        </div>
-      )}
-
       {a && b && (
         <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("compare.title", "Party Comparison")}>
-          <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
+          <table className="min-w-full bg-slate-800 rounded-xl overflow-hidden data-table">
             <thead className="bg-slate-700">
               <tr>
-                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                   {t("compare.col.metric", "Metric")}
                 </th>
-                <th scope="col" className="px-4 py-3 text-center text-sm font-semibold text-slate-100">
+                <th scope="col" className="px-4 py-3 text-center text-sm font-semibold !text-slate-100">
                   {a.color && (
                     <span
                       aria-hidden="true"
@@ -200,7 +221,7 @@ export default function PartyComparison() {
                   )}
                   {a.short_name}
                 </th>
-                <th scope="col" className="px-4 py-3 text-center text-sm font-semibold text-slate-100">
+                <th scope="col" className="px-4 py-3 text-center text-sm font-semibold !text-slate-100">
                   {b.color && (
                     <span
                       aria-hidden="true"
@@ -213,13 +234,14 @@ export default function PartyComparison() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700">
-              {metrics.map((m) => (
-                <tr key={m.label} className="hover:bg-slate-700/50">
+              {metrics.map((m, index) => (
+                <tr key={m.label}>
                   <th scope="row" className="px-4 py-3 text-slate-400 font-normal text-left">{m.label}</th>
                   <td
-                    className={`px-4 py-3 text-center font-semibold ${
+                    className={`relative group px-4 py-3 text-center font-semibold ${
                       m.higherIsBetter === "a" ? "text-emerald-300" : "text-slate-200"
                     }`}
+                    aria-describedby={m.a === "—" ? `${tipId}-a-${index}` : undefined}
                   >
                     {m.a}
                     {m.higherIsBetter === "a" && (
@@ -228,11 +250,17 @@ export default function PartyComparison() {
                         <span aria-hidden="true">▲</span>
                       </span>
                     )}
+                    {m.a === "—" ? (
+                      <TooltipText id={`${tipId}-a-${index}`}>
+                        {t("compare.chairsUnavailable", "No dated chair data in corpus → unavailable, not zero")}
+                      </TooltipText>
+                    ) : null}
                   </td>
                   <td
-                    className={`px-4 py-3 text-center font-semibold ${
+                    className={`relative group px-4 py-3 text-center font-semibold ${
                       m.higherIsBetter === "b" ? "text-emerald-300" : "text-slate-200"
                     }`}
+                    aria-describedby={m.b === "—" ? `${tipId}-b-${index}` : undefined}
                   >
                     {m.b}
                     {m.higherIsBetter === "b" && (
@@ -241,6 +269,11 @@ export default function PartyComparison() {
                         <span aria-hidden="true">▲</span>
                       </span>
                     )}
+                    {m.b === "—" ? (
+                      <TooltipText id={`${tipId}-b-${index}`}>
+                        {t("compare.chairsUnavailable", "No dated chair data in corpus → unavailable, not zero")}
+                      </TooltipText>
+                    ) : null}
                   </td>
                 </tr>
               ))}

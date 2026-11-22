@@ -9,7 +9,7 @@ export default function DashboardHeader() {
   const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between gap-3">
-      <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-100">
+      <h1 className="page-title">
         {t("overview")}
       </h1>
       <ThemeToggle />

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 // Tree-shakeable D3 imports: only scaleOrdinal + schemeCategory10 (~12 KB vs ~240 KB full d3)
@@ -6,6 +6,9 @@ import { scaleOrdinal } from "d3-scale";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import { sankey } from "d3-sankey";
 import { traseismSummary } from "../api/client";
+import RetryButton from "./RetryButton";
+import TooltipText from "./ui/TooltipText";
+import { activateOnKey } from "../utils/a11y";
 
 interface FlowLink {
   source: string;
@@ -76,9 +79,12 @@ export default function SankeyFlow({
   legislature,
 }: SankeyFlowProps) {
   const { t } = useTranslation();
+  const uid = useId().replace(/:/g, "");
   const containerRef = useRef<HTMLDivElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [width, setWidth] = useState(0);
+  const [selected, setSelected] = useState<SankeyLinkWithPath | null>(null);
+  const [selectedNode, setSelectedNode] = useState<SankeyNode | null>(null);
 
   const summary = useQuery({
     queryKey: ["traseism-summary", legislature, chamber],
@@ -177,9 +183,7 @@ export default function SankeyFlow({
         <h2 className="font-semibold">{t("defections")}</h2>
         <div className="h-[320px] flex flex-col items-center justify-center gap-2 text-center">
           <p className="text-rose-200 text-sm">{t("traseismLoadError")}</p>
-          <button type="button"className="btn bg-slate-700 hover:bg-slate-600" onClick={() => summary.refetch()}>
-            {t("traseismRetry")}
-          </button>
+          <RetryButton onRetry={() => summary.refetch()} />
         </div>
       </div>
     );
@@ -224,18 +228,22 @@ export default function SankeyFlow({
 
       <div ref={containerRef} className="relative w-full" style={{ height: layoutHeight }}>
         {layout ? (
+          <>
           <svg
             ref={svgRef}
             className="w-full"
             height={layoutHeight}
-            role="img"
+            role="group"
             aria-label={t("traseismFlowDesc")}
           >
           {/* Links */}
-          {sankeyLinks.map((link) => {
+          {sankeyLinks.map((link, idx) => {
             const startX = link.source.x1 ?? 0;
             const endX = link.target.x0 ?? 0;
             const middleX = (startX + endX) / 2;
+            const linkText = `${link.source.name} → ${link.target.name}: ${link.value} switch${
+              link.value === 1 ? "" : "s"
+            }`;
             return (
               <path
                 key={`${link.source.name}\0${link.target.name}`}
@@ -244,23 +252,31 @@ export default function SankeyFlow({
                 strokeWidth={Math.max(1, link.width)}
                 fill="none"
                 strokeOpacity={0.4}
-                className="cursor-pointer hover:stroke-opacity-0.8 transition-stroke"
+                role="button"
+                tabIndex={0}
+                aria-label={t("a11y.sankeyLink", "Flow from {{from}} to {{to}}: {{count}} switches", { from: link.source.name, to: link.target.name, count: link.value })}
+                aria-describedby={`${uid}-link-${idx}`}
+                onClick={() => setSelected(link)}
+                onKeyDown={(e) => activateOnKey(e, () => setSelected(link))}
+                className="cursor-pointer hover:stroke-opacity-0.8 transition-stroke focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
               >
-                <title>
-                  {`${link.source.name} → ${link.target.name}: ${link.value} switch${
-                    link.value === 1 ? "" : "s"
-                  }`}
-                </title>
+                <title>{linkText}</title>
               </path>
             );
           })}
 
           {/* Nodes */}
-          {sankeyNodes.map((node) => (
+          {sankeyNodes.map((node, idx) => (
             <g
               key={node.name}
               transform={`translate(${node.x0 ?? 0},${node.y0 ?? 0})`}
-              className="cursor-pointer"
+              role="button"
+              tabIndex={0}
+              aria-label={t("a11y.sankeyNode", "Party {{name}}: {{count}} switches total", { name: node.name, count: node.value })}
+              aria-describedby={`${uid}-node-${idx}`}
+              onClick={() => setSelectedNode(node)}
+              onKeyDown={(e) => activateOnKey(e, () => setSelectedNode(node))}
+              className="cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
             >
               <rect
                 width={Math.max(0, (node.x1 ?? 0) - (node.x0 ?? 0))}
@@ -279,6 +295,17 @@ export default function SankeyFlow({
             </g>
           ))}
           </svg>
+          {sankeyLinks.map((link, idx) => (
+            <TooltipText key={`link-${idx}`} id={`${uid}-link-${idx}`}>
+              {`${link.source.name} → ${link.target.name}: ${link.value} switches`}
+            </TooltipText>
+          ))}
+          {sankeyNodes.map((node, idx) => (
+            <TooltipText key={`node-${idx}`} id={`${uid}-node-${idx}`}>
+              {`${node.name}: ${node.value} switches total`}
+            </TooltipText>
+          ))}
+          </>
         ) : (
           <div role="status" className="absolute inset-0 flex items-center justify-center text-slate-300 text-sm">
             {width <= 2 ? t("loading") : t("layoutUnavailable")}
@@ -306,6 +333,23 @@ export default function SankeyFlow({
             </span>
           ))}
         </div>
+      )}
+      {selected && (
+        <p role="status" className="mt-2 text-xs text-slate-200">
+          {t("a11y.sankeySelection", "Selected flow: {{from}} → {{to}}, {{count}} switches", {
+            from: selected.source.name,
+            to: selected.target.name,
+            count: selected.value,
+          })}
+        </p>
+      )}
+      {selectedNode && (
+        <p role="status" className="mt-2 text-xs text-slate-200">
+          {t("a11y.sankeyNodeSelection", "Selected party: {{name}}, {{count}} switches total", {
+            name: selectedNode.name,
+            count: selectedNode.value ?? 0,
+          })}
+        </p>
       )}
       {omitted > 0 && (
         <p className="text-xs text-amber-200 mt-2" role="note">

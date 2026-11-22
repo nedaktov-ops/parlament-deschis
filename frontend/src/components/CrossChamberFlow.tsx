@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 export interface CrossChamberPerson {
   person_id: string;
@@ -21,118 +22,93 @@ export default function CrossChamberFlow({
   onPersonClick,
   // width and height intentionally unused for now
 }: CrossChamberFlowProps) {
-  const stats = useMemo(() => {
-    const deputies = data.filter(d => d.chambers.includes('deputies')).length;
-    const senate = data.filter(d => d.chambers.includes('senate')).length;
-    const both = data.length;
-    
-    return {
-      deputies,
-      senate,
-      both,
-      total: data.length,
-    };
-  }, [data]);
+  const { t } = useTranslation();
 
-  const topMembers = useMemo(() => {
-    return [...data]
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .slice(0, 5);
-  }, [data]);
+  // The endpoint already returns people with a mandate in both chambers, so
+  // the only honest headline figure is the size of that population. The list
+  // below contains exactly these people (not a competing top-5 slice) and each
+  // row navigates to its own person instead of a shared `data[0]`.
+  const members = useMemo(
+    () => [...data].sort((a, b) => a.name.localeCompare(b.name)),
+    [data],
+  );
 
   if (!data?.length) {
     return (
-      <div className="w-full bg-slate-800/30 rounded-xl p-4 overflow-hidden">
-        <div className="text-xs text-slate-400 mb-2">Cross-Chamber Movement</div>
-        <div className="flex items-center justify-center h-32 text-slate-500">
-          Loading cross-chamber data...
-        </div>
-      </div>
+      <section className="card p-4 flex flex-col h-full min-h-72">
+        <h2 className="text-base font-semibold text-slate-100">
+          {t("crossChamberMPs")}
+        </h2>
+        <p className="mt-3 text-sm text-slate-300" role="status">
+          {t("crossChamberNoData")}
+        </p>
+      </section>
     );
   }
 
-  // Flow percentages
-  const deputiesPct = stats.total > 0 ? (stats.deputies / stats.total) * 100 : 0;
-  const senatePct = stats.total > 0 ? (stats.senate / stats.total) * 100 : 0;
-
   return (
-    <div className="w-full bg-slate-800/30 rounded-xl p-4 overflow-hidden">
-      <div className="text-xs text-slate-400 mb-2 flex justify-between items-center">
-        <span>Cross-Chamber</span>
-        <span className="text-slate-300">
-          {stats.total} MPs
-        </span>
+    <section className="card p-4 flex flex-col h-full min-h-72">
+      <h2 className="text-sm font-semibold text-slate-100">
+        {t("crossChamberMPs")}
+      </h2>
+
+      {/* One labelled summary, followed by the caveat that explains what the
+          count does and does not include. No overlapping percentage bars: the
+          old pair was both left-anchored, both ~100% and both opened data[0]. */}
+      <p className="mt-2 text-sm text-slate-200" aria-live="polite">
+        {t("crossChamberCount", { count: data.length })}
+      </p>
+      <p className="mt-1 text-xs text-slate-400">
+        {t("crossChamberDateLimit")}
+      </p>
+
+      <div
+        className="mt-3 flex-1 min-h-0 overflow-y-auto pr-1"
+        tabIndex={0}
+        role="region"
+        aria-label={t("crossChamberTableCaption")}
+      >
+        <ul className="space-y-1">
+          {members.map((member) => {
+            const chamberNames = [
+              member.chambers.includes("deputies") ? t("deputies") : null,
+              member.chambers.includes("senate") ? t("senate") : null,
+            ]
+              .filter(Boolean)
+              .join(", ");
+            const ariaLabel = chamberNames
+              ? `${member.name}: ${chamberNames}`
+              : member.name;
+            return (
+              <li key={member.person_id}>
+                <button
+                  type="button"
+                  onClick={() => onPersonClick?.(member.person_id)}
+                  disabled={!onPersonClick}
+                  aria-label={ariaLabel}
+                  className="btn-hover flex w-full min-h-11 items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left hover:bg-slate-700/40 disabled:cursor-default disabled:hover:bg-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
+                >
+                  <span className="truncate text-xs text-slate-200">
+                    {member.name}
+                  </span>
+                  <span className="flex shrink-0 gap-1" aria-hidden="true">
+                    {member.chambers.includes("deputies") && (
+                      <span className="rounded bg-sky-400/20 px-1.5 py-0.5 text-xs font-semibold text-sky-300">
+                        D
+                      </span>
+                    )}
+                    {member.chambers.includes("senate") && (
+                      <span className="rounded bg-rose-400/20 px-1.5 py-0.5 text-xs font-semibold text-rose-400">
+                        S
+                      </span>
+                    )}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       </div>
-      
-      {/* Flow visualization */}
-      <div className="relative h-8 mb-3">
-        {/* Deputies bar */}
-        <div 
-          className="absolute left-0 top-0 h-full bg-sky-400/40 rounded-l-lg cursor-pointer"
-          style={{ width: `${deputiesPct}%` }}
-          onClick={() => onPersonClick?.(data[0]?.person_id || '')}
-        />
-        
-        {/* Senate bar */}
-        <div 
-          className="absolute left-0 top-0 h-full bg-rose-400/40 rounded-r-lg cursor-pointer"
-          style={{ width: `${senatePct}%` }}
-          onClick={() => onPersonClick?.(data[0]?.person_id || '')}
-        />
-        
-        {/* Both indicator */}
-        {stats.total > 0 && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-xs font-bold text-slate-100">
-              {stats.both} in both
-            </span>
-          </div>
-        )}
-      </div>
-      
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 text-xs text-center">
-        <div>
-          <div className="text-lg font-bold text-sky-400">{stats.deputies}</div>
-          <div className="text-slate-500">Deputies</div>
-        </div>
-        <div>
-          <div className="text-lg font-bold text-slate-300">{stats.both}</div>
-          <div className="text-slate-500">Both</div>
-        </div>
-        <div>
-          <div className="text-lg font-bold text-rose-400">{stats.senate}</div>
-          <div className="text-slate-500">Senate</div>
-        </div>
-      </div>
-      
-      {/* Top members list */}
-      {topMembers.length > 0 && (
-        <div className="mt-3 pt-2 border-t border-slate-700/30">
-          <div className="text-xs text-slate-400 mb-2">Cross-chamber MPs</div>
-          <div className="space-y-1 max-h-32 overflow-y-auto" tabIndex={0} aria-label="List of MPs serving in both chambers">
-            {topMembers.map((member) => (
-              <div
-                key={member.person_id}
-                onClick={() => onPersonClick?.(member.person_id)}
-                className="flex items-center justify-between p-1 rounded hover:bg-slate-700/30 cursor-pointer"
-              >
-                <span className="text-xs text-slate-300 truncate">
-                  {member.name}
-                </span>
-                <div className="flex gap-1">
-                  {member.chambers.includes('deputies') && (
-                    <span className="text-xs bg-sky-400/20 px-1 rounded">D</span>
-                  )}
-                  {member.chambers.includes('senate') && (
-                    <span className="text-xs bg-rose-400/20 px-1 rounded">S</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+    </section>
   );
 }

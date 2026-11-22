@@ -36,10 +36,14 @@ not be written into `organization.short_name` or overwrite genealogy.
 
 ## Known gaps in the released corpus
 
-- **Party genealogy: 0 links.** `previous_party_id` / `successor_party_id` exist
+- **Party genealogy: 0 links (DROP confirmed 2026-11-21).** `previous_party_id` / `successor_party_id` exist
   in the `organization` model and in the migration, but every value is NULL in
-  the corpus and GraphQL exposes no such fields. Merger/split timeline work is
-  therefore blocked on data, not UI.
+  the corpus and GraphQL exposes no such fields. **No licence-complete source
+  declares an ID-addressable predecessor/successor relation for Romanian parties**
+  (Wikidata zero references, Party Facts incomplete, PolPaL NOT PROVEN, SER-PROM
+  ShareAlike). The feature is formally dropped; the columns remain for
+  forward-compatibility but are documented as unused. See `docs/METHODOLOGY.md`
+  §9.5 and `docs/DECISION-PARTY-GENEALOGY.md`.
 - **Senate historical profile ingest deferred.** Discovery is fixed and guarded
   (128/134 GUIDs — see [SOURCE-RESEARCH](SOURCE-RESEARCH.md)) but is **not**
   wired into `build-corpus` / `ingest_profiles`. Identity risk (name order,

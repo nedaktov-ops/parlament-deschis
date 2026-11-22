@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 
 function toISO(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -19,6 +20,7 @@ export default function TimeSlider({
   ticks: { label: string; start: string }[];
 }) {
   const { t } = useTranslation();
+  const reducedMotion = useReducedMotion();
   const [playing, setPlaying] = useState(false);
   const timer = useRef<number | null>(null);
   // Keep the latest value/onChange in refs so the interval can read them
@@ -37,7 +39,7 @@ export default function TimeSlider({
   );
 
   useEffect(() => {
-    if (!playing) return;
+    if (!playing || reducedMotion) return;
     timer.current = window.setInterval(() => {
       const cur = new Date(valueRef.current).getTime();
       const next = cur + 7 * 86400_000;
@@ -53,17 +55,23 @@ export default function TimeSlider({
     return () => {
       if (timer.current) window.clearInterval(timer.current);
     };
-  }, [playing, minMs, maxMs]);
+  }, [playing, minMs, maxMs, reducedMotion]);
 
   return (
     <div className="card p-4">
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <button type="button"className="btn bg-slate-700 hover:bg-slate-600 min-h-11 sm:min-h-0"
+        <button type="button"className="btn btn-hover bg-slate-700 hover:bg-slate-600 min-h-11 sm:min-h-0"
           onClick={() => setPlaying((p) => !p)}
           aria-pressed={playing}
+          disabled={reducedMotion}
         >
           {playing ? t("pause") : t("play")}
         </button>
+        {reducedMotion ? (
+          <span className="sr-only">
+            {t("a11y.reducedMotionNote", "Animation disabled by your reduced-motion setting.")}
+          </span>
+        ) : null}
         <div className="flex-1">
           <label htmlFor="as-of-date" className="sr-only">{t("selectDate")}</label>
           <input

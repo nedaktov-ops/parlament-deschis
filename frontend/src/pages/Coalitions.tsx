@@ -1,9 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { switchWaves, type SwitchWave } from "../api/client";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { Sparkline } from "../components/DataViz";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 interface NamedEvent {
   date: string;
@@ -26,10 +29,11 @@ function toNamedEvents(waves: SwitchWave[], triggerType: string): NamedEvent[] {
 
 export default function Coalitions() {
   const { t } = useTranslation();
+  const scope = useScope();
 
   const waves = useQuery({
-    queryKey: ["switch-waves-all"],
-    queryFn: () => switchWaves(),
+    queryKey: ["switch-waves-all", ...scope.scopeKey],
+    queryFn: () => switchWaves(scope.chamber, scope.legislature),
   });
 
   const all = waves.data ?? [];
@@ -37,8 +41,8 @@ export default function Coalitions() {
   const breakups = toNamedEvents(all, "coalition_breakup");
   const congresses = toNamedEvents(all, "party_congress");
 
-  // Observed span: for each named breakup, the most recent prior formation
-  // (evidence of duration, not a claim about the government's official life).
+  // Editor labels only; "days" is a wave-to-wave interval, not a government lifetime.
+  // The most recent prior labelled formation is a proximity match, not a sourced fact.
   const spans = breakups.map((b) => {
     const prior = formations.filter((f) => f.date <= b.date);
     const last = prior.length > 0 ? prior[prior.length - 1] : null;
@@ -52,34 +56,41 @@ export default function Coalitions() {
     return { breakup: b, formation: last, days };
   });
 
+  const view = resolveViewState({
+    isLoading: waves.isLoading,
+    isError: waves.isError,
+    isEmpty: waves.isSuccess && all.length === 0,
+  });
+  if (view !== "ready") {
+    return (
+      <AsyncState
+        view={view}
+        pageTitle={t("coalitions.title", "Switch-wave timeline (proxy)")}
+        onRetry={() => void waves.refetch()}
+        errorLabel={t("coalitions.loadError", "Failed to load wave data.")}
+        emptyTitle={t("coalitions.noBreakups", "No coalition breakups recorded.")}
+      />
+    );
+  }
+
   return (
-    <div className="wrap space-y-6">
+    <div className="space-y-6">
+      <ScopeControls showChamber showLegislature note={t("scope.note.waves")} />
       {/* Section 1: Hero — fills the first screen alone (H2-G recipe). */}
-      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
-        <div className="max-w-7xl mx-auto">
+      <section className="hero-section" data-enter>
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight text-slate-100">
-                {t("coalitions.title", "Coalition Stability")}
+              <h1 className="page-title">
+                {t("coalitions.title", "Switch-wave timeline (proxy)")}
               </h1>
               <p className="text-sm text-slate-400">
                 {t(
                   "coalitions.intro",
-                  "Government formations, coalition breakups and party congresses that coincide with detected switch waves. Each event is a burst of affiliation change the corpus links to a named political moment.",
+                  "Detected bursts of group-switch events. Named political moments are editor-curated labels — not coalition facts asserted by the corpus — matched to a wave inside its window or up to 90 days before it.",
                 )}
               </p>
-              {waves.isLoading && (
-                <div className="text-slate-500" role="status" aria-live="polite">
-                  {t("loading", "Loading…")}
-                </div>
-              )}
-              {waves.isError && (
-                <div className="text-rose-400" role="alert">
-                  {t("coalitions.loadError", "Failed to load wave data.")}
-                </div>
-              )}
-              {!waves.isLoading && !waves.isError && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
                   <InfoStat
                     label={t("coalitions.statWaves", "Total waves")}
                     value={all.length}
@@ -99,18 +110,16 @@ export default function Coalitions() {
                     label={t("coalitions.statCongresses", "Congresses")}
                     value={congresses.length}
                     accent="rose"
-                  />
-                </div>
-              )}
+                />
+              </div>
             </div>
             <div className="w-full md:w-auto max-w-[260px]">
               <HeroGraphic variant="wave" className="mx-auto" />
             </div>
           </div>
-          {!waves.isLoading && !waves.isError && (
-            <>
+          <>
               <div className="mt-8 flex items-center gap-4" data-moment>
-                <span className="text-5xl font-black block tracking-tight text-slate-100">
+                <span className="moment-value block">
                   {all.length}
                 </span>
                 <span className="text-sm text-slate-400">
@@ -130,9 +139,8 @@ export default function Coalitions() {
                     color="stroke-sky-400"
                   />
                 </div>
-              )}
-            </>
-          )}
+            )}
+          </>
         </div>
       </section>
 
@@ -147,26 +155,26 @@ export default function Coalitions() {
           </div>
         ) : (
           <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("coalitions.breakups", "Coalition breakups")}>
-            <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
+            <table className="min-w-full bg-slate-800 rounded-xl overflow-hidden data-table">
               <thead className="bg-slate-700">
                 <tr>
-                  <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                  <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                     {t("coalitions.col.event", "Event")}
                   </th>
-                  <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                  <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                     {t("coalitions.col.date", "Date")}
                   </th>
-                  <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                  <th scope="col" className="px-4 py-3 text-right text-sm font-medium !text-slate-300">
                     {t("coalitions.col.switches", "Switches in wave")}
                   </th>
-                  <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
-                    {t("coalitions.col.since", "Since prior formation")}
+                  <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
+                    {t("coalitions.col.since", "Interval from prior labelled wave")}
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700">
                 {spans.map(({ breakup, formation, days }) => (
-                  <tr key={breakup.waveId} className="hover:bg-slate-700/50">
+                  <tr key={breakup.waveId}>
                     <th scope="row" className="px-4 py-3 text-slate-200 font-normal text-left">{breakup.name}</th>
                     <td className="px-4 py-3 text-slate-300">{breakup.date}</td>
                     <td className="px-4 py-3 text-right">
@@ -218,7 +226,7 @@ export default function Coalitions() {
               </span>
             </div>
           ))}
-          {formations.length === 0 && !waves.isLoading && (
+          {formations.length === 0 && (
             <div className="text-slate-500">
               {t("coalitions.noFormations", "No formations recorded.")}
             </div>
@@ -241,12 +249,38 @@ export default function Coalitions() {
               </span>
             </div>
           ))}
-          {congresses.length === 0 && !waves.isLoading && (
+          {congresses.length === 0 && (
             <div className="text-slate-500">
               {t("coalitions.noCongresses", "No congresses recorded.")}
             </div>
           )}
         </div>
+      </section>
+
+      <section
+        className="mt-8 bg-slate-800/50 rounded p-4 text-sm text-slate-400"
+        data-enter
+      >
+        <h2 className="text-slate-200 font-semibold mb-1">
+          {t("coalitions.triggerDisclosureTitle", "Trigger disclosure")}
+        </h2>
+        <p role="note">
+          {t(
+            "coalitions.triggerDisclosure",
+            "Trigger disclosure — each label below is an editor-curated name from a hardcoded lookup (pipeline/analytics.py:24-73), matched within the wave window or 90 days before it. No source URL is attached to the trigger; do not read these as coalition records.",
+          )}
+        </p>
+        <p className="mt-2">
+          {t(
+            "coalitions.triggerCounts",
+            "Editor labels in this scope: {{formations}} formations, {{breakups}} breakups, {{congresses}} congresses.",
+            {
+              formations: formations.length,
+              breakups: breakups.length,
+              congresses: congresses.length,
+            },
+          )}
+        </p>
       </section>
 
       <div className="mt-8 bg-slate-800/50 rounded p-4 text-sm text-slate-400">
@@ -256,7 +290,7 @@ export default function Coalitions() {
         <p>
           {t(
             "coalitions.methodology.desc",
-            "Switch waves are 30-day clusters of 3+ observed switch_group events. A wave is linked to a named event (government, coalition breakup, congress) when the corpus records that trigger at the wave's date. 'Since prior formation' measures days between the most recent formation wave and the breakup wave — an observation about switch bursts, not an official government lifetime.",
+            'A wave is a 30-day cluster of 3+ switch_group events. Trigger labels come from the editor-maintained TRIGGER_DATES lookup in pipeline/analytics.py; there is no per-event source URL in the dataset. "Since prior formation" is the interval between two labelled waves, not an official government duration.',
           )}
         </p>
       </div>

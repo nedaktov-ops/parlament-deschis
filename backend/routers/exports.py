@@ -65,12 +65,24 @@ def _build_report_payload(db: Session) -> dict:
     from pipeline.analytics import derive_committee_control, generational_shift
     from pipeline.db import Event, Membership, Organization, Person, SwitchWave
 
+    # R-04: this report has always counted group switches only (docs/API.md
+    # count definitions, resolution R1). Publish that definition explicitly
+    # and add the party count so the dashboard's all-events total is derivable
+    # without changing the meaning of any existing field.
+    switches_group = (
+        db.scalar(select(func.count(Event.id)).where(Event.type == "switch_group")) or 0
+    )
+    switches_party = (
+        db.scalar(select(func.count(Event.id)).where(Event.type == "switch_party")) or 0
+    )
     totals = {
         "persons": db.scalar(select(func.count(Person.id))) or 0,
         "memberships": db.scalar(select(func.count(Membership.id))) or 0,
         "events": db.scalar(select(func.count(Event.id))) or 0,
-        "switches": db.scalar(select(func.count(Event.id)).where(Event.type == "switch_group"))
-        or 0,
+        "switches": switches_group,  # deprecated alias of switches_group
+        "switches_group": switches_group,
+        "switches_party": switches_party,
+        "switches_all": switches_group + switches_party,
         "committees": db.scalar(
             select(func.count(Organization.id)).where(Organization.classification == "committee")
         )
@@ -127,7 +139,7 @@ def _build_report_payload(db: Session) -> dict:
     waves = db.scalars(select(SwitchWave).order_by(SwitchWave.switch_count.desc()).limit(10)).all()
 
     try:
-        _, ages = generational_shift(db)
+        _, ages, _ = generational_shift(db)
     except ValueError:
         ages = []
 
@@ -139,6 +151,12 @@ def _build_report_payload(db: Session) -> dict:
     return {
         "report": "parlament-deschis transparency report",
         "scope": "all",
+        "definitions": {
+            "switches": "Group switches only (Event.type='switch_group'); legacy field name.",
+            "switches_all": "Exact sum of group and party switch events; equals /api/dashboard/stats switches_all for the same corpus.",
+            "persons": "All Person rows in the corpus, not 'deputies currently serving'.",
+            "memberships": "Prepared runtime corpus (7,349); raw release asset is 7,358.",
+        },
         "totals": totals,
         "coverage": queries.get_coverage_detailed(db),
         "top_switchers": top_switchers,

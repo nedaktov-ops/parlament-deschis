@@ -22,13 +22,13 @@ cd "$root" || exit 2
 # source, so a bare-token match no longer means a false claim.
 pattern='193 passed|199 pytest|0 JS errors|Ready for Deployment|3 expected failures|125 passed|273 known errors|"ignoreCommand": "git|previous \{ shortName|successor \{ shortName|"memberships": 12445|"switches": 7429|"legislatures": 10|"parties": 62|"cross_chamber": 461|"coverage_score": 85'
 
-hits="$(git grep -nE "$pattern" -- '*.md' ':(exclude)docs/remediation/*' || true)"
+hits="$(git grep -nE "$pattern" -- '*.md' ':(exclude)docs/remediation/*' ':(exclude).nedcode/qa/*' || true)"
 
 # The genuine stale-tag false claim asserts that the OLD tag is the CURRENT pin.
 # A list of historical tags (as in MASTER-INTEGRATION-BLUEPRINT.md:103) is not
 # that claim. Match the assertion, not mere mention, over every tracked .md.
 stale_tag='(pinned|pin|current|today|serving|served|latest).{0,60}data-20261117-T060923|data-20261117-T060923.{0,60}(pinned|current|serving|served|is the latest)'
-hits_tag="$(git grep -niE "$stale_tag" -- '*.md' ':(exclude)docs/remediation/*' || true)"
+hits_tag="$(git grep -niE "$stale_tag" -- '*.md' ':(exclude)docs/remediation/*' ':(exclude).nedcode/qa/*' || true)"
 if [[ -n "$hits_tag" ]]; then
 	if [[ -n "$hits" ]]; then
 		hits="$(printf '%s\n%s\n' "$hits" "$hits_tag")"
@@ -53,7 +53,8 @@ hits_281="$(git grep -niE "$false_281" -- '*.md' \
 	':(exclude)docs/MASTER-INTEGRATION-BLUEPRINT-WAVE2.md' \
 	':(exclude)docs/DATA-ENRICHMENT-RESEARCH.md' \
 	':(exclude)docs/MASTER-STRATEGY.md' \
-	':(exclude)tests/fixtures/votes/LICENSE-APPENDIX.md' || true)"
+	':(exclude)tests/fixtures/votes/LICENSE-APPENDIX.md' \
+	':(exclude).nedcode/qa/*' || true)"
 
 if [[ -n "$hits_281" ]]; then
 	if [[ -n "$hits" ]]; then

@@ -2,25 +2,12 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
-import { get } from "../api/client";
+import { mpsCards, type MpCard } from "../api/client";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
-import { localISODate } from "../utils/date";
-
-interface MpCard {
-  id: string;
-  name: string;
-  birth_date: string | null;
-  age: number | null;
-  party: string | null;
-  switches: number;
-  committees: number;
-}
-
-interface MpsResponse {
-  status: string;
-  data: MpCard[];
-}
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 interface CompareRow {
   label: string;
@@ -28,14 +15,9 @@ interface CompareRow {
   highlight?: boolean;
 }
 
-function fetchMps(q: string): Promise<MpsResponse> {
-  const params = new URLSearchParams({ limit: "200", sort: "name" });
-  if (q) params.set("q", q);
-  return get<MpsResponse>(`/mps?${params.toString()}`);
-}
-
 export default function MpComparison() {
   const { t } = useTranslation();
+  const scope = useScope();
   const [searches, setSearches] = useState<string[]>(["", "", ""]);
   const [selected, setSelected] = useState<(MpCard | null)[]>([
     null,
@@ -43,10 +25,13 @@ export default function MpComparison() {
     null,
   ]);
 
-  // Load a wide pool once; selection is client-side over the pool.
+  // Load a wide pool; selection is client-side over the pool.
   const pool = useQuery({
-    queryKey: ["mps-pool"],
-    queryFn: () => fetchMps(""),
+    queryKey: ["mps-pool", ...scope.scopeKey],
+    queryFn: () => mpsCards({
+      limit: 200, sort: "name",
+      asOf: scope.date, chamber: scope.chamber, legislature: scope.legislature,
+    }),
   });
 
   const poolList = useMemo(() => pool.data?.data ?? [], [pool.data]);
@@ -134,16 +119,34 @@ export default function MpComparison() {
     ];
   }, [chosen, t]);
 
+  const view = resolveViewState({
+    isLoading: pool.isLoading,
+    isError: pool.isError,
+    isEmpty: pool.isSuccess && poolList.length === 0,
+  });
+  if (view !== "ready") {
+    return (
+      <AsyncState
+        view={view}
+        pageTitle={t("mpc.title", "MP Comparison")}
+        onRetry={() => void pool.refetch()}
+        errorLabel={t("mpc.loadError", "Failed to load MP list.")}
+        emptyTitle={t("mpc.pickTwo", "Pick at least two MPs to compare.")}
+      />
+    );
+  }
+
   const maxSwitches = Math.max(...chosen.map((c) => c.switches), 0);
   const maxCommittees = Math.max(...chosen.map((c) => c.committees), 0);
 
   return (
-    <div className="wrap space-y-6">
-      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
-        <div className="max-w-7xl mx-auto">
+    <div className="space-y-6">
+      <ScopeControls showDate showChamber showLegislature note={t("scope.note.mpc")} />
+      <section className="hero-section" data-enter>
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight">{t("mpc.title", "MP Comparison")}</h1>
+              <h1 className="page-title">{t("mpc.title", "MP Comparison")}</h1>
               <p className="text-sm text-slate-300 mt-2">
                 {t("mpc.intro")}
               </p>
@@ -154,8 +157,8 @@ export default function MpComparison() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
             <InfoStat
-              label={t("mpcTotalMps", "Total MPs")}
-              value={poolList.length}
+              label={t("mpcTotalMps", "MPs in corpus (search pool capped at 200)")}
+              value={pool.data?.total ?? "--"}
               accent="sky"
             />
             <InfoStat
@@ -170,11 +173,11 @@ export default function MpComparison() {
             />
           </div>
           <div className="mt-8 flex items-center gap-4" data-moment>
-            <span className="text-5xl font-black block tracking-tight">
-              {poolList.length}
+            <span className="moment-value block">
+              {pool.data?.total ?? "--"}
             </span>
             <span className="text-sm text-slate-400">
-              {t("mpcTotalMpsLabel", "members of parliament in corpus")}
+              {t("mpcTotalMpsLabel", "persons in corpus")}
             </span>
           </div>
         </div>
@@ -191,7 +194,7 @@ export default function MpComparison() {
                 <Link
                   to="/person/$id"
                   params={{ id: selected[i]!.id }}
-                  search={{ date: localISODate() }}
+                  search={scope.searchFor()}
                   className="text-slate-100 font-semibold hover:text-sky-300 hover:underline"
                 >
                   {selected[i]!.name}
@@ -246,16 +249,9 @@ export default function MpComparison() {
         ))}
       </div>
 
-      {pool.isLoading && (
-        <div className="text-slate-500">{t("loading", "Loading…")}</div>
-      )}
-      {pool.isError && (
-        <div className="text-red-400">{t("mpc.loadError", "Failed to load MP list.")}</div>
-      )}
-
       {chosen.length >= 2 && (
         <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("mpc.title", "MP Comparison")}>
-          <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
+          <table className="min-w-full bg-slate-800 rounded-xl overflow-hidden data-table">
             <thead className="bg-slate-700">
               <tr>
                 <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
@@ -274,7 +270,7 @@ export default function MpComparison() {
             </thead>
             <tbody className="divide-y divide-slate-700">
               {rows.map((row) => (
-                <tr key={row.label} className="hover:bg-slate-700/50">
+                <tr key={row.label}>
                   <th scope="row" className="px-4 py-3 text-slate-400 font-normal text-left">{row.label}</th>
                   {row.values.map((v, idx) => (
                     <td
@@ -317,7 +313,7 @@ export default function MpComparison() {
         </div>
       )}
 
-      {chosen.length < 2 && !pool.isLoading && (
+      {chosen.length < 2 && (
         <div className="text-slate-500">
           {t("mpc.pickTwo", "Pick at least two MPs to compare.")}
         </div>

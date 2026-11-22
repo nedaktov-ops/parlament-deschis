@@ -392,6 +392,7 @@ def generational_shift(
 
     ages_by_party: dict[str, dict[str, int]] = {}
     party_names: dict[str, str] = {}
+    population_ages: dict[str, int] = {}  # R-04: dedupe by person, not by party
     for person_id, birth_date, party_id, short_name, party_name in session.execute(stmt):
         age = evaluation_date.year - birth_date.year
         if (evaluation_date.month, evaluation_date.day) < (birth_date.month, birth_date.day):
@@ -399,6 +400,7 @@ def generational_shift(
         if age < 0:
             continue
         ages_by_party.setdefault(party_id, {})[person_id] = age
+        population_ages[person_id] = age
         party_names[party_id] = short_name or party_name
 
     results = [
@@ -412,7 +414,43 @@ def generational_shift(
         if ages
     ]
     results.sort(key=lambda result: result["party"])
-    return evaluation_date, results
+
+    # R-04: the denominator is every MP active in scope at the evaluation
+    # date, including those with no published birth date. Identical joins and
+    # active-window predicates as the main query, minus the birth-date filter.
+    scope = (
+        select(func.count(func.distinct(Membership.person_id)))
+        .join(Person, Person.id == Membership.person_id)
+        .join(group, group.id == Membership.org_id)
+        .join(party, party.id == Membership.on_behalf_of_id)
+        .where(
+            is_group(group),
+            party.classification == "party",
+            Membership.start_date <= evaluation_date,
+            or_(Membership.end_date.is_(None), Membership.end_date > evaluation_date),
+        )
+    )
+    if legislature:
+        scope = scope.where(Membership.legislature == legislature)
+    mps_in_scope = int(session.scalar(scope) or 0)
+    mps_with_birth_date = len(population_ages)
+    mps_unknown_birth_date = mps_in_scope - mps_with_birth_date
+    if mps_unknown_birth_date < 0:
+        raise ValueError("demographic scope counts disagree: known > total")
+
+    all_ages = list(population_ages.values())
+    totals = {
+        "mps_in_scope": mps_in_scope,
+        "mps_with_birth_date": mps_with_birth_date,
+        "mps_unknown_birth_date": mps_unknown_birth_date,
+        "population_avg_age": round(sum(all_ages) / len(all_ages), 1) if all_ages else None,
+        "population_median_age": median(all_ages) if all_ages else None,
+        "coverage_pct": round(100 * mps_with_birth_date / mps_in_scope, 1)
+        if mps_in_scope
+        else None,
+        "definition": "coverage_pct = mps_with_birth_date / mps_in_scope; population_avg_age is computed over all persons with a known birth date, not a mean of per-party means.",
+    }
+    return evaluation_date, results, totals
 
 
 def derive_party_cohesion(
@@ -541,13 +579,17 @@ def derive_generational_shift(
     legislature: str | None = None,
 ) -> int:
     """Report party age summaries and return the number of parties measured."""
-    evaluation_date, results = generational_shift(session, legislature)
+    evaluation_date, results, totals = generational_shift(session, legislature)
     for result in results:
         print(
             f"Party {result['party']}: {result['mps_with_birth_dates']} MPs with birth dates, "
             f"avg={result['avg_age']:.1f}, median={result['median_age']} "
             f"(as of {evaluation_date.isoformat()})"
         )
+    print(
+        f"Population: {totals['mps_with_birth_date']}/{totals['mps_in_scope']} MPs with birth dates "
+        f"({totals['coverage_pct']}%); mean age {totals['population_avg_age']}"
+    )
     if not results:
         print("No party memberships with birth-date data are available.")
     return len(results)

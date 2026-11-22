@@ -1,12 +1,15 @@
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link, useSearch } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { get } from "../api/client";
-import { localISODate } from "../utils/date";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { Sparkline } from "../components/DataViz";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
+import TooltipText from "../components/ui/TooltipText";
 
 interface PartySpan {
   party: string;
@@ -47,11 +50,11 @@ function fetchTimeline(): Promise<PartyTimelineResponse> {
 
 export default function PartyTimeline() {
   const { t } = useTranslation();
-  const search = useSearch({ strict: false }) as { date?: string };
-  const date = search?.date;
+  const tipId = useId().replace(/:/g, "");
+  const scope = useScope();
 
   const timeline = useQuery({
-    queryKey: ["party-timeline"],
+    queryKey: ["party-timeline", ...scope.scopeKey],
     queryFn: fetchTimeline,
   });
 
@@ -86,14 +89,32 @@ export default function PartyTimeline() {
     );
   }, [rows]);
 
+  const view = resolveViewState({
+    isLoading: timeline.isLoading,
+    isError: timeline.isError,
+    isEmpty: timeline.isSuccess && rows.length === 0,
+  });
+  if (view !== "ready") {
+    return (
+      <AsyncState
+        view={view}
+        pageTitle={t("ptimeline.title", "Party Timeline")}
+        onRetry={() => void timeline.refetch()}
+        errorLabel={t("ptimeline.loadError", "Failed to load the timeline.")}
+        emptyTitle={t("ptimeline.empty", "No dated party spans.")}
+      />
+    );
+  }
+
   return (
-    <div className="p-6">
+    <div className="py-6">
+      <ScopeControls note={t("scope.note.partyTimeline")} />
       {/* H2-O Hero section — fills the first screen alone */}
       <section className="hero-section" data-enter>
-        <div className="max-w-7xl mx-auto">
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight">
+              <h1 className="page-title">
                 {t("ptimeline.title", "Party Timeline")}
               </h1>
               <p className="text-sm text-slate-400">
@@ -105,7 +126,7 @@ export default function PartyTimeline() {
               <p className="text-sm">
                 <Link
                   to="/parties"
-                  search={{ date: date ?? localISODate() }}
+                  search={scope.searchFor()}
                   className="text-sky-400 hover:underline"
                 >
                   {t("ptimeline.viewAllParties", "View all parties →")}
@@ -120,7 +141,7 @@ export default function PartyTimeline() {
                   accent="sky"
                 />
                 <InfoStat
-                  label={t("ptimeline.statSwitches", "Total switches")}
+                  label={t("ptimeline.statSwitches", "Dated joins in range")}
                   value={datedJoins}
                   accent="emerald"
                 />
@@ -139,7 +160,7 @@ export default function PartyTimeline() {
                 />
               </div>
               <div className="mt-8 flex items-center gap-4" data-moment>
-                <span className="text-5xl font-black block tracking-tight">
+                <span className="moment-value block">
                   {rows.length}
                 </span>
                 <span className="text-sm text-slate-400">
@@ -178,15 +199,11 @@ export default function PartyTimeline() {
               { pred: gaps.predecessor_links, diss: gaps.dissolution_dates },
             )}
           </p>
-        </div>
-      )}
-
-      {timeline.isLoading && (
-        <div className="text-slate-500">{t("loading", "Loading…")}</div>
-      )}
-      {timeline.isError && (
-        <div className="text-red-400">
-          {t("ptimeline.loadError", "Failed to load the timeline.")}
+          {gaps.note && (
+            <p className="mt-2 text-xs text-amber-200/80">
+              <span className="font-semibold">{t("prov.note")}: </span>{gaps.note}
+            </p>
+          )}
         </div>
       )}
 
@@ -211,7 +228,7 @@ export default function PartyTimeline() {
           </div>
 
           <div className="space-y-1.5 min-w-[720px]">
-            {rows.map((p) => {
+            {rows.map((p, idx) => {
               const start = yearOf(p.first_join);
               const end = yearOf(p.last_join);
               if (start === null) return null;
@@ -222,19 +239,24 @@ export default function PartyTimeline() {
               return (
                 <div key={p.party} className="flex items-center gap-3">
                   <span
-                    className="w-24 shrink-0 text-sm text-slate-300 text-right truncate"
-                    title={p.name}
+                    className="relative group w-24 shrink-0 text-sm text-slate-300 text-right truncate"
+                    aria-describedby={`${tipId}-party-${idx}`}
                   >
                     {p.party}
+                    <TooltipText id={`${tipId}-party-${idx}`}>{p.name}</TooltipText>
                   </span>
                   <div className="relative flex-1 h-5 bg-slate-900/60 rounded">
                     <div
-                      className={`absolute inset-y-1 rounded ${
+                      className={`group absolute inset-y-1 rounded ${
                         ongoing ? "bg-sky-500" : "bg-slate-500"
                       }`}
                       style={{ left: `${left}%`, width: `${width}%` }}
-                      title={`${p.first_join} → ${p.last_join} (${p.dated_joins} dated joins)`}
-                    />
+                      aria-describedby={`${tipId}-span-${idx}`}
+                    >
+                      <TooltipText id={`${tipId}-span-${idx}`}>
+                        {`${p.first_join} → ${p.last_join} (${p.dated_joins} dated joins)`}
+                      </TooltipText>
+                    </div>
                   </div>
                   <span className="w-40 shrink-0 text-xs text-slate-500 font-mono">
                     {p.first_join} → {p.last_join}
@@ -258,10 +280,6 @@ export default function PartyTimeline() {
             </span>
           </div>
         </div>
-      )}
-
-      {rows.length === 0 && !timeline.isLoading && !timeline.isError && (
-        <div className="text-slate-500">{t("ptimeline.empty", "No dated party spans.")}</div>
       )}
 
       <div className="mt-6 bg-slate-800/50 rounded p-4 text-sm text-slate-400">

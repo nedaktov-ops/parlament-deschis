@@ -83,6 +83,7 @@ export interface PersonDetail {
   committee_memberships?: Membership[];
   events: EventItem[];
   evidence: EvidenceItem[];
+  as_of?: string | null;
 }
 
 export interface PersonSummary {
@@ -121,16 +122,59 @@ export interface CoverageRow extends CoverageItem {
   last_refresh: string | null;
 }
 
+/** R-08: honest per-scope coverage across three independent dimensions. */
+export interface CoverageDimension {
+  status: string;
+  count: number;
+  total?: number;
+  note: string | null;
+}
+export interface CoverageDimensionRow {
+  chamber: string;
+  legislature: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  mandates: CoverageDimension;
+  votes: CoverageDimension;
+  biographies: CoverageDimension;
+}
+
 export interface DashboardStats {
   persons: number;
   memberships: number;
-  switches: number;
+  switches: number; // deprecated alias of switches_all
+  switches_all: number;
+  switches_group: number;
+  switches_party: number;
   committees: number;
   legislatures: number;
   parties: number;
   cross_chamber: number;
-  coverage_score: number;
+  coverage_score: number | null;
+  coverage_full_rows: number;
+  coverage_rows_total: number;
+  definitions: Record<string, string>;
   computed_at: string;
+}
+
+/** R-04: canonical coverage aggregates; percentages are null when denominator is 0. */
+export interface CoverageSummaryResponse {
+  status: string;
+  totals: {
+    memberships: number;
+    memberships_dated: number;
+    memberships_sourced: number;
+    switches_group: number;
+    switches_party: number;
+    switches_all: number;
+    switches_sourced: number;
+  };
+  percentages: {
+    dated: number | null;
+    sourced: number | null;
+    switches_sourced: number | null;
+  };
+  definitions: Record<string, string>;
 }
 
 export interface DashboardStatsResponse {
@@ -168,6 +212,7 @@ export interface HealthResponse {
 
 export interface MovementFilters {
   chamber?: string;
+  legislature?: string;
   from?: string;
   to?: string;
   limit?: number;
@@ -233,6 +278,10 @@ export interface PartyMovementResponse {
   to_org: OrgBrief | null;
   summary_ro: string | null;
   summary_en: string | null;
+  precision: string | null;
+  reason: string | null;
+  confidence: string;
+  source_url: string | null;
 }
 
 export interface PartyTimelineResponse {
@@ -281,6 +330,13 @@ export interface VoteRow {
   positions_incomplete: boolean;
 }
 
+/** A chamber/legislature pair that actually has votes in the corpus. */
+export interface VoteScope {
+  chamber: string;
+  legislature: string | null;
+  total: number;
+}
+
 export interface VotesResponse {
   status: string;
   data_exists: boolean;
@@ -288,6 +344,8 @@ export interface VotesResponse {
   total: number;
   offset: number;
   limit: number;
+  /** Data-derived alternatives; summing their totals equals the corpus total. */
+  scopes: VoteScope[];
 }
 
 export interface VoteDetail {
@@ -380,6 +438,52 @@ export interface VotesFilters {
   offset?: number;
 }
 
+export interface MpCard {
+  id: string;
+  name: string;
+  birth_date: string | null;
+  age: number | null;
+  party: string | null;
+  switches: number;
+  committees: number;
+}
+export interface MpsResponse {
+  status: string;
+  data: MpCard[];
+  offset: number;
+  limit: number;
+  /** R-04: corpus-wide denominator, independent of offset/limit (never the page length). */
+  total: number;
+  definition: string;
+  scope: { as_of: string | null; chamber: string | null; legislature: string | null };
+}
+export interface MpsQuery {
+  q?: string; sort?: string; offset?: number; limit?: number;
+  chamber?: string; legislature?: string; asOf?: string;
+}
+export function mpsCards(query: MpsQuery = {}): Promise<MpsResponse> {
+  const p = new URLSearchParams();
+  if (query.q) p.set("q", query.q);
+  if (query.sort) p.set("sort", query.sort);
+  if (query.offset !== undefined) p.set("offset", String(query.offset));
+  if (query.limit !== undefined) p.set("limit", String(query.limit));
+  if (query.chamber) p.set("chamber", query.chamber);
+  if (query.legislature) p.set("legislature", query.legislature);
+  if (query.asOf) p.set("as_of", query.asOf);
+  return get<MpsResponse>(`/mps${p.toString() ? `?${p.toString()}` : ""}`);
+}
+
+/** Map a route scope to /votes' supported parameters (date ⇒ upper bound). */
+export function votesForScope(scope: { date: string; chamber?: string; legislature?: string },
+                              extra: VotesFilters = {}): VotesFilters {
+  return {
+    chamber: scope.chamber,
+    legislature: scope.legislature,
+    to: scope.date,              // "votes up to <date>" — label it that way in the UI
+    ...extra,                    // caller may override limit/offset/from/to
+  };
+}
+
 const BASE = "/api";
 
 export async function get<T>(path: string): Promise<T> {
@@ -415,7 +519,8 @@ export const api = {
     get<PersonSummary[]>(
       `/persons?q=${encodeURIComponent(q)}${chamber ? `&chamber=${chamber}` : ""}`,
     ),
-  person: (id: string) => get<PersonDetail>(`/persons/${encodeURIComponent(id)}`),
+  person: (id: string, asOf?: string) =>
+    get<PersonDetail>(`/persons/${encodeURIComponent(id)}${asOf ? `?as_of=${encodeURIComponent(asOf)}` : ""}`),
   personHistory: (id: string) =>
     get<PersonHistoryResponse>(`/persons/${encodeURIComponent(id)}/history`),
   partyProfile: (shortName: string, asOf: string) =>
@@ -432,6 +537,7 @@ export const api = {
     const options = typeof filters === "string" ? { chamber: filters } : filters;
     const params = new URLSearchParams();
     if (options.chamber) params.set("chamber", options.chamber);
+    if (options.legislature) params.set("legislature", options.legislature);
     if (options.from) params.set("from", options.from);
     if (options.to) params.set("to", options.to);
     if (options.limit !== undefined) params.set("limit", String(options.limit));
@@ -444,6 +550,8 @@ export const api = {
   ),
   coverage: () => get<CoverageItem[]>("/coverage"),
   coverage_detailed: () => get<CoverageRow[]>("/coverage/detailed"),
+  coverageDimensions: () => get<CoverageDimensionRow[]>("/coverage/dimensions"),
+  coverageSummary: () => get<CoverageSummaryResponse>("/coverage/summary"),
   about: () => get<AboutResponse>("/about"),
   health: () => get<HealthResponse>("/health"),
   dashboardStats: (asOf?: string) =>
@@ -608,6 +716,7 @@ export interface TraseismScope {
   repeat_switchers: TraseismRepeatSwitchers;
   timing: TraseismTiming;
   coverage: TraseismCoverage;
+  definitions: Record<string, string>;
 }
 
 export interface TraseismSwitchRow {
@@ -679,11 +788,20 @@ export interface SwitchLeaderboardEntry {
   parties: string[];
   total_events: number;
   tenure_years: number;
-  loyalty_score: number;
+  loyalty_score: number | null;
+  loyalty_status: string;
+  loyalty_inputs: {
+    switch_count: number;
+    total_events_in_scope: number;
+    tenure_years: number;
+    tenure_weight: number | null;
+  };
 }
 
 export interface SwitchLeaderboardResponse {
   status: string;
+  score_scope: string;
+  definitions: Record<string, string>;
   data: SwitchLeaderboardEntry[];
 }
 
@@ -713,6 +831,15 @@ export interface GenerationalShiftEntry {
 export interface GenerationalShiftResponse {
   status: string;
   as_of: string;
+  totals: {
+    mps_in_scope: number;
+    mps_with_birth_date: number;
+    mps_unknown_birth_date: number;
+    population_avg_age: number | null;
+    population_median_age: number | null;
+    coverage_pct: number | null;
+    definition: string;
+  };
   data: GenerationalShiftEntry[];
 }
 
@@ -846,6 +973,8 @@ export interface SwitchWave {
   switch_count: number;
   trigger_type: string | null;
   trigger_event: string | null;
+  /** Editor-curated trigger disclosure; null when the wave has no label. */
+  trigger_provenance: string | null;
   legislature: string | null;
   chamber: string | null;
   created_at: string | null;
@@ -892,9 +1021,14 @@ export interface ScorecardEntry {
   no_votes: number;
   abstain_votes: number;
   not_voting_votes: number;
-  loyalty_pct: number;
-  rebellion_pct: number;
-  participation_pct: number;
+  loyalty_pct: number | null;
+  rebellion_pct: number | null;
+  participation_pct: number | null;
+  denominators: {
+    alignment: number;
+    participation: number;
+    definition: string;
+  };
 }
 
 export interface ScorecardResponse {

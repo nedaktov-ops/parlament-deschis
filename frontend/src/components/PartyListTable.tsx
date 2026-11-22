@@ -58,10 +58,11 @@ export default function PartyListTable({
           const rankColor = index === 0 ? "text-amber-400" : index === 1 ? "text-slate-300" : index === 2 ? "text-rose-400" : "text-slate-400";
           
           return (
-            <div
+            <button
+              type="button"
               key={party.id}
               onClick={() => onPartyClick?.(party.short_name || party.id)}
-              className="group flex items-center gap-3 p-2 rounded-lg hover:bg-slate-700/30 cursor-pointer transition-all"
+              className="group flex w-full items-center gap-3 p-2 text-left rounded-lg hover:bg-slate-700/30 cursor-pointer transition-all btn-hover min-h-11"
             >
               <div className="flex items-center gap-2 w-12">
                 <span className={`text-xs font-bold ${rankColor}`}>
@@ -95,7 +96,7 @@ export default function PartyListTable({
                   ↗{party.switches_in}
                 </div>
               )}
-            </div>
+            </button>
           );
         })}
       </div>
@@ -103,12 +104,13 @@ export default function PartyListTable({
       <div className="mt-3 pt-2 border-t border-slate-700/30 flex justify-between text-xs">
         <span className="text-slate-500">Total: {totalMembers.toLocaleString()}</span>
         {onViewAll && (
-          <span 
-            className="text-sky-400 cursor-pointer hover:underline"
+          <button
+            type="button"
+            className="btn-hover min-h-11 text-sky-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
             onClick={onViewAll}
           >
             View all →
-          </span>
+          </button>
         )}
       </div>
     </div>

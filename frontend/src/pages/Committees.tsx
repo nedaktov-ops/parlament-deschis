@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback, useEffect } from "react";
+import { useState, useRef, useMemo, useCallback, useEffect, useId } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
@@ -9,11 +9,15 @@ import {
   type CommitteeListItem,
   type CommitteeMember,
 } from "../api/client";
-import { localISODate } from "../utils/date";
+import { useScope } from "../hooks/useScope";
+import TooltipText from "../components/ui/TooltipText";
+import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import LoadingState from "../components/LoadingState";
 import EmptyState from "../components/EmptyState";
+import { StateView } from "../components/ui/AsyncState";
+import ProvenanceStamp from "../components/ProvenanceStamp";
 
 function fmtDate(value: string | null): string {
   if (!value) return "—";
@@ -22,13 +26,14 @@ function fmtDate(value: string | null): string {
 
 function MemberRow({ member }: { member: CommitteeMember }) {
   const { t } = useTranslation();
+  const scope = useScope();
   return (
-    <tr className="hover:bg-slate-700/40">
+    <tr className="">
       <th scope="row" className="px-3 py-2 font-normal text-left">
         <Link
           to="/person/$id"
           params={{ id: member.person_id }}
-          search={{ date: localISODate() }}
+          search={scope.searchFor()}
           className="text-sky-400 hover:text-sky-300 hover:underline"
         >
           {member.name}
@@ -53,6 +58,12 @@ function MemberRow({ member }: { member: CommitteeMember }) {
           </span>
         )}
       </td>
+      <td className="px-3 py-2">
+        <ProvenanceStamp
+          sourceUrl={member.source_url}
+          precision={[member.start_precision, member.end_precision].filter(Boolean).join(" / ") || null}
+        />
+      </td>
     </tr>
   );
 }
@@ -65,11 +76,12 @@ function CommitteeCard({
   onMembersLoaded?: (committeeId: string, totalCount: number) => void;
 }) {
   const { t } = useTranslation();
+  const scope = useScope();
   const [open, setOpen] = useState(false);
 
   const members = useQuery({
-    queryKey: ["committee-members", committee.id],
-    queryFn: () => committeeMembers(committee.id),
+    queryKey: ["committee-members", committee.id, ...scope.scopeKey],
+    queryFn: () => committeeMembers(committee.id, scope.date),
     enabled: open,
   });
 
@@ -108,12 +120,15 @@ function CommitteeCard({
       {open && (
         <div className="border-t border-slate-700 overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={committee.name}>
           {members.isError && (
-            <div className="px-4 py-3 text-red-400 text-sm">
-              {t("committees.loadError", "Failed to load members.")}
-            </div>
+            <StateView
+              view="error"
+              variant="inline"
+              onRetry={() => void members.refetch()}
+              errorLabel={t("committees.loadError", "Failed to load members.")}
+            />
           )}
           {members.data && members.data.members.length > 0 && (
-            <table className="min-w-full text-sm">
+            <table className="min-w-full text-sm data-table">
               <thead className="bg-slate-700/60">
                 <tr>
                   <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">
@@ -134,6 +149,7 @@ function CommitteeCard({
                   <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">
                     {t("committees.col.status", "Status")}
                   </th>
+                  <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">{t("source")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/60">
@@ -156,22 +172,25 @@ function CommitteeCard({
 
 export default function Committees() {
   const { t } = useTranslation();
-  const [chamber, setChamber] = useState<string>("");
+  const tipId = useId().replace(/:/g, "");
+  const scope = useScope();
   const [totalMembers, setTotalMembers] = useState(0);
   const countedCommittees = useRef<Set<string>>(new Set());
 
   const list = useQuery({
-    queryKey: ["committees"],
-    queryFn: () => committees(),
+    queryKey: ["committees", scope.date, ...scope.scopeKey],
+    queryFn: () => committees(scope.date),
   });
 
   const control = useQuery({
-    queryKey: ["committee-control"],
-    queryFn: () => committeeControl(),
+    queryKey: ["committee-control", scope.legislature, scope.date, ...scope.scopeKey],
+    queryFn: () => committeeControl(scope.legislature, scope.date),
   });
 
+  // Chamber is a client-side filter of the returned list (the endpoint has no
+  // chamber param); it is persisted in the URL through useScope.
   const rows = (list.data ?? []).filter(
-    (c) => !chamber || c.chamber === chamber,
+    (c) => !scope.chamber || c.chamber === scope.chamber,
   );
 
   const controlData = control.data?.status === "ok" ? control.data.data : null;
@@ -196,13 +215,14 @@ export default function Committees() {
   );
 
   return (
-    <div className="wrap py-6 print:p-0">
+    <div className="py-6 print:p-0">
+      <ScopeControls showDate showChamber showLegislature note={t("scope.note.committees")} />
       <div
-        className="min-h-screen flex flex-wrap items-start justify-between gap-3 mb-6 print:mb-3"
+        className="flex flex-wrap items-start justify-between gap-3 mb-6 print:mb-3"
         data-enter
       >
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-100 print:text-slate-900">
+          <h1 className="page-title print:text-slate-900">
             {t("committees.title", "Commitment Tracker")}
           </h1>
           <p className="text-slate-400 print:text-slate-600 text-sm mt-1">
@@ -213,7 +233,7 @@ export default function Committees() {
           </p>
           {list.data && (
             <p className="mt-4 text-slate-200" data-moment>
-              <span className="text-5xl font-black block tracking-tight">
+              <span className="moment-value block">
                 {list.data.length.toLocaleString()}
               </span>
               <span className="text-sm text-slate-400 mt-1">
@@ -239,8 +259,8 @@ export default function Committees() {
                 accent="emerald"
               />
               <InfoStat
-                label={t("committees.totalMembers", "Total members")}
-                value={totalMembers}
+                label={t("committees.totalMembers", "Members in expanded committees")}
+                value={countedCommittees.current.size === 0 ? "—" : totalMembers}
                 accent="sky"
               />
               <InfoStat
@@ -272,17 +292,21 @@ export default function Committees() {
           </p>
           <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("control.table", "Committee control table")}>
             <div className="space-y-2 mb-4">
-              {controlData.parties.map((p) => (
+              {controlData.parties.map((p, idx) => (
                 <div key={p.party} className="flex items-center gap-3">
                   <span className="w-24 text-sm text-slate-300 shrink-0">
                     {p.party}
                   </span>
                   <div className="bg-slate-700 rounded-full h-4 flex-1 min-w-[120px]">
                     <div
-                      className="bg-sky-500 rounded-full h-4"
+                      className="relative group bg-sky-500 rounded-full h-4"
                       style={{ width: `${p.share_pct}%` }}
-                      title={`${p.chairs} / ${controlData.total_committees}`}
-                    />
+                      aria-describedby={`${tipId}-share-${idx}`}
+                    >
+                      <TooltipText id={`${tipId}-share-${idx}`}>
+                        {`${p.chairs} / ${controlData.total_committees}`}
+                      </TooltipText>
+                    </div>
                   </div>
                   <span className="w-20 text-sm text-slate-400 text-right shrink-0">
                     {p.chairs} ({p.share_pct}%)
@@ -295,7 +319,7 @@ export default function Committees() {
             <summary className="text-sm text-sky-400 cursor-pointer hover:text-sky-300">
               {t("control.showChairs", "Show all chairs →")}
             </summary>
-            <table className="min-w-full text-sm mt-3">
+            <table className="min-w-full text-sm mt-3 data-table">
               <thead className="bg-slate-700/60">
                 <tr>
                   <th scope="col" className="px-3 py-2 text-left text-slate-300 font-medium">
@@ -314,13 +338,13 @@ export default function Committees() {
               </thead>
               <tbody className="divide-y divide-slate-700/60">
                 {controlData.chairs.map((c) => (
-                  <tr key={c.committee_id} className="hover:bg-slate-700/40">
+                  <tr key={c.committee_id} className="">
                     <th scope="row" className="px-3 py-2 text-slate-300 font-normal text-left">{c.committee}</th>
                     <td className="px-3 py-2">
                       <Link
                         to="/person/$id"
                         params={{ id: c.chair_person_id }}
-                        search={{ date: localISODate() }}
+                        search={scope.searchFor()}
                         className="text-sky-400 hover:text-sky-300 hover:underline"
                       >
                         {c.chair}
@@ -339,33 +363,24 @@ export default function Committees() {
       )}
 
       {control.isError && (
-        <div className="mb-6 text-amber-400 text-sm">
-          {t("control.loadError", "Committee control data unavailable.")}
-        </div>
+        <StateView
+          view="error"
+          variant="inline"
+          onRetry={() => void control.refetch()}
+          errorLabel={t("control.loadError", "Committee control data unavailable.")}
+        />
       )}
-
-      <div className="mb-6">
-        <label className="flex flex-col gap-1 text-sm text-slate-400 max-w-xs">
-          {t("committees.filter.chamber", "Chamber")}
-          <select
-            value={chamber}
-            onChange={(e) => setChamber(e.target.value)}
-            className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200"
-          >
-            <option value="">{t("committees.filter.all", "All")}</option>
-            <option value="deputies">{t("deputies", "Deputies")}</option>
-            <option value="senate">{t("senate", "Senate")}</option>
-          </select>
-        </label>
-      </div>
 
       {list.isLoading && (
         <LoadingState label={t("loading", "Loading…")} />
       )}
       {list.isError && (
-        <div className="text-red-400">
-          {t("committees.loadError", "Failed to load committees.")}
-        </div>
+        <StateView
+          view="error"
+          variant="inline"
+          onRetry={() => void list.refetch()}
+          errorLabel={t("committees.loadError", "Failed to load committees.")}
+        />
       )}
 
       <div className="space-y-2">

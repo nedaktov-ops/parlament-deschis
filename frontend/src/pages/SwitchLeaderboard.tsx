@@ -1,24 +1,14 @@
-import { useState } from "react";
+import { useId } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { switchLeaderboard, type SwitchLeaderboardEntry } from "../api/client";
-import { localISODate } from "../utils/date";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
-
-const LEGISLATURES = [
-  "1990",
-  "1992",
-  "1996",
-  "2000",
-  "2004",
-  "2008",
-  "2012",
-  "2016",
-  "2020",
-  "2024",
-];
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
+import TooltipText from "../components/ui/TooltipText";
 
 function fmtDate(value: string | null): string {
   if (!value) return "—";
@@ -27,43 +17,69 @@ function fmtDate(value: string | null): string {
 
 export default function SwitchLeaderboard() {
   const { t } = useTranslation();
-  const [legislature, setLegislature] = useState<string>("");
-  const [limit, setLimit] = useState<number>(20);
+  const tipId = useId().replace(/:/g, "");
+  const scope = useScope();
+  const navigate = useNavigate({ from: "/leaderboard" });
+  // Page-local filter lives in the URL too (FN-7); scope reads stay in useScope.
+  const rawLimit = useSearch({
+    from: "/leaderboard",
+    select: (s) => Number((s as Record<string, unknown>).limit ?? 20),
+  });
+  const limit = [10, 20, 50, 100].includes(rawLimit) ? rawLimit : 20;
+  const setLimit = (value: number) => navigate({ search: scope.searchFor({ limit: value }) });
 
   const leaderboard = useQuery({
-    queryKey: ["switch-leaderboard", legislature, limit],
-    queryFn: () => switchLeaderboard(limit, legislature || undefined),
+    queryKey: ["switch-leaderboard", scope.legislature, scope.chamber, limit, ...scope.scopeKey],
+    queryFn: () => switchLeaderboard(limit, scope.legislature, scope.chamber),
   });
 
   const rows = leaderboard.data?.data ?? [];
 
+  // R-04: top-N sum of the displayed rows, NOT a corpus total.
   const totalSwitches = rows.reduce((sum, row) => sum + row.switch_count, 0);
   const uniqueSwitchers = rows.length;
   const topSwitcherCount = rows.length > 0 ? rows[0].switch_count : 0;
 
+  const view = resolveViewState({
+    isLoading: leaderboard.isLoading,
+    isError: leaderboard.isError,
+    isEmpty: leaderboard.isSuccess && rows.length === 0,
+  });
+  if (view !== "ready") {
+    return (
+      <AsyncState
+        view={view}
+        pageTitle={t("leaderboard.title", "Party Switching Leaderboard")}
+        onRetry={() => void leaderboard.refetch()}
+        errorLabel={t("leaderboard.error", "Failed to load leaderboard.")}
+        emptyTitle={t("leaderboard.empty", "No switch data available for this scope.")}
+      />
+    );
+  }
+
   return (
-    <div className="p-6">
+    <div className="py-6">
       {/* Hero section — H2-D: min-h-screen, data-enter, HeroGraphic, dealt moment */}
-      <section className="min-h-screen mb-8" data-enter>
-        <div className="max-w-7xl mx-auto">
+      <section className="hero-section" data-enter>
+        <div>
           <div className="flex flex-col lg:flex-row lg:items-start gap-8">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-4">
                 <HeroGraphic variant="switches" className="w-10 h-10" />
-                <h1 className="text-3xl font-bold tracking-tight text-slate-100">
+                <h1 className="page-title">
                   {t("leaderboard.title", "Party Switching Leaderboard")}
                 </h1>
               </div>
               <p className="text-slate-400 text-lg mb-6">
                 {t(
                   "leaderboard.intro",
-                  "MPs ranked by the number of observed party/group switches. Every count comes from the chambers' own dated group ledgers.",
+                  "MPs ranked by observed group switch count (switch_group) within the reported scope.",
                 )}
               </p>
               {/* Dealt moment: InfoStat cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 <InfoStat
-                  label={t("leaderboard.stat.total_switches", "Total switches")}
+                  label={t("leaderboard.stat.total_switches", "Group switches in top N")}
                   value={totalSwitches}
                   accent="amber"
                 />
@@ -80,22 +96,8 @@ export default function SwitchLeaderboard() {
               </div>
             </div>
             <div className="w-full lg:w-72 shrink-0">
-              <div className="flex gap-4 flex-wrap">
-                <label className="flex flex-col gap-1 text-sm text-slate-400">
-                  {t("leaderboard.filter.legislature", "Legislature")}
-                  <select
-                    value={legislature}
-                    onChange={(e) => setLegislature(e.target.value)}
-                    className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200"
-                  >
-                    <option value="">{t("leaderboard.filter.all", "All")}</option>
-                    {LEGISLATURES.map((leg) => (
-                      <option key={leg} value={leg}>
-                        {leg}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              <div className="flex flex-col gap-4">
+                <ScopeControls showChamber showLegislature />
                 <label className="flex flex-col gap-1 text-sm text-slate-400">
                   {t("leaderboard.filter.limit", "Show top")}
                   <select
@@ -116,58 +118,49 @@ export default function SwitchLeaderboard() {
         </div>
       </section>
 
-      {legislature && (
+      {scope.legislature && (
         <p role="note" className="mb-4 text-amber-300 text-sm">
           {t("leaderboard.scope.note")}
         </p>
       )}
 
-      {leaderboard.isLoading && (
-        <div className="text-slate-500">{t("loading", "Loading…")}</div>
-      )}
-      {leaderboard.isError && (
-        <div className="text-red-400">
-          {t("leaderboard.error", "Failed to load leaderboard.")}
-        </div>
-      )}
-
       {rows.length > 0 && (
         <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("leaderboard.title", "Party Switching Leaderboard")}>
-          <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
+          <table className="min-w-full bg-slate-800 rounded-xl overflow-hidden data-table">
             <thead className="bg-slate-700">
               <tr>
-                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                   #
                 </th>
-                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                   {t("leaderboard.col.name", "MP")}
                 </th>
-                <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-right text-sm font-medium !text-slate-300">
                   {t("leaderboard.col.switches", "Switches")}
                 </th>
-                <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-right text-sm font-medium !text-slate-300">
                   {t("leaderboard.col.loyalty", "Loyalty")}
                 </th>
-                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                   {t("leaderboard.col.parties", "Parties joined")}
                 </th>
-                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                   {t("leaderboard.col.first", "First")}
                 </th>
-                <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                   {t("leaderboard.col.last", "Last")}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700">
               {rows.map((row: SwitchLeaderboardEntry, index: number) => (
-                <tr key={row.person_id} className="hover:bg-slate-700/50">
+                <tr key={row.person_id}>
                   <th scope="row" className="px-4 py-3 text-slate-500 font-normal text-left">{index + 1}</th>
                   <td className="px-4 py-3">
                     <Link
                       to="/person/$id"
                       params={{ id: row.person_id }}
-                      search={{ date: localISODate() }}
+                      search={scope.searchFor()}
                       className="text-sky-400 hover:text-sky-300 hover:underline"
                     >
                       {row.name}
@@ -180,20 +173,27 @@ export default function SwitchLeaderboard() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <span
-                      className={`inline-block px-2 py-1 rounded text-sm font-semibold ${
-                        row.loyalty_score >= 70
-                          ? "bg-emerald-900/40 text-emerald-300"
-                          : row.loyalty_score >= 40
-                            ? "bg-amber-900/40 text-amber-300"
-                            : "bg-red-900/40 text-red-300"
+                      className={`relative group inline-block px-2 py-1 rounded text-sm font-semibold ${
+                        row.loyalty_score === null
+                          ? "bg-slate-700/40 text-slate-400"
+                          : row.loyalty_score >= 70
+                            ? "bg-emerald-900/40 text-emerald-300"
+                            : row.loyalty_score >= 40
+                              ? "bg-amber-900/40 text-amber-300"
+                              : "bg-red-900/40 text-red-300"
                       }`}
-                      title={t("leaderboard.loyalty.hint", {
-                        switches: row.switch_count,
-                        events: row.total_events,
-                        years: row.tenure_years,
-                      })}
+                      aria-describedby={`${tipId}-loyalty-${index}`}
                     >
-                      {row.loyalty_score}
+                      {row.loyalty_score === null ? "—" : row.loyalty_score}
+                      <TooltipText id={`${tipId}-loyalty-${index}`}>
+                        {t("leaderboard.loyalty.denominators", {
+                          switches: row.loyalty_inputs.switch_count,
+                          events: row.loyalty_inputs.total_events_in_scope,
+                          years: row.loyalty_inputs.tenure_years,
+                          weight: row.loyalty_inputs.tenure_weight ?? "—",
+                          status: row.loyalty_status,
+                        })}
+                      </TooltipText>
                     </span>
                   </td>
                   <td className="px-4 py-3 text-slate-400 text-sm">
@@ -212,12 +212,6 @@ export default function SwitchLeaderboard() {
         </div>
       )}
 
-      {rows.length === 0 && !leaderboard.isLoading && !leaderboard.isError && (
-        <div className="text-slate-500">
-          {t("leaderboard.empty", "No switch data available for this scope.")}
-        </div>
-      )}
-
       <div className="mt-6 bg-slate-800/50 rounded p-4 text-sm text-slate-400">
         <h2 className="text-slate-200 font-semibold mb-1">
           {t("leaderboard.methodology", "Methodology")}
@@ -231,7 +225,7 @@ export default function SwitchLeaderboard() {
         <p className="mt-2">
           {t(
             "leaderboard.methodology.loyalty",
-            "Loyalty = 100 × (1 − (switches ÷ total events) × tenure weight), where tenure weight = min(1, career years ÷ 4). 100 means no observed switch in the record.",
+            "Loyalty = 100 × (1 − (switches ÷ total events in scope) × min(1, tenure years ÷ 4)). 100 is the maximum proxy value; any MP with an observed group switch is capped below 100; — means no observed event span in scope.",
           )}
         </p>
         <p className="mt-2">

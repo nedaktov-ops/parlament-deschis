@@ -1,8 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 interface CoverageRow {
   chamber: string;
@@ -33,9 +36,10 @@ function formatDate(value: string | null): string {
 
 export default function SenateHistory() {
   const { t } = useTranslation();
+  const scope = useScope();
 
   const coverage = useQuery({
-    queryKey: ["coverage-detailed"],
+    queryKey: ["coverage-detailed", ...scope.scopeKey],
     queryFn: () => api.coverage_detailed(),
   });
 
@@ -43,15 +47,37 @@ export default function SenateHistory() {
 
   // Never fall back to all-chamber rows: deputy data must not be presented
   // under a Senate heading. If Senate coverage is empty, the table says so.
-  const allRows = rows.filter((r) => r.chamber === "senate");
+  // Legislature is a client-side row filter persisted in the URL.
+  const allRows = rows.filter(
+    (r) => r.chamber === "senate" &&
+      (!scope.legislature || r.legislature === scope.legislature),
+  );
+
+  const view = resolveViewState({
+    isLoading: coverage.isLoading,
+    isError: coverage.isError,
+    isEmpty: coverage.isSuccess && allRows.length === 0,
+  });
+  if (view !== "ready") {
+    return (
+      <AsyncState
+        view={view}
+        pageTitle={t("senate.history", "Senate Historical Coverage")}
+        onRetry={() => void coverage.refetch()}
+        errorLabel={t("senate.history.loadError", "Senate historical coverage could not be loaded.")}
+        emptyTitle={t("senate.history.noData", "No coverage data available")}
+      />
+    );
+  }
 
   return (
-    <div className="wrap space-y-6">
-      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
-        <div className="max-w-7xl mx-auto">
+    <div className="space-y-6">
+      <ScopeControls showLegislature note={t("scope.note.coverage")} />
+      <section className="hero-section" data-enter>
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight">
+              <h1 className="page-title">
                 {t("senate.history", "Senate Historical Coverage")}
               </h1>
               <p className="text-sm text-slate-300 mt-2">
@@ -64,8 +90,8 @@ export default function SenateHistory() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
             <InfoStat
-              label={t("senateStatMembers", "Senate Members")}
-              value={coverage.data?.reduce((acc, r) => acc + r.persons, 0) ?? "--"}
+              label={t("senateStatMembers", "Senate members (this corpus)")}
+              value={allRows.reduce((acc, r) => acc + r.persons, 0)}
               accent="sky"
             />
             <InfoStat
@@ -75,24 +101,22 @@ export default function SenateHistory() {
             />
             <InfoStat
               label={t("senateStatLegislatures", "Legislatures")}
-              value={new Set(rows.map((r) => r.legislature)).size}
+              value={allRows.length}
               accent="amber"
             />
             <InfoStat
-              label={t("senateStatCoverage", "Full Coverage %")}
-              value={
-                rows.filter((r) => r.completeness === "full").length
-              }
-              accent="rose"
+              label={t("senateStatCoverage", "Full-coverage scopes (of {{n}})", { n: allRows.length })}
+              value={allRows.filter((r) => r.completeness === "full").length}
+              accent="emerald"
               showBar={false}
             />
           </div>
           <div className="mt-8 flex items-center gap-4" data-moment>
-            <span className="text-5xl font-black block tracking-tight">
-              {coverage.data?.reduce((acc, r) => acc + r.persons, 0) ?? "--"}
+            <span className="moment-value block">
+              {allRows.reduce((acc, r) => acc + r.persons, 0)}
             </span>
             <span className="text-sm text-slate-400">
-              {t("senateStatMembersLabel", "senate members in corpus")}
+              {t("senateStatMembersLabel", "senate members in this corpus")}
             </span>
           </div>
         </div>
@@ -103,6 +127,14 @@ export default function SenateHistory() {
           </h2>
           <ul className="text-slate-400 list-disc list-inside space-y-1">
             <li>
+              <span role="note">
+              {t(
+                "senate.history.hold",
+                "HOLD (2026-11-21) — historical Senate profiles are NOT ingested. There is no exact senat_guid crosswalk (0 rows) and profiles carry no date of birth, so ingest would require name-only auto-matching, which the project prohibits. Decision: docs/SENATE-PROFILE-IMPACT.md §4.",
+              )}
+              </span>
+            </li>
+            <li>
               {t(
                 "senate.history.gap.pre1990",
                 "Pre-1990: Different regime; outside project scope"
@@ -111,7 +143,7 @@ export default function SenateHistory() {
             <li>
               {t(
                 "senate.history.gap.current",
-                "Current legislature (2024): Only sitemap data available (134 GUIDs)"
+                "Current legislature (2024): GUID discovery only. No senator profiles are archived in this dataset (0 senator_profile fragments); the GUID count from discovery notes is not a corpus count.",
               )}
             </li>
             <li>
@@ -124,26 +156,26 @@ export default function SenateHistory() {
       </div>
 
       <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("senate.history", "Senate Historical Coverage")}>
-        <table className="min-w-full bg-slate-800 rounded-lg overflow-hidden">
+        <table className="min-w-full bg-slate-800 rounded-xl overflow-hidden data-table">
           <thead className="bg-slate-700">
             <tr>
-              <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+              <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                 {t("senate.history.legislature", "Legislature")}
               </th>
-              <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+              <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                 {t("senate.history.period", "Period")}
               </th>
-              <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+              <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                 {t("senate.history.completeness", "Completeness")}
               </th>
-              <th scope="col" className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+              <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
                 {t("senate.history.notes", "Notes")}
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-700">
             {allRows.map((row: CoverageRow) => (
-              <tr key={`${row.chamber}-${row.legislature}`} className="hover:bg-slate-700/50">
+              <tr key={`${row.chamber}-${row.legislature}`}>
                 <th scope="row" className="px-4 py-3 text-slate-200 font-normal text-left">{row.legislature ?? "—"}</th>
                 <td className="px-4 py-3 text-slate-300">
                   {formatDate(row.period_start)} — {formatDate(row.period_end)}
@@ -158,13 +190,6 @@ export default function SenateHistory() {
                 <td className="px-4 py-3 text-slate-400 text-sm">{row.note ?? "—"}</td>
               </tr>
             ))}
-            {allRows.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
-                  {t("senate.history.noData", "No coverage data available")}
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
@@ -202,7 +227,7 @@ export default function SenateHistory() {
         <p className="text-slate-500 text-xs mt-3">
           {t(
             "senate.history.methodology.source",
-            "Source: senat.ro public data, CC-BY 4.0"
+            "Source: senat.ro public data — Open Government Licence (Romania), OGL-ROU-1.0, per the project licence register (pipeline/licenses.py). The derived corpus is licensed CC BY 4.0."
           )}
         </p>
       </div>

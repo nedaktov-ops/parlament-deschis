@@ -213,13 +213,17 @@ def test_generational_shift_excludes_departed_mps_in_legislature_scope(tmp_path)
         add_mp("Departed MP", date(1970, 5, 15), date(2025, 6, 1))
         session.commit()
 
-        evaluated, results = generational_shift(session, legislature="2024")
+        evaluated, results, totals = generational_shift(session, legislature="2024")
 
         assert evaluated == evaluation_date
         assert len(results) == 1
         assert results[0]["party"] == "DP"
         assert results[0]["mps_with_birth_dates"] == 1
         assert results[0]["avg_age"] == 45
+        assert totals["mps_with_birth_date"] == 1
+        assert totals["mps_in_scope"] == 1
+        assert totals["mps_unknown_birth_date"] == 0
+        assert totals["coverage_pct"] == 100.0
     finally:
         session.close()
         engine.dispose()

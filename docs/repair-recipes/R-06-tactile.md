@@ -17,7 +17,7 @@
 
 Eliminate the eight tactile/accessibility defects TA-1…TA-8 in the front-end so that every pointer affordance is a real, focusable, named, keyboard-operable control; every scrollable data region is keyboard-scrollable; every retry action is one 44 px press-target with press feedback; every hover-only native tooltip has a focus-reachable `aria-describedby` equivalent; every canvas/autoplay animation honours `prefers-reduced-motion`; both generic dialogs trap correctly and are named; the `About` component's careful focus management becomes reachable; and static rows stop advertising non-existent actions.
 
-Outcome gates: `npm run lint` + `npm run build` exit 0; `scripts/ui_validate.py` reports **24/24 routes, 0 JS errors, 0 axe violations**; a documented keyboard walk passes. Each is a checkpoint below; none is asserted as already passing by this design.
+Outcome gates: `npm run lint` + `npm run build` exit 0; `scripts/ui_validate.py` reports **24/24 routes, zero JavaScript errors, 0 axe violations**; a documented keyboard walk passes. Each is a checkpoint below; none is asserted as already passing by this design.
 
 ---
 
@@ -462,7 +462,7 @@ Run §8.1 → §8.2 → §8.3 in that order. Capture raw output to `/tmp/opencod
 | C9 | `grep -rln 'useReducedMotion' frontend/src --include=*.tsx \| sort` | 5 files (VoteActivityChart, PartyAgreementMatrix, Ideology, TimelineChart, TimeSlider) | 0 |
 | C10 | `grep -rn 'row-hover' frontend/src/pages --include=*.tsx` | no matches | 1 |
 | C11 (gate) | `cd frontend && npm run build` | `tsc -b && vite build` completes; no TS error | 0 |
-| C12 (gate) | `python3 scripts/ui_validate.py http://127.0.0.1:5180` (with §4.5 servers up) | `UI VALIDATION PASS: 24 routes, 0 JS errors, 0 axe violations` | 0 |
+| C12 (gate) | `python3 scripts/ui_validate.py http://127.0.0.1:5180` (with §4.5 servers up) | `UI VALIDATION PASS: 24 routes, zero JavaScript errors, 0 axe violations` | 0 |
 | C13 (gate) | keyboard walk §8.3 | all rows in the walkthrough marked PASS in the log | 0 |
 
 A grep "no match" is **exit 1** and is the expected result for C4/C5/C6/C7/C10 — do not treat it as a failure.
@@ -488,7 +488,7 @@ cd /home/nedaktov/parlament-deschis
 python3 scripts/ui_validate.py http://127.0.0.1:5180 | tee /tmp/opencode/R06-ui-gate.log
 echo "EXIT=${PIPESTATUS[0]}"
 ```
-Expected final line: `UI VALIDATION PASS: 24 routes, 0 JS errors, 0 axe violations`; exit 0. The per-route table (`ui_validate.py:47-75,156`) must show `[OK]` for all 24. Historical scope caveat: the same gate is 23/24 against the **live** proxy because `/ideology` 404s there (`QA-AND-AXE.md:36-39`) — report the scope (local backend vs live) explicitly. If `/tmp/axe.min.js` is missing or playwright/chromium unavailable, report **NOT PROVEN**, never a pass.
+Expected final line: `UI VALIDATION PASS: 24 routes, zero JavaScript errors, 0 axe violations`; exit 0. The per-route table (`ui_validate.py:47-75,156`) must show `[OK]` for all 24. Historical scope caveat: the same gate is 23/24 against the **live** proxy because `/ideology` 404s there (`QA-AND-AXE.md:36-39`) — report the scope (local backend vs live) explicitly. If `/tmp/axe.min.js` is missing or playwright/chromium unavailable, report **NOT PROVEN**, never a pass.
 
 ### 8.3 Keyboard walk (manual, Tier A; no script exists)
 
@@ -535,7 +535,7 @@ R-06 changes no Python/data, so these should stay green; a failure here is a sid
 - [ ] Traseism's local About is reachable via a visible button; no duplicate `about-title` id; choice (A or B) recorded.
 - [ ] False `row-hover` / `hover:bg` on actionless rows removed; K12 passes.
 - [ ] `npm run lint` and `npm run build` exit 0 with no new warnings.
-- [ ] `ui_validate.py` reports 24/24, 0 JS errors, 0 axe violations **on a named scope**; keyboard walk K1–K12 logged PASS; OR any unrun check is explicitly recorded as **NOT PROVEN** (§14), never as a pass.
+- [ ] `ui_validate.py` reports 24/24, zero JavaScript errors, 0 axe violations **on a named scope**; keyboard walk K1–K12 logged PASS; OR any unrun check is explicitly recorded as **NOT PROVEN** (§14), never as a pass.
 - [ ] No file outside §3.1 was modified (`git status --short` review at handoff).
 
 ---

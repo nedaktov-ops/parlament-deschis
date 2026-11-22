@@ -1,57 +1,98 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { api, type ScorecardEntry } from "../api/client";
-import { DataBar } from "../components/DataViz";
-import Skeleton from "../components/ui/Skeleton";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
+import { DataBar, type DataBarTone } from "../components/DataViz";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
-const LOYALTY_COLOR = (pct: number) => {
-  if (pct >= 90) return "#10b981"; // emerald
-  if (pct >= 70) return "#22c55e"; // green
-  if (pct >= 50) return "#eab308"; // yellow
-  if (pct >= 30) return "#f59e0b"; // amber
-  return "#ef4444"; // rose
+// Thresholds preserved from the previous loyalty-colour helper; intermediate
+// green/yellow steps collapse into the two on-palette semantic tones (success / warning).
+const LOYALTY_TONE = (pct: number): DataBarTone => {
+  if (pct >= 50) return "success";
+  if (pct >= 30) return "warning";
+  return "danger";
 };
 
 export default function Topuri() {
   const { t } = useTranslation();
-  const [minVotes, setMinVotes] = useState(1);
+  const scope = useScope();
+  const navigate = useNavigate({ from: "/topuri" });
+  const minVotesRaw = useSearch({
+    from: "/topuri",
+    select: (s) => Number((s as Record<string, unknown>).minVotes ?? 1),
+  });
+  const minVotes = Number.isFinite(minVotesRaw) ? Math.max(0, minVotesRaw) : 1;
+  const setMinVotes = (value: number) =>
+    navigate({ search: scope.searchFor({ minVotes: value }) });
+
+  const [offset, setOffset] = useState(0);
+  const limit = 100;
+
+  // R-08/W10: derive the scope from the data-bearing scopes published by
+  // /votes (W8); URL scope takes precedence over the corpus default.
+  const scopeProbe = useQuery({
+    queryKey: ["votes-scopes"],
+    queryFn: () => api.votes({ limit: 1 }),
+  });
+  const active = useMemo(() => {
+    const candidates = (scopeProbe.data?.scopes ?? [])
+      .filter((s) => !scope.chamber || s.chamber === scope.chamber)
+      .filter((s) => !scope.legislature || s.legislature === scope.legislature)
+      .sort((a, b) => b.total - a.total);
+    return candidates[0] ?? null;
+  }, [scopeProbe.data, scope.chamber, scope.legislature]);
+  const legislature = active?.legislature ?? undefined;
+  const chamber = active?.chamber ?? "deputies";
+
+  useEffect(() => {
+    setOffset(0);
+  }, [minVotes, legislature, chamber]);
 
   const scorecardQuery = useQuery({
-    queryKey: ["topuri-scorecard", minVotes],
-    queryFn: () =>
-      api.scorecard(undefined, undefined, 100, 0, minVotes),
+    queryKey: ["topuri-scorecard", minVotes, chamber, legislature ?? "*", offset],
+    queryFn: () => api.scorecard(legislature, chamber, limit, offset, minVotes),
+    enabled: scopeProbe.isSuccess && !!legislature,
   });
 
   const entries = useMemo(() => scorecardQuery.data?.data ?? [], [
     scorecardQuery.data,
   ]);
   const dataExists = scorecardQuery.data?.data_exists ?? false;
+  const total = scorecardQuery.data?.total ?? 0;
+  const shownFrom = total === 0 ? 0 : offset + 1;
+  const shownTo = Math.min(offset + limit, total);
 
-  if (scorecardQuery.isLoading) {
+  const view = resolveViewState({
+    isLoading: scopeProbe.isLoading || scorecardQuery.isLoading,
+    isError: scopeProbe.isError || scorecardQuery.isError,
+    isEmpty: scopeProbe.isSuccess && (!legislature
+      || (scorecardQuery.isSuccess && (!dataExists || entries.length === 0))),
+  });
+  if (view !== "ready") {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <h1 className="sr-only">{t("view.topuri.title", "MP behavioural scorecard")}</h1>
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="mt-2 h-4 w-64" />
-        <p className="mt-2 text-sm text-slate-500">{t("loading", "Loading…")}</p>
-      </div>
-    );
-  }
-
-  if (scorecardQuery.isError) {
-    return (
-      <div className="text-red-400 text-sm py-6 text-center">
-        <h1 className="sr-only">{t("view.topuri.title", "MP behavioural scorecard")}</h1>
-        {t("view.voturi.loadError", "Failed to load votes.")}
-      </div>
+      <AsyncState
+        view={view}
+        pageTitle={t("view.topuri.title", "MP behavioural scorecard")}
+        onRetry={() => {
+          void scopeProbe.refetch();
+          void scorecardQuery.refetch();
+        }}
+        errorLabel={t("view.topuri.loadError", "The behavioural scorecard could not be loaded.")}
+        emptyTitle={dataExists
+          ? t("topuri.empty", "No behavioural data available yet for the selected scope.")
+          : t("empty.rollcall", "Roll-call vote data is not yet available for this legislature.")}
+      />
     );
   }
 
   return (
     <div className="space-y-6">
+      <ScopeControls showChamber showLegislature note={t("scope.note.scorecard")} />
       <section className="py-2" data-enter>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100">
+        <h1 className="page-title">
           {t("view.topuri.title", "MP behavioural scorecard")}
         </h1>
         <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-3xl">
@@ -59,6 +100,16 @@ export default function Topuri() {
             "view.topuri.intro",
             "Rank MPs by loyalty / rebellion / participation on roll-call votes.",
           )}
+        </p>
+        <p className="mt-2 text-xs text-slate-400" aria-live="polite">
+          {t("view.topuri.scopeNote", "Scope: {{chamber}} / {{legislature}} — {{total}} votes. Showing {{from}}–{{to}} of {{n}} MPs.", {
+            chamber: active?.chamber ?? "—",
+            legislature: legislature ?? "—",
+            total: active?.total ?? 0,
+            from: shownFrom,
+            to: shownTo,
+            n: total,
+          })}
         </p>
       </section>
 
@@ -76,36 +127,21 @@ export default function Topuri() {
               className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500"
             />
           </label>
-          <div className="text-xs text-slate-400">
-            {entries.length} MPs shown
+          <div className="text-xs text-slate-400" aria-live="polite">
+            {t("view.topuri.page", "Showing {{from}}–{{to}} of {{total}} MPs", {
+              from: shownFrom,
+              to: shownTo,
+              total,
+            })}
           </div>
         </div>
 
-        {scorecardQuery.isLoading && (
-          <div className="text-slate-500 text-sm py-6">
-            {t("loading", "Loading…")}
-          </div>
-        )}
-        {scorecardQuery.isError && (
-          <div className="text-red-400 text-sm py-6">
-            {t("view.voturi.loadError", "Failed to load votes.")}
-          </div>
-        )}
-
-        {!scorecardQuery.isLoading && !scorecardQuery.isError && entries.length === 0 && (
-          <div className="text-slate-500 text-sm py-6 text-center">
-            {dataExists
-              ? t("topuri.empty", "No behavioural data available yet for the selected scope.")
-              : t("empty.rollcall", "Roll-call vote data is not yet available for this legislature.")}
-          </div>
-        )}
-
-        {!scorecardQuery.isLoading && !scorecardQuery.isError && entries.length > 0 && (
-          <div className="overflow-x-auto">
+        <>
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("view.topuri.title", "Top MPs")}>
             <table
               role="table"
               aria-label="MP behavioural scorecard: loyalty, rebellion and participation per MP"
-              className="min-w-full text-sm"
+              className="min-w-full text-sm data-table"
             >
               <caption className="sr-only">
                 MP behavioural scorecard: loyalty, rebellion and participation per MP
@@ -142,18 +178,22 @@ export default function Topuri() {
                       {e.total_votes}
                     </td>
                     <td className="py-2.5 pr-4 text-right">
-                      <div className="flex items-center gap-2">
-                        <DataBar value={e.loyalty_pct} max={100} color={LOYALTY_COLOR(e.loyalty_pct)} />
-                        <span className="text-slate-300 tabular-nums w-8">
-                          {e.loyalty_pct}%
-                        </span>
-                      </div>
+                      {e.loyalty_pct === null ? (
+                        <span className="text-slate-400">—</span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <DataBar value={e.loyalty_pct} max={100} tone={LOYALTY_TONE(e.loyalty_pct)} />
+                          <span className="text-slate-300 tabular-nums w-8">
+                            {e.loyalty_pct}%
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
-                      {e.rebellion_pct}%
+                      {e.rebellion_pct === null ? "—" : `${e.rebellion_pct}%`}
                     </td>
                     <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
-                      {e.participation_pct}%
+                      {e.participation_pct === null ? "—" : `${e.participation_pct}%`}
                     </td>
                     <td className="py-2.5 pr-4 text-slate-300 font-mono text-xs">
                       {e.party ?? "—"}
@@ -163,12 +203,50 @@ export default function Topuri() {
               </tbody>
             </table>
           </div>
-        )}
+          <p role="note" className="mt-2 text-xs text-slate-400">
+            {t(
+              "topuri.denominators",
+              "Loyalty/rebellion denominator: {{alignment}} yes/no positions with a party majority (abstain/not-voting excluded). Participation denominator: {{participation}} votes in scope.",
+              {
+                alignment: scorecardQuery.data?.data[0]?.denominators.alignment ?? "—",
+                participation: scorecardQuery.data?.data[0]?.denominators.participation ?? "—",
+              },
+            )}
+        </p>
+        <div className="mt-4 flex items-center justify-end gap-3 text-xs text-slate-400">
+          <button
+            type="button"
+            disabled={offset === 0}
+            onClick={() => setOffset((o) => Math.max(0, o - limit))}
+            className="rounded border border-slate-600 px-3 py-1.5 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+          >
+            {t("view.topuri.prev", "Previous")}
+          </button>
+          <span aria-live="polite">
+            {t("view.topuri.page", "Showing {{from}}–{{to}} of {{total}} MPs", {
+              from: shownFrom,
+              to: shownTo,
+              total,
+            })}
+          </span>
+          <button
+            type="button"
+            disabled={offset + limit >= total}
+            onClick={() => setOffset((o) => o + limit)}
+            className="rounded border border-slate-600 px-3 py-1.5 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+          >
+            {t("view.topuri.next", "Next")}
+          </button>
+        </div>
+        </>
       </section>
 
       <section className="text-xs text-slate-500 mt-2 max-w-3xl">
         <p>
-          {t("view.topuri.note", "Loyalty = share of votes where the MP voted with their party's majority. Rebellion = share against it. Participation = share of all votes in scope the MP cast a position for. Derived from observed roll-call positions only.")}
+          {t("view.topuri.note", "Loyalty = share of yes/no votes with the party majority. Rebellion = share of yes/no votes against it. Abstain and not-voting are excluded from both and reported separately. Participation = share of votes in scope with a recorded position.")}
+        </p>
+        <p role="note" className="mt-2">
+          {t("scope.note.positionsIncomplete")}
         </p>
       </section>
     </div>

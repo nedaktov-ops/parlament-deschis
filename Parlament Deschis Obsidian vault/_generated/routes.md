@@ -7,9 +7,9 @@ status: active
 authority: mirror
 tags: [type/reference, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py, backend/routers/api.py, backend/main.py]
-created: 2026-11-21T16:54:22+02:00
-updated: 2026-11-21T16:54:22+02:00
-source_commit: 58a9752ef4f1a995bb38c8fbfa8c922bd5c28b5d
+created: 2026-11-22T15:56:55+02:00
+updated: 2026-11-22T15:56:55+02:00
+source_commit: a20c4190a8a23b9079a9c55fe908ff829d790392
 generated: true
 generator: scripts/vault_sync.py
 ---
@@ -20,7 +20,7 @@ generator: scripts/vault_sync.py
 
 Extracted from the source-commit versions of `backend/routers/api.py` and `backend/main.py`.
 
-Route decorators found: 50.
+Route decorators found: 51.
 
 | Method | Path | Source |
 |---|---|---|
@@ -49,6 +49,7 @@ Route decorators found: 50.
 | `GET` | `/coverage` | `backend/routers/api.py` |
 | `GET` | `/coverage/detailed` | `backend/routers/api.py` |
 | `GET` | `/coverage/dimensions` | `backend/routers/api.py` |
+| `GET` | `/coverage/summary` | `backend/routers/api.py` |
 | `GET` | `/dashboard/stats` | `backend/routers/api.py` |
 | `GET` | `/events/recent` | `backend/routers/api.py` |
 | `GET` | `/evidence/{evidence_id}` | `backend/routers/api.py` |

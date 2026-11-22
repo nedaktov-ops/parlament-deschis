@@ -4,6 +4,8 @@ import { get } from "../api/client";
 import HeroGraphic from "../components/HeroGraphic";
 import { InfoStat } from "../components/InfoStat";
 import { Sparkline, ProgressRing } from "../components/DataViz";
+import ScopeControls from "../components/ScopeControls";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 interface ReportTopSwitcher {
   person_id: string;
@@ -71,7 +73,7 @@ export default function Report() {
     queryFn: fetchReport,
   });
 
-  const d = report.data;
+  const d = report.data!;
 
   const statMax = d
     ? Math.max(
@@ -91,24 +93,46 @@ export default function Report() {
         ? "text-amber-600 print:text-amber-700"
         : "text-slate-500";
 
-  const completenessValue = (c: string): number =>
-    c === "full" ? 100 : c === "partial" ? 60 : 0;
-
-  const completenessRingColor = (c: string): string =>
+  // R-04/R-08: `partial`/`none` are states, never percentages. Only `full`
+  // gets a ring; the other states get explicit text with no numeric affordance.
+  const completenessText = (c: string): string =>
     c === "full"
-      ? "stroke-emerald-400"
-      : c === "partial"
-        ? "stroke-amber-400"
-        : "stroke-slate-400";
+      ? "full"
+      : t(
+          "report.coverageNoPct",
+          "{{status}} — no completeness percentage is published",
+          { status: c },
+        );
+
+  const view = resolveViewState({
+    isLoading: report.isLoading,
+    isError: report.isError,
+    isEmpty: report.isSuccess && !report.data,
+  });
+  if (view !== "ready") {
+    return (
+      <AsyncState
+        view={view}
+        pageTitle={t("report.title", "Transparency Report")}
+        onRetry={() => void report.refetch()}
+        loadingLabel={t("report.loadingTitle", "Loading report…")}
+        loadingDescription={t("report.loadingDesc", "Compiling the transparency corpus. This may take a moment.")}
+        errorLabel={t("report.errorTitle", "Failed to load report")}
+        errorDescription={t("report.errorDesc", "We couldn't load the transparency report.")}
+      />
+    );
+  }
 
   return (
-    <div className="wrap py-6 print:p-0">
+    <div className="py-6 print:p-0">
+      {/* Deliberately unscoped endpoint (exports.py); honest disclosure only. */}
+      <ScopeControls note={t("scope.note.report", { generated_at: d?.generated_at ?? "—" })} />
       <div
         className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 lg:gap-10 mb-8 sm:mb-10 print:mb-4 print:block"
         data-enter
       >
         <div className="flex-1 min-w-0 space-y-3">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-100 print:text-slate-900">
+          <h1 className="page-title print:text-slate-900">
             {t("report.title", "Transparency Report")}
           </h1>
           <p className="text-slate-400 print:text-slate-600 text-sm sm:text-base mt-1 max-w-2xl leading-relaxed">
@@ -125,11 +149,11 @@ export default function Report() {
           )}
           {d && (
             <div className="mt-6 sm:mt-8 pt-6 border-t border-slate-800/80 print:border-slate-200" data-moment>
-              <span className="text-5xl sm:text-6xl font-black block tracking-tight text-slate-100 print:text-slate-900">
+              <span className="moment-value block print:text-slate-900">
                 {d.totals.persons.toLocaleString()}
               </span>
               <span className="text-sm sm:text-base text-slate-400 print:text-slate-600 mt-1 block">
-                {t("report.deputiesCount", "deputies in the corpus")}
+                {t("report.peopleCount", "people in the corpus")}
               </span>
             </div>
           )}
@@ -155,80 +179,6 @@ export default function Report() {
         </div>
       </div>
 
-      {report.isLoading && (
-        <div
-          role="status"
-          aria-label={t("report.loadingTitle", "Loading report…")}
-          className="flex flex-col items-center justify-center gap-3 py-12 text-slate-400"
-        >
-          <svg
-            className="w-12 h-12 text-sky-400"
-            aria-hidden="true"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            ></path>
-          </svg>
-          <h2 className="font-semibold text-slate-200">
-            {t("report.loadingTitle", "Loading report…")}
-          </h2>
-          <p className="text-sm text-slate-500 text-center max-w-xs">
-            {t(
-              "report.loadingDesc",
-              "Compiling the transparency corpus. This may take a moment.",
-            )}
-          </p>
-          <button
-            type="button"
-            onClick={() => report.refetch()}
-            className="mt-3 bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
-          >
-            {t("report.refresh", "Refresh")}
-          </button>
-        </div>
-      )}
-      {report.isError && (
-        <div
-          role="alert"
-          aria-label={t("report.errorTitle", "Failed to load report")}
-          className="flex flex-col items-center justify-center gap-3 py-12 text-slate-400"
-        >
-          <svg
-            className="w-12 h-12 text-red-400"
-            aria-hidden="true"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            ></path>
-          </svg>
-          <h2 className="font-semibold text-slate-200">
-            {t("report.errorTitle", "Failed to load report")}
-          </h2>
-          <p className="text-sm text-slate-500 text-center max-w-xs">
-            {t("report.errorDesc", "We couldn't load the transparency report.")}
-          </p>
-          <button
-            type="button"
-            onClick={() => report.refetch()}
-            className="mt-3 bg-sky-700 hover:bg-sky-800 text-white px-4 py-2 rounded text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
-          >
-            {t("report.retry", "Retry")}
-          </button>
-        </div>
-      )}
-
       {d && (
         <>
           <div className="bg-slate-800/30 rounded-xl p-4 sm:p-5 mb-6 print:bg-transparent print:p-0">
@@ -253,7 +203,7 @@ export default function Report() {
                   max={statMax}
                 />
                 <InfoStat
-                  label={t("report.switches", "Party switches")}
+                  label={t("report.groupSwitches", "Group switches (switch_group events)")}
                   value={d.totals.switches}
                   max={statMax}
                 />
@@ -269,6 +219,9 @@ export default function Report() {
                   barValue={d.totals.persons_with_birth_date}
                 />
               </div>
+              <p role="note" className="mt-3 text-xs text-slate-500 print:text-slate-600">
+                {t("groupSwitchesOnly", "Group switches only (switch_group); see /api/dashboard/stats for all events.")}
+              </p>
             </section>
 
             <section className="mb-0">
@@ -281,7 +234,7 @@ export default function Report() {
                 role="region"
                 aria-label={t("report.topSwitchers", "Top party switchers")}
               >
-                <table className="min-w-full text-sm">
+                <table className="min-w-full text-sm data-table">
                   <thead>
                     <tr className="text-left text-slate-400 print:text-slate-600 border-b border-slate-700 print:border-slate-300">
                       <th scope="col" className="py-1 pr-3">{t("report.col.mp", "MP")}</th>
@@ -406,13 +359,16 @@ export default function Report() {
               <h2 className="font-semibold text-slate-200 print:text-slate-900 mb-2">
                 {t("report.coverage", "Data coverage")}
               </h2>
+              <p className="mb-2 text-xs text-slate-500 print:text-slate-600">
+                {t("report.coverageNote", "'partial' means incomplete data, not a numeric percentage.")}
+              </p>
               <div
                 className="overflow-x-auto max-w-full"
                 tabIndex={0}
                 role="region"
                 aria-label={t("report.coverage", "Data coverage")}
               >
-                <table className="min-w-full text-sm">
+                <table className="min-w-full text-sm data-table">
                   <thead>
                     <tr className="text-left text-slate-400 print:text-slate-600 border-b border-slate-700 print:border-slate-300">
                       <th scope="col" className="py-1 pr-3">
@@ -445,14 +401,16 @@ export default function Report() {
                                 c.completeness,
                               )}`}
                             >
-                              {c.completeness}
+                              {completenessText(c.completeness)}
                             </span>
-                            <ProgressRing
-                              value={completenessValue(c.completeness)}
-                              max={100}
-                              size={22}
-                              color={completenessRingColor(c.completeness)}
-                            />
+                            {c.completeness === "full" && (
+                              <ProgressRing
+                                value={100}
+                                max={100}
+                                size={22}
+                                color="stroke-emerald-400"
+                              />
+                            )}
                           </div>
                         </td>
                       </tr>

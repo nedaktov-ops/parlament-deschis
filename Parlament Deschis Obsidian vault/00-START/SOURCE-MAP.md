@@ -8,7 +8,7 @@ authority: derived
 tags: [type/source-map, lifecycle/active, domain/project]
 source_paths: [docs/POST-INITIAL-AUDIT-2026-11-21.md, docs/GAP-ANALYSIS-2026-11-21.md, docs/AUDIT-RESOLUTIONS-2026-11-21.md, docs/COMPREHENSIVE-REVIEW-2026-11-21.md]
 created: 2026-11-21
-updated: 2026-11-21
+updated: 2026-11-22
 source_commit: 6fd6028
 verified: 2026-11-21
 ---
@@ -51,8 +51,10 @@ Status vocabulary in the table: `active` (current truth), `stale` (newer source 
 | 28 | [DASHBOARD-VERIFICATION-2026-11-19](../60-EVIDENCE/DASHBOARD-VERIFICATION-2026-11-19.md) | 60-EVIDENCE | `docs/DASHBOARD-VERIFICATION.md` (dated addendum — scope-limited) | stale |
 | 29 | [STRATEGY-BLUEPRINTS-HISTORICAL](../70-ARCHIVE/STRATEGY-BLUEPRINTS-HISTORICAL.md) | 70-ARCHIVE | `docs/MASTER-STRATEGY.md`; `docs/MASTER-INTEGRATION-BLUEPRINT.md`; `docs/MASTER-INTEGRATION-BLUEPRINT-WAVE2.md`; `docs/STRATEGY-TRANSPARENCY.md` | archived / historical |
 | 30 | [COMPLETION-CERTIFICATE](../70-ARCHIVE/COMPLETION-CERTIFICATE.md) | 70-ARCHIVE | `COMPLETION-CERTIFICATE.md` (gitignored, outside the truth gate; self-withdrawn) | archived / superseded |
+| 31 | [GITHUB-TOOLING-INVENTORY-2026-11-22](../50-RESEARCH/GITHUB-TOOLING-INVENTORY-2026-11-22.md) | 50-RESEARCH | external: GitHub REST API and live repository pages, read 2026-11-22 (no repo path authoritative; curation claims marked NOT PROVEN in the note) | unverified |
+| 32 | [DEEP-DIVE-REDESIGN-2026-11-22](../50-RESEARCH/DEEP-DIVE-REDESIGN-2026-11-22.md) | 50-RESEARCH | `frontend/src/pages/LiveDashboard.tsx`; `frontend/src/components/{PartyNetwork,SwitchTimeline,CrossChamberFlow,LiveFeed}.tsx`; `frontend/src/i18n.ts` | derived |
 
-`AGENTS.md` in this folder is the machine-readable operating contract, not a content note; it is self-authoring and is not counted in the 30 notes above.
+`AGENTS.md` in this folder is the machine-readable operating contract, not a content note; it is self-authoring and is not counted in the 32 notes above.
 
 ## Conventions
 

@@ -29,6 +29,7 @@ export default function EmptyState({
 }: EmptyStateProps) {
   return (
     <div
+      aria-live="polite"
       className={`flex flex-col items-center justify-center py-12 max-w-xs mx-auto text-center ${className ?? ""}`}
     >
       <div aria-hidden="true" className="text-slate-400 mb-6">{icon}</div>
@@ -42,7 +43,7 @@ export default function EmptyState({
         <button
           type="button"
           onClick={onCta}
-          className="btn mt-4 bg-slate-700 hover:bg-slate-600"
+          className="btn btn-hover min-h-11 mt-4 bg-slate-700 hover:bg-slate-600"
           aria-label={ctaLabel}
         >
           {ctaLabel}

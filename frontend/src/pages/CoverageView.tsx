@@ -1,10 +1,12 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { api } from "../api/client";
+import { api, type CoverageDimension } from "../api/client";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
-import { ProgressRing } from "../components/DataViz";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 function completenessClass(value: string): string {
   if (value === "full") return "bg-emerald-900/50 text-emerald-300";
@@ -22,81 +24,117 @@ function fmtDate(value: string | null | undefined): string {
   return value;
 }
 
+function DimensionCell({
+  d,
+  labelT,
+}: {
+  d: CoverageDimension;
+  labelT: (key: string) => string;
+}) {
+  return (
+    <td className="py-1.5 pr-3 align-top">
+      <span className={`rounded px-2 py-0.5 ${completenessClass(d.status)}`}>{labelT(d.status)}</span>
+      <span className="ml-2 tabular-nums">
+        {d.count}{d.total != null ? ` / ${d.total}` : ""}
+      </span>
+      <div className="text-slate-500 text-xs">{d.note ?? "—"}</div>
+    </td>
+  );
+}
+
 export default function CoverageView() {
   const { t } = useTranslation();
+  const scope = useScope();
 
   const coverage = useQuery({
-    queryKey: ["coverage-detailed"],
+    queryKey: ["coverage-detailed", ...scope.scopeKey],
     queryFn: () => api.coverage_detailed(),
   });
 
-  const rows = useMemo(() => coverage.data ?? [], [coverage.data]);
-  const totals = useMemo(() => {
-    const totalMemberships = rows.reduce((sum, r) => sum + r.total_memberships, 0);
-    const datedMemberships = rows.reduce(
-      (sum, r) => sum + Math.round(((r.dated_pct ?? 0) / 100) * r.total_memberships),
-      0,
-    );
-    const totalSwitches = rows.reduce((sum, r) => sum + r.total_switches, 0);
-    const sourcedSwitches = rows.reduce(
-      (sum, r) =>
-        sum + Math.round(((r.sourced_switches_pct ?? 0) / 100) * r.total_switches),
-      0,
-    );
-    return {
-      totalMemberships,
-      datedMemberships,
-      totalSwitches,
-      sourcedSwitches,
-    };
-  }, [rows]);
+  // R-08: the dimensions endpoint is the primary view. Mandates, votes and
+  // biographies are independent; no overall percentage is averaged or inferred.
+  const dimensions = useQuery({
+    queryKey: ["coverage-dimensions", ...scope.scopeKey],
+    queryFn: api.coverageDimensions,
+  });
 
-  const chamberCount = useMemo(() => new Set(rows.map((r) => r.chamber)).size, [rows]);
-  const legislatureCount = useMemo(
-    () => new Set(rows.map((r) => r.legislature).filter(Boolean)).size,
-    [rows],
+  // Chamber/legislature are client-side row filters on the data-availability
+  // matrix; the endpoint itself takes no scope params.
+  const rows = useMemo(
+    () => (coverage.data ?? []).filter(
+      (r) =>
+        (!scope.chamber || r.chamber === scope.chamber) &&
+        (!scope.legislature || r.legislature === scope.legislature),
+    ),
+    [coverage.data, scope.chamber, scope.legislature],
   );
-  const fullCount = rows.filter((r) => r.completeness === "full").length;
-  const partialCount = rows.filter((r) => r.completeness === "partial").length;
-  const fullPct = rows.length > 0 ? (fullCount / rows.length) * 100 : 0;
-  const partialPct = rows.length > 0 ? (partialCount / rows.length) * 100 : 0;
-  const overallPct =
-    totals.totalMemberships > 0
-      ? (totals.datedMemberships / totals.totalMemberships) * 100
-      : 0;
+  const dimRows = useMemo(
+    () => (dimensions.data ?? []).filter(
+      (r) =>
+        (!scope.chamber || r.chamber === scope.chamber) &&
+        (!scope.legislature || r.legislature === scope.legislature),
+    ),
+    [dimensions.data, scope.chamber, scope.legislature],
+  );
 
-  if (coverage.isLoading) {
-    return (
-      <div className="card p-4">
-        <div className="text-slate-500 text-sm py-8">{t("loading")}</div>
-      </div>
-    );
-  }
+  // R-04: corpus-wide aggregates stay backed by the API's raw integer counts,
+  // never by back-computing rows from rounded percentages.
+  const summary = useQuery({
+    queryKey: ["coverage-summary"],
+    queryFn: () => api.coverageSummary(),
+  });
+  const totals = useMemo(
+    () => ({
+      totalCount: summary.data?.totals?.memberships ?? null,
+      datedCount: summary.data?.totals?.memberships_dated ?? null,
+      switchesCount: summary.data?.totals?.switches_all ?? null,
+      sourcedCount: summary.data?.totals?.switches_sourced ?? null,
+    }),
+    [summary.data],
+  );
 
-  if (coverage.isError) {
+  const chamberCount = useMemo(() => new Set(dimRows.map((r) => r.chamber)).size, [dimRows]);
+  const legislatureCount = useMemo(
+    () => new Set(dimRows.map((r) => r.legislature).filter(Boolean)).size,
+    [dimRows],
+  );
+  const fullMandateCount = dimRows.filter((r) => r.mandates.status === "full").length;
+  const partialMandateCount = dimRows.filter((r) => r.mandates.status === "partial").length;
+  const voteScopeCount = dimRows.filter((r) => r.votes.status !== "none").length;
+  const entryCount = dimRows.length;
+
+  const view = resolveViewState({
+    isLoading: coverage.isLoading || dimensions.isLoading,
+    isError: coverage.isError || dimensions.isError,
+    isEmpty: coverage.isSuccess && dimensions.isSuccess && dimRows.length === 0,
+  });
+  if (view !== "ready") {
     return (
-      <div className="card p-4">
-        <div role="alert" className="text-rose-200 text-sm py-8">
-          {t("coverageLoadError")}
-          <button type="button"className="ml-3 underline" onClick={() => coverage.refetch()}>
-            {t("traseismRetry")}
-          </button>
-        </div>
-      </div>
+      <AsyncState
+        view={view}
+        pageTitle={t("coverageTitle")}
+        onRetry={() => {
+          void coverage.refetch();
+          void dimensions.refetch();
+        }}
+        errorLabel={t("coverageLoadError")}
+        emptyTitle={t("coverage.empty", "There are no coverage records for this scope.")}
+      />
     );
   }
 
   return (
-    <div className="wrap space-y-6">
+    <div className="space-y-6">
+      <ScopeControls showChamber showLegislature note={t("scope.note.coverage")} />
       {/* Section 1: Hero — fills the first screen alone */}
-      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
-        <div className="max-w-7xl mx-auto">
+      <section className="hero-section" data-enter>
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight">{t("coverageTitle")}</h1>
+              <h1 className="page-title">{t("coverageTitle")}</h1>
               <p className="text-sm text-slate-400">{t("coverageDesc")}</p>
 
-              {/* InfoStat cards */}
+              {/* Count-only headline cards: no derived percentage is shown. */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
                 <InfoStat
                   label={t("coverageStatChambers", "Chambers")}
@@ -109,31 +147,31 @@ export default function CoverageView() {
                   accent="emerald"
                 />
                 <InfoStat
-                  label={t("coverageStatFullCoverage", "Full coverage")}
-                  value={fullPct}
-                  max={100}
+                  label={t("coverageStatFullCoverage", "Scopes with full mandates")}
+                  value={fullMandateCount}
                   accent="emerald"
                 />
                 <InfoStat
-                  label={t("coverageStatPartialCoverage", "Partial coverage")}
-                  value={partialPct}
-                  max={100}
+                  label={t("coverageStatPartialCoverage", "Scopes with votes recorded")}
+                  value={voteScopeCount}
                   accent="amber"
                 />
               </div>
 
-              {/* Progress ring — overall coverage */}
-              <div className="mt-6 flex items-center gap-4">
-                <ProgressRing value={overallPct} size={56} />
-                <div>
-                  <div className="text-sm font-bold text-slate-100">
-                    {overallPct.toFixed(0)}%
-                  </div>
-                  <div className="text-xs text-slate-400">
-                    {t("coverageOverallLabel", "Overall coverage")}
-                  </div>
-                </div>
-              </div>
+              <p role="note" className="mt-6 text-xs text-slate-400 max-w-3xl">
+                {t(
+                  "coverageDimensionsNote",
+                  "Dimensions are reported separately. A scope with full mandates is not claimed to have full votes or biographies. Counts and notes come from /api/coverage/dimensions; no overall percentage is averaged or inferred.",
+                )}
+              </p>
+              <p role="note" className="mt-2 text-xs text-slate-400">
+                {t("coverageRawCounts", "Members with a start date: {{dated}} / {{total}}; switch events with a source: {{sourced}} / {{switches}}.", {
+                  dated: totals.datedCount ?? "—",
+                  total: totals.totalCount ?? "—",
+                  sourced: totals.sourcedCount ?? "—",
+                  switches: totals.switchesCount ?? "—",
+                })}
+              </p>
             </div>
             <div className="w-full md:w-auto max-w-[260px]">
               <HeroGraphic variant="overview" className="mx-auto" />
@@ -142,8 +180,8 @@ export default function CoverageView() {
 
           {/* Dealt moment — total coverage entries */}
           <div className="mt-8 flex items-center gap-4" data-moment>
-            <span className="text-5xl font-black block tracking-tight">
-              {rows.length}
+            <span className="moment-value block">
+              {entryCount}
             </span>
             <span className="text-sm text-slate-400">
               {t("coverageStatEntries", "coverage entries")}
@@ -152,17 +190,73 @@ export default function CoverageView() {
         </div>
       </section>
 
-      {/* Section 2: Coverage table (existing) */}
-      <section className="wrap space-y-4">
+      {/* Section 2: per-dimension table (primary view) */}
+      <section className="space-y-4">
         <div className="card p-4">
-          {/* Per-scope table */}
+          <h2 className="text-lg font-semibold text-slate-100 mb-3">
+            {t("coverageDimensionsTitle", "Coverage by dimension")}
+          </h2>
+          <div
+            className="overflow-x-auto max-w-full"
+            tabIndex={0}
+            role="region"
+            aria-label={t("coverageDimensionsTitle", "Coverage by dimension")}
+          >
+            <table className="w-full data-table border-collapse">
+              <caption className="sr-only">{t("coverageDimensionsTitle", "Coverage by dimension")}</caption>
+              <thead>
+                <tr className="text-left text-slate-500">
+                  <th scope="col" className="py-1 pr-3 font-medium">{t("chamber")}</th>
+                  <th scope="col" className="py-1 pr-3 font-medium">{t("legislature")}</th>
+                  <th scope="col" className="py-1 pr-3 font-medium">{t("period")}</th>
+                  <th scope="col" className="py-1 pr-3 font-medium">{t("coverageDimMandates", "Mandates")}</th>
+                  <th scope="col" className="py-1 pr-3 font-medium">{t("coverageDimVotes", "Votes")}</th>
+                  <th scope="col" className="py-1 pr-3 font-medium">{t("coverageDimBiographies", "Biographies")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dimRows.map((row) => (
+                  <tr
+                    key={`dim-${row.chamber}-${row.legislature}`}
+                    className="border-t border-slate-700/60 align-top"
+                  >
+                    <td className="py-1.5 pr-3 text-slate-200">
+                      {row.chamber === "deputies" ? t("deputies") : t("senate")}
+                    </td>
+                    <td className="py-1.5 pr-3 font-mono text-slate-300">{row.legislature ?? "—"}</td>
+                    <td className="py-1.5 pr-3 font-mono text-slate-300">
+                      {fmtDate(row.period_start)} → {fmtDate(row.period_end)}
+                    </td>
+                    <DimensionCell d={row.mandates} labelT={t} />
+                    <DimensionCell d={row.votes} labelT={t} />
+                    <DimensionCell d={row.biographies} labelT={t} />
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-xs text-slate-500">
+            {t("coverageDimensionsNote", "Dimensions are reported separately. A scope with full mandates is not claimed to have full votes or biographies. Counts and notes come from /api/coverage/dimensions; no overall percentage is averaged or inferred.")}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            {t("coveragePartialMandateCount", "Scopes with partial mandates: {{n}}.", { n: partialMandateCount })}
+          </p>
+        </div>
+      </section>
+
+      {/* Section 3: existing mandate detail table */}
+      <section className="space-y-4">
+        <div className="card p-4">
+          <h2 className="text-lg font-semibold text-slate-100 mb-3">
+            {t("coverageMandateDetail", "Mandate detail")}
+          </h2>
           <div
             className="overflow-x-auto max-w-full"
             tabIndex={0}
             role="region"
             aria-label={t("coverageTableCaption")}
           >
-            <table className="w-full text-xs border-collapse">
+            <table className="w-full data-table border-collapse">
               <caption className="sr-only">{t("coverageTableCaption")}</caption>
               <thead>
                 <tr className="text-left text-slate-500">
@@ -192,6 +286,9 @@ export default function CoverageView() {
                   </th>
                   <th scope="col" className="py-1 pr-3 font-medium text-right">
                     {t("lastRefresh")}
+                  </th>
+                  <th scope="col" className="py-1 pr-3 font-medium text-right">
+                    {t("prov.note")}
                   </th>
                 </tr>
               </thead>
@@ -234,6 +331,9 @@ export default function CoverageView() {
                       </td>
                       <td className="py-1.5 pr-3 font-mono text-slate-300 text-right">
                         {fmtDate(row.last_refresh)}
+                      </td>
+                      <td className="py-1.5 pr-3 text-xs text-slate-400 text-right">
+                        {row.note ?? "—"}
                       </td>
                     </tr>
                   );

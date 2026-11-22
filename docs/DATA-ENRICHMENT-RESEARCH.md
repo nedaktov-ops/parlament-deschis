@@ -39,6 +39,13 @@ This document supersedes the stale parts of `docs/RESEARCH.md` (dated 2025-11-12
 
 **A critical warning:** several excellent sources are **non-commercial only** (IPU, OpenSanctions) or **ShareAlike** (V-Dem, some academic sets). They are fine for *checking* our numbers, but their rows must not be copied into our CC-BY dataset. Section 5 gives the exact rules.
 
+> **Note (2026-11-21):** Party genealogy is formally dropped. No licence-complete source
+> declares an ID-addressable predecessor/successor relation for Romanian parties
+> (Wikidata zero references, Party Facts incomplete, PolPaL NOT PROVEN, SER-PROM
+> ShareAlike). The schema columns `previous_party_id`/`successor_party_id` remain
+> but are documented as unused. See `docs/METHODOLOGY.md` §9.5 and
+> `docs/DECISION-PARTY-GENEALOGY.md`.
+
 ---
 
 ## 1. What the project actually contains today (verified, not assumed)
