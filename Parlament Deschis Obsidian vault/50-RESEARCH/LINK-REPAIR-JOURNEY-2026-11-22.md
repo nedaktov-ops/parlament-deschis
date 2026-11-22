@@ -1287,6 +1287,17 @@ Authorisation (GREEN only — reproduce verbatim):
   "Integration authorised: wave W10 is GREEN on the evidence cited above; the lead may merge repair/links-w10 into repair/links-base with git merge --ff-only."
 ```
 
+## Wave W11 — parallel F1/F2 follow-ups (L-23, L-24)
+
+**Code evidence — entry:** branch `repair/links-w11`, entry HEAD
+`bf322770d6ba5c8cdd739bf9b4dc766eb1646b28`, clean tree. Backup ROOT
+`/tmp/opencode/backups/link-repair/W11`; `git bundle verify`, `tar -tzf` and
+`sha256sum -c` all exited 0 (`pre.bundle / pre.sha / pre.status / worktree.tgz: OK`).
+Recipes and parallel protocol:
+[LINK-FOLLOWUP-PARALLEL-RECIPES](../20-DIRECTION/LINK-FOLLOWUP-PARALLEL-RECIPES-2026-11-22.md).
+
+_Two agent diffs, shared gate, commits, browser items and verdict pending._
+
 ## See also
 
 [CLICK-INVESTIGATION-JOURNEY](CLICK-INVESTIGATION-JOURNEY-2026-11-22.md) ·
