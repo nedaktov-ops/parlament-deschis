@@ -93,11 +93,30 @@ made — the working tree already contained extensive staged user work.
   committed tree, which is **not identical** to GitHub, Vercel, or Render.
   Local green is not production green.
 
+## CI remediation and PR status — 2026-11-22
+
+- Branch `w5-deployment-squash` was pushed and PR
+  [#73](https://github.com/nedaktov-ops/parlament-deschis/pull/73) was opened
+  against `main`.
+- CI initially failed `test`: the new corpus-backed tests need
+  `data/parlament.db`, which the test job did not download. Fixed in `99f40d3`
+  by reusing the audit job's release download.
+- CI still failed six tests. Root cause: `backend.config.DB_PATH` is resolved at
+  import time to `data/parlament-real.db` (gitignored, absent in CI), so the app
+  saw an empty schema despite the downloaded corpus. Fixed in `a20c419` by
+  setting step-level `PARLAMENT_DB` to `${{ github.workspace }}/data/parlament.db`
+  for `pytest`; a temporary diagnostic step added in `f641c72` was removed.
+- At head `a20c4190a8a23b9079a9c55fe908ff829d790392`, all four required checks
+  are SUCCESS: `test`, `audit`, `docker`, `evidence-guards` (plus Vercel Preview
+  Comments). PR is `MERGEABLE` but `reviewDecision = REVIEW_REQUIRED`.
+- `main` requires one approving review; the agent cannot approve its own PR.
+  Merge and production deployment remain blocked on the owner's approval.
+
 ## Upcoming progress — NOT DONE
 
-1. Push the branch and open a PR to `main` (all CI gates are green locally);
-   after merge, re-run `scripts/verify-deploy.sh` with `TARGET_SHA` equal to the
-   merge commit and re-check the served bundle markers on Vercel.
+1. Owner approves PR #73, then merge it to `main`; afterwards re-run
+   `scripts/verify-deploy.sh` with `TARGET_SHA` equal to the merge commit and
+   re-check the served bundle markers on Vercel.
 2. Confirm the exact Render commit SHA and dataset release with a Render API
    token, then reconcile the `3381/6614` vs `3388/7349` count difference.
 3. Make `Parties` and `switchWaves` honour date/legislature scope so the copy

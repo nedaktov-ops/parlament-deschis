@@ -96,7 +96,13 @@ commits; the three oldest are the review/audit commits described above.
   markers; Render's health data differs from local. Preview is therefore not
   identical to the deployed versions — see the parity table in
   [DEEP-DIVE-REDESIGN-2026-11-22](DEEP-DIVE-REDESIGN-2026-11-22.md) §Commit and
-  deployment verification. No push, PR or deploy was made.
+  deployment verification.
+- **2026-11-22 — push, PR and CI remediation.** Pushed the branch and opened
+  PR #73. Two CI fixes followed: download the pinned corpus in the test job
+  (`99f40d3`) and set step-level `PARLAMENT_DB` so `backend.config` resolves to
+  the downloaded DB (`a20c419`); a diagnostic step in `f641c72` was removed.
+  At `a20c419` all four required checks are green, but merge is blocked on the
+  one approving review required by `main` protection. No merge or deploy yet.
 
 ## Five-agent post-initial audit — provenance
 

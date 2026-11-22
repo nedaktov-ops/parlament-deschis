@@ -129,5 +129,10 @@ unpushed — see [GIT-POSITION](GIT-POSITION.md).
   Render API token.
 - Therefore the local preview is **not identical** to GitHub, Vercel or Render.
   Do not treat local green as production green. Full evidence and the ordered
-  next steps (push → PR → merge → `verify-deploy.sh TARGET_SHA=…`) are in
+  next steps are in
   [DEEP-DIVE-REDESIGN-2026-11-22](../50-RESEARCH/DEEP-DIVE-REDESIGN-2026-11-22.md).
+- **Update (same day):** branch pushed, PR #73 opened, and two CI fixes landed
+  (`99f40d3`, `a20c419`). At head `a20c419` the required checks `test`, `audit`,
+  `docker`, `evidence-guards` are all SUCCESS in GitHub Actions. PR is
+  `MERGEABLE` but blocked by the one approving review required on `main`; no
+  merge, Vercel production deploy or Render deploy has happened yet.
