@@ -122,6 +122,23 @@ export interface CoverageRow extends CoverageItem {
   last_refresh: string | null;
 }
 
+/** R-08: honest per-scope coverage across three independent dimensions. */
+export interface CoverageDimension {
+  status: string;
+  count: number;
+  total?: number;
+  note: string | null;
+}
+export interface CoverageDimensionRow {
+  chamber: string;
+  legislature: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  mandates: CoverageDimension;
+  votes: CoverageDimension;
+  biographies: CoverageDimension;
+}
+
 export interface DashboardStats {
   persons: number;
   memberships: number;
@@ -195,6 +212,7 @@ export interface HealthResponse {
 
 export interface MovementFilters {
   chamber?: string;
+  legislature?: string;
   from?: string;
   to?: string;
   limit?: number;
@@ -308,6 +326,13 @@ export interface VoteRow {
   positions_incomplete: boolean;
 }
 
+/** A chamber/legislature pair that actually has votes in the corpus. */
+export interface VoteScope {
+  chamber: string;
+  legislature: string | null;
+  total: number;
+}
+
 export interface VotesResponse {
   status: string;
   data_exists: boolean;
@@ -315,6 +340,8 @@ export interface VotesResponse {
   total: number;
   offset: number;
   limit: number;
+  /** Data-derived alternatives; summing their totals equals the corpus total. */
+  scopes: VoteScope[];
 }
 
 export interface VoteDetail {
@@ -506,6 +533,7 @@ export const api = {
     const options = typeof filters === "string" ? { chamber: filters } : filters;
     const params = new URLSearchParams();
     if (options.chamber) params.set("chamber", options.chamber);
+    if (options.legislature) params.set("legislature", options.legislature);
     if (options.from) params.set("from", options.from);
     if (options.to) params.set("to", options.to);
     if (options.limit !== undefined) params.set("limit", String(options.limit));
@@ -518,6 +546,7 @@ export const api = {
   ),
   coverage: () => get<CoverageItem[]>("/coverage"),
   coverage_detailed: () => get<CoverageRow[]>("/coverage/detailed"),
+  coverageDimensions: () => get<CoverageDimensionRow[]>("/coverage/dimensions"),
   coverageSummary: () => get<CoverageSummaryResponse>("/coverage/summary"),
   about: () => get<AboutResponse>("/about"),
   health: () => get<HealthResponse>("/health"),
@@ -940,6 +969,8 @@ export interface SwitchWave {
   switch_count: number;
   trigger_type: string | null;
   trigger_event: string | null;
+  /** Editor-curated trigger disclosure; null when the wave has no label. */
+  trigger_provenance: string | null;
   legislature: string | null;
   chamber: string | null;
   created_at: string | null;

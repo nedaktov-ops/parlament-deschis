@@ -93,13 +93,16 @@ export default function Report() {
         ? "text-amber-600 print:text-amber-700"
         : "text-slate-500";
 
-  // R-04: `partial`/`none` are states, not percentages. They render as "—".
-  const completenessRingColor = (c: string): string =>
+  // R-04/R-08: `partial`/`none` are states, never percentages. Only `full`
+  // gets a ring; the other states get explicit text with no numeric affordance.
+  const completenessText = (c: string): string =>
     c === "full"
-      ? "stroke-emerald-400"
-      : c === "partial"
-        ? "stroke-amber-400"
-        : "stroke-slate-400";
+      ? "full"
+      : t(
+          "report.coverageNoPct",
+          "{{status}} — no completeness percentage is published",
+          { status: c },
+        );
 
   const view = resolveViewState({
     isLoading: report.isLoading,
@@ -150,7 +153,7 @@ export default function Report() {
                 {d.totals.persons.toLocaleString()}
               </span>
               <span className="text-sm sm:text-base text-slate-400 print:text-slate-600 mt-1 block">
-                {t("report.personsInCorpus", "persons in corpus")}
+                {t("report.peopleCount", "people in the corpus")}
               </span>
             </div>
           )}
@@ -200,7 +203,7 @@ export default function Report() {
                   max={statMax}
                 />
                 <InfoStat
-                  label={t("report.switches", "Group switches")}
+                  label={t("report.groupSwitches", "Group switches (switch_group events)")}
                   value={d.totals.switches}
                   max={statMax}
                 />
@@ -398,17 +401,15 @@ export default function Report() {
                                 c.completeness,
                               )}`}
                             >
-                              {c.completeness}
+                              {completenessText(c.completeness)}
                             </span>
-                            {c.completeness === "full" ? (
+                            {c.completeness === "full" && (
                               <ProgressRing
                                 value={100}
                                 max={100}
                                 size={22}
-                                color={completenessRingColor(c.completeness)}
+                                color="stroke-emerald-400"
                               />
-                            ) : (
-                              <span className="text-xs text-slate-500 print:text-slate-600">—</span>
                             )}
                           </div>
                         </td>

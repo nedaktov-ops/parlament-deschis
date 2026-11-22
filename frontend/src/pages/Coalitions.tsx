@@ -41,8 +41,8 @@ export default function Coalitions() {
   const breakups = toNamedEvents(all, "coalition_breakup");
   const congresses = toNamedEvents(all, "party_congress");
 
-  // Observed span: for each named breakup, the most recent prior formation
-  // (evidence of duration, not a claim about the government's official life).
+  // Editor labels only; "days" is a wave-to-wave interval, not a government lifetime.
+  // The most recent prior labelled formation is a proximity match, not a sourced fact.
   const spans = breakups.map((b) => {
     const prior = formations.filter((f) => f.date <= b.date);
     const last = prior.length > 0 ? prior[prior.length - 1] : null;
@@ -65,7 +65,7 @@ export default function Coalitions() {
     return (
       <AsyncState
         view={view}
-        pageTitle={t("coalitions.title", "Coalition Stability")}
+        pageTitle={t("coalitions.title", "Switch-wave timeline (proxy)")}
         onRetry={() => void waves.refetch()}
         errorLabel={t("coalitions.loadError", "Failed to load wave data.")}
         emptyTitle={t("coalitions.noBreakups", "No coalition breakups recorded.")}
@@ -82,12 +82,12 @@ export default function Coalitions() {
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
               <h1 className="page-title">
-                {t("coalitions.title", "Coalition Stability")}
+                {t("coalitions.title", "Switch-wave timeline (proxy)")}
               </h1>
               <p className="text-sm text-slate-400">
                 {t(
                   "coalitions.intro",
-                  "Government formations, coalition breakups and party congresses that coincide with detected switch waves. Each event is a burst of affiliation change the corpus links to a named political moment.",
+                  "Detected bursts of group-switch events. Named political moments are editor-curated labels — not coalition facts asserted by the corpus — matched to a wave inside its window or up to 90 days before it.",
                 )}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
@@ -168,7 +168,7 @@ export default function Coalitions() {
                     {t("coalitions.col.switches", "Switches in wave")}
                   </th>
                   <th scope="col" className="px-4 py-3 text-left text-sm font-medium !text-slate-300">
-                    {t("coalitions.col.since", "Since prior formation")}
+                    {t("coalitions.col.since", "Interval from prior labelled wave")}
                   </th>
                 </tr>
               </thead>
@@ -257,6 +257,32 @@ export default function Coalitions() {
         </div>
       </section>
 
+      <section
+        className="mt-8 bg-slate-800/50 rounded p-4 text-sm text-slate-400"
+        data-enter
+      >
+        <h2 className="text-slate-200 font-semibold mb-1">
+          {t("coalitions.triggerDisclosureTitle", "Trigger disclosure")}
+        </h2>
+        <p role="note">
+          {t(
+            "coalitions.triggerDisclosure",
+            "Trigger disclosure — each label below is an editor-curated name from a hardcoded lookup (pipeline/analytics.py:24-73), matched within the wave window or 90 days before it. No source URL is attached to the trigger; do not read these as coalition records.",
+          )}
+        </p>
+        <p className="mt-2">
+          {t(
+            "coalitions.triggerCounts",
+            "Editor labels in this scope: {{formations}} formations, {{breakups}} breakups, {{congresses}} congresses.",
+            {
+              formations: formations.length,
+              breakups: breakups.length,
+              congresses: congresses.length,
+            },
+          )}
+        </p>
+      </section>
+
       <div className="mt-8 bg-slate-800/50 rounded p-4 text-sm text-slate-400">
         <h2 className="text-slate-200 font-semibold mb-1">
           {t("coalitions.methodology", "Methodology")}
@@ -264,7 +290,7 @@ export default function Coalitions() {
         <p>
           {t(
             "coalitions.methodology.desc",
-            "Switch waves are 30-day clusters of 3+ observed switch_group events. A wave is linked to a named event (government, coalition breakup, congress) when the corpus records that trigger at the wave's date. 'Since prior formation' measures days between the most recent formation wave and the breakup wave — an observation about switch bursts, not an official government lifetime.",
+            'A wave is a 30-day cluster of 3+ switch_group events. Trigger labels come from the editor-maintained TRIGGER_DATES lookup in pipeline/analytics.py; there is no per-event source URL in the dataset. "Since prior formation" is the interval between two labelled waves, not an official government duration.',
           )}
         </p>
       </div>

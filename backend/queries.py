@@ -543,12 +543,15 @@ def get_movements(
     start: date | None,
     end: date | None,
     limit: int = 200,
+    legislature: str | None = None,
 ) -> list[dict]:
     stmt = select(Event).where(Event.type.in_(["switch_group", "switch_party"]))
     if person_id:
         stmt = stmt.where(Event.person_id == person_id)
     if chamber:
         stmt = stmt.where(Event.chamber == chamber)
+    if legislature:
+        stmt = stmt.where(Event.legislature == legislature)
     if start:
         stmt = stmt.where(Event.event_date >= start)
     if end:

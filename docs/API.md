@@ -60,8 +60,11 @@ Person detail with memberships, events, evidence.
 ### `GET /api/persons/{person_id}/history`
 Timeline of changes (memberships, events, etc.).
 
-### `GET /api/movements?person_id=...&chamber=deputies&from=...&to=...&limit=200`
-Events with optional filters.
+### `GET /api/movements?person_id=...&chamber=deputies&legislature=2024&from=...&to=...&limit=200`
+Events with optional filters. `legislature` is an additive four-digit filter
+matched against `Event.legislature`; omitting it preserves the previous
+whole-corpus behaviour. The filter applies to `switch_group` and
+`switch_party` events only.
 
 ### `GET /api/events/recent?limit=50`
 Most recent events across all chambers.
@@ -154,7 +157,11 @@ Delete and rebuild all stored switch waves from the current event ledger.
 Requires the `X-Admin-Token` header and `PARLAMENT_ADMIN_TOKEN`.
 
 ### `GET /api/analytics/switch-waves?chamber=deputies&legislature=2024`
-List stored switch waves with filters. This endpoint is read-only.
+List stored switch waves with filters. This endpoint is read-only. Each row
+keeps every existing field and adds `trigger_provenance`: when `trigger_event`
+is set, the value is `editor-curated lookup (pipeline/analytics.py:TRIGGER_DATES); matched within wave window or 90 days before; no per-event source URL`;
+otherwise it is `null`. Trigger labels are editor-curated proximity matches,
+not corpus assertions or coalition facts.
 
 ### `GET /api/analytics/party-cohesion?legislature=2024`
 Party switching rate per party, based on dated party-switch events attributed
@@ -240,11 +247,15 @@ Roll-call vote list, newest `vote_time` first.
 Params: `chamber` (`deputies`|`senate`), `legislature` (`YYYY`), `from`, `to`,
 `limit` (default 50, 1–200), `offset` (default 0).
 ```json
-{"status":"ok","data_exists":false,"data":[],"total":0,"offset":0,"limit":50}
+{"status":"ok","data_exists":false,"data":[],"total":0,"offset":0,"limit":50,"scopes":[]}
 ```
 A populated `data[]` row has: `id`, `native_vote_id`, `chamber`, `legislature`,
 `vote_time`, `title_raw`, `present`, `not_voting`, `yes`, `no`, `abstain`,
-`source_url`, `positions_incomplete`.
+`source_url`, `positions_incomplete`. The additive `scopes` array is derived
+from the corpus independently of `from`/`to`/`chamber`/`legislature` filters:
+each item is `{ "chamber": string, "legislature": string | null, "total": int }`,
+ordered by descending `total`. Its totals sum to the whole-corpus vote count,
+so clients can select a scope that actually has rows instead of hardcoding one.
 
 ### `GET /api/votes/{vote_id}`
 Single vote looked up by `native_vote_id` (not the numeric `id`). A missing vote

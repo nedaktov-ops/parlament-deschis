@@ -90,8 +90,8 @@ export default function SenateHistory() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
             <InfoStat
-              label={t("senateStatMembers", "Persons in coverage rows (all chambers)")}
-              value={coverage.data?.reduce((acc, r) => acc + r.persons, 0) ?? "--"}
+              label={t("senateStatMembers", "Senate members (this corpus)")}
+              value={allRows.reduce((acc, r) => acc + r.persons, 0)}
               accent="sky"
             />
             <InfoStat
@@ -101,24 +101,22 @@ export default function SenateHistory() {
             />
             <InfoStat
               label={t("senateStatLegislatures", "Legislatures")}
-              value={new Set(rows.map((r) => r.legislature)).size}
+              value={allRows.length}
               accent="amber"
             />
             <InfoStat
-              label={t("senateStatCoverage", "Full coverage rows")}
-              value={
-                rows.filter((r) => r.completeness === "full").length
-              }
-              accent="rose"
+              label={t("senateStatCoverage", "Full-coverage scopes (of {{n}})", { n: allRows.length })}
+              value={allRows.filter((r) => r.completeness === "full").length}
+              accent="emerald"
               showBar={false}
             />
           </div>
           <div className="mt-8 flex items-center gap-4" data-moment>
             <span className="moment-value block">
-              {coverage.data?.reduce((acc, r) => acc + r.persons, 0) ?? "--"}
+              {allRows.reduce((acc, r) => acc + r.persons, 0)}
             </span>
             <span className="text-sm text-slate-400">
-              {t("senateStatMembersLabel", "persons in coverage rows (all chambers)")}
+              {t("senateStatMembersLabel", "senate members in this corpus")}
             </span>
           </div>
         </div>
@@ -129,6 +127,14 @@ export default function SenateHistory() {
           </h2>
           <ul className="text-slate-400 list-disc list-inside space-y-1">
             <li>
+              <span role="note">
+              {t(
+                "senate.history.hold",
+                "HOLD (2026-11-21) — historical Senate profiles are NOT ingested. There is no exact senat_guid crosswalk (0 rows) and profiles carry no date of birth, so ingest would require name-only auto-matching, which the project prohibits. Decision: docs/SENATE-PROFILE-IMPACT.md §4.",
+              )}
+              </span>
+            </li>
+            <li>
               {t(
                 "senate.history.gap.pre1990",
                 "Pre-1990: Different regime; outside project scope"
@@ -137,7 +143,7 @@ export default function SenateHistory() {
             <li>
               {t(
                 "senate.history.gap.current",
-                "Current legislature (2024): Only sitemap data available (134 GUIDs)"
+                "Current legislature (2024): GUID discovery only. No senator profiles are archived in this dataset (0 senator_profile fragments); the GUID count from discovery notes is not a corpus count.",
               )}
             </li>
             <li>
@@ -221,7 +227,7 @@ export default function SenateHistory() {
         <p className="text-slate-500 text-xs mt-3">
           {t(
             "senate.history.methodology.source",
-            "Source: senat.ro public data, CC-BY 4.0"
+            "Source: senat.ro public data — Open Government Licence (Romania), OGL-ROU-1.0, per the project licence register (pipeline/licenses.py). The derived corpus is licensed CC BY 4.0."
           )}
         </p>
       </div>

@@ -84,14 +84,18 @@ export default function Ideology() {
     [data, selectedYear],
   );
 
-  // Build scatter plot data
-  // R-04: parties without a published score are omitted, not plotted at zero.
-  const scatterData = filteredData
-    .filter(
-      (d: IdeologyEntry) =>
-        d.lrgen !== null && d.galtan !== null && d.eu_position !== null,
-    )
-    .map((d: IdeologyEntry) => ({
+  // Build scatter plot data.
+  // R-04: parties without a published score are omitted, not plotted at zero;
+  // R-08: only finite, complete CHES triples enter the plot.
+  const AXIS_KEYS = ["lrgen", "galtan", "eu_position"] as const;
+  const hasAxes = (
+    d: IdeologyEntry,
+  ): d is IdeologyEntry & { lrgen: number; galtan: number; eu_position: number } =>
+    AXIS_KEYS.every((k) => typeof d[k] === "number" && Number.isFinite(d[k]));
+  const plottedData = filteredData.filter(hasAxes);
+  const omittedCount = filteredData.length - plottedData.length;
+
+  const scatterData = plottedData.map((d) => ({
       value: [d.lrgen, d.galtan, d.eu_position],
       name: d.party_name,
       partyfacts_id: d.partyfacts_id,
@@ -132,9 +136,9 @@ export default function Ideology() {
             `<div style="padding: 8px">`,
             `<div style="font-weight: bold">${d.name}</div>`,
             `<div>Year: ${d.survey_year}</div>`,
-            `<div>Left-Right: ${d.value[0] == null ? "—" : d.value[0].toFixed(2)}</div>`,
-            `<div>GAL-TAN: ${d.value[1] == null ? "—" : d.value[1].toFixed(2)}</div>`,
-            `<div>EU Position: ${d.value[2] == null ? "—" : d.value[2].toFixed(2)}</div>`,
+            `<div>Left-Right: ${d.value[0].toFixed(2)}</div>`,
+            `<div>GAL-TAN: ${d.value[1].toFixed(2)}</div>`,
+            `<div>EU Position: ${d.value[2].toFixed(2)}</div>`,
             `<div>Anti-Elite: ${d.antielite_salience == null ? "—" : d.antielite_salience.toFixed(2)}</div>`,
             `<div>People vs Elite: ${d.people_vs_elite == null ? "—" : d.people_vs_elite.toFixed(2)}</div>`,
             `</div>`,
@@ -213,7 +217,9 @@ export default function Ideology() {
         pageTitle={t("view.ideology.title", "Ideological spatial map")}
         onRetry={() => void ideologyQuery.refetch()}
         errorLabel={t("view.ideology.loadError", "The ideological map could not be loaded.")}
-        emptyTitle={t("empty.ideology", "Ideological data not yet available.")}
+        emptyTitle={dataExists
+          ? t("view.ideology.noYear", "No CHES wave is available for the selected year.")
+          : t("empty.ideology", "Ideological data not yet available.")}
       />
     );
   }
@@ -226,7 +232,7 @@ export default function Ideology() {
           {t("view.ideology.title", "Ideological spatial map")}
         </h1>
         <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-3xl">
-          {t("view.ideology.intro", "Ideological positioning of parties (left-right, authoritarian-libertarian) based on CHES and PopuList data.")}
+          {t("view.ideology.intro", "Party positions from CHES expert-survey scores (0–10 axes: left-right, GAL-TAN, EU). PopuList is NOT ingested in this corpus and is not used here.")}
         </p>
       </section>
 
@@ -302,13 +308,13 @@ export default function Ideology() {
                     {d.survey_year}
                   </td>
                   <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
-                    {d.lrgen === null ? "—" : d.lrgen.toFixed(2)}
+                    {d.lrgen == null || !Number.isFinite(d.lrgen) ? "—" : d.lrgen.toFixed(2)}
                   </td>
                   <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
-                    {d.galtan === null ? "—" : d.galtan.toFixed(2)}
+                    {d.galtan == null || !Number.isFinite(d.galtan) ? "—" : d.galtan.toFixed(2)}
                   </td>
                   <td className="py-2.5 pr-4 text-right text-slate-300 tabular-nums">
-                    {d.eu_position === null ? "—" : d.eu_position.toFixed(2)}
+                    {d.eu_position == null || !Number.isFinite(d.eu_position) ? "—" : d.eu_position.toFixed(2)}
                   </td>
                 </tr>
               ))}
@@ -318,20 +324,19 @@ export default function Ideology() {
       </section>
 
       <section className="text-xs text-slate-500 mt-2 max-w-3xl">
-        <p>
-          {t("view.ideology.note", "Ideological data not yet ingested. No figures or invented axes shown.")}
+        <p role="note">
+          {t(
+            "view.ideology.provenance",
+            "Source: CHES, EUI archive (hdl.handle.net/1814/69975), CC BY 4.0. Parties are matched by Party Facts ID; PopuList is excluded (licence UNVERIFIED).",
+          )}
         </p>
-        <p>
-          {t("view.ideology.sources", "Planned sources:")}{" "}
-          <span className="text-slate-300">
-            CHES (Chapel Hill Expert Survey), Party Facts.
-          </span>
-        </p>
-        <p>
-          {t("view.ideology.licence", "Licence-gated:")}{" "}
-          <span className="text-slate-300">
-            CC BY 4.0 (CHES), CC0 (Party Facts).
-          </span>
+        {omittedCount > 0 && (
+          <p role="note" className="mt-1">
+            {t("view.ideology.omitted", "{{n}} party-wave(s) omitted from the plot: at least one CHES axis is missing. Missing values are shown as — in the table, never as 0.", { n: omittedCount })}
+          </p>
+        )}
+        <p className="mt-1">
+          {t("view.ideology.licence", "CHES: CC BY 4.0.")}
         </p>
       </section>
     </div>

@@ -453,11 +453,12 @@ def movements(
     start: str | None = Query(None, alias="from"),
     end: str | None = Query(None, alias="to"),
     limit: int = Query(200, ge=1, le=1000),
+    legislature: str | None = Query(None, pattern=r"^\d{4}$"),
     db: Session = Depends(get_db),
 ):
     s = _parse_date(start, date(1990, 1, 1))
     e = _parse_date(end, date.today())
-    return queries.get_movements(db, person_id, chamber, s, e, limit)
+    return queries.get_movements(db, person_id, chamber, s, e, limit, legislature)
 
 
 @router.get("/events/recent")
@@ -976,6 +977,12 @@ def get_switch_waves(
             "switch_count": w.switch_count,
             "trigger_type": w.trigger_type,
             "trigger_event": w.trigger_event,
+            "trigger_provenance": (
+                "editor-curated lookup (pipeline/analytics.py:TRIGGER_DATES); "
+                "matched within wave window or 90 days before; no per-event source URL"
+                if w.trigger_event
+                else None
+            ),
             "legislature": w.legislature,
             "chamber": w.chamber,
             "created_at": w.created_at.isoformat() if w.created_at else None,
@@ -1268,7 +1275,7 @@ def votes_list(
     accept that format or ISO ``YYYY-MM-DD`` and are compared as calendar dates
     (a raw string compare on ``DD.MM.YYYY`` is not chronological).
     """
-    from sqlalchemy import select
+    from sqlalchemy import func, select
 
     stmt = select(Vote)
     if chamber:
@@ -1293,6 +1300,17 @@ def votes_list(
 
     total = len(rows)
     data_exists = total > 0
+    # Additive: data-derived scopes (corpus-wide, independent of the date
+    # window) let clients pick a scope that actually has rows. No scope is
+    # hardcoded; an empty corpus returns an empty list.
+    scopes = [
+        {"chamber": r[0] or "unknown", "legislature": r[1], "total": r[2]}
+        for r in db.execute(
+            select(Vote.chamber, Vote.legislature, func.count(Vote.id))
+            .group_by(Vote.chamber, Vote.legislature)
+            .order_by(func.count(Vote.id).desc())
+        ).all()
+    ]
     paged = rows[offset : offset + limit]
     data = [
         {
@@ -1319,6 +1337,7 @@ def votes_list(
         "total": total,
         "offset": offset,
         "limit": limit,
+        "scopes": scopes,
     }
 
 
@@ -1559,10 +1578,12 @@ def vote_scorecard(
 ):
     """MP behavioural scorecard: loyalty / rebellion / participation per person.
 
-    Loyalty = share of votes where the MP voted with their party's majority choice
-    in that vote. Rebellion = share where they voted against it. Participation =
-    share of all votes in scope the MP cast a position for. No attendance score;
-    every figure is derived from observed roll-call positions only.
+    Loyalty = share of yes/no positions with the party majority choice in that
+    vote. Rebellion = share of yes/no positions against it. Abstain and
+    not_voting are excluded from both loyalty and rebellion (they stay in the
+    per-choice counters and in participation). Participation = share of all
+    votes in scope the MP cast a position for. No attendance score; every
+    figure is derived from observed roll-call positions only.
     """
     from collections import defaultdict
 
@@ -1663,9 +1684,7 @@ def vote_scorecard(
                 "no_votes": stats["no_votes"],
                 "abstain_votes": stats["abstain_votes"],
                 "not_voting_votes": stats["not_voting_votes"],
-                "loyalty_pct": round(
-                    stats["loyal_votes"] / stats["alignment_denominator"] * 100, 1
-                )
+                "loyalty_pct": round(stats["loyal_votes"] / stats["alignment_denominator"] * 100, 1)
                 if stats["alignment_denominator"]
                 else None,
                 "rebellion_pct": round(

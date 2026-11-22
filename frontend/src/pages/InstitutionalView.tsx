@@ -78,7 +78,7 @@ export function InstitutionalView() {
 
           <div className="card p-4">
             <h2 className="font-semibold mb-3">{t("bureauComposition")}</h2>
-            <div className="text-slate-500 text-sm">{t("bureauDataUnavailable")}</div>
+            <p className="text-sm text-slate-400" role="note">{t("bureauGap")}</p>
           </div>
         </div>
 

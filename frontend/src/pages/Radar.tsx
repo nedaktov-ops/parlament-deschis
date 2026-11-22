@@ -25,27 +25,53 @@ export default function Radar() {
   const { t } = useTranslation();
   const scope = useScope();
 
+  // R-08: discover data-bearing scopes from the API (W8), never hardcode
+  // a chamber/legislature. URL scope takes precedence over the corpus default.
+  const scopeProbe = useQuery({
+    queryKey: ["votes-scopes"],
+    queryFn: () => api.votes({ limit: 1 }),
+  });
+  const active = useMemo(() => {
+    const candidates = (scopeProbe.data?.scopes ?? [])
+      .filter((s) => !scope.chamber || s.chamber === scope.chamber)
+      .filter((s) => !scope.legislature || s.legislature === scope.legislature)
+      .sort((a, b) => b.total - a.total);
+    const chosen = candidates[0];
+    return chosen
+      ? { chamber: chosen.chamber, legislature: chosen.legislature, total: chosen.total }
+      : null;
+  }, [scopeProbe.data, scope.chamber, scope.legislature]);
+  const total = active?.total ?? 0;
+
   const votesQuery = useQuery({
-    queryKey: ["radar-votes", ...scope.scopeKey],
-    queryFn: () => api.votes(votesForScope(scope, { limit: 30 })),
+    queryKey: ["radar-votes", ...scope.scopeKey, active?.chamber ?? "*", active?.legislature ?? "*"],
+    queryFn: () => api.votes({
+      ...votesForScope(scope, { limit: 30, offset: 0 }),
+      chamber: active?.chamber,
+      legislature: active?.legislature ?? undefined,
+    }),
+    enabled: scopeProbe.isSuccess,
   });
 
   const votes = useMemo(() => votesQuery.data?.data ?? [], [votesQuery.data]);
-  const dataExists = votesQuery.data?.data_exists ?? false;
 
   const positionQueries = useQueries({
     queries: votes.map((v) => ({
       queryKey: ["radar-positions", v.native_vote_id],
       queryFn: () => api.votePositions(v.native_vote_id, { limit: 500 }),
       enabled: votesQuery.isSuccess && !!v.native_vote_id,
+      retry: 1,
     })),
   });
 
+  // Only successful position queries contribute cells; failures are counted
+  // and disclosed separately instead of blanking the whole matrix.
+  const failedPositions = positionQueries.reduce((n, q) => n + (q.isError ? 1 : 0), 0);
   const positionsData = useMemo(() => {
     const map = new Map<string, VotePositionRow[]>();
     positionQueries.forEach((q, i) => {
       const vote = votes[i];
-      if (q.data?.data && vote) {
+      if (q.isSuccess && q.data?.data && vote) {
         map.set(vote.native_vote_id, q.data.data);
       }
     });
@@ -88,9 +114,11 @@ export default function Radar() {
   }, [votes, positionsData]);
 
   const view = resolveViewState({
-    isLoading: votesQuery.isLoading || positionQueries.some((q) => q.isLoading),
-    isError: votesQuery.isError || positionQueries.some((q) => q.isError),
-    isEmpty: votesQuery.isSuccess && (!dataExists || votes.length === 0 || matrix.parties.length === 0),
+    isLoading: scopeProbe.isLoading || votesQuery.isLoading
+      || positionQueries.some((q) => q.isLoading && q.fetchStatus !== "idle"),
+    // A failed positions query is an excluded column, not a page-level error.
+    isError: scopeProbe.isError || votesQuery.isError,
+    isEmpty: votesQuery.isSuccess && votes.length === 0,
   });
   if (view !== "ready") {
     return (
@@ -98,6 +126,7 @@ export default function Radar() {
         view={view}
         pageTitle={t("view.radar.title", "Roll-call alignment matrix")}
         onRetry={() => {
+          void scopeProbe.refetch();
           void votesQuery.refetch();
           positionQueries.forEach((q) => void q.refetch());
         }}
@@ -198,12 +227,28 @@ export default function Radar() {
       </section>
 
       <section className="text-xs text-slate-500 mt-2 max-w-3xl">
-        <p>
+        <p role="note">
+          {t("view.radar.sampleNote", "Sample of {{shown}} of {{total}} votes in scope {{legislature}}. Colour = dominant party choice; number = count of MPs with that choice.", {
+            shown: votes.length,
+            total,
+            legislature: active?.legislature ?? "—",
+          })}
+        </p>
+        {failedPositions > 0 && (
+          <p role="note" className="mt-2 text-amber-300">
+            {t("view.radar.failedPositions", "{{failed}} vote(s) had positions that could not be loaded and are excluded from the matrix — this is an error, not an empty result.", { failed: failedPositions })}
+          </p>
+        )}
+        <p className="mt-2">
           {t("view.radar.note", "Each cell shows how many MPs of a party voted a given way in a roll-call vote. Colour = dominant party choice; number = count of MPs with that choice.")}
         </p>
         {votes.some((v) => v.positions_incomplete) && (
           <p role="note" className="mt-2">
-            {t("scope.note.positionsIncomplete")}
+            {t("scope.note.positionsIncomplete")}{" "}
+            {t("view.radar.positionsNote", "In this sample, {{n}} of {{m}} votes are flagged positions_incomplete=true; official yes/no/abstain totals can exceed the number of recorded individual positions.", {
+              n: votes.filter((v) => v.positions_incomplete).length,
+              m: votes.length,
+            })}
           </p>
         )}
       </section>

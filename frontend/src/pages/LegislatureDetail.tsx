@@ -22,6 +22,11 @@ export function LegislatureDetail() {
 
   const meta = useQuery({ queryKey: ["meta"], queryFn: api.meta });
   const leg = meta.data?.legislatures?.[year];
+  // R-08: guard an unknown year before any data query runs. Without this,
+  // `start` fell back to 1990 and the page showed an unrelated corpus window.
+  const knownYears = Object.keys(meta.data?.legislatures ?? {});
+  const yearUnknown = meta.isSuccess && !leg;
+  const scoped = !!leg && !yearUnknown;
   const today = localISODate();
   const start = leg?.start ?? "1990-01-01";
   const end = leg?.end ?? today;
@@ -34,10 +39,18 @@ export function LegislatureDetail() {
   const chamber = useQuery({
     queryKey: ["chamber", chamberFilter, selectedDate, ...scope.scopeKey],
     queryFn: () => api.chamber(chamberFilter, selectedDate),
+    enabled: scoped,
   });
   const movements = useQuery({
-    queryKey: ["leg-movements", year, start, selectedDate, ...scope.scopeKey],
-    queryFn: () => api.movements({ chamber: scope.chamber, from: start, to: selectedDate, limit: 1000 }),
+    queryKey: ["leg-movements", year, chamberFilter, start, selectedDate, ...scope.scopeKey],
+    queryFn: () => api.movements({
+      from: start,
+      to: selectedDate,
+      limit: 1000,
+      chamber: chamberFilter,
+      legislature: year,
+    }),
+    enabled: scoped,
   });
 
   const metaView = resolveViewState({
@@ -53,6 +66,17 @@ export function LegislatureDetail() {
         onRetry={() => void meta.refetch()}
         errorLabel={t("chamberLoadError")}
       />
+    );
+  }
+
+  if (yearUnknown) {
+    return (
+      <div className="wrap p-6" role="alert">
+        <h1 className="text-xl font-semibold">{t("legislatureUnknown", { year })}</h1>
+        <p className="text-sm text-slate-400">
+          {t("legislatureKnownYears", { years: knownYears.join(", ") || "—" })}
+        </p>
+      </div>
     );
   }
 
@@ -96,7 +120,7 @@ export function LegislatureDetail() {
               accent="emerald"
             />
             <InfoStat
-              label={t("legislatureStatSwitches", "Group switches in loaded movements")}
+              label={t("legislatureStatSwitches", "Group switches in this legislature (first 1000)")}
               value={
                 movements.isLoading || movements.isError
                   ? "--"
