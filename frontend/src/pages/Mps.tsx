@@ -141,6 +141,12 @@ export default function Mps() {
         </button>
       </form>
 
+      <div className="mb-4 flex justify-end">
+        <Link to="/compare-mps" search={scope.searchFor()} className="text-sky-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 rounded">
+          {t("mps.compareLink", "Compare MPs →")}
+        </Link>
+      </div>
+
       <AsyncState
         view={view}
         variant="inline"
