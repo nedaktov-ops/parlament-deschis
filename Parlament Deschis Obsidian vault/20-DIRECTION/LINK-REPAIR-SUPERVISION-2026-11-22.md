@@ -355,6 +355,32 @@ and N-2 are assigned to W2/W4 and N-4 to the W0 vault write-back.
 - V5 — browser re-test on local dev with raw captures: footer `/traseism` link ends on `/traseism` with `date` scope; wave click ends on `/traseism` with the wave date; dashboard card still SPA-navigates to `/mps`; at least one other scope control (ScopeControls date/chamber/legislature) changes scope without leaving its page; console error/warn list empty.
 - V6 — W2B integrated `--ff-only` before W2 sign-off; the two W2 acceptance items re-checked and marked PASS against V5 captures; only then may W2 be signed GREEN with the §F sentence.
 
+## J. Programme close-out (2026-11-22)
+
+**Final programme verdict: GREEN** (integration complete on `repair/links-base`
+at `61891cc`, pushed to origin; `main`/`origin/main` unchanged at `8811216`;
+owner decision on PR/merge/deploy intentionally not taken).
+
+| Wave | Verdict | Note |
+|---|---|---|
+| W0 | GREEN | vault-only baseline; manifest verified before first edit |
+| W1 | GREEN | L-01 S-10 step verified at `Ideology.tsx:65`; L-02 link rendered |
+| W2 | **GREEN after RED escalation** | initially R2 (broken route), resolved by emergency W2B/L-18 (`useScope.ts` explicit `to`); two acceptance items re-marked PASS on V5 captures |
+| W3 | GREEN | 3 runtime/data-dependent items per-item AMBER/NOT PROVEN with named resolvers |
+| W4 | GREEN | L-12 documented NO-CHANGE; L-13 sole i18n owner |
+| W5 | GREEN | 4-file diff; two L-15 sub-items declined as out-of-scope and recorded |
+| W6 | GREEN | guards 24/47/0; probe 9 routes × 3 scenarios, 0 failures |
+| W7 | GREEN | full gate replay exit 0; no further integration step; owner decision pending |
+
+**Open follow-ups (NOT remediations of any GREEN wave):**
+
+1. **EmptyState CTA chain** — C-05 F2: CTA button unreachable because no page supplies `onEmptyCta`/`emptyCtaLabel`; `AsyncState.tsx:89-90` only forwards; L-15 declined because editing that file would exceed its exclusive list. Resolver: a scoped future recipe.
+2. **AgeDistributionRadial arc plumbing** — C-05 F7: sole caller `AgeDistributionSection.tsx:40` omits `onCohortClick`, so the interactive arcs never render. The fix file is outside L-15's exclusive list. Resolver: scoped future recipe.
+3. **Production `/ideology` behaviour** — browser note B4: loaded "Se încarcă…" with zero selects; NOT PROVEN. Resolver: a loaded production ideology response.
+4. **External URL reachability** — C06 E01–E03 / master §6: NOT PROVEN; the strategy's HTTP 404/200 probe was a note claim, not supervisor-verified. Resolver: network probe.
+5. **Console raw captures for W3/W4/W6** — those wave notes record no dedicated raw console capture (W1/W2 did). Resolver: future waves attach a raw `list_console_messages` artifact.
+6. **pytest / strict corpus audit / Docker** — explicitly NOT RUN in this frontend-only programme; W7 :1035-1037 names CI as resolver. No pass claimed.
+
 ## See also
 
 [LINK-REPAIR-STRATEGY](LINK-REPAIR-STRATEGY-2026-11-22.md) ·

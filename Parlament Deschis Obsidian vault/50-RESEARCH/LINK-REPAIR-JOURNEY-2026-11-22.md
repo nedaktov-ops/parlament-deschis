@@ -1068,7 +1068,43 @@ decide whether to open a PR from `repair/links-base` and let the four required
 CI checks (`test`, `audit`, `docker`, `evidence-guards`) run, and whether to
 deploy afterwards. Push status and final supervisor verdict are recorded below.
 
-_Push result and final supervisor verdict pending._
+### Push result
+
+`git push -u origin repair/links-base` succeeded; GitHub reported
+`* [new branch] repair/links-base -> repair/links-base` and
+`git ls-remote origin refs/heads/repair/links-base` returned
+`61891ccfcb4a8b5ab7265a08af00bdc6c2cdb5fb`. Local `main` and `origin/main`
+remain `88112168237e5c37841b785dccd2375f6cc40115`. No other branch was pushed.
+
+### Supervisor sign-off (§F template)
+
+```text
+WAVE SIGN-OFF
+Wave ID:            W7 (programme integration and owner hand-off)
+Recipes:            L-17 (git-master)
+Entry HEAD/branch:  967191fe33e45e3e39e2177bd0054cbdbac5f0f9 / repair/links-base (W7 :1013-1017); final local and pushed HEAD 61891ccfcb4a8b5ab7265a08af00bdc6c2cdb5fb (supervisor re-read both refs/remotes/origin/repair/links-base and HEAD)
+Backup ROOT:        /tmp/opencode/backups/link-repair/W7 (whole programme: W0…W7 plus W2B)
+Manifest evidence:  git bundle verify exit 0, tar -tzf exit 0, sha256sum -c exit 0 (W7 :1016-1017) — supervisor re-verified SHA256SUMS for all nine backup roots (4 OK lines each), bundle verify complete history and tar exit 0 for W7
+Diff (name-only):   L-17 owns no files (strategy §4 W7 row :81); integration is ff-only. Supervisor re-verified: 40 additive linear commits from main@8811216 to 967191f (as recorded at W7 :1043-1044) plus the W7 evidence commit = 41 at 61891cc; zero merge commits (git log --merges = 0); no reset, force-push, tag move or history rewrite
+Checkpoint SHAs:    W7 evidence 61891cc; W7 entry 967191f; W0–W6 GREEN sign-offs recorded in this note at :437, :577, :723, :804, :869, :925, :981; all wave code checkpoints named in their wave sections. Owner decision deliberately not taken (W7 :1063-1069).
+Gates (cmd/exit):   full replay on the integrated branch, raw /tmp/opencode/w7-gate-replay.txt (W7 :1019-1037): LINT_EXIT=0, BUILD_EXIT=0, I18N_EXIT=0 (ro=731/en=731, 0 missing/asymmetric/duplicate), ROUTES_EXIT=0 (24/47/0), PY_EXIT=0, VAULTLINT_EXIT=0 (66 notes), SYNC_EXIT=0 (5 generated notes clean), DIFF_EXIT=0; doc-truth "false-claims: 0" (no explicit TRUTH_EXIT marker in the raw file, but supervisor independently re-ran bash scripts/check-doc-truth.sh at exit 0). pytest, strict corpus audit and Docker explicitly NOT RUN, named resolver CI (W7 :1035-1037) — not claimed as passes.
+Browser evidence:   no new browser pass in W7; previously captured W1–W4 and W6 evidence is replayed, no new claim (W7 :1058-1061). Supervisor re-ran no browser tool.
+Code evidence:      W7 §Code evidence :1013-1017, §Full gate replay :1019-1037, §Programme summary :1039-1056, §Owner decision :1063-1069, §Push result :1071-1077; supervisor read-only git verification of branch, refs, linearity, commit counts and main/origin/main.
+Acceptance items:   all PASS · 0 AMBER/NOT PROVEN — L-17 :433-435: all gate outputs recorded with exits; git log shows only additive commits; owner decision note exists (W7 :1063-1069); main and origin/main still 88112168237e5c37841b785dccd2375f6cc40115 and production untouched; only repair/links-base pushed.
+Verdict:            GREEN
+
+Citations (exact note/section or file:line for every judgement):
+  - This note, W7 §Code evidence :1013-1017, §Full gate replay :1019-1037, §Programme summary :1039-1056, §Browser evidence :1058-1061, §Owner decision :1063-1069, §Push result :1071-1077.
+  - Recipe L-17 :421-435; strategy §4 W7 row :81, §4 :83-84 (ff-only integration, RED wave never merged), §5, §6, §7, §9 :183-189; supervision protocol §C (G1-G8, R1-R9, A1-A5), §D, §E, §F.
+  - Supervisor read-only re-verification (2026-11-22): local HEAD and origin/repair/links-base 61891cc; main and origin/main 8811216; 41 linear commits / 0 merges; nine verified backup manifests; raw gate replay exits; W0–W6 sign-off blocks present and all GREEN.
+  - Non-blocking observations carried forward as follow-ups, not remediations of this wave (listed in supervision note close-out): declined L-15 sub-items, production /ideology, external URL reachability, console raw captures, and CI-run pytest/audit/Docker.
+
+Required remediations (owner: lead; each must be closed before next verdict):
+  - none. The PR/merge/deploy decision is an owner gate, not a supervisor remediation.
+
+Authorisation (GREEN only — reproduce verbatim with the W7 adaptation):
+  "Integration authorised: wave W7 is GREEN on the evidence cited above; no further integration step; owner decision pending."
+```
 
 ## See also
 
