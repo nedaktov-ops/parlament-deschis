@@ -1,4 +1,4 @@
-import { useId, useMemo } from "react";
+import { useCallback, useEffect, useId, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
@@ -38,13 +38,20 @@ export default function PartyComparison() {
   const { t } = useTranslation();
   const tipId = useId().replace(/:/g, "");
   const scope = useScope();
+  const { searchFor } = scope;
   const navigate = useNavigate({ from: "/compare" });
   // Page-local comparison selection is URL-backed too (FN-7).
   const local = useSearch({ from: "/compare", select: (s) => s as Record<string, unknown> });
   const partyA = typeof local.partyA === "string" ? local.partyA : "PSD";
   const partyB = typeof local.partyB === "string" ? local.partyB : "PNL";
-  const setPartyA = (value: string) => navigate({ search: scope.searchFor({ partyA: value }) });
-  const setPartyB = (value: string) => navigate({ search: scope.searchFor({ partyB: value }) });
+  const setPartyA = useCallback(
+    (value: string) => navigate({ search: searchFor({ partyA: value }) }),
+    [navigate, searchFor],
+  );
+  const setPartyB = useCallback(
+    (value: string) => navigate({ search: searchFor({ partyB: value }) }),
+    [navigate, searchFor],
+  );
 
   const parties = useQuery({
     queryKey: ["parties"],
@@ -61,7 +68,22 @@ export default function PartyComparison() {
     queryFn: () => committeeControl(scope.legislature, scope.date),
   });
 
-  const partyList = parties.data?.data ?? [];
+  const partyList = useMemo(() => parties.data?.data ?? [], [parties.data]);
+
+  // L-11: the PSD/PNL defaults may not exist in every corpus snapshot. Once the
+  // party list resolves, correct an unavailable selection once through the URL
+  // setters; the "invalid only" guard stops this from looping.
+  useEffect(() => {
+    if (!parties.isSuccess || partyList.length === 0) return;
+    const names = partyList.map((p) => p.short_name);
+    if (!names.includes(partyA)) {
+      setPartyA(names[0]);
+      return;
+    }
+    if (!names.includes(partyB)) {
+      setPartyB(names.find((n) => n !== partyA) ?? names[0]);
+    }
+  }, [parties.isSuccess, partyList, partyA, partyB, setPartyA, setPartyB]);
 
   const ageMap = useMemo(() => {
     const map = new Map<string, GenerationalShiftEntry>();
