@@ -1114,7 +1114,19 @@ Authorisation (GREEN only — reproduce verbatim with the W7 adaptation):
 `sha256sum -c` all exited 0 (`pre.bundle / pre.sha / pre.status / worktree.tgz: OK`).
 Commands used the expanded-path procedure from STRATEGY §5.
 
-_Probe result, evidence note and verdict pending._
+### Code evidence — result
+
+L-19 ran the dated `curl -L` status probe at `2026-11-22T20:49:44Z`; raw capture
+`/tmp/opencode/w8-url-probe.txt`. Results: the canonical project URL 200, the
+former `About.tsx:6` literal **404**, methodology + AGPL + CC URLs 200, and
+Wikidata host sample (Q42) 200. This corroborates the STRAT §1 note claim with a
+dated raw capture. Full table in
+[LINK-URL-REACHABILITY](../60-EVIDENCE/LINK-URL-REACHABILITY-2026-11-22.md).
+No product code changed; diff is the two vault-evidence files only.
+
+**Browser evidence:** N/A — network probe, not a browser action. No claim made.
+
+Four vault gates exit 0; verdict pending supervisor.
 
 ## See also
 
