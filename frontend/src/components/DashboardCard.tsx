@@ -9,7 +9,6 @@ export interface DashboardCardProps {
   searchParams?: Record<string, string>;
   color?: "sky" | "emerald" | "amber" | "rose";
   className?: string;
-  onClick?: () => void;
 }
 
 const COLOR_VARIANTS: Record<
@@ -53,8 +52,7 @@ export default function DashboardCard({
   linkTo,
   searchParams,
   color = "sky",
-  className = "",
-  onClick
+  className = ""
 }: DashboardCardProps) {
   const { t } = useTranslation();
   const v = COLOR_VARIANTS[color];
@@ -76,18 +74,10 @@ export default function DashboardCard({
   // Use a native interactive element as the card itself. A `role="button"`
   // wrapper around a focusable <Link> is a nested-interactive axe violation,
   // and a hand-rolled onKeyDown misses Space and repeats differently.
-  if (linkTo) {
-    return (
-      <Link to={linkTo} search={searchParams} className={cardClass}>
-        {content}
-        <span className="sr-only">{t("navigateTo", "Navigate to")} {title}</span>
-      </Link>
-    );
-  }
-
   return (
-    <button type="button" className={cardClass} onClick={onClick}>
+    <Link to={linkTo} search={searchParams} className={cardClass}>
       {content}
-    </button>
+      <span className="sr-only">{t("navigateTo", "Navigate to")} {title}</span>
+    </Link>
   );
 }

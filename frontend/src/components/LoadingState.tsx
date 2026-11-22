@@ -1,17 +1,11 @@
-import RetryButton from "./RetryButton";
-
 export interface LoadingStateProps {
   label?: string;
   description?: string;
-  retryLabel?: string;
-  onRetry?: () => void;
 }
 
 export default function LoadingState({
   label,
-  description,
-  retryLabel,
-  onRetry,
+  description
 }: LoadingStateProps) {
   return (
     <div
@@ -42,14 +36,6 @@ export default function LoadingState({
       {label && <h2 className="text-sm font-semibold text-slate-200">{label}</h2>}
       {description && (
         <p className="text-xs text-slate-400 text-center max-w-xs">{description}</p>
-      )}
-      {onRetry && retryLabel && (
-        <RetryButton
-          onRetry={onRetry}
-          label={retryLabel}
-          ariaLabel={retryLabel}
-          className="mt-4"
-        />
       )}
     </div>
   );
