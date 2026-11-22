@@ -1,3 +1,5 @@
+import BrandMark from "./BrandMark";
+
 export interface HeroGraphicProps {
   variant:
     | "overview"
@@ -71,21 +73,7 @@ export default function HeroGraphic({
         className={`w-full max-w-[200px] h-auto ${cfg.primary}`}
       >
         {variant === "overview" && (
-          <>
-            {/* Parliament building silhouette */}
-            <rect x="20" y="120" width="160" height="60" fill="currentColor" opacity={0.15} />
-            <rect x="60" y="80" width="80" height="40" fill="currentColor" opacity={0.3} />
-            <rect x="80" y="50" width="40" height="30" fill="currentColor" opacity={0.5} />
-            {/* Dome */}
-            <path
-              d="M40 120 Q100 20 160 120"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              opacity={0.4}
-            />
-            <rect x="90" y="140" width="20" height="20" fill="currentColor" opacity={0.3} />
-          </>
+          <BrandMark />
         )}
         {variant === "switches" && (
           <>

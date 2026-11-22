@@ -4,6 +4,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Search from "./components/Search";
+import HeaderLogo from "./components/HeaderLogo";
 import Footer from "./components/Footer";
 import SenateHistory from "./pages/SenateHistory";
 import { useScope } from "./hooks/useScope";
@@ -232,9 +233,12 @@ function RootLayout() {
       </a>
       <header className="border-b border-slate-700/60 bg-ink/95 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex-1">
-            <div className="text-base font-semibold tracking-tight">{t("title")}</div>
-            <p className="text-xs text-slate-400">{t("subtitle")}</p>
+          <div className="flex-1 flex items-center gap-3">
+            <HeaderLogo />
+            <div>
+              <div className="text-base font-semibold tracking-tight">{t("title")}</div>
+              <p className="text-xs text-slate-400">{t("subtitle")}</p>
+            </div>
           </div>
           <div className="flex w-full sm:w-auto flex-wrap items-center gap-2">
             <Search onSelect={(id) => router.navigate({

@@ -498,3 +498,32 @@ or `instance` wrapper, and no `application/problem+json` content type.
 Codes observed in the live API / source: `401` (unauthorized), `404` (not
 found), `405` (wrong method on a write route), `422` (validation), `502`
 (upstream poll failed), `503` (admin disabled).
+
+## Logo storage API
+
+Brand logo files are stored outside the read-only corpus database, under
+`data/assets/logos/` (override with `PARLAMENT_LOGO_DIR`). A JSON index in that
+directory records each file's id, content type, size, SHA-256 and active flag.
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| GET | `/api/logo` | public | Serve the active logo bytes with its media type |
+| GET | `/api/logo/{id}` | public | Serve a specific stored logo |
+| GET | `/api/logo/list` | public | List logo metadata (no filesystem names) |
+| POST | `/api/logo` | `X-Admin-Token` | Upload a logo; raw body plus `Content-Type` header |
+| POST | `/api/logo/{id}/activate` | `X-Admin-Token` | Set the active logo |
+| DELETE | `/api/logo/{id}` | `X-Admin-Token` | Delete a logo |
+
+Accepted content types: `image/svg+xml`, `image/png`, `image/jpeg`, `image/webp`;
+maximum 512 KiB. SVG uploads are parsed and restricted to a small element and
+attribute allowlist (scripts, event handlers, external references and style
+elements are rejected). Admin writes use the same fail-closed token and lockout
+as the other `/api/admin/*` endpoints.
+
+`GET /api/logo` and `GET /api/logo/{id}` accept an optional `color` query
+parameter (six-digit hex, e.g. `color=%230369a1`). For SVG logos the server
+injects it on the root element so `currentColor` paints resolve correctly when
+the file is loaded through an `<img>` tag; invalid values fall back to
+`#38bdf8`. Uploaded shape opacities are also lifted to a 0.55 minimum in the
+served copy so the mark stays legible at 36–40px header size. The backend file
+itself is never modified.

@@ -23,6 +23,7 @@ This document locks **design/implementation stack choices** for the frontend so 
 ## Illustration family (locked)
 - **Locked default:** **No custom illustration family by default.** Prefer charts/data visuals already in use (e.g. ECharts/D3-related deps present) and simple UI affordances.
 - **If illustrations are added later:** pick **one** minimal, consistent family (style + license documented in `docs/design/asset-manifest.md`) and update this file. Avoid mixing styles.
+- One custom **brand-mark family** is permitted as a narrow exception to the "No custom illustration family by default" rule: a single original, hand-authored SVG mark used only for the product's brand/hero identity (e.g. `HeroGraphic.tsx`), painted exclusively with `currentColor` and existing CSS-variable tokens so it follows both themes. This is a brand mark, **not** an illustration or icon pack: Lucide React remains the single locked icon set for all UI icons, and no second icon library, illustration style, or additional custom mark may be introduced without a further PR updating this file and `docs/design/asset-manifest.md`. The mark's source, license, and optimisation status must be recorded in the asset manifest before merge.
 
 ## Fonts
 - **Current (observed):** System UI stack in `src/index.css`:

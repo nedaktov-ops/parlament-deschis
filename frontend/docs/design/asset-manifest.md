@@ -14,6 +14,7 @@ Fill rows as assets are added. Use relative paths from the repo root (e.g. `fron
 | Path / location | Description | Source (author/vendor/link) | License | Optimized? (yes/no + notes) | Notes |
 |---|---|---|---|---|---|
 | _Example: `public/favicon.svg`_ | _Favicon_ | _Existing repo asset_ | _TBD / see repo_ | _TBD_ | _Verify current state_ |
+| `frontend/src/components/BrandMark.tsx` + `frontend/src/components/HeroGraphic.tsx` | Concept A "Amfiteatrul deschis" (Open Hemicycle) — original hand-authored SVG brand mark; shared component used in the site header (left of the title) and the hero | Original in-repo authoring | Repo LICENSE (AGPL-3.0-or-later, free/open source) | Inline JSX SVG, minified by the Vite production build; no separate `.svg` asset for SVGO. Free SVGO 4.1.0 confirmed available (`npx svgo --version`) if a standalone asset is exported later. No raster exports. | Single permitted custom brand-mark family; theme via `currentColor`; no new hex tokens |
 | | | | | | |
 
 ## How to update this manifest
