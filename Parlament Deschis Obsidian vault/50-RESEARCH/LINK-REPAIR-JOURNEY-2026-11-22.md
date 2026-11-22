@@ -434,9 +434,75 @@ Scope: git identity/branch/commit operations, backup artifact creation and verif
 
 No browser action in W0 — not applicable. No browser capture exists and no browser observation is claimed.
 
+### Supervisor sign-off (§F template)
+
+```text
+WAVE SIGN-OFF
+Wave ID:            W0
+Recipes:            L-00 (agent: git-master)
+Entry HEAD/branch:  main / 88112168237e5c37841b785dccd2375f6cc40115 (W0 §Entry identity :74-101; backup pre.sha)
+Backup ROOT:        /tmp/opencode/backups/link-repair/W0
+Manifest evidence:  bundle verify exit 0 (W0 :355-356; raw verify-bundle.stdout/stderr) | tar -tzf exit 0 (W0 :358) | sha256sum -c exit 0 (W0 :360-367) — committed in vault commit baa972a; supervisor re-ran all three read-only: four OK lines, "The bundle records a complete history", tar exit 0
+Diff (name-only):   baseline dbc5eaf changed 15 files, all under "Parlament Deschis Obsidian vault/" (W0 :377-409); supervisor re-ran git diff --name-only main..HEAD — 15 vault paths, zero product-code paths
+Checkpoint SHAs:    baseline dbc5eafcbcf5412fc883a78d5870b44c3021f71d; evidence baa972ae211182fa2259efaf499b8f8690680901; main and origin/main still 88112168237e5c37841b785dccd2375f6cc40115 (supervisor re-check)
+Gates (cmd/exit):   vault_lint 0 (66 notes); vault_sync --check 0 (5 generated notes clean); check-doc-truth.sh 0 (false-claims: 0); git diff --check 0 (no output) — W0 :420-425, raw captures :427; supervisor independently re-ran check-doc-truth.sh -> false-claims: 0, exit 0
+Browser evidence:   N/A — no browser action in W0 (W0 :433-435); no browser-dependent acceptance item
+Code evidence:      W0 :429-431 (separate titled section: scope, result, limits)
+Acceptance items:   5/5 PASS — L-00 :66-67 (branch exists; baseline commit exists; manifest verifies; main untouched; no product code changed)
+Verdict:            GREEN
+
+Citations (exact note/section or file:line for every judgement):
+  - This note, W0 §Entry identity :74-101, §Backup :119-369, §Branch and baseline commit :371-416, §Gate results :418-427, §Code evidence :429-431, §Browser evidence :433-435.
+  - Recipes L-00 :39-67 (steps, checkpoint, rollback, acceptance); strategy §4 W0 row :74, §5 :104-127, §6 :129-156; supervision protocol §C G1-G8 and §F.
+  - Supervisor read-only re-verification (2026-11-22): branch repair/links-base; HEAD baa972a; main/origin/main 8811216; clean worktree; SHA256SUMS four OK; git bundle verify complete history; tar -tzf exit 0; doc-truth false-claims 0; banned tag literal absent from this note and the [superseded-tag] alias present at :308; no "W0 NOT STARTED" or "one checkpoint" lines remain.
+  - This sign-off is supervisor-authored and appended after commit baa972a; the lead commits the verdict block with the wave record.
+
+Required remediations (owner: lead; each must be closed before next verdict):
+  - none
+
+Authorisation (GREEN only — reproduce verbatim, filling the braces):
+  "Integration authorised: wave W0 is GREEN on the evidence cited above; the lead may merge repair/links-base into repair/links-base with git merge --ff-only."
+```
+
 ## Wave W1 — confirmed BROKEN fixes
 
-_Recipes L-01, L-02. Entry/exit, checkpoint SHAs, gate output, browser result, verdict._
+Recipes L-01 (Ideology "All years") and L-02 (dead Compare MPs link).
+
+### Code evidence — entry and backup (recorded before the first edit)
+
+```console
+$ git branch --show-current
+repair/links-base
+$ git rev-parse HEAD
+baa972ae211182fa2259efaf499b8f8690680901
+$ git status --short
+(empty)
+```
+
+Backup ROOT: `/tmp/opencode/backups/link-repair/W1`. Exact commands (fully
+expanded paths, no ellipses):
+
+```bash
+mkdir -p /tmp/opencode/backups/link-repair/W1
+git bundle create /tmp/opencode/backups/link-repair/W1/pre.bundle --all
+git rev-parse HEAD > /tmp/opencode/backups/link-repair/W1/pre.sha
+git status --porcelain > /tmp/opencode/backups/link-repair/W1/pre.status
+tar -czf /tmp/opencode/backups/link-repair/W1/worktree.tgz -C /home/nedaktov/parlament-deschis --exclude=.git --exclude=node_modules --exclude=.venv --exclude=.next --exclude=dist .
+(cd /tmp/opencode/backups/link-repair/W1 && sha256sum pre.bundle pre.sha pre.status worktree.tgz > SHA256SUMS)
+git bundle verify /tmp/opencode/backups/link-repair/W1/pre.bundle
+tar -tzf /tmp/opencode/backups/link-repair/W1/worktree.tgz >/dev/null
+(cd /tmp/opencode/backups/link-repair/W1 && sha256sum -c SHA256SUMS)
+```
+
+Verification outputs: `git bundle verify` exit 0 ("The bundle records a complete
+history", 203 refs); `tar -tzf` exit 0; `sha256sum -c` exit 0 with
+`pre.bundle: OK`, `pre.sha: OK`, `pre.status: OK`, `worktree.tgz: OK`.
+Full raw outputs are in `/tmp/opencode/backups/link-repair/W1/`.
+
+### Implementation, gates and browser evidence
+
+_Pending agent return: checkpoint SHAs, diff, gate commands/exit codes, browser
+result with raw capture path, acceptance table, supervisor verdict._
 
 ## Wave W2 — navigation and scope integrity
 
