@@ -114,3 +114,33 @@ Exhaustive register: [ACTION-PLAN](../20-DIRECTION/ACTION-PLAN.md). Quick view: 
 
 See [RESEARCH-FLEET](../50-RESEARCH/RESEARCH-FLEET-2026-11-21.md) for evidence
 and [ACTION-PLAN](../20-DIRECTION/ACTION-PLAN.md) for gates and rollbacks.
+
+## F. Repair-wave + parallel-action pass (2026-11-22)
+
+Branch `repair/w0-safety`, product HEAD `e905682`, vault HEAD `42b8f5a`.
+Waves W0–W4 of the nine-recipe front-end repair programme are complete; the
+four parallel ACTION-PLAN items that were unblocked are now closed.
+
+| # | Item | Outcome | Evidence |
+|---|---|---|---|
+| 1 | **A-06 genealogy DROP relabelling** | **DONE** | `METHODOLOGY.md` §9 retitled "retired" + new §9.5 DROP decision; `DATA-MODEL.md` column notes + note; `DATA-ENRICHMENT-RESEARCH.md` dated note; vault `30-SYSTEM/DATA-MODEL.md` + `50-RESEARCH/DATA-ENRICHMENT.md`. `check-doc-truth.sh` → 0; vault lint 50 notes PASS; `vault_sync --check` clean. Commit `e905682` |
+| 2 | **A-08 licence register seed** | **DONE** | `python -m pipeline.cli --db data/parlament.db licenses-seed` → `licence register seeded: 15 entries written, 15 rows in source_license`; `select count(*) from source_license` → `15`; `tests/test_source_licenses.py` 13/13 PASS |
+| 3 | **A-11 Voturi shared states** | **DONE (verified, no change)** | `Voturi.tsx` renders `AsyncState`, which wraps `LoadingState`/`EmptyState`/`ErrorState`; R-05 wiring already satisfies the contract |
+| 4 | **A-13 `footer.datasetRelease` key** | **DONE (verified, no change)** | key present in both `i18n.ts` locales and consumed by `Footer.tsx`; `check_i18n_keys.mjs` PASS (ro=711 en=711, 0 missing) |
+| 5 | **W0–W4 repair waves** | **COMPLETE** | W0 PASS, W1 AMBER (2 pre-existing residuals tracked), W2 PASS, W3 PASS, W4 PASS (R-06 AMBER by design, R-07 PASS). Detail in [REPAIR-WAVE-OUTCOMES](REPAIR-WAVE-OUTCOMES.md) |
+| 6 | **Doc-truth gate hardening** | **DONE** | `.nedcode/qa/*` excluded from the false-claim scan (QA notes legitimately quote gate output); without it `verification-matrix.md` false-positives |
+
+### Revised top priority after this pass
+
+1. **W5 owner rollout** (🔒 owner-only): merge `repair/w0-safety` → `main`,
+   confirm branch protection, deploy, run `verify-deploy.sh`. This is the only
+   step that unlocks the repair programme's value.
+2. **Owner decision A/B/C/D** for the data workflow pin (A-01) — the P0
+   operational unknown; A-02/A-03/A-04/A-05 stay blocked behind it.
+3. **Owner decision A-12** (newsletter/social proof) — DROP recommended.
+4. **Cheap truth/hardening work an agent can do now:** A-16 (formalize Vercel
+   build-commit metadata), A-21 (research-date anomaly), A-22 (historic
+   licence-seeding proof), A-14 (WCAG AA re-check), A-09/A-10 (low priority).
+5. **Maintain the mirror after every change** (A-23) — habit, all three gates
+   green at each checkpoint.
+
