@@ -130,7 +130,20 @@ resolved.
 
 **Next step:** finish R-08's UI/a11y repairs, re-run the full W3 gate set, then update this note with PASS/FAIL and raw evidence before W4.
 
-## W4 — Tactile + provenance/i18n/nav (R-06, R-07) — **PENDING**
+## W4 — Tactile + provenance/i18n/nav (R-06, R-07) — **IN PROGRESS (R-06 AMBER; R-07 PENDING)**
+
+### R-06 — Tactile semantics / keyboard access — **AMBER by design (all executable hard gates PASS)**
+
+| Item | Evidence |
+|---|---|
+| Baseline | HEAD `7179ba7` on `repair/w0-safety`; backup `/tmp/opencode/R06-backup-20261122-070706` (SHA256SUMS OK, frontend tar `OK`) |
+| Commit | `5547795` — 4 new primitives + 36 modified files, all under `frontend/src`; `git diff --check` clean |
+| New primitives | `frontend/src/utils/a11y.ts` (`activateOnKey`), `frontend/src/hooks/useReducedMotion.ts`, `frontend/src/components/RetryButton.tsx`, `frontend/src/components/ui/TooltipText.tsx` |
+| Blocking gates | lint exit 0; build exit 0 (`✓ built in 8.67s`, pre-existing chunk-size warning only); UI gate on **fresh Vite** (port 5196) → `UI VALIDATION PASS: 24 routes, zero JavaScript errors, zero axe violations` (all 24 `[OK]`); `STATE PROBE PASS: 9 routes × 3 scenarios, 0 failures` (after master fixed empty stub for bare-array `/api/coverage/dimensions`); keyboard walk → K1,K2,K2a,K3,K5,K7,K8,K10,K11,K12 PASS, K4/K6 DEFERRED (R-07-owned files), K9 NOT PROVEN (runtime; TimeSlider unmounted on all routes, ECharts animation flag not DOM-introspectable; code guards C9 proven) |
+| Scope | `git diff --name-only -- . ':(exclude)frontend/src'` → empty; excluded files (`ui/Modal.tsx`, `ui/Drawer.tsx`, `TimelineStrip.tsx`, `i18n.ts`, `About.tsx`, `index.css`) untouched |
+| Supervisor deferrals honoured | Modal/Drawer/TimelineStrip → R-07 deletion (remedy 3); About trigger → R-07 D6 (remedy 4); i18n.ts untouched (remedy 5); R-01 index.css verify-only |
+
+**W4/R-06 decision: AMBER (hard gates green, deferrals/K9 by design).** Most effective next step: dispatch R-07 (provenance/i18n/nav) to finish the deferred items, then W5 owner rollout.
 
 ## W5 — Owner rollout (merge/protect/deploy) — **PENDING (owner-only)**
 
@@ -145,3 +158,4 @@ resolved.
 | 2026-11-21 | W2/R-04 | PASS | ruff clean, pytest 419, lint/build green, API probes 1217/1217/0, UI 24/24 zero axe (master re-run) | continue W2 with R-05 (states) |
 | 2026-11-21 | W2 overall | PASS | R-03/R-04/R-05 all blocking gates green, master re-verified; residuals scoped to W3/W4 | proceed W3/R-08 (feature honesty + grafice overflow) |
 | 2026-11-22 | W3 | PASS | ruff/pytest 431/lint/build/audit 275-0/UI 24-0-0/grafice overflow 3-3; stale-server gate failure diagnosed and dismissed; agent cancelled, master finished | proceed W4 (R-06 tactile -> R-07 provenance/i18n/nav) |
+| 2026-11-22 | W4/R-06 | AMBER | lint/build exit 0; UI 24/24 zero JS/axe (fresh server); state probe master-fixed (bare-array dims) PASS; keyboard walk 10/13 PASS, K9 NOT PROVEN, K4/K6 deferred to R-07 | proceed W4/R-07 (provenance/i18n/nav) |
