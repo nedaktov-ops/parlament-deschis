@@ -30,6 +30,12 @@ export function LiveDashboard() {
   const scope = useScope();
   const asOf = scope.date;
 
+  const cardSearch: Record<string, string> = {
+    date: scope.date,
+    ...(scope.chamber ? { chamber: scope.chamber } : {}),
+    ...(scope.legislature ? { legislature: scope.legislature } : {}),
+  };
+
   const meta = useQuery({ queryKey: ["meta"], queryFn: api.meta });
   const dashboardStats = useQuery({ queryKey: ["dashboard-stats", asOf, ...scope.scopeKey], queryFn: () => api.dashboardStats(asOf) });
   const partiesData = useQuery({ queryKey: ["parties"], queryFn: api.parties });
@@ -138,6 +144,7 @@ export function LiveDashboard() {
                   }
                   value={stats?.persons ?? "--"}
                   linkTo="/mps"
+                  searchParams={cardSearch}
                   color="sky"
                 />
                 <DashboardCard
@@ -149,6 +156,7 @@ export function LiveDashboard() {
                   }
                   value={stats?.memberships ?? "--"}
                   linkTo="/mps"
+                  searchParams={cardSearch}
                   color="emerald"
                 />
                 <DashboardCard
@@ -160,6 +168,7 @@ export function LiveDashboard() {
                   }
                   value={stats?.switches_all ?? "--"}
                   linkTo="/traseism"
+                  searchParams={cardSearch}
                   color="amber"
                 />
                 <DashboardCard
@@ -172,6 +181,7 @@ export function LiveDashboard() {
                   }
                   value={stats?.committees ?? "--"}
                   linkTo="/committees"
+                  searchParams={cardSearch}
                   color="rose"
                 />
               </div>
