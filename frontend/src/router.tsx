@@ -8,6 +8,7 @@ import HeaderLogo from "./components/HeaderLogo";
 import Footer from "./components/Footer";
 import SenateHistory from "./pages/SenateHistory";
 import { useScope } from "./hooks/useScope";
+import { PROJECT_URL } from "./config/links";
 import { isISODate, localISODate } from "./utils/date";
 import "./i18n";
 import "./index.css";
@@ -175,7 +176,7 @@ function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           <p className="text-slate-400">{t("codeLicense")}: AGPL-3.0-or-later</p>
           <p className="text-slate-400">{t("dataLicense")}: CC-BY-4.0</p>
           <h3 className="font-semibold">{t("project")}</h3>
-          <a href="https://github.com/nedaktov-ops/parlament-deschis" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">https://github.com/nedaktov-ops/parlament-deschis</a>
+          <a href={PROJECT_URL} target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">{PROJECT_URL}</a>
         </div>
       </div>
     </div>

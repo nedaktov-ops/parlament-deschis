@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { api, type HealthResponse } from "../api/client";
+import { PROJECT_URL } from "../config/links";
+import { useScope } from "../hooks/useScope";
 
 // Footer #5 "Status indicator footer" (vibeui.online Footer category):
 // live system status indicator alongside grouped links, logo and copyright.
@@ -16,6 +19,7 @@ type SourceHealth = Exclude<HealthResponse["sources"][string], string>;
 
 export default function Footer() {
   const { t, i18n } = useTranslation();
+  const scope = useScope();
   const health = useQuery({
     queryKey: ["health"],
     queryFn: api.health,
@@ -62,28 +66,31 @@ export default function Footer() {
             </h3>
             <ul className="space-y-2 text-xs text-slate-400 list-none p-0 m-0">
               <li>
-                <a
-                  href="/"
+                <Link
+                  to="/"
+                  search={scope.searchFor()}
                   className="hover:text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 rounded"
                 >
                   {t("overview")}
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="/traseism"
+                <Link
+                  to="/traseism"
+                  search={scope.searchFor()}
                   className="hover:text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 rounded"
                 >
                   {t("traseismShort")}
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="/report"
+                <Link
+                  to="/report"
+                  search={scope.searchFor()}
                   className="hover:text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 rounded"
                 >
                   {t("nav.report")}
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -94,17 +101,17 @@ export default function Footer() {
             <ul className="space-y-2 text-xs text-slate-400 list-none p-0 m-0">
               <li>
                 <a
-                  href="https://github.com/nedaktov-ops/parlament-deschis"
+                  href={PROJECT_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 rounded"
                 >
-                  {t("about")}
+                  {t("footer.sourceCode", "Source code")}
                 </a>
               </li>
               <li>
                 <a
-                  href="https://github.com/nedaktov-ops/parlament-deschis"
+                  href={PROJECT_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 rounded"
@@ -120,12 +127,13 @@ export default function Footer() {
             </h3>
             <ul className="space-y-2 text-xs text-slate-400 list-none p-0 m-0">
               <li>
-                <a
-                  href="/coverage"
+                <Link
+                  to="/coverage"
+                  search={scope.searchFor()}
                   className="hover:text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 rounded"
                 >
                   {t("coverage")}
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
