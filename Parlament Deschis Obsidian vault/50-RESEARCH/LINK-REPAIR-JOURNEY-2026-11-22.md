@@ -903,7 +903,24 @@ Recipe L-15. **Code evidence — entry:** branch `repair/links-base`, HEAD
 `/tmp/opencode/backups/link-repair/W5`; `git bundle verify`, `tar -tzf` and
 `sha256sum -c` all exited 0 (`pre.bundle / pre.sha / pre.status / worktree.tgz: OK`).
 
-_Implementation, gates, browser evidence and verdict pending._
+Implementation: commit `3e3cd99efa6999f81369304c918cfb043eb583fc`
+(`refactor(dead): L-15 remove unreachable controls`). Re-run importer greps
+proved zero source importers for `PartyComparisonMatrix` and `TimeSlider`, so
+both files were deleted; `LoadingState`'s unused retry and `DashboardCard`'s
+unreachable button branch were removed. The agent correctly **declined** two
+parts of the recipe as unsafe: `EmptyState`'s CTA is still passed by
+`AsyncState.tsx:89-90` (outside its exclusive list), and the dead arc plumbing
+lives in `AgeDistributionRadial.tsx` (also outside its list); changing them
+would either break the type gate or exceed scope. Both are recorded as
+follow-ups, not claimed as fixed. `i18n.ts` read-only; `mps.compareLink` kept.
+
+Diff from W5 entry `ccf01a44..HEAD` is exactly four paths (5 insertions,
+232 deletions). Gates all exit 0: lint, build, i18n:check (ro=731/en=731),
+routes PASS, vault lint PASS 66, sync clean, doc-truth 0, `git diff --check` 0.
+
+**Browser evidence:** no browser pass — this wave removes only unreachable
+code, so there is no clickable control whose runtime behaviour could change.
+No browser claim is made. Verdict pending supervisor.
 
 ## Wave W6 — regression guards
 
