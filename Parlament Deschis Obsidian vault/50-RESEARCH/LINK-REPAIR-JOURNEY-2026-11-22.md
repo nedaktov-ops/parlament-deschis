@@ -1256,6 +1256,37 @@ Full note: [CONSOLE-CAPTURES](../60-EVIDENCE/CONSOLE-CAPTURES-2026-11-22.md).
 vault lint `PASS: 72 notes`, sync check clean, doc-truth `false-claims: 0`,
 `git diff --check` no output — all exit 0. Verdict pending supervisor.
 
+### Supervisor sign-off (§F template)
+
+```text
+WAVE SIGN-OFF
+Wave ID:            W10 (follow-up wave — F6 CI evidence, F5 console captures)
+Recipes:            L-21 (CI required checks) then L-22 (fresh console captures), one vault-writer agent, two atomic commits, shared backup (L-04+L-05 precedent)
+Entry HEAD/branch:  a0c6fe76e08e054f87c9763c61c3c3b82743992dfa / repair/links-w10 (W10 :1222-1226); exit HEAD 0d802a3fb020364f8667994390a3f58667a3a8b3; main and origin/main still 88112168237e5c37841b785dccd2375f6cc40115 (supervisor re-read)
+Backup ROOT:        /tmp/opencode/backups/link-repair/W10 (one backup shared by both atomic evidence commits)
+Manifest evidence:  git bundle verify exit 0 ("The bundle records a complete history"), tar -tzf exit 0, sha256sum -c exit 0 (four OK lines) — recorded in W10 :1222-1226 and committed in 6d17cd6 at 22:56:32+02:00, BEFORE both evidence commits 418dd7c (22:58:30) and 0d802a3 (22:58:45); supervisor re-ran bundle verify and sha256sum -c read-only: complete history, four OK lines. pre.sha = a0c6fe76e08e054f87c9763c61c3b82743992dfa (matches entry).
+Diff (name-only):   a0c6fe7..0d802a3 = exactly three vault-evidence paths (supervisor re-ran git diff --name-only): "Parlament Deschis Obsidian vault/50-RESEARCH/LINK-REPAIR-JOURNEY-2026-11-22.md" and the two new notes under 60-EVIDENCE/ (CI-REQUIRED-CHECKS, CONSOLE-CAPTURES). Zero product-code, config, workflow, data or deployment paths; no PR opened, no workflow edited. main/origin/main unchanged.
+Checkpoint SHAs:    entry-identity + shared verified backup 6d17cd6; L-21 evidence 418dd7c; L-22 evidence 0d802a3; base a0c6fe7. Additive rollback (reverse order): git revert 0d802a3fb020364f8667994390a3f58667a3a8b3, then git revert 418dd7c, then 6d17cd6 only if the entry record is also withdrawn. No reset, force-push, tag move or history rewrite; git log --merges repair/links-base..repair/links-w10 = 0 and repair/links-base is an ancestor (ff-only eligible).
+Gates (cmd/exit):   working directory /home/nedaktov/parlament-deschis; lead recorded per-command excerpts at W10 :1239-1243 (L-21, cwd repo root — vault lint 71 notes, sync clean, doc-truth false-claims: 0, git diff --check no output, all exit 0) and :1255-1257 (L-22 re-run — vault lint 72 notes, sync clean, doc-truth false-claims: 0, git diff --check no output, all exit 0). The 71→72 note-count change is the addition of the CONSOLE-CAPTURES note between the two commits, not a contradiction. Supervisor independently re-ran all four read-only at final state: "VAULT LINT PASS: 72 notes", "vault_sync --check: clean — 5 generated notes match the source commit", "false-claims: 0", empty git diff --check — all exit 0. No frontend gate required (no product code changed; W5 precedent :921-923).
+Browser evidence:   L-21 N/A — GitHub CLI query (W10 :1239). L-22 titled Browser evidence at W10 :1245-1253 and evidence note :21-31; six raw artifacts re-read by supervisor (three DOM JSONs plus three paired `*-console.json` files), each with an artifact-backed "no console messages found" from chrome-devtools error/warn and the note "new observation on integrated HEAD, not original wave capture". No GREEN wave record altered. This closes the W9 supervisor note about prose-only console claims.
+Code evidence:      W10 :1222-1226, :1228-1237, :1245-1257 plus both evidence notes. L-21: `gh run list --repo nedaktov-ops/parlament-deschis --branch repair/links-base --limit 20` exit 0 with no output — no runs on that branch; the unfiltered control query returned successful runs on main and older branches for different commits, correctly not attributed here (CI note :29-41). Four required checks are NOT PROVEN with resolver "owner opens a PR from repair/links-base → four required checks run → record conclusions with run IDs and URLs". This is the expected L-21 outcome under §C A2/A5 and wave plan §5/§8, not a defect or a wave failure.
+Acceptance items:   6/6 PASS — (1) L-21 query executed, raw capture exists → /tmp/opencode/w10-ci-checks.txt; (2) L-21 four checks NOT PROVEN with named resolver, no run ID misattributed → W10 :1234-1236 and CI note :36-41; (3) L-22 three DOM + three console artifacts exist and are cited → W10 :1247-1252; (4) L-22 new-observation labeling, no GREEN record changed → W10 :1252 and console note :17-19; (5) no product code/config/workflow/data change, three-path diff → git diff --name-only; (6) four vault gates exit 0 with per-command excerpts, final lint PASS 72 → W10 :1239-1243, :1255-1257 + supervisor re-run.
+Verdict:            GREEN
+
+Citations (exact note/section or file:line for every judgement):
+  - This note, W10 §Entry/backup :1222-1226, §L-21 :1228-1243, §L-22 :1245-1257; evidence notes CI-REQUIRED-CHECKS :17-20, :22-41 and CONSOLE-CAPTURES :15-31, :33-39.
+  - Wave plan LINK-FOLLOWUP-WAVE-PLAN §2 (one agent/two atomic commits), §5 (L-21 NOT-PROVEN acceptance), §6 (L-22 acceptance), §7 (gates), §8 (GREEN with item-scoped NOT PROVEN); supervision protocol §C (G1-G8, A1, A2, A5, R1-R9), §D, §F; strategy §2.1, §2.6, §5, §6, §9; CI workflow required checks at .github/workflows/ci.yml:17,59,80,111.
+  - Supervisor read-only re-verification (2026-11-22): branch/entry/exit HEAD, clean worktree, three-path diff, pre.sha, backup bundle/manifest re-verified, commit order (shared backup before both evidence commits), raw CI and six console artifacts, inbound link to CONSOLE-CAPTURES already present in the L-21 commit tree, four vault gates re-run at final state, ancestry/linearity, main/origin/main unchanged. No browser or network tool was run by the supervisor.
+
+Required remediations (owner: lead; each must be closed before next verdict):
+  - none. The F6 resolver (owner opens a PR from repair/links-base) remains an owner gate by design and is not a wave remediation.
+
+Non-blocking observations: (1) a vault-lint orphan finding occurred mid-wave while the console note lacked an inbound link; the lead fixed it before committing L-21 (the link is present in tree 418dd7c at journey line 1245) and final lint is PASS 72 — no gate failed at any committed checkpoint, so A1/R4 is not triggered. (2) The L-22 W6 row observes /coverage, not a forced retry-error state; the evidence note limits the claim to the raw-capture documentation gap (:36-39), so no retry runtime claim is made.
+
+Authorisation (GREEN only — reproduce verbatim):
+  "Integration authorised: wave W10 is GREEN on the evidence cited above; the lead may merge repair/links-w10 into repair/links-base with git merge --ff-only."
+```
+
 ## See also
 
 [CLICK-INVESTIGATION-JOURNEY](CLICK-INVESTIGATION-JOURNEY-2026-11-22.md) ·
