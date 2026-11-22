@@ -976,7 +976,37 @@ sync clean, doc-truth 0, `git diff --check` 0.
 retry click produced a new API request (`api_requests_before_click=5`,
 `after_click=6`, `NEW_API_REQUEST_ON_CLICK=True`). This is a runtime observation
 of the guard script, not a product UI claim; no axe/network-reachability claim
-is made. Verdict pending supervisor.
+is made.
+
+### Supervisor sign-off (§F template)
+
+```text
+WAVE SIGN-OFF
+Wave ID:            W6
+Recipes:            L-16 (regression guards; agent qa-reviewer)
+Entry HEAD/branch:  95a15993d37382e01873a0fd612b6cf825399924 / repair/links-base (W6 :957-960; W6 backup pre.sha re-read). Entry-identity commit 075d5011; code commit 9a7b0ae — the two IDs were inverted in the verbal request, but the wave note and git log are correct.
+Backup ROOT:        /tmp/opencode/backups/link-repair/W6
+Manifest evidence:  git bundle verify exit 0, tar -tzf exit 0, sha256sum -c exit 0 (W6 :957-960) — supervisor re-ran all three: four OK lines, "The bundle records a complete history", tar exit 0; pre.sha matches entry HEAD
+Diff (name-only):   exactly two authorized script paths (W6 :962-963; supervisor re-ran git diff --name-status 075d5011..HEAD -- scripts/): M scripts/check_routes_nav.mjs, M scripts/ui_state_probe.py. No CI/workflow edit; extra journey/_generated paths are mandated vault write-back (STRAT §10). The verification request's "two script files" is correct.
+Checkpoint SHAs:    9a7b0aeb76748d30298045297a7c25ecdecf423a (L-16), c5ac80b37e4d7181f38c35818eb6ca3c1be5b0f9 (evidence); entry identity 075d5011. Code message carries recipe ID, evidence anchor, gates and rollback SHA 075d5011.
+Gates (cmd/exit):   all exit 0 — lint, build, npm run i18n:check, node scripts/check_routes_nav.mjs (24 routes / 47 nav_links / 0 unlinked / 0 deprecated), python3 -m py_compile scripts/ui_state_probe.py, vault lint 66, sync clean, doc-truth 0, git diff --check (W6 :969-971). Supervisor re-ran routes: ROUTES total=24 nav_links=47 unlinked=0, exit 0; probe source compiles (read-only compile check); i18n, vault lint, sync --check, doc-truth and diff --check all exit 0. The request's "unlinked once" and "No gates exit" are contradicted by the repository: unlinked=0 and every gate exited 0. Build not re-run (writes dist). main/origin/main still 88112168237e5c37841b785dccd2375f6cc40115; worktree clean.
+Browser evidence:   runtime observation of the guard script, not a product UI claim (W6 :973-979): vite preview of frontend/dist on 127.0.0.1:5180, `python3 scripts/ui_state_probe.py` → "STATE PROBE PASS: 9 routes × 3 scenarios, 0 failures" (the request's "9 out of 3" is a misstatement); retry click produced a new /api/ request (api_requests_before_click=5, after_click=6, NEW_API_REQUEST_ON_CLICK=True). No axe or network-reachability claim.
+Code evidence:      W6 :957-971; supervisor read the script diff: four NAV_ANCHORS including internal href="/…" (S-13 satisfied), and a real retry click assertion using expect_request on "/api/" with an error-state-transition fallback — no false-positive "presence only" check.
+Acceptance items:   all PASS · 0 AMBER/NOT PROVEN — L-16 "guards still green, no false positives" (nav 47/0 exit 0; probe 9×3 with click proving a request), and no CI workflow edited.
+Verdict:            GREEN
+
+Citations (exact note/section or file:line for every judgement):
+  - This note, W6 §Code evidence :957-971, §Browser/runtime evidence :973-979.
+  - Recipe L-16 :450-471 (exclusive files, all three regex patterns, click assertion, exit-code contract); strategy §4 W6 row :80, §5, §6, §10; supervision protocol S-13, §C (G1-G8), §D, §E.
+  - Supervisor read-only re-verification (2026-11-22): branch/HEAD, 2-path script diff, backup manifest/bundle/tar, routes guard re-run (24/47/0, exit 0), probe syntax, five other gates re-run, main/origin/main unchanged, clean worktree.
+  - Non-blocking note: the state-probe PASS figure is recorded in the wave note as an output excerpt without a separate raw capture file; future waves should attach one, as done for frontend gates.
+
+Required remediations (owner: lead; each must be closed before next verdict):
+  - none
+
+Authorisation (GREEN only — reproduce verbatim, filling the braces):
+  "Integration authorised: wave W6 is GREEN on the evidence cited above; the lead may merge repair/links-w6 into repair/links-base with git merge --ff-only."
+```
 
 ## Wave W7 — integration and owner hand-off
 
