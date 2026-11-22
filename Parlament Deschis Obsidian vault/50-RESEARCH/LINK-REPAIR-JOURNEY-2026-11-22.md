@@ -574,7 +574,36 @@ Scope: Chrome DevTools on `http://127.0.0.1:5188` only; no production or axe cla
 | Diff ⊆ exclusive file list | `{Ideology.tsx, Mps.tsx}` | PASS |
 | No new console errors | console capture | PASS |
 
-Verdict: pending supervisor sign-off.
+### Supervisor sign-off (§F template)
+
+```text
+WAVE SIGN-OFF
+Wave ID:            W1
+Recipes:            L-01, L-02 (agent: minimal-change-engineer)
+Entry HEAD/branch:  e919b6771267866682946f842b9a770d49e02e2a / repair/links-base (W1 :473-480; backup pre.sha re-read)
+Backup ROOT:        /tmp/opencode/backups/link-repair/W1
+Manifest evidence:  bundle verify exit 0 (W1 :497-500; raw bundle-verify.txt) | tar -tzf exit 0 (W1 :498; tar-list.txt) | sha256sum -c exit 0 (W1 :498-499; manifest-check.txt) — entry/evidence commit e919b67; supervisor re-ran all three: four OK lines, "The bundle records a complete history", tar exit 0
+Diff (name-only):   code commits 12cab48..943f4bf = exactly frontend/src/pages/Ideology.tsx + frontend/src/pages/Mps.tsx (W1 :512-514; supervisor re-ran git diff --name-only e919b677..943f4bf = 2 paths). Full e919b677..HEAD additionally has the journey note and five regenerated _generated/* notes from evidence commit eab926a (W1 :544-545) — mandated vault write-back (STRAT §10) and regeneration (AGENTS NEVER hand-edit generated files), not a code-scope breach under R1; vault_sync --check clean confirms.
+Checkpoint SHAs:    L-01 12cab48cf6c3c095850275a9d642666dca727fea; L-02 943f4bf00fe191a1d60542676d9f5029bc00a672; evidence eab926a233b38a3d18cb14ce703ddb8f4ce0d3e2; entry e919b6771267866682946f842b9a770d49e02e2a. Code commit messages carry recipe ID, evidence anchor, gate output and rollback SHA (W1 :507-510; supervisor git log). The "brownser" typo is only in the vault evidence-commit subject: no gate reads commit-subject text, so no gate or checkpoint is affected.
+Gates (cmd/exit):   lint 0; build 0; routes total=24 nav_links=22 unlinked=0 exit 0; i18n parity 0; vault_lint 66 notes 0; vault_sync --check 0; doc-truth false-claims: 0; git diff --check 0 — W1 :523-542, raw captures :544-545 and /tmp/opencode/w1-{lint,build}.txt. Supervisor re-ran routes (24/22/0), i18n (ro=724 en=724 used=651 dynamic=21; 0 missing/asymmetric/duplicate), vault_lint, sync --check, doc-truth and diff --check: all exit 0. Build not re-run by supervisor (it writes dist); recorded build log examined instead.
+Browser evidence:   separate titled section W1 :547-564. Raw captures /tmp/opencode/w1-browser-ideology.json (chesYear=all persists, 38 rows / 6 distinct years), /tmp/opencode/w1-browser-mps-specific.json (new "Compară parlamentarii →" link clicked, marker "spa", /compare-mps?date=2026-11-22, correct title), /tmp/opencode/w1-browser-mps.json (first-click false lead recorded and discarded, not claimed). No console error/warn observed (:564). Local dev server 127.0.0.1:5188 only; no production or axe claim.
+Code evidence:      separate title W1 :471-545. Ideology.tsx:49 ALL_YEARS; :65 mandatory S-10 step `chesYear === ALL_YEARS ? undefined : chesYear` so year=all never reaches api.py:1747's ^\d{4}$; :81-84 selectedYear; :253-257 value/onChange/option sentinel; :64 query key unchanged. Mps.tsx:144-148 <Link to="/compare-mps" search={scope.searchFor()}> with t("mps.compareLink"); i18n.ts unchanged (2-path code diff). Supervisor re-read all cited lines.
+Acceptance items:   6/6 PASS — W1 :568-575; each corroborated by code, gate or browser capture above.
+Verdict:            GREEN
+
+Citations (exact note/section or file:line for every judgement):
+  - This note, W1 §Code evidence :471-545, §Browser evidence :547-564, §Acceptance table :566-575.
+  - Recipes L-01 :51-105, L-02 :109-138; strategy §2.5 :48-49, §6 :129-156, §10 :191-197; supervision protocol §C (G1-G8, R1, R2), §D, §E, finding S-10.
+  - Supervisor read-only re-verification (2026-11-22): branch repair/links-w1; HEAD eab926a; clean worktree; code diff entry..943f4bf = 2 files; six checks re-run with exit 0; backup SHA256SUMS and bundle re-verified; browser JSON captures read.
+  - Commit-subject typo in eab926a is cosmetic and affects no gate (STRAT §2.5 applies to code checkpoint messages, which are correct).
+  - Non-blocking evidence note for future waves: W1 :564 records an empty error/warn console list with tool name but no separate raw capture file; no console error was observed, so R2 is not triggered.
+
+Required remediations (owner: lead; each must be closed before next verdict):
+  - none
+
+Authorisation (GREEN only — reproduce verbatim, filling the braces):
+  "Integration authorised: wave W1 is GREEN on the evidence cited above; the lead may merge repair/links-w1 into repair/links-base with git merge --ff-only."
+```
 
 ## Wave W2 — navigation and scope integrity
 
