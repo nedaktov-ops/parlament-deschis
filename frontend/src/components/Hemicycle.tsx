@@ -104,6 +104,7 @@ export default function Hemicycle({
 
   return (
     <div className="relative">
+      {/* L-12 (a11y): seats are decorative (aria-hidden SVG); every seated member is also a real <button> in the member list at the end of this component — that list is the keyboard/screen-reader path. */}
       <svg viewBox="0 0 100 56" className="w-full" aria-hidden="true" focusable="false">
         {seats.map((s, i) => (
           <circle
