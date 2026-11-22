@@ -7,7 +7,15 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, "..");
 const text = readFileSync(path.join(repo, "frontend/src/router.tsx"), "utf8");
 const routes = [...text.matchAll(/path:\s*"([^"]+)"/g)].map((m) => m[1]);
-const navTargets = [...text.matchAll(/<NavLink\s+to="([^"]+)"/g)].map((m) => m[1]);
+// Four source anchors prove a route is nav-reachable. Each anchor is counted
+// independently (the same target may be matched by more than one anchor).
+const NAV_ANCHORS = [
+  /<NavLink\s+to="([^"]+)"/g,          // 1: <NavLink to="…">
+  /\bto="([^"]+)"/g,                    // 2: literal to="…" (incl. <Link to="…">)
+  /navigate\(\{\s*to:\s*"([^"]+)"/g,   // 3: navigate({ to: "…" })
+  /href="(\/[^"]*)"/g,                  // 4: internal native anchors href="/…"
+];
+const navTargets = NAV_ANCHORS.flatMap((re) => [...text.matchAll(re)].map((m) => m[1]));
 const REACHABLE_OTHERWISE = new Map([
   ["/person/$id", "reachable via global Search (router.tsx:227-231)"],
   ["/electoral", "redirect-only route (router.tsx:322-336)"],
