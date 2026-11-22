@@ -7,9 +7,9 @@ status: active
 authority: mirror
 tags: [type/source-map, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py]
-created: 2026-11-22T08:06:10+02:00
-updated: 2026-11-22T08:06:10+02:00
-source_commit: 5547795a7c800275bfd417007119255b402ac8d1
+created: 2026-11-22T12:27:32+02:00
+updated: 2026-11-22T12:27:32+02:00
+source_commit: e905682447dc42ecd23e6dc5524db56a9de10edb
 generated: true
 generator: scripts/vault_sync.py
 ---
@@ -23,17 +23,18 @@ Derived from `git ls-tree -r --name-only <source-commit>`. Counts are recursive 
 | Folder | Files | Purpose |
 |---|---:|---|
 | `.github` | 6 | CI workflows, issue templates and automation. |
+| `.nedcode` | 2 | Project files (purpose not mapped). |
 | `Parlament Deschis Obsidian vault` | 60 | Project files (purpose not mapped). |
 | `backend` | 11 | FastAPI backend: API routers, services and database access. |
 | `data` | 7 | Datasets, release markers and generated database artifacts. |
 | `docker` | 1 | Container build and deployment support files. |
 | `docs` | 57 | Human-readable project documentation and decision records. |
-| `frontend` | 93 | React and Vite dashboard application. |
+| `frontend` | 91 | React and Vite dashboard application. |
 | `pipeline` | 44 | Data ingestion, transformation and export pipeline. |
-| `scripts` | 18 | Operational, verification and generation scripts. |
+| `scripts` | 20 | Operational, verification and generation scripts. |
 | `tests` | 84 | Python test suite and fixtures. |
 
 Root-level tracked files: 16.
-Total tracked files: 397.
+Total tracked files: 399.
 
 Regenerate with `scripts/vault_sync.py`.

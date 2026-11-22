@@ -16,8 +16,7 @@ source_commit: aca0ec9
 
 # Front-end repair strategy — master index
 
-**Status: IN PROGRESS — Waves W0–W4 executed under the supervisor/implementer
-protocol; W5 (owner merge/protect/deploy) is the current open step.** Nine
+**Status: W0–W4 COMPLETE — Wave W5 (owner merge/protect/deploy) is the current open step.** Nine
 strategy agents produced 9,179 lines of implementation-ready recipes in
 `docs/repair-recipes/`. This note indexes them, fixes cross-recipe ownership
 conflicts, and defines the wave/gate envelope. All diagnoses come from the
@@ -87,10 +86,8 @@ check is **NOT PROVEN**, never PASS.
 
 Local gates as of 2026-11-22 (Waves W0–W4 executed): doc-truth **false-claims: 0**,
 vault lint clean, `vault_sync --check` clean, `git diff --check` clean. Waves W0
-(R-09 safety) and W3 (R-08 honesty) completed with every blocking gate green; W1
-(R-01/R-02) AMBER with two pre-existing residuals tracked; W2 (R-03/R-04/R-05) PASS;
-W4 (R-06 tactile → R-07 provenance/i18n/nav) in progress (R-06 AMBER by design,
-hard gates green).
+(R-09 safety), W2 (R-03/R-04/R-05), W3 (R-08 honesty), and **W4 (R-06 tactile → R-07 provenance/i18n/nav)** completed with every blocking gate green; W1
+(R-01/R-02) AMBER with two pre-existing residuals tracked (stale probe UUID, `/grafice` overflow → R-08 owner).
 
 **NOT PROVEN across all recipes:** touch/reduced-motion runtime emulation (K9
 runtime probe pending — TimeSlider not mounted on any route), print/PDF, live API
@@ -100,8 +97,7 @@ are recorded as named preconditions/gaps, not claimed as green.
 
 ## 6. Next decision
 
-**Current next step:** complete R-07 (provenance/i18n/nav) inside Wave W4, then
-run the W5 owner rollout (merge/protect/deploy, 🔒 owner-only). The next step
+**Current next step:** W5 owner rollout (merge `repair/w0-safety` → `main`, confirm branch protection, deploy, run `verify-deploy.sh` — 🔒 owner-only). The next step
 after that is the explicit owner decision to begin Wave W0/W1 with one
 recipe-owned agent per step (implementer fleet), following
 [ACTION-PLAN](ACTION-PLAN.md) and the R-09 gate envelope. Until then this note

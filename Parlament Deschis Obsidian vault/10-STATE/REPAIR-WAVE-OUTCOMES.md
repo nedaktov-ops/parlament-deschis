@@ -145,7 +145,69 @@ resolved.
 
 **W4/R-06 decision: AMBER (hard gates green, deferrals/K9 by design).** Most effective next step: dispatch R-07 (provenance/i18n/nav) to finish the deferred items, then W5 owner rollout.
 
+### R-07 — Provenance / i18n / nav — **PASS**
+
+| Item | Evidence |
+|---|---|
+| Baseline | HEAD `aca0ec9` on `repair/w0-safety` (implementer dispatch); background agent died mid-flight (free usage limit); master completed implementation directly |
+| Commit | `2ebb24a` — router, 7 pages, i18n.ts, new ProvenanceStamp component, 3 deletions (Modal, Drawer, TimelineStrip), 2 new check scripts; `git diff --check` clean |
+| i18n gate | `node scripts/check_i18n_keys.mjs` → **PASS: i18n key diff clean (0 missing, 0 asymmetric, 0 duplicate)**, exit 0; ro=711 en=711 |
+| Routes/nav gate | `node scripts/check_routes_nav.mjs` → **PASS: every route is nav-reachable or formally deprecated (22 nav links, 0 unlinked)**, exit 0 |
+| ProvenanceStamp | wired to Committees, CoverageView, PartyProfile, PartyTimeline, PersonDeepDive, Voturi (detail), Ideology (meta) |
+| LiveFeed | imported and rendered in LiveDashboard (legislature=2024, chamber=senate) |
+| Traseism | About modal button wired (`traseismAboutButton` key) |
+| Dead components | deleted: `ui/Modal.tsx`, `ui/Drawer.tsx`, `TimelineStrip.tsx` |
+| Secondary nav | 6 orphan routes linked in new second nav row with document title labels |
+| Blocking gates | lint exit 0; build exit 0; UI gate 24/24, zero JavaScript errors, zero axe violations (fresh Vite port 5180); state probe **STATE PROBE PASS: 9 routes × 3 scenarios, 0 failures**; doc-truth 0; vault lint PASS, vault sync PASS |
+| NOT PROVEN | K9 reduced-motion runtime probe (TimeSlider unmounted on all routes; code guards C9 proven) — inherited from R-06 deferral |
+
+**W4/R-07 decision: PASS.** All executable gates green; i18n and routes/nav guards clean; provenance wiring complete; dead code removed; navigation reachable. Most effective next step: W5 owner rollout (merge `repair/w0-safety` → `main`, confirm branch protection, deploy, run `verify-deploy.sh`).
+
 ## W5 — Owner rollout (merge/protect/deploy) — **PENDING (owner-only)**
+
+## Parallel actions from ACTION-PLAN.md (A-06, A-08, A-11, A-13) — **COMPLETED**
+
+### A-08 — Seed licence register — **PASS**
+
+| Item | Evidence |
+|---|---|
+| Command | `python -m pipeline.cli --db data/parlament.db licenses-seed` |
+| Output | `licence register seeded: 15 entries written, 15 rows in source_license` |
+| Verification | `sqlite3 data/parlament.db "select count(*) from source_license;"` → `15` |
+| Python fix | `mise use -g python@3.12.15` + `pip install six beautifulsoup4 apscheduler urllib3 certifi lxml` |
+| Blocking gates | doc-truth 0; vault lint PASS; vault sync PASS; pytest source_license tests 13/13 PASS |
+
+**Decision:** PASS. The 15-entry licence register is seeded and verified.
+
+### A-06 — Genealogy DROP doc relabelling — **PASS**
+
+| Item | Evidence |
+|---|---|
+| Files updated | `docs/METHODOLOGY.md` (§9 retitled "Party genealogy — retired", §9.5 DROP decision added), `docs/DATA-MODEL.md` (column notes + note), `docs/DATA-ENRICHMENT-RESEARCH.md` (top note added) |
+| Vault notes updated | `30-SYSTEM/DATA-MODEL.md`, `50-RESEARCH/DATA-ENRICHMENT.md` |
+| DROP rationale | No licence-complete source declares ID-addressable predecessor/successor for RO parties (Wikidata 0 refs, Party Facts incomplete, PolPaL NOT PROVEN, SER-PROM ShareAlike) |
+| Blocking gates | doc-truth 0; vault lint PASS (50 notes); vault sync PASS; schema tests PASS |
+
+**Decision:** PASS. All three docs + vault notes relabelled with dated DROP note (2026-11-21); columns remain for forward-compatibility.
+
+### A-11 — Voturi states wiring — **VERIFIED COMPLETE (no code change needed)**
+
+| Item | Evidence |
+|---|---|
+| Finding | `Voturi.tsx` already uses `AsyncState` which wraps `LoadingState` / `EmptyState` / `ErrorState` |
+| Components | `LoadingState`, `EmptyState`, `ErrorState` imported from `components/ui/AsyncState` |
+| Blocking gates | No changes required; existing wiring satisfies R-05 contract |
+
+**Decision:** Already complete — no action needed.
+
+### A-13 — Footer `datasetRelease` i18n key — **VERIFIED COMPLETE (no code change needed)**
+
+| Item | Evidence |
+|---|---|
+| Finding | `footer.datasetRelease` key exists in both `i18n.ts` locales (ro/en) and is used in `Footer.tsx` |
+| Blocking gates | No changes required; key present and wired |
+
+**Decision:** Already complete — no action needed.
 
 ## Decision log
 
@@ -159,3 +221,4 @@ resolved.
 | 2026-11-21 | W2 overall | PASS | R-03/R-04/R-05 all blocking gates green, master re-verified; residuals scoped to W3/W4 | proceed W3/R-08 (feature honesty + grafice overflow) |
 | 2026-11-22 | W3 | PASS | ruff/pytest 431/lint/build/audit 275-0/UI 24-0-0/grafice overflow 3-3; stale-server gate failure diagnosed and dismissed; agent cancelled, master finished | proceed W4 (R-06 tactile -> R-07 provenance/i18n/nav) |
 | 2026-11-22 | W4/R-06 | AMBER | lint/build exit 0; UI 24/24 zero JS/axe (fresh server); state probe master-fixed (bare-array dims) PASS; keyboard walk 10/13 PASS, K9 NOT PROVEN, K4/K6 deferred to R-07 | proceed W4/R-07 (provenance/i18n/nav) |
+| 2026-11-22 | W4/R-07 | **PASS** | i18n key diff PASS (ro=711 en=711, 0 missing/0 asymmetric/0 duplicate); routes/nav guard PASS (24 routes, 22 nav-linked, 0 unlinked); ProvenanceStamp wired (7 pages); LiveFeed wired in LiveDashboard; Traseism About button wired; Modal/Drawer/TimelineStrip deleted; secondary nav (6 orphan routes); lint/build/UI 24/24/0/0 all PASS; state probe 9×3 PASS; doc-truth 0; vault lint/sync green | W4 complete → proceed W5 (owner rollout) |

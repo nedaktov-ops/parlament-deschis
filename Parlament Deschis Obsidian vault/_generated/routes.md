@@ -7,9 +7,9 @@ status: active
 authority: mirror
 tags: [type/reference, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py, backend/routers/api.py, backend/main.py]
-created: 2026-11-22T08:06:10+02:00
-updated: 2026-11-22T08:06:10+02:00
-source_commit: 5547795a7c800275bfd417007119255b402ac8d1
+created: 2026-11-22T12:27:32+02:00
+updated: 2026-11-22T12:27:32+02:00
+source_commit: e905682447dc42ecd23e6dc5524db56a9de10edb
 generated: true
 generator: scripts/vault_sync.py
 ---
