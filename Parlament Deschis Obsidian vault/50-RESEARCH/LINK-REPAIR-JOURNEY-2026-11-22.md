@@ -1128,6 +1128,37 @@ No product code changed; diff is the two vault-evidence files only.
 
 Four vault gates exit 0; verdict pending supervisor.
 
+### Supervisor sign-off (§F template)
+
+```text
+WAVE SIGN-OFF
+Wave ID:            W8 (follow-up wave — F4 external URL reachability)
+Recipes:            L-19 (lead; vault-evidence only, no product-code checkpoint)
+Entry HEAD/branch:  b193af6ce3ba08e367e7f0522ed74c20a6d12f3d / repair/links-w8 (W8 :1111-1115); exit/evidence HEAD 71b9a443f62fb92d07876cc00c6b8f4ba29b2b4a; main and origin/main still 88112168237e5c37841b785dccd2375f6cc40115 (supervisor re-read)
+Backup ROOT:        /tmp/opencode/backups/link-repair/W8
+Manifest evidence:  git bundle verify exit 0 ("The bundle records a complete history"), tar -tzf exit 0, sha256sum -c exit 0 (four OK lines) — recorded in W8 :1111-1115 and committed in d5a2404 BEFORE the probe; supervisor re-ran git bundle verify and sha256sum -c read-only: complete history, four OK lines. pre.sha = b193af6ce3ba08e367e7f0522ed74c20a6d12f3d (matches entry).
+Diff (name-only):   b193af6..71b9a44 = exactly two vault-evidence paths (supervisor re-ran git diff --name-only): "Parlament Deschis Obsidian vault/50-RESEARCH/LINK-REPAIR-JOURNEY-2026-11-22.md" and "Parlament Deschis Obsidian vault/60-EVIDENCE/LINK-URL-REACHABILITY-2026-11-22.md". Zero product-code paths; zero config/workflow/data paths. main/origin/main unchanged.
+Checkpoint SHAs:    entry-identity + verified-backup d5a2404 (10-line W8 entry/backup record, committed 22:49:44+02:00); evidence 71b9a44 (committed 22:50:13+02:00, after the backup); base b193af6. Additive rollback: git revert 71b9a443f62fb92d07876cc00c6b8f4ba29b2b4a (and d5a2404 first, in reverse order, if the entry record is also withdrawn). No reset, force-push, tag move or history rewrite; git log --merges repair/links-base..repair/links-w8 = 0 and repair/links-base is an ancestor (ff-only eligible).
+Gates (cmd/exit):   working directory /home/nedaktov/parlament-deschis for all four — `python3 scripts/vault_lint.py` → "VAULT LINT PASS: 69 notes, all links/frontmatter/vocabularies clean" exit 0; `python3 scripts/vault_sync.py --check` → "vault_sync --check: clean — 5 generated notes match the source commit" exit 0; `bash scripts/check-doc-truth.sh` → "false-claims: 0" exit 0; `git diff --check` → no output exit 0. The lead recorded these in aggregate at W8 :1129; the supervisor independently re-ran all four read-only with the outputs above (G4/A1 satisfied by recorded re-run). No frontend lint/build/i18n/routes gate is required: this wave changes no product code (W5 precedent at :921-923).
+Browser evidence:   N/A — network probe, not a browser action; explicitly recorded at W8 :1127 and in the evidence note :45-48. G6 permits; no browser claim made.
+Code evidence:      W8 :1111-1125 plus raw capture /tmp/opencode/w8-url-probe.txt (supervisor re-read): canonical URL 200, former About literal 404, methodology/AGPL/CC 200, Wikidata host sample (Q42) 200, timestamp 2026-11-22T20:49:44Z. Evidence note :22-34 tabulates each status/effective URL and :36-43 corroborates the STRAT §1 note claim with a citation. Wikidata Q42 is explicitly a host-reachability sample, not a data claim (:29, :52-54).
+Acceptance items:   5/5 PASS — (1) every probed literal has a status and timestamp → raw capture; (2) STRAT §1 claim corroborated with a citation → evidence note :36-43; (3) no product code changed → two-path diff; (4) four vault gates exit 0 → supervisor re-run above; (5) Browser evidence N/A recorded → W8 :1127.
+Verdict:            GREEN
+
+Citations (exact note/section or file:line for every judgement):
+  - This note, W8 §Entry/backup :1111-1115, §Result :1117-1125, §Browser evidence :1127; evidence note LINK-URL-REACHABILITY :22-34, :36-43, :45-48, :50-54.
+  - Wave plan LINK-FOLLOWUP-WAVE-PLAN §3 (L-19 steps/checkpoint/rollback/acceptance/side-quest policy), §7 (gates), §8 (W8 verdict conditions); supervision protocol §C (G1-G8, A1, A2, A3, R1-R9), §D, §F; strategy §2.1, §5, §6, §9.
+  - Supervisor read-only re-verification (2026-11-22): branch/entry/exit HEAD, clean worktree, two-path diff, pre.sha, bundle verify, SHA256SUMS, raw probe file, commit order (backup before probe), four vault gates re-run, ancestry/linearity, main/origin/main unchanged. No browser or network tool was run by the supervisor.
+
+Required remediations (owner: lead; each must be closed before next verdict):
+  - none
+
+Non-blocking evidence note for future waves: the lead-authored W8 section records the four gates in aggregate without a per-command excerpt table or a dedicated raw gate-capture file (unlike W1-W7). The supervisor's re-run above supplies the required command/exit/excerpt record in this sign-off. Future follow-up waves should attach per-gate output excerpts and a raw gate capture in the lead-authored section to keep the evidence pattern identical to W0-W7 (§D item 5, G4).
+
+Authorisation (GREEN only — reproduce verbatim):
+  "Integration authorised: wave W8 is GREEN on the evidence cited above; the lead may merge repair/links-w8 into repair/links-base with git merge --ff-only."
+```
+
 ## See also
 
 [CLICK-INVESTIGATION-JOURNEY](CLICK-INVESTIGATION-JOURNEY-2026-11-22.md) ·
