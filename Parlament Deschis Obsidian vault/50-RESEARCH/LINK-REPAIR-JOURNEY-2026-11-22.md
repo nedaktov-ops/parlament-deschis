@@ -1242,9 +1242,19 @@ No workflow edited, no PR opened.
 `bash scripts/check-doc-truth.sh` → `false-claims: 0` exit 0;
 `git diff --check` → no output exit 0.
 
-L-22 evidence note: [CONSOLE-CAPTURES](../60-EVIDENCE/CONSOLE-CAPTURES-2026-11-22.md).
+### Browser evidence — L-22 (fresh console captures)
 
-_L-22 result and verdict pending._
+New local-dev observations on integrated HEAD for the three wave-relevant pages:
+`/Voturi` (W3), `/topuri` (W4), `/coverage` (W6). Raw DOM captures
+`/tmp/opencode/w10-console-w3.json`, `w10-console-w4.json`, `w10-console-w6.json`
+and artifact-backed console captures `w10-console-w*-console.json`; each
+`list_console_messages` (error/warn) returned "no console messages found". These
+are **new observations**, not retroactive wave evidence; no GREEN record changed.
+Full note: [CONSOLE-CAPTURES](../60-EVIDENCE/CONSOLE-CAPTURES-2026-11-22.md).
+
+**Code evidence / gates:** no product code changed. Four vault gates re-run:
+vault lint `PASS: 72 notes`, sync check clean, doc-truth `false-claims: 0`,
+`git diff --check` no output — all exit 0. Verdict pending supervisor.
 
 ## See also
 
