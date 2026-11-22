@@ -7,9 +7,9 @@ status: active
 authority: mirror
 tags: [type/source-map, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py]
-created: 2026-11-22T00:31:17+02:00
-updated: 2026-11-22T00:31:17+02:00
-source_commit: 3e6cf3e50506e4c3c31ec0056d856345d98e5e5d
+created: 2026-11-22T07:05:30+02:00
+updated: 2026-11-22T07:05:30+02:00
+source_commit: 0b26149e8a28daab6aec8c63c279994a78b73250
 generated: true
 generator: scripts/vault_sync.py
 ---
@@ -31,9 +31,9 @@ Derived from `git ls-tree -r --name-only <source-commit>`. Counts are recursive 
 | `frontend` | 89 | React and Vite dashboard application. |
 | `pipeline` | 44 | Data ingestion, transformation and export pipeline. |
 | `scripts` | 18 | Operational, verification and generation scripts. |
-| `tests` | 83 | Python test suite and fixtures. |
+| `tests` | 84 | Python test suite and fixtures. |
 
 Root-level tracked files: 16.
-Total tracked files: 392.
+Total tracked files: 393.
 
 Regenerate with `scripts/vault_sync.py`.

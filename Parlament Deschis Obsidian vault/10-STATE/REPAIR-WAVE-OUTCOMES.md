@@ -107,7 +107,28 @@ resolved.
 
 **Decision:** R-03 PASS. Next: R-04 (count/definition honesty), serial — it edits `client.ts`, `i18n.ts`, `api.py`, pages already touched by R-03; master will re-verify all gates.
 
-## W3 — Feature honesty (R-08) — **PENDING**
+## W3 — Feature honesty (R-08) — **PASS**
+
+| Item | Evidence |
+|---|---|
+| Baseline | HEAD `db26e87`; backup `/tmp/opencode/R-08-backup-20261121T223243Z` (SHA256SUMS 1,579 B) |
+| Commit | `0b26149` — 17 files, 1,178 insertions / 317 deletions (1 new test) |
+| Scope | 17 R-08-owned files only; `git diff --check` clean |
+| Blocking gates | ruff clean; pytest **431 passed**; lint 0; build exit 0; strict audit **275 known / 0 new**; UI gate 24/24, zero JavaScript errors, zero axe violations (fresh dev server, master run); `/grafice` overflow probe: scrollWidth 320/768/1024 == viewport at all three widths; doc-truth 0 |
+| Stale-gate diagnosis | Implementer's original UI gate ran against a Vite server started before R-04/R-05; traces cited `SwitchLeaderboard.tsx:298` while current file has 241 lines. Fresh server reproduced PASS — stale HMR module, not a product regression. Agent became unresponsive, was cancelled; master completed verification and commit. |
+| NOT PROVEN | W10 Gate A (rebellion redefinition) intentionally not taken — Gate B used per recipe (owner sign-off required); production/mobile/print behaviour not measured |
+
+**W3 decision: PASS.** The W1 `/grafice` overflow residual is closed. Most effective next step: W4 (R-06 tactile semantics → R-07 provenance/i18n/nav, serial), then W5 owner rollout.
+
+| Item | Evidence |
+|---|---|
+| Baseline | HEAD `db26e87` on `repair/w0-safety`; backup `/tmp/opencode/R-08-backup-20261121T223243Z` (SHA256SUMS 1,579 B) |
+| Work items | W1–W10 applied in order with owner decision lines; honesty greps and corpus probe logged in `/tmp/opencode/R-08-evidence.md` |
+| Blocking gates so far | strict audit `EXIT 0, 275 known errors / 0 new` (`r08-audit.txt`); targeted pytest logs green; honesty greps green |
+| **UI gate RED** | `r08-cp12.txt`: `SwitchLeaderboard` runtime `TypeError: Cannot read properties of undefined (reading 'switch_count')` at `SwitchLeaderboard.tsx:298` (repeated); `/coverage` two 404 resources; `/senate-history` axe `aria-allowed-role` + `list` violations; `UI VALIDATION FAIL` |
+| Decision | **RED — do not commit W3 yet.** The implementer must repair these runtime/a11y regressions and re-run CP-12 to `UI VALIDATION PASS: 24 routes, zero JavaScript errors, zero axe violations`; master will re-verify independently. If unresolvable, revert the R-08 work tree (`git checkout -- <owned files>`; backup restored) and record W3 FAIL with the blocking evidence. |
+
+**Next step:** finish R-08's UI/a11y repairs, re-run the full W3 gate set, then update this note with PASS/FAIL and raw evidence before W4.
 
 ## W4 — Tactile + provenance/i18n/nav (R-06, R-07) — **PENDING**
 
@@ -123,3 +144,4 @@ resolved.
 | 2026-11-21 | W2/R-03 | PASS | ruff clean, pytest 412, lint/build green, API probes incl. 422, UI 24/24 zero axe (master re-run), URL persistence OK | continue W2 with R-04 (counts) |
 | 2026-11-21 | W2/R-04 | PASS | ruff clean, pytest 419, lint/build green, API probes 1217/1217/0, UI 24/24 zero axe (master re-run) | continue W2 with R-05 (states) |
 | 2026-11-21 | W2 overall | PASS | R-03/R-04/R-05 all blocking gates green, master re-verified; residuals scoped to W3/W4 | proceed W3/R-08 (feature honesty + grafice overflow) |
+| 2026-11-22 | W3 | PASS | ruff/pytest 431/lint/build/audit 275-0/UI 24-0-0/grafice overflow 3-3; stale-server gate failure diagnosed and dismissed; agent cancelled, master finished | proceed W4 (R-06 tactile -> R-07 provenance/i18n/nav) |

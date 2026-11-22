@@ -7,9 +7,9 @@ status: active
 authority: mirror
 tags: [type/reference, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py, tests/]
-created: 2026-11-22T00:31:17+02:00
-updated: 2026-11-22T00:31:17+02:00
-source_commit: 3e6cf3e50506e4c3c31ec0056d856345d98e5e5d
+created: 2026-11-22T07:05:30+02:00
+updated: 2026-11-22T07:05:30+02:00
+source_commit: 0b26149e8a28daab6aec8c63c279994a78b73250
 generated: true
 generator: scripts/vault_sync.py
 ---
@@ -20,7 +20,7 @@ generator: scripts/vault_sync.py
 
 Counts come from the source-commit versions of tracked files under `tests/`.
 
-- Python test files: 50; `def test_` definitions: 377.
+- Python test files: 51; `def test_` definitions: 389.
 - Bats test files: 0; `@test` cases: 0.
 
 | File | Pattern | Count |
@@ -61,6 +61,7 @@ Counts come from the source-commit versions of tracked files under `tests/`.
 | `tests/test_party_facts_parser.py` | `def test_` | 7 |
 | `tests/test_polite_client_content.py` | `def test_` | 3 |
 | `tests/test_prepare_db.py` | `def test_` | 6 |
+| `tests/test_r08_feature_honesty.py` | `def test_` | 12 |
 | `tests/test_reconcile.py` | `def test_` | 14 |
 | `tests/test_scope_backend.py` | `def test_` | 4 |
 | `tests/test_security_hardening.py` | `def test_` | 6 |
