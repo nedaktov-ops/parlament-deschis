@@ -90,6 +90,13 @@ commits; the three oldest are the review/audit commits described above.
   "Vederi detaliate" section. Progress, verified fixes, upcoming work and NOT
   PROVEN items are recorded in
   [DEEP-DIVE-REDESIGN-2026-11-22](DEEP-DIVE-REDESIGN-2026-11-22.md).
+- **2026-11-22 — commit and parity check.** All pending work was committed as
+  `efdbba7` on `w5-deployment-squash`. GitHub `main` and the Vercel production
+  deployment still point at `618849a`, whose served bundle lacks the new
+  markers; Render's health data differs from local. Preview is therefore not
+  identical to the deployed versions — see the parity table in
+  [DEEP-DIVE-REDESIGN-2026-11-22](DEEP-DIVE-REDESIGN-2026-11-22.md) §Commit and
+  deployment verification. No push, PR or deploy was made.
 
 ## Five-agent post-initial audit — provenance
 

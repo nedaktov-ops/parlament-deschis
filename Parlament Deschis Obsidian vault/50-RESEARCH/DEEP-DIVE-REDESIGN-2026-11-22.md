@@ -71,18 +71,45 @@ made — the working tree already contained extensive staged user work.
 - Section 2 (legislature slider + two hemicycles) was re-checked: heading,
   slider `min=0 max=9`, and both chamber charts still render and update scope.
 
+## Commit and deployment verification — 2026-11-22
+
+- Main commit: `efdbba71705d154767754766b4d4e8b6fe0603a6` on
+  `w5-deployment-squash`. Before it, local HEAD equalled `origin/main`
+  (`618849af13d65db89c4ce585954cdd0edc79a7a8`).
+- **GitHub:** `origin/main` is still `618849a…`; the new commit is **not** on
+  GitHub. No push or PR was made in this session.
+- **Vercel:** production alias `parlament-deschis.vercel.app` serves deployment
+  `dpl_53HDzW8FT4PaiA3GkSW3xV6su4pp` (READY), whose
+  `meta.githubCommitSha = 618849a…` on branch `main`. Its served bundle
+  `/assets/index-DjwGQole.js` lacks the new markers (`Compoziția camerelor pe
+  legislaturi`, `Harta partidelor`); the local `frontend/dist` bundle has them.
+- **Render:** `https://parlament-deschis.onrender.com/api/health` is HTTP 200 /
+  `status ok`, but its data differs from local: Render `persons=3381`,
+  `memberships=6614`, release `data-20261121-votes-001`; local API
+  `persons=3388`, `memberships=7349`, release `null`. The deployed Render
+  commit SHA is **NOT PROVEN** — no Render API key is available here. Resolver:
+  `RENDER_API_KEY` + `scripts/verify-deploy.sh` with `TARGET_SHA`.
+- **Verdict:** the preview pane at `http://127.0.0.1:5188/` shows the local
+  committed tree, which is **not identical** to GitHub, Vercel, or Render.
+  Local green is not production green.
+
 ## Upcoming progress — NOT DONE
 
-1. Make `Parties` and `switchWaves` honour date/legislature scope so the copy
+1. Push the branch and open a PR to `main` (all CI gates are green locally);
+   after merge, re-run `scripts/verify-deploy.sh` with `TARGET_SHA` equal to the
+   merge commit and re-check the served bundle markers on Vercel.
+2. Confirm the exact Render commit SHA and dataset release with a Render API
+   token, then reconcile the `3381/6614` vs `3388/7349` count difference.
+3. Make `Parties` and `switchWaves` honour date/legislature scope so the copy
    can be upgraded from "whole corpus" to "selected legislature". Resolver:
    API query support in `backend/routers/api.py` + `frontend/src/api/client.ts`.
-2. Run `scripts/ui_validate.py` across all routes at 1280/768/390px and a real
+4. Run `scripts/ui_validate.py` across all routes at 1280/768/390px and a real
    axe/Lighthouse pass; neither was run in this session. Resolver: QA owner.
-3. Add a visual-regression baseline for Section 4 using a tool from the saved
+5. Add a visual-regression baseline for Section 4 using a tool from the saved
    inventory (e.g. `garris/BackstopJS` or `argos-ci/argos`). Resolver: owner.
-4. Add this note to the [START-HERE](../00-START/START-HERE.md) note index and
-   coordinate a single commit with the owner once the staged work is settled.
-5. Verify production parity — local green is not production green.
+6. This note is indexed in [START-HERE](../00-START/START-HERE.md) and
+   [SOURCE-MAP](../00-START/SOURCE-MAP.md) row 32; generated vault notes were
+   resynced against `efdbba7` by `scripts/vault_sync.py`.
 
 ## NOT PROVEN
 
