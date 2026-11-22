@@ -10,19 +10,21 @@ source_paths:
   - docs/repair-recipes
   - docs/CONTINUATION-STRATEGY-2026-11-21.md
 created: 2026-11-21
-updated: 2026-11-21
-source_commit: eb693b4
+updated: 2026-11-22
+source_commit: aca0ec9
 ---
 
 # Front-end repair strategy — master index
 
-**Status: AMBER — recipes complete, no repairs implemented.** Nine strategy
-agents produced 9,179 lines of implementation-ready recipes in
+**Status: IN PROGRESS — Waves W0–W4 executed under the supervisor/implementer
+protocol; W5 (owner merge/protect/deploy) is the current open step.** Nine
+strategy agents produced 9,179 lines of implementation-ready recipes in
 `docs/repair-recipes/`. This note indexes them, fixes cross-recipe ownership
 conflicts, and defines the wave/gate envelope. All diagnoses come from the
 [TRIAD-AUDIT](../40-FRONTEND/TRIAD-AUDIT-2026-11-21.md) and
 [FRONTEND-AUDIT](../40-FRONTEND/FRONTEND-AUDIT-2026-11-21.md). Baseline product
-tree is byte-identical at `eb693b4` and the authoring HEAD.
+tree is byte-identical at `eb693b4` and the authoring HEAD; later waves landed
+on top of the integration HEAD `618849a` then `repair/w0-safety` checkpoints.
 
 ## 1. Recipe index
 
@@ -83,23 +85,27 @@ check is **NOT PROVEN**, never PASS.
 
 ## 5. Current verification and gaps
 
-Local gates at recipe-authoring time: doc-truth **false-claims: 0**, vault lint
-**48 notes clean**, `vault_sync --check` clean, `git diff --check` clean. Recipes
-are documentation only; product tree unchanged.
+Local gates as of 2026-11-22 (Waves W0–W4 executed): doc-truth **false-claims: 0**,
+vault lint clean, `vault_sync --check` clean, `git diff --check` clean. Waves W0
+(R-09 safety) and W3 (R-08 honesty) completed with every blocking gate green; W1
+(R-01/R-02) AMBER with two pre-existing residuals tracked; W2 (R-03/R-04/R-05) PASS;
+W4 (R-06 tactile → R-07 provenance/i18n/nav) in progress (R-06 AMBER by design,
+hard gates green).
 
-**NOT PROVEN across all recipes:** browser render/axe/WCAG-AA, 320/768/1024px
-reflow, keyboard walk, touch/reduced-motion emulation, print/PDF, live API
-payloads and production parity. `/tmp/axe.min.js` is currently missing, so the
-UI gate cannot pass until it is restored — recorded as a named precondition,
-not claimed as green.
+**NOT PROVEN across all recipes:** touch/reduced-motion runtime emulation (K9
+runtime probe pending — TimeSlider not mounted on any route), print/PDF, live API
+payloads and production parity. `/tmp/axe.min.js` restored (axe-core 4.10.2); UI
+gate re-verified green on fresh dev servers after the stale-HMR diagnosis. These
+are recorded as named preconditions/gaps, not claimed as green.
 
 ## 6. Next decision
 
-Per the user's instruction, **no fixes have been implemented**. The next step
-is an explicit owner decision to begin Wave W0/W1 with one recipe-owned agent
-per step (implementer fleet), following [ACTION-PLAN](ACTION-PLAN.md) and the
-R-09 gate envelope. Until then this note is AMBER and must not be read as a
-repair-completion claim.
+**Current next step:** complete R-07 (provenance/i18n/nav) inside Wave W4, then
+run the W5 owner rollout (merge/protect/deploy, 🔒 owner-only). The next step
+after that is the explicit owner decision to begin Wave W0/W1 with one
+recipe-owned agent per step (implementer fleet), following
+[ACTION-PLAN](ACTION-PLAN.md) and the R-09 gate envelope. Until then this note
+must not be read as a repair-completion claim.
 
 ## See also
 
