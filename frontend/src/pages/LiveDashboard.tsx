@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { api, committeeControl, switchWaves } from "../api/client";
 import { useNavigate } from "@tanstack/react-router";
 import { useScope } from "../hooks/useScope";
-import HeroGraphic from "../components/HeroGraphic";
 import DashboardCard from "../components/DashboardCard";
 import PartyListTable from "../components/PartyListTable";
 import CommitteeControl from "../components/CommitteeControl";
@@ -118,7 +117,7 @@ export function LiveDashboard() {
       <section className="py-8 sm:py-12 lg:py-14" data-enter>
         <div>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
-            <div className="lg:col-span-7 space-y-5">
+            <div className="lg:col-span-12 space-y-5">
               <DashboardHeader />
               <p className="text-sm sm:text-base text-slate-300/90 max-w-2xl leading-relaxed">{t("dashboardIntro")}</p>
               
@@ -177,9 +176,6 @@ export function LiveDashboard() {
                 />
               </div>
               </AsyncState>
-            </div>
-            <div className="lg:col-span-5 lg:pt-1">
-              <HeroGraphic variant="overview" className="mx-auto" />
             </div>
           </div>
           
