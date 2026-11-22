@@ -844,7 +844,29 @@ label, sole W4 i18n owner), L-14 (three live "View all →" literals).
 `/tmp/opencode/backups/link-repair/W4`; `git bundle verify`, `tar -tzf` and
 `sha256sum -c` all exited 0 (`pre.bundle / pre.sha / pre.status / worktree.tgz: OK`).
 
-_Implementation, gates, browser evidence, acceptance table and verdict pending._
+### Code evidence — implementation and gates
+
+| Recipe | SHA / outcome |
+|---|---|
+| L-12 | **NO-CHANGE** with one explanatory comment; committed as `docs(a11y): L-12 hemicycle NO-CHANGE decision comment …` (code evidence: every clickable seat has an equivalent native button in `Hemicycle.tsx:129-153`, same callback as `:118`) |
+| L-13 | `aa5a358225291800a19383d93f53a601a396f4e0` — `Topuri.tsx` + sole W4 `i18n.ts` edit |
+| L-14 | `258186fc2551a74c856415cf0f1c50016b06de64` — `SwitchTimeline.tsx`, `PartyNetwork.tsx`, `PartyListTable.tsx` |
+
+Diff from W4 entry `4510d9ce..HEAD` is exactly the six authorized paths.
+Gates all exit 0: lint, build (941 modules, pre-existing chunk advisory),
+`i18n:check` (ro=731/en=731, 0 missing/asymmetric/duplicate), routes PASS,
+vault lint PASS 66, sync check clean, doc-truth 0, `git diff --check` 0.
+Exactly three keys added symmetrically: `filter.minVotes`,
+`filter.minVotesPlaceholder`, `common.viewAll`.
+
+### Browser evidence
+
+`/tmp/opencode/w4-browser-labels.json`: `/topuri?date=2026-11-22` renders the
+Romanian "Voturi minime" label and contains no stray "Minimum votes" / "View
+all" English strings. The three localized "Vezi toate →" buttons were verified
+in source only (no raw capture for them) — code evidence, not a browser claim.
+
+Verdict pending supervisor.
 
 ## Wave W5 — dead controls
 
