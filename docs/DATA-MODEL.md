@@ -68,10 +68,15 @@ This document describes the SQLAlchemy ORM models in `pipeline/db.py` and their 
 | `dissolution_date` | Date | NULLABLE | |
 | `localised_labels` | JSON | NULLABLE | i18n |
 | `chamber` | String(16) | NULLABLE | deputies/senate |
-| **`previous_party_id`** | UUID | FK, NULLABLE | **Genealogy: predecessor** |
-| **`successor_party_id`** | UUID | FK, NULLABLE | **Genealogy: successor** |
+| **`previous_party_id`** | UUID | FK, NULLABLE | **Genealogy: predecessor (unused — DROP 2026-11-21)** |
+| **`successor_party_id`** | UUID | FK, NULLABLE | **Genealogy: successor (unused — DROP 2026-11-21)** |
 
 **Unique**: `(classification, normalized_name, founding_date)`
+
+> **Note (2026-11-21):** Party genealogy is formally dropped. No licence-complete source
+> declares an ID-addressable predecessor/successor relation for Romanian parties.
+> The columns remain for forward-compatibility but hold 0 non-null values. See
+> `docs/METHODOLOGY.md` §9.5 and `docs/DECISION-PARTY-GENEALOGY.md`.
 
 ---
 
