@@ -801,7 +801,38 @@ Not browser-verified in this wave: `POSITION_LIMIT=500` truncation note
 correction (data-dependent), chair disabled label (component-level). These are
 code-verified only and remain AMBER/NOT PROVEN for runtime.
 
-Verdict pending supervisor.
+### Supervisor sign-off (§F template)
+
+```text
+WAVE SIGN-OFF
+Wave ID:            W3
+Recipes:            L-07, L-08, L-09 (+ self-detected follow-up 944e67d), L-10, L-11 (two agents, six commits)
+Entry HEAD/branch:  bab425db28618df46eff08f2245ce89b231ee88d / repair/links-base (W3 :759-763; W3 backup pre.sha re-read)
+Backup ROOT:        /tmp/opencode/backups/link-repair/W3
+Manifest evidence:  git bundle verify exit 0, tar -tzf exit 0, sha256sum -c exit 0 (W3 :761-763) — supervisor re-ran all three: four OK lines, "The bundle records a complete history", tar exit 0; pre.sha matches entry HEAD
+Diff (name-only):   exactly six authorized code paths (W3 :769-782; supervisor re-ran git diff --name-only 037934b2..HEAD -- frontend/): Voturi.tsx, RollCallTable.tsx, i18n.ts, CommitteeControl.tsx, PartyProfile.tsx, PartyComparison.tsx. i18n.ts touched by L-07 ONLY (git log on that path returns 85bdd81 alone), matching strategy §4.1 sole-owner register. Extra journey/_generated paths are mandated vault write-back and regeneration (STRAT §10), not an R1 breach.
+Checkpoint SHAs:    85bdd81 (L-07), 3f965aa (L-08), 1f2cdc8 (L-11), 74e7997 (L-09), 7ccfd26 (L-10), 944e67d (L-09 a11y follow-up), c12ada1 (evidence). Code messages carry recipe ID, evidence anchor, gates and rollback SHA. The L-09 agent self-detected an accessible-name regression from its first patch and closed it in 944e67d; final CommitteeControl.tsx:100-101 has disabled={!canOpenChair} and both aria-label branches named (a11y.committeeChair / committee.noChair) — verified by supervisor re-read.
+Gates (cmd/exit):   all exit 0 — npm run lint, npm run build, npm run i18n:check (ro=728/en=728, used=655, 0 missing/asymmetric/duplicate; exactly 3 keys added in both locales: view.voturi.searchHint, vote.positionsTruncated, committee.noChair), check_routes_nav.mjs 24/22/0, vault lint 66, sync clean after regeneration against 944e67d, doc-truth 0, git diff --check (W3 :784-789; logs w3-*.txt). Supervisor re-ran routes, i18n, vault lint, sync --check, doc-truth and diff --check: all exit 0. Build not re-run (writes dist); recorded log examined. main/origin/main still 88112168237e5c37841b785dccd2375f6cc40115; worktree clean.
+Browser evidence:   separate titled section W3 :791-802. Supervisor read both raw captures: /tmp/opencode/w3-browser-voturi.json (hasHint true, URL /Voturi?date=2026-11-22) → page-local hint rendered; /tmp/opencode/w3-browser-partyprofile.json (nestedAnchorsInButtons [] on /party/PSD?date=2026-11-22) → no nested interactive markup. Local dev only; no production or axe claim. No new console error or broken route observed.
+Code evidence:      W3 :765-789 plus supervisor re-read of final CommitteeControl.tsx:94-117 and i18n key diff.
+Acceptance items:   9/12 PASS · 3/12 AMBER/NOT PROVEN — per §C A2/A5 the AMBER items are acceptance-item-scoped, not wave-level, because every required gate ran and passed and no defect was observed:
+  - AMBER 1: L-08 truncation note runtime rendering needs a vote with >100 positions; resolver = live payload (W3 :799-800). Code path bounded to POSITION_LIMIT=500 and note condition code-verified.
+  - AMBER 2: L-11 party-default correction is data-dependent; resolver = live /api/parties (W3 :800-801; C03 F5).
+  - AMBER 3: L-09 chair disabled label at runtime is component-level only; resolver = browser check with a chairless party (W3 :801-802).
+Verdict:            GREEN
+
+Citations (exact note/section or file:line for every judgement):
+  - This note, W3 §Code evidence :759-789, §Browser evidence :791-802.
+  - Recipes L-07 :257-278, L-08 :282-300, L-09 :304-317, L-10 :321-339, L-11 :343-357; strategy §2.2, §2.5, §4.1 :93-99, §5, §6 :129-156, §10; supervision protocol §C (G1-G8, A2, A5), §D, §E, §I.
+  - AMBER scope ruling: my §C A2/A5 explicitly make a non-runnable or data-dependent item "AMBER for that acceptance item only"; STRAT §6 :134 requires naming the missing check and its resolver — done for all three at W3 :799-802. No R1/R2 condition is present, so the wave is GREEN; the three items remain NOT PROVEN and must never be restated as PASS.
+  - Non-blocking note: the W3 browser section does not state console error/warn status explicitly; future waves should record it, as done in W1/W2.
+
+Required remediations (owner: lead; each must be closed before next verdict):
+  - none (three AMBER items carry named resolvers and are explicitly NOT PROVEN, not remediations of a defect)
+
+Authorisation (GREEN only — reproduce verbatim, filling the braces):
+  "Integration authorised: wave W3 is GREEN on the evidence cited above; the lead may merge repair/links-w3 into repair/links-base with git merge --ff-only."
+```
 
 ## Wave W4 — accessibility, labels, URLs
 
