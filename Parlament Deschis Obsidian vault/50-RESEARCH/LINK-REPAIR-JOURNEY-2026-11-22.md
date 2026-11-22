@@ -954,7 +954,12 @@ Authorisation (GREEN only — reproduce verbatim, filling the braces):
 
 ## Wave W6 — regression guards
 
-_Recipe L-16._
+Recipe L-16. **Code evidence — entry:** branch `repair/links-base`, HEAD
+`95a15993d37382e01873a0fd612b6cf825399924`, clean tree. Backup ROOT
+`/tmp/opencode/backups/link-repair/W6`; `git bundle verify`, `tar -tzf` and
+`sha256sum -c` all exited 0 (`pre.bundle / pre.sha / pre.status / worktree.tgz: OK`).
+
+_Implementation, gates and verdict pending._
 
 ## Wave W7 — integration and owner hand-off
 
