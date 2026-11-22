@@ -169,3 +169,13 @@ made — the working tree already contained extensive staged user work.
 - The exact Render commit SHA is still NOT PROVEN without a Render API token;
   deployment of the merged backend is inferred from the new `/api/votes.scopes`
   field, which is direct runtime evidence of the new code.
+
+## Brand logo deployment — 2026-11-22 (final)
+
+- PR #74 ("backend logo store, header-only mark and accessible contrast") was opened from `design/hero-brand-mark`, passed all required checks (`test`, `audit`, `docker`, `evidence-guards`) and was merged into `main` as squash commit `77fa2526906eae2fe35c6bff0ce78bf2256de876` with the owner's authorisation. Branch protection was temporarily lifted for the merge and restored immediately: 4 required checks + 1 review + dismiss stale = true.
+- **Vercel:** production deployment `dpl_HR5kG2rSDCnh9rSsZjbUmhydrsWX`, state READY, `githubCommitSha = 77fa252…`. Served bundle `/assets/index-CapGpe5x.js` contains the `/api/logo?color=` call site; the overview hero caption is absent from the rendered DOM.
+- **Render:** `/api/logo/list` returns HTTP 200 with `{"data":[]}` (the disk store starts empty on each deploy, as expected on ephemeral free-tier disk), so the header renders the inline `BrandMark` fallback. `/api/health` is HTTP 200 / `status ok` with the pinned release `data-20261121-votes-001` (3381 persons / 6614 memberships).
+- `scripts/check-deployment-status.sh` passes against both production hosts.
+- Contrast: dark accent `#38bdf8` (8.33:1 on `#0f172a`), light accent `#0369a1` (5.67:1 on `#f8fafc`); before/after screenshots in `frontend/docs/design/qa-notes.md`.
+- `pytest -q` 434 passed, `ruff` clean, `npm run lint` 0, `npm run build` 0, i18n check clean, design guard 35/35, doc-truth 0 at the merged tree.
+- Still NOT PROVEN: a full `scripts/verify-deploy.sh` run (Vercel/Render credentials unavailable in this environment), and persistence of uploaded logo files across Render redeploys without a persistent mount.

@@ -144,3 +144,9 @@ unpushed — see [GIT-POSITION](GIT-POSITION.md).
   for **code version**; Render's dataset counts still reflect the pinned
   release (`data-20261121-votes-001`), by design. Evidence:
   [DEEP-DIVE-REDESIGN-2026-11-22](../50-RESEARCH/DEEP-DIVE-REDESIGN-2026-11-22.md).
+
+## Addendum (2026-11-22) — brand logo release
+
+- Merged `77fa2526906eae2fe35c6bff0ce78bf2256de876` (PR #74) into `main`; all four required checks were green and branch protection was restored after the owner-authorised merge.
+- Vercel production `dpl_HR5kG2rSDCnh9rSsZjbUmhydrsWX` is READY on `77fa252`; Render serves the new logo endpoints (`/api/logo/list` → 200, empty store → inline fallback) and the pinned dataset release. Both hosts pass `scripts/check-deployment-status.sh`.
+- Local gates at the merged tree: pytest 434 passed, ruff clean, npm lint/build 0, i18n clean, design guard 35/35, doc-truth 0. Full `verify-deploy.sh` remains NOT PROVEN without credentials.

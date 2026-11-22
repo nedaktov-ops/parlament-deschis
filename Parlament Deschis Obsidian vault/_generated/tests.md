@@ -7,9 +7,9 @@ status: active
 authority: mirror
 tags: [type/reference, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py, tests/]
-created: 2026-11-22T16:22:33+02:00
-updated: 2026-11-22T16:22:33+02:00
-source_commit: 39ad23ebb36ab563fc76bf5c0159c39061543398
+created: 2026-11-22T19:18:42+02:00
+updated: 2026-11-22T19:18:42+02:00
+source_commit: 77fa2526906eae2fe35c6bff0ce78bf2256de876
 generated: true
 generator: scripts/vault_sync.py
 ---
@@ -20,7 +20,7 @@ generator: scripts/vault_sync.py
 
 Counts come from the source-commit versions of tracked files under `tests/`.
 
-- Python test files: 51; `def test_` definitions: 389.
+- Python test files: 52; `def test_` definitions: 392.
 - Bats test files: 0; `@test` cases: 0.
 
 | File | Pattern | Count |
@@ -57,6 +57,7 @@ Counts come from the source-commit versions of tracked files under `tests/`.
 | `tests/test_identity.py` | `def test_` | 11 |
 | `tests/test_ingest_dedup_scope.py` | `def test_` | 1 |
 | `tests/test_ingest_integration.py` | `def test_` | 10 |
+| `tests/test_logo_store.py` | `def test_` | 3 |
 | `tests/test_normalize_groups.py` | `def test_` | 3 |
 | `tests/test_party_facts_parser.py` | `def test_` | 7 |
 | `tests/test_polite_client_content.py` | `def test_` | 3 |

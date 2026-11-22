@@ -163,3 +163,5 @@ The five-agent continuation strategy is mirrored in
 `docs/CONTINUATION-STRATEGY-2026-11-21.md` §0. It supersedes the older
 ahead/behind framing in this log; the superseded values survive only as dated
 historical context above.
+
+- **2026-11-22 — brand logo deployment.** PR #74 merged as `77fa252` after all required checks passed; protection restored. Vercel production is on `77fa252` (`dpl_HR5kG2rSDCnh9rSsZjbUmhydrsWX`), Render serves the new `/api/logo/list` endpoint with an empty store and the header falls back to the inline mark. Both hosts pass `check-deployment-status.sh`. Details in [DEEP-DIVE-REDESIGN-2026-11-22](DEEP-DIVE-REDESIGN-2026-11-22.md) §Brand logo deployment.
