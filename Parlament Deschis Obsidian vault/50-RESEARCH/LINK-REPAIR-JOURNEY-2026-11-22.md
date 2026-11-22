@@ -1166,7 +1166,25 @@ Authorisation (GREEN only — reproduce verbatim):
 `/tmp/opencode/backups/link-repair/W9`; `git bundle verify`, `tar -tzf` and
 `sha256sum -c` all exited 0 (`pre.bundle / pre.sha / pre.status / worktree.tgz: OK`).
 
-_Production observation, evidence note and verdict pending._
+### Browser evidence — result and gates
+
+L-20 retried production `https://parlament-deschis.vercel.app/ideology?date=2026-11-22`
+after a 5 s wait: title "Ideologie — Parlament Deschis", `<select>` count **0**,
+`loading: true`, text "Harta ideologică Se încarcă…"; console error/warn list
+empty. Raw capture `/tmp/opencode/w9-prod-ideology.json`. Per L-20 step 4 the
+item is **NOT PROVEN**, resolver "a loaded production ideology response plus
+deployment metadata identifying the served SHA". No defect opened, no code
+changed. Full note:
+[PROD-IDEOLOGY](../60-EVIDENCE/PROD-IDEOLOGY-2026-11-22.md).
+
+Code evidence: diff is the two vault-evidence files only. Gates (per command,
+cwd `/home/nedaktov/parlament-deschis`): `python3 scripts/vault_lint.py` →
+`VAULT LINT PASS: 70 notes`, exit 0; `python3 scripts/vault_sync.py --check` →
+clean, exit 0; `bash scripts/check-doc-truth.sh` → `false-claims: 0`, exit 0;
+`git diff --check` → no output, exit 0. Raw capture: these gate results are
+recorded here with per-command excerpts; no separate raw gate file was created.
+
+Verdict pending supervisor.
 
 ## See also
 
