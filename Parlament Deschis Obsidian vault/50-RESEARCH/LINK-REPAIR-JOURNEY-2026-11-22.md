@@ -836,7 +836,15 @@ Authorisation (GREEN only — reproduce verbatim, filling the braces):
 
 ## Wave W4 — accessibility, labels, URLs
 
-_Recipes L-12…L-14._
+Recipes L-12 (Hemicycle seat semantics — decision procedure), L-13 (Topuri
+label, sole W4 i18n owner), L-14 (three live "View all →" literals).
+
+**Code evidence — entry:** branch `repair/links-base`, HEAD
+`129986e4bdbfd512fb4aebdcb66cffaecb379cf5`, clean tree. Backup ROOT
+`/tmp/opencode/backups/link-repair/W4`; `git bundle verify`, `tar -tzf` and
+`sha256sum -c` all exited 0 (`pre.bundle / pre.sha / pre.status / worktree.tgz: OK`).
+
+_Implementation, gates, browser evidence, acceptance table and verdict pending._
 
 ## Wave W5 — dead controls
 
