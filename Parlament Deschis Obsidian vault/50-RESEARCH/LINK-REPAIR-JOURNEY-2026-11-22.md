@@ -680,9 +680,44 @@ with explicit `to: location.pathname` via `useLocation()`, preserving the
 functional search updater and `replace: false`; re-test footer link, wave click,
 dashboard card and another scope control. Details in the supervision note §I.
 
-### W2B entry and backup
+### W2B entry, backup and L-18 result
 
-_W2B entry identity, backup verification and L-18 result to be recorded here._
+Entry branch `repair/links-w2`, HEAD `1167d8a7de21d0e6e699dc5a1ef36727db365f8e`,
+clean tree. Backup ROOT `/tmp/opencode/backups/link-repair/W2B`, created with the
+same expanded-path bundle/archive/manifest procedure as W1/W2; `git bundle
+verify` exit 0, `tar -tzf` exit 0, `sha256sum -c` exit 0 (`pre.bundle: OK`,
+`pre.sha: OK`, `pre.status: OK`, `worktree.tgz: OK`). Raw outputs in that folder.
+
+L-18 agent: `frontend-developer`, branch `repair/links-w2b`, one commit
+`3a49f25a949bb9b292c6188fe4bb1c35d065d42b`. Diff from W2B entry is exactly
+`frontend/src/hooks/useScope.ts`: `useLocation` imported (`:2`), `location`
+captured (`:39`), `to: location.pathname` added to the `navigate` call (`:52-66`)
+with the functional search updater and `replace: false` preserved, dependency
+array `[navigate, location.pathname]`, and the false "no `to` = stay in place"
+comment corrected.
+
+Gates (all exit 0): `npm run lint`, `npm run build` (941 modules, pre-existing
+chunk warning), `npm run i18n:check` (ro=725/en=725, 0 missing/asymmetric/
+duplicate), `node scripts/check_routes_nav.mjs` (24/22/0), vault lint 66, sync
+check clean after regeneration against `3a49f25`, doc-truth 0, `git diff --check` 0.
+
+Browser re-test captures (local dev, supplementary):
+
+- `/tmp/opencode/w2b-browser-footer.json` — footer click from
+  `/?date=2024-06-01` now lands on `/traseism?date=2024-06-01&legislature=2020`,
+  title "Traseism — Parlament Deschis", marker survived (SPA), `aria-current`
+  on Traseism. **V5 footer item PASS.**
+- `/tmp/opencode/w2b-browser-wave.json` — wave `2016-02-01` click lands on
+  `/traseism?date=2016-02-01&chamber=deputies&legislature=2012`, title
+  "Traseism — Parlament Deschis", marker survived. **V5 wave item PASS.**
+- `/tmp/opencode/w2b-browser-scope-control.json` + a subsequent `fill` of the
+  "Camera" select — dashboard card still SPA (`/mps?date=2024-06-01`), and
+  changing chamber stayed on `/mps?date=2024-06-01&chamber=deputies` with title
+  "Parlamentari — Parlament Deschis". **V5 card + other-control items PASS.**
+- `list_console_messages` (error/warn): no console messages found. **V5 console item PASS.**
+
+The two W2 acceptance items that were FAIL are now PASS on the V5 captures.
+W2B integration and W2 verdict pending supervisor.
 
 ## Wave W3 — honest controls
 
