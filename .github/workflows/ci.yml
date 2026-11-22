@@ -32,6 +32,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: uv run python scripts/download_dataset.py data/parlament.db
 
+      - name: Verify downloaded corpus
+        run: |
+          ls -l data/parlament.db
+          uv run python - <<'PY'
+          import sqlite3
+          c = sqlite3.connect("data/parlament.db")
+          print("corpus persons:", c.execute("select count(*) from person").fetchone()[0])
+          print("corpus memberships:", c.execute("select count(*) from membership").fetchone()[0])
+          PY
+
       - name: Lint
         run: uv run ruff check pipeline backend scripts tests
 
