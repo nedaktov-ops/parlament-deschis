@@ -1296,7 +1296,54 @@ Authorisation (GREEN only — reproduce verbatim):
 Recipes and parallel protocol:
 [LINK-FOLLOWUP-PARALLEL-RECIPES](../20-DIRECTION/LINK-FOLLOWUP-PARALLEL-RECIPES-2026-11-22.md).
 
-_Two agent diffs, shared gate, commits, browser items and verdict pending._
+### Parallel dispatch (per protocol §2)
+
+Two agents dispatched concurrently with strictly disjoint exclusive files:
+L-23 (`minimal-change-engineer`) owns `AsyncState.tsx` + `EmptyState.tsx`;
+L-24 (`accessibility-auditor`) owns `AgeDistributionSection.tsx` +
+`AgeDistributionRadial.tsx`. Both were instructed NOT to commit, stage, edit
+vault notes, touch the sibling's files or run the gate; the lead owns diff
+partitioning, the shared gate and the two atomic commits. A diff overlap is a
+RED stop condition.
+
+### Code evidence — combined diff, shared gate and commits
+
+The lead verified `git diff --name-only` before committing: exactly the two
+L-23 paths (`AsyncState.tsx`, `EmptyState.tsx`), the one L-24 path
+(`AgeDistributionRadial.tsx`) plus this vault note; no overlap between agents.
+Shared gate on the combined tree, all exit 0: `npm run lint`, `npm run build`,
+`npm run i18n:check`, `node scripts/check_routes_nav.mjs` (24 routes / 47 nav
+links / 0 unlinked). Post-edit greps for `onEmptyCta|emptyCtaLabel|onCta|ctaLabel`
+and for `onCohortClick` in `frontend/src` both returned no match.
+
+Two atomic commits:
+
+| Recipe | SHA | Files |
+|---|---|---|
+| L-23 | `b0f5c35` | `AsyncState.tsx`, `EmptyState.tsx` — REMOVE decision: CTA props had zero suppliers; dead forwarding + button removed; `onRetry` path untouched |
+| L-24 | `0481541` | `AgeDistributionRadial.tsx` — REMOVE decision: no action to wire (`AgeDistributionSection.tsx:40` passes no handler); dead interactive arc spread removed, visual/legend rendering preserved byte-identically |
+
+**Metadata correction:** the L-24 commit subject contains the literal placeholder
+`<L-23-sha>` instead of the SHA; its actual parent/rollback is `b0f5c35` (the
+L-23 commit). No gate depends on the message text; recorded here for accuracy.
+
+### Browser evidence
+
+`/tmp/opencode/w11-browser-decorative.json` on local overview: the age SVG has
+`aria-label` "Age distribution across 30 cohorts, average age 68" and
+**0 focusable descendants**; nested anchors inside buttons = 0. Console
+error/warn list: no console messages found. The 8 remaining `role=button` +
+`tabindex` nodes on the page are unrelated interactive SVG wave bars, not the
+removed arc path. Runtime keyboard activation of cohort arcs is **NOT PROVEN
+by design** (no arcs are interactive); resolver: a future recipe that wires a
+real cohort action.
+
+### Vault gates
+
+`python3 scripts/vault_lint.py` → PASS; `python3 scripts/vault_sync.py --check`
+→ clean; `bash scripts/check-doc-truth.sh` → `false-claims: 0`;
+`git diff --check` → exit 0 (per-command excerpts from the final run to be
+attached with the evidence commit). Verdicts pending supervisor.
 
 ## See also
 
