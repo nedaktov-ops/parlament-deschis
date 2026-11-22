@@ -1186,6 +1186,37 @@ recorded here with per-command excerpts; no separate raw gate file was created.
 
 Verdict pending supervisor.
 
+### Supervisor sign-off (§F template)
+
+```text
+WAVE SIGN-OFF
+Wave ID:            W9 (follow-up wave — F3 production /ideology behaviour)
+Recipes:            L-20 (lead; runtime evidence attempt, no product-code checkpoint)
+Entry HEAD/branch:  e60959beb0cd72ca3a4c0f99deb040fd9d8ccf3e / repair/links-w9 (W9 :1164-1168); exit/evidence HEAD 8efb917b75b8f31d77c4359e09fce16e41cce910; main and origin/main still 88112168237e5c37841b785dccd2375f6cc40115 (supervisor re-read)
+Backup ROOT:        /tmp/opencode/backups/link-repair/W9
+Manifest evidence:  git bundle verify exit 0 ("The bundle records a complete history"), tar -tzf exit 0, sha256sum -c exit 0 (four OK lines) — recorded in W9 :1164-1167 and committed in 15cc4ea at 22:53:10+02:00, BEFORE the evidence commit 8efb917 at 22:54:11+02:00; supervisor re-ran git bundle verify and sha256sum -c read-only: complete history, four OK lines. pre.sha = e60959beb0cd72ca3a4c0f99deb040fd9d8ccf3e (matches entry).
+Diff (name-only):   e60959b..8efb917 = exactly two vault-evidence paths (supervisor re-ran git diff --name-only): "Parlament Deschis Obsidian vault/50-RESEARCH/LINK-REPAIR-JOURNEY-2026-11-22.md" and "Parlament Deschis Obsidian vault/60-EVIDENCE/PROD-IDEOLOGY-2026-11-22.md". Zero product-code, config, workflow or data paths. main/origin/main unchanged.
+Checkpoint SHAs:    entry-identity + verified-backup 15cc4ea; evidence 8efb917; base e60959b. Additive rollback: git revert 8efb917b75b8f31d77c4359e09fce16e41cce910 (and 15cc4ea first, in reverse order, if the entry record is also withdrawn). No reset, force-push, tag move or history rewrite; git log --merges repair/links-base..repair/links-w9 = 0 and repair/links-base is an ancestor (ff-only eligible).
+Gates (cmd/exit):   working directory /home/nedaktov/parlament-deschis for all four, with per-command excerpts in the lead-authored section W9 :1180-1185 — `python3 scripts/vault_lint.py` → "VAULT LINT PASS: 70 notes" exit 0; `python3 scripts/vault_sync.py --check` → clean exit 0; `bash scripts/check-doc-truth.sh` → "false-claims: 0" exit 0; `git diff --check` → no output exit 0. Supervisor independently re-ran all four read-only with identical outputs. No frontend lint/build/i18n/routes gate is required (no product code changed; W5 precedent :921-923).
+Browser evidence:   titled section W9 :1169-1178 (production scope) plus evidence note :30-44. Raw /tmp/opencode/w9-prod-ideology.json re-read by supervisor: production URL, title "Ideologie — Parlament Deschis", selects=0, options empty, loading=true, "Se încarcă…" in bodyExcerpt. The year control could not be exercised; item explicitly NOT PROVEN with resolver "a loaded production ideology response plus deployment metadata identifying the served SHA" (W9 :1174-1176; evidence note :39-40). No defect opened, no local-dev result substituted (evidence note :26-27 labels W1 as local-only), no code or production change. Per §C A2/A5 this is item-scoped, exactly the expected outcome of L-20, and does not block GREEN (W3 precedent :818-827).
+Code evidence:      W9 :1164-1168, :1180-1185 plus evidence note :22-29. Anchor B4 re-read; production host taken from existing vault evidence, not guessed. Two-path diff verified.
+Acceptance items:   5/5 PASS — (1) L-20's second acceptance branch satisfied: explicit NOT PROVEN with named resolver → raw capture + W9 :1174-1176; (2) local dev not substituted → evidence note :26-27; (3) no product code changed → two-path diff; (4) four vault gates exit 0 with per-command excerpts → W9 :1180-1185 + supervisor re-run; (5) raw capture artifact exists and is cited → /tmp/opencode/w9-prod-ideology.json. The NOT PROVEN finding is an expected outcome, not a defect or a remediation.
+Verdict:            GREEN
+
+Citations (exact note/section or file:line for every judgement):
+  - This note, W9 §Entry/backup :1164-1168, §Browser evidence :1169-1178, §Code evidence/gates :1180-1185; evidence note PROD-IDEOLOGY :17-20, :22-29, :30-44.
+  - Wave plan LINK-FOLLOWUP-WAVE-PLAN §4 (L-20 objective/NOT-PROVEN acceptance), §7 (gates), §8 (GREEN with item-scoped NOT PROVEN; A2/A5); supervision protocol §C (G1-G8, A2, A5, R1-R9), §D, §F; strategy §2.1, §2.6, §5, §6, §9; browser observations B4; investigation §6.
+  - Supervisor read-only re-verification (2026-11-22): branch/entry/exit HEAD, clean worktree, two-path diff, pre.sha, backup manifest/bundle/tar re-verified, commit order (backup before evidence), raw production capture, four vault gates re-run, ancestry/linearity, main/origin/main unchanged. No browser or network tool was run by the supervisor.
+
+Required remediations (owner: lead; each must be closed before next verdict):
+  - none. The F3 resolver remains open by design; closing it requires a loaded production response plus deployment metadata, not a change to this wave.
+
+Non-blocking evidence note: the raw JSON capture does not itself contain a console-message field, so the "console error/warn list empty" statement at W9 :1173 and evidence note :34-35 is a lead observation recorded in prose, not backed by that artifact. No console error was observed and R2 is not triggered, and this statement is not an acceptance item. Future browser captures should embed the console list in the raw JSON artifact.
+
+Authorisation (GREEN only — reproduce verbatim):
+  "Integration authorised: wave W9 is GREEN on the evidence cited above; the lead may merge repair/links-w9 into repair/links-base with git merge --ff-only."
+```
+
 ## See also
 
 [CLICK-INVESTIGATION-JOURNEY](CLICK-INVESTIGATION-JOURNEY-2026-11-22.md) ·
