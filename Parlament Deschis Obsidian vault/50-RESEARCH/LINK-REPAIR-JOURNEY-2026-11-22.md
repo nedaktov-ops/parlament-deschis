@@ -630,10 +630,59 @@ with `W1` replaced by `W2` (fully expanded absolute paths, no ellipses):
 then `git bundle verify`, `tar -tzf` and `sha256sum -c`. All three verifications
 exited 0: `pre.bundle: OK`, `pre.sha: OK`, `pre.status: OK`, `worktree.tgz: OK`.
 
-### Implementation, gates and browser evidence
+### Code evidence — implementation (W2)
 
-_Pending agent returns: checkpoint SHAs, diff, gate output, browser captures,
-acceptance table, supervisor verdict._
+| Recipe | SHA | Subject |
+|---|---|---|
+| L-03 | `11538c857acd7216c4d6ca20521a6d7f641cd59e` | `fix(footer): L-03 router links, honest label, single project URL …` |
+| L-04 | `b739c958eef2a27afce64e07b8af94233ff0e8d5` | `fix(dashboard): L-04 preserve scope on four stat cards …` |
+| L-05 | `9e22d94ee0afe9e1f56a4788e4776f396719ea02` | `fix(dashboard): L-05 wave click carries wave date …` |
+| L-06 | `624e15982ade695fca46f7649b4dcdfdf729d4e4` | `fix(pagination): L-06 correct next-page bounds …` |
+
+Diff from W2 entry `0613198f..624e159` is exactly eight paths:
+`About.tsx`, `Footer.tsx`, `config/links.ts` (new), `i18n.ts`, `LiveDashboard.tsx`,
+`Mps.tsx`, `Traseism.tsx`, `router.tsx`. Gate outputs: `npm run lint` exit 0,
+`npm run build` exit 0 (941 modules, pre-existing chunk-size warning),
+`npm run i18n:check` exit 0 (ro=725/en=725, 0 missing/asymmetric/duplicate),
+`check_routes_nav.mjs` 24 routes / 22 nav links / 0 unlinked exit 0, vault lint
+PASS 66, sync check clean after regeneration, doc-truth 0, `git diff --check` 0.
+`grep -R "github.com/parlament-deschis" frontend/src` returned no match; the
+footer now shows "Cod sursă" pointing at the 200 URL.
+
+### Browser evidence — W2 (supplementary, local dev)
+
+Raw captures: `/tmp/opencode/w2-browser-footer.json`,
+`w2-browser-footer-retest.json`, `w2-browser-footer-trace.json`,
+`w2-browser-card.json`, `w2-browser-card-click.json`, `w2-browser-wave.json`.
+
+- Footer links now carry scope in `href` (e.g. `/traseism?date=2024-06-01`,
+  `/report?date=2024-06-01`) and the click is an SPA navigation (marker survived).
+- Dashboard card `/mps?date=2024-06-01` click reached "Parlamentari" with the
+  scope retained and marker survived — L-04 PASS.
+- Wave click carried the wave date (`date=2016-02-01`) — L-05's own logic works.
+- **FAIL (pre-existing, escalated):** a browser history trace showed
+  `push /traseism?date=2024-06-01` followed by
+  `push /?date=2024-06-01&legislature=2020`, ending on the overview page; the
+  wave click likewise ended on `/` with `?date=2016-02-01…`. Direct navigation
+  to `/traseism?date=2024-06-01` also settled on `/`, proving the defect is not
+  a W2 regression. Cause: `useScope.ts:38` `useNavigate({ from: "/" })` plus
+  `:51-65` `navigate({ search })` with no `to`, triggered by
+  `Traseism.tsx:678-682`.
+
+### Supervisor ruling — RED for W2, emergency wave W2B
+
+The supervisor classified the failed browser check as **R2 (broken route)** —
+the check ran and failed, so it cannot be downgraded to NOT PROVEN. No W2
+checkpoint revert is warranted because a direct-navigation control proves the
+defect pre-existed L-03, but W2 cannot be signed GREEN. Ruling: add emergency
+recipe **L-18** in wave **W2B**, exclusive file `frontend/src/hooks/useScope.ts`,
+with explicit `to: location.pathname` via `useLocation()`, preserving the
+functional search updater and `replace: false`; re-test footer link, wave click,
+dashboard card and another scope control. Details in the supervision note §I.
+
+### W2B entry and backup
+
+_W2B entry identity, backup verification and L-18 result to be recorded here._
 
 ## Wave W3 — honest controls
 
