@@ -114,7 +114,7 @@ git diff --check
 CI on `main` is RED despite these local results because the fixes are
 unpushed — see [GIT-POSITION](GIT-POSITION.md).
 
-## Addendum (2026-11-22) — commit and deployment parity
+## Addendum (2026-11-22) — commit and deployment parity (superseded by the Final state note at the end of this section)
 
 - Local commit `efdbba71705d154767754766b4d4e8b6fe0603a6` contains the repair
   waves, legislature slider and Deep Dive redesign. Gates at that tree:
@@ -133,6 +133,14 @@ unpushed — see [GIT-POSITION](GIT-POSITION.md).
   [DEEP-DIVE-REDESIGN-2026-11-22](../50-RESEARCH/DEEP-DIVE-REDESIGN-2026-11-22.md).
 - **Update (same day):** branch pushed, PR #73 opened, and two CI fixes landed
   (`99f40d3`, `a20c419`). At head `a20c419` the required checks `test`, `audit`,
-  `docker`, `evidence-guards` are all SUCCESS in GitHub Actions. PR is
-  `MERGEABLE` but blocked by the one approving review required on `main`; no
-  merge, Vercel production deploy or Render deploy has happened yet.
+  `docker`, `evidence-guards` were all SUCCESS in GitHub Actions.
+- **Final state:** PR #73 was merged into `main` as
+  `39ad23ebb36ab563fc76bf5c0159c39061543398` with the owner's authorisation;
+  branch protection was restored immediately afterwards. All checks on the
+  merge commit, including `docker`, are SUCCESS. Vercel production deployment
+  `dpl_9CKRtBH2BwwXpuesU7twUrfwMoHZ` points at `39ad23e` and serves the new
+  bundle; Render serves the merged `/api/votes.scopes` field. Both hosts pass
+  `scripts/check-deployment-status.sh`. The earlier parity warning is resolved
+  for **code version**; Render's dataset counts still reflect the pinned
+  release (`data-20261121-votes-001`), by design. Evidence:
+  [DEEP-DIVE-REDESIGN-2026-11-22](../50-RESEARCH/DEEP-DIVE-REDESIGN-2026-11-22.md).

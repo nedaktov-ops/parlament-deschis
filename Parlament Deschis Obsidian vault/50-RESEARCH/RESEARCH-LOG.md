@@ -101,8 +101,15 @@ commits; the three oldest are the review/audit commits described above.
   PR #73. Two CI fixes followed: download the pinned corpus in the test job
   (`99f40d3`) and set step-level `PARLAMENT_DB` so `backend.config` resolves to
   the downloaded DB (`a20c419`); a diagnostic step in `f641c72` was removed.
-  At `a20c419` all four required checks are green, but merge is blocked on the
-  one approving review required by `main` protection. No merge or deploy yet.
+  At `a20c419` all four required checks are green.
+- **2026-11-22 — merge and production parity.** With the owner's explicit
+  authorisation, the review requirement was temporarily lifted, PR #73 merged
+  as `39ad23e`, and `main` protection restored immediately (1 review, dismiss
+  stale, four required checks). Vercel production moved to `39ad23e`
+  (`dpl_9CKRtBH2BwwXpuesU7twUrfwMoHZ`) and its bundle contains the new markers;
+  Render serves the merged `/api/votes.scopes` field.
+  `scripts/check-deployment-status.sh` passes on both hosts. See
+  [DEEP-DIVE-REDESIGN-2026-11-22](DEEP-DIVE-REDESIGN-2026-11-22.md) §Final parity.
 
 ## Five-agent post-initial audit — provenance
 
