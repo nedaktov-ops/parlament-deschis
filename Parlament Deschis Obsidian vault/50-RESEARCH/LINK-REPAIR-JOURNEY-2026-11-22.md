@@ -1345,6 +1345,69 @@ real cohort action.
 `git diff --check` → exit 0 (per-command excerpts from the final run to be
 attached with the evidence commit). Verdicts pending supervisor.
 
+### Supervisor per-recipe verdicts
+
+**L-23 (F1, EmptyState CTA chain) — GREEN.** The L-12 decision is recorded with
+citations (W11 :1323); greps prove zero suppliers and the final greps are empty;
+the removal order was forwarding in `AsyncState.tsx` then props in
+`EmptyState.tsx`; `onRetry` and all live state rendering are untouched; the diff
+is exactly the two exclusive files; gates exit 0. Acceptance 4/5 PASS plus the
+expected click-capture item **NOT PROVEN** with resolver "a future call site
+that supplies a real CTA plus a local-dev click capture" (§C A2/A5; not a
+defect).
+
+**L-24 (F2, AgeDistributionRadial arcs) — GREEN.** The L-12 decision is recorded
+with citations (W11 :1324): no action exists to wire at
+`AgeDistributionSection.tsx:40`, so removal was the honest choice; no capability
+was invented; the diff removes only the dead prop/destructure/interactive spread
+and the now-unused imports while preserving the SVG, colours, `<title>` and
+legend byte-identically (verified in the committed diff); the final grep is
+empty and the import graph builds; the diff is a subset of the two exclusive
+files. Acceptance 4/5 PASS plus the expected cohort-keyboard item **NOT PROVEN
+by design** with resolver "a future recipe that wires a real cohort action".
+
+**L-24 commit-message placeholder ruling — non-blocking metadata note, NOT
+wave-level AMBER.** The message carries all four field *kinds* (recipe ID,
+evidence anchor, gate output, rollback field); only the rollback field holds the
+literal template marker instead of a SHA. The actual parent/rollback `b0f5c35`
+is recorded in W11 :1326-1328 and independently verified from git
+(`0481541^ = b0f5c35`), no gate reads commit-subject text, and no amend or
+history rewrite is permitted. This matches the W1 precedent (a commit-subject
+typo affected no gate or checkpoint). G8's recording requirement is satisfied by
+the sign-off below, which states the concrete additive rollback commands.
+**Do not amend the commit** — the correction stays in the vault record.
+
+### Supervisor sign-off (§F template)
+
+```text
+WAVE SIGN-OFF
+Wave ID:            W11 (parallel follow-ups F1/F2 — L-23 and L-24)
+Recipes:            L-23 (minimal-change-engineer), L-24 (accessibility-auditor), dispatched concurrently; no agent committed, staged or edited the vault; lead owns diff partitioning, shared gate and both atomic commits (parallel protocol §2)
+Entry HEAD/branch:  bf322770d6ba5c8cdd739bf9b4dc766eb1646b28 / repair/links-w11 (W11 :1292-1297); exit/evidence HEAD c6b79f500c7de1e0c1e07a005a452152dba1d1cd; main and origin/main still 88112168237e5c37841b785dccd2375f6cc40115 (supervisor re-read)
+Backup ROOT:        /tmp/opencode/backups/link-repair/W11 (ONE shared backup for both recipes)
+Manifest evidence:  git bundle verify exit 0 ("The bundle records a complete history"), tar -tzf exit 0, sha256sum -c exit 0 (four OK lines) — recorded in W11 :1292-1295 and committed in 03c33d2 at 23:03:57+02:00, BEFORE both code commits at 23:07:32+02:00; supervisor re-ran bundle verify and sha256sum -c read-only: complete history, four OK lines. pre.sha = bf322770d6ba5c8cdd739bf9b4dc766eb1646b28 (matches entry).
+Diff (name-only):   code paths bf322770..HEAD -- frontend/ = exactly three (supervisor re-ran): L-23 = frontend/src/components/ui/AsyncState.tsx + frontend/src/components/EmptyState.tsx (exactly its exclusive list); L-24 = frontend/src/components/AgeDistributionRadial.tsx (non-empty subset of its two-file exclusive list; AgeDistributionSection.tsx deliberately unchanged). A ∩ B = empty; A ∪ B = full code diff; no unattributed or out-of-list path (R1/R5 clear). Extra journey and five regenerated _generated/* paths in evidence commit c6b79f5 are mandated vault write-back/regeneration (STRAT §10), not a scope breach; vault_sync --check clean proves regeneration, not hand-edits.
+Checkpoint SHAs:    entry/backup 03c33d2; L-23 b0f5c35; L-24 0481541 (parent verified = b0f5c35 despite the subject placeholder); evidence c6b79f5; base bf322770. Additive rollback, reverse order: git revert 0481541 then git revert b0f5c35 (then 03c33d2 only if the entry record is withdrawn). No reset, force-push, tag move or history rewrite; git log --merges repair/links-base..repair/links-w11 = 0 and repair/links-base is an ancestor (ff-only eligible).
+Gates (cmd/exit):   frontend cwd /home/nedaktov/parlament-deschis/frontend: npm run lint exit 0, npm run build exit 0, npm run i18n:check exit 0 (no key change); repo-root cwd /home/nedaktov/parlament-deschis: node scripts/check_routes_nav.mjs exit 0 (24 routes / 47 nav links / 0 unlinked), python3 scripts/vault_lint.py → "VAULT LINT PASS: 73 notes" exit 0, python3 scripts/vault_sync.py --check → "clean — 5 generated notes match the source commit" exit 0, bash scripts/check-doc-truth.sh → "false-claims: 0" exit 0, git diff --check → no output exit 0. Lead recorded the shared gate at W11 :1314-1317 and the four vault gates at :1341-1346; supervisor independently re-ran the four vault gates at final state with the outputs above. No unrun or wrong-directory gate (A1/R4 clear).
+Browser evidence:   titled section W11 :1330-1339; raw /tmp/opencode/w11-browser-decorative.json re-read by supervisor: svgRoleImg=true, focusableRoleButtonTabs=8 (unrelated interactive wave bars, not the removed arc path), nestedAnchorsInButtons=0. Cohort-keyboard activation is NOT PROVED by design with a named resolver. No browser fact was used as the sole basis for either defect decision; both decisions are code-grounded (W11 :1323-1324).
+Code evidence:      W11 :1290-1328 plus supervisor re-read of both committed diffs and the two post-edit greps (both empty, exit 1 = no match). L-23 removed only the CTA forwarding chain; L-24 removed only the dead arc plumbing with visual/legend preserved. i18n.ts untouched, no new dependencies.
+Acceptance items:   L-23 4/5 PASS + 1 expected NOT PROVEN (click capture); L-24 4/5 PASS + 1 expected NOT PROVEN (cohort keyboard). Parallel protocol §2 satisfied: one verified backup before edits, two disjoint exclusive lists, no agent commit/stage/vault edit, lead-run shared gate, exactly two atomic lead-owned commits. Both recipes GREEN; wave GREEN.
+Verdict:            GREEN
+
+Citations (exact note/section or file:line for every judgement):
+  - This note, W11 §Entry/backup :1292-1297, §Parallel dispatch :1299-1307, §Combined diff/gate/commits :1309-1328, §Browser evidence :1330-1339, §Vault gates :1341-1346.
+  - Parallel recipes LINK-FOLLOWUP-PARALLEL-RECIPES §2 (protocol, overlap STOP condition), §3 (L-23), §4 (L-24), §5 (gates and verdict conditions); supervision protocol §C (G1-G8, A2, A5, R1, R4, R5, R7), §D, §E, §F; strategy §2.2, §2.5, §5, §6, §9; C-05 F2/F7; W5 of this note (:899-953, the original scope decline).
+  - Supervisor read-only re-verification (2026-11-22): branch/entry/exit HEAD, clean worktree, three-path code diff and per-recipe partition, pre.sha, backup bundle/manifest re-verified, commit order (backup before both code commits), both committed diffs, post greps, browser raw JSON, four vault gates re-run, ancestry/linearity, main/origin/main unchanged. No browser or network tool was run by the supervisor.
+
+Required remediations (owner: lead; each must be closed before next verdict):
+  - none. Do NOT amend 0481541: amending would rewrite history, which is forbidden; the placeholder correction is already recorded at W11 :1326-1328 and the concrete rollback commands are recorded above.
+
+Non-blocking observations: (1) the L-24 commit-subject rollback placeholder (ruled non-blocking above; W1 precedent); (2) recipe L-24 step 4's suggested one-line comment in AgeDistributionSection.tsx was not added — the same reasoning is recorded with citations in W11 :1324, no acceptance item or rendering depends on the comment, so no remediation; (3) the raw browser JSON does not embed the aria-label text or the console list, which are stated in prose at W11 :1332-1335 — no acceptance item depends on them, but future captures should embed both fields in the raw artifact.
+
+Authorisation (GREEN only — reproduce verbatim):
+  "Integration authorised: wave W11 is GREEN on the evidence cited above; the lead may merge repair/links-w11 into repair/links-base with git merge --ff-only."
+```
+
 ## See also
 
 [CLICK-INVESTIGATION-JOURNEY](CLICK-INVESTIGATION-JOURNEY-2026-11-22.md) ·
