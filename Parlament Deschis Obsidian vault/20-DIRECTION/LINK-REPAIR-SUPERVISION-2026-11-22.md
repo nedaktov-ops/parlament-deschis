@@ -333,6 +333,28 @@ and N-2 are assigned to W2/W4 and N-4 to the W0 vault write-back.
 
 **Final check (2026-11-22):** N-1…N-4 RESOLVED (REC L-04 :178-182/:203-233 vs STRAT §2.5 :48-49; STRAT §4 :78; REC L-01 :99; journey :26-28) — W0 MAY START: YES; W1 UNBLOCKED: YES (supersedes the NO above; residual "one checkpoint" wording at STRAT §4 :76 and §4.1 :88-90 to be aligned to two atomic commits before W2).
 
+## I. W2 escalation — route abandonment on scope change (2026-11-22)
+
+**Ruling: option (a) — emergency recipe L-18 in a new wave W2B, one agent, exclusive file `frontend/src/hooks/useScope.ts`.**
+
+**§C classification: RED (STOP) for W2 as constituted, not AMBER.** R2 applies: a broken route was *observed* in the browser this wave — the footer trace
+`/tmp/opencode/w2-browser-footer-trace.json` records two pushes,
+`push /traseism?date=2024-06-01` then `push /?date=2024-06-01&legislature=2020`, ending on the overview; `/tmp/opencode/w2-browser-wave.json` records a wave click ending at `/?date=2016-02-01&chamber=deputies&legislature=2012` with title "Prezentare generală". Two W2 acceptance items therefore fail G5 and G6. A2 does **not** apply: the browser check ran and produced a failing observation, it did not "could not run". Option (b)'s "NOT PROVEN" framing would contradict MAINTENANCE-PROTOCOL §1.6 and my §E evidence discipline — this is proven broken. The direct-navigation control (same redirect without any L-03 code path) establishes the defect is **pre-existing**, so it is not an L-03 regression and does not require reverting W2 checkpoints; it still blocks GREEN.
+
+**Supervisor read-only verification:** `useScope.ts:38` `const navigate = useNavigate({ from: "/" })`; `:49-68` `setScope` calls `navigate({ search: (prev) => …, replace: false })` with **no `to`**, and the comment at `:36-37` that "no `to` = stay in place" is empirically false. `Traseism.tsx:678-682` calls `setRouteScope({ legislature: matchingLegislature })` on mount, triggering that no-`to` navigation back to `/`. Non-regression control: `/tmp/opencode/w2-browser-card-click.json` shows L-04's card click still reaches `/mps?date=2024-06-01` as an SPA with marker preserved.
+
+**Authority for L-18:** REC "Shared side-quest policy" :493-499 — a need outside an existing recipe becomes a new recipe after supervisor approval; this entry is that approval. STRAT §2.1 :39-41 evidence-only scope is preserved: L-18 repairs a proven defect, not an opportunistic refactor.
+
+**STOP conditions (immediate):** do not merge `repair/links-w2` (STRAT §4 :83-84), do not push it (§9 :183-189), do not sign W2 GREEN until V1–V6 below are met. Keep W2 checkpoints intact — no revert is warranted because the defect predates L-03. Lead to record this escalation in the journey W2 section (supervisor does not edit that note this turn).
+
+**Validation conditions to lift STOP:**
+- V1 — W2B diff contains only `frontend/src/hooks/useScope.ts` plus mandated vault write-back / regenerated `_generated/*`; no other agent or wave owns that hook.
+- V2 — fix passes the current path explicitly (e.g. `useLocation()` → `to: location.pathname`). Do **not** merely delete `from: "/"` unless the agent proves build-time type safety; the `:36-37` typing rationale must be preserved or replaced with equivalent evidence.
+- V3 — the functional search updater at `:55-63` (page-local params) and `replace: false` history stepping at `:64` are preserved; no query-param loss.
+- V4 — gates all exit 0 with recorded output: `npm run lint`, `npm run build`, `npm run i18n:check`, `check_routes_nav.mjs`, `check_i18n_keys.mjs`, the four vault gates and `git diff --check`.
+- V5 — browser re-test on local dev with raw captures: footer `/traseism` link ends on `/traseism` with `date` scope; wave click ends on `/traseism` with the wave date; dashboard card still SPA-navigates to `/mps`; at least one other scope control (ScopeControls date/chamber/legislature) changes scope without leaving its page; console error/warn list empty.
+- V6 — W2B integrated `--ff-only` before W2 sign-off; the two W2 acceptance items re-checked and marked PASS against V5 captures; only then may W2 be signed GREEN with the §F sentence.
+
 ## See also
 
 [LINK-REPAIR-STRATEGY](LINK-REPAIR-STRATEGY-2026-11-22.md) ·
