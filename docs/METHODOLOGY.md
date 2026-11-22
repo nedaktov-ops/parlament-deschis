@@ -301,7 +301,7 @@ Silent changes to these rules are bugs, even if the code still runs.
 
 ---
 
-## 9. Party genealogy
+## 9. Party genealogy — retired (DROP confirmed 2026-11-21)
 
 Romanian political parties undergo frequent mergers, splits, and renamings. To enable longitudinal analysis, Parlament Deschis records party genealogy as explicit relationships between organizations.
 
@@ -316,6 +316,23 @@ Both are nullable foreign keys to `organization.id`, creating a directed graph.
 **Current status (verified 2026-11-19 by a read-only count on the shipped
 database): both columns hold 0 non-null values.** Sections 9.2–9.3 describe the
 intended data model, not ingested genealogy data; this is a declared gap.
+
+### 9.5 DROP decision (2026-11-21)
+
+**Party genealogy is formally dropped.** No licence-complete source declares an
+ID-addressable predecessor/successor relation for Romanian parties:
+
+- Wikidata: zero referenced `predecessor`/`successor` statements for RO political
+  parties (verified by SPARQL, 2026-11-21).
+- Party Facts: codebook says coding is incomplete; no stable join key for RO.
+- PolPaL: licence NOT PROVEN.
+- SER-PROM: CC BY-SA 4.0 (ShareAlike incompatible with our CC-BY output).
+- 281.ro: self-declared CC BY 4.0 but no party genealogy field.
+
+Without a provenance-safe source, the feature cannot be populated without
+violating the project's evidence rules. The schema columns
+(`previous_party_id`, `successor_party_id`) remain in the database for
+forward-compatibility but are documented as unused.
 
 ### 9.2 Genealogy rules
 

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import Search from "./components/Search";
 import Footer from "./components/Footer";
 import SenateHistory from "./pages/SenateHistory";
+import { useScope } from "./hooks/useScope";
 import { isISODate, localISODate } from "./utils/date";
 import "./i18n";
 import "./index.css";
@@ -34,11 +35,22 @@ const Grafice = lazy(() => import("./pages/Grafice").then(m => ({ default: m.def
 const Topuri = lazy(() => import("./pages/Topuri").then(m => ({ default: m.default })));
 const Ideology = lazy(() => import("./pages/Ideology").then(m => ({ default: m.default })));
 
-function validateDateSearch(search: Record<string, unknown>) {
-  const candidate = search.date;
-  const date = isISODate(candidate) ? candidate : localISODate();
+export type ChamberScope = "deputies" | "senate";
+
+/** One scope validator for every route: spreads unknown keys (page-local
+ * filters survive navigation) and materialises all three canonical dims. */
+function validateScopeSearch(search: Record<string, unknown>) {
+  const chamber: ChamberScope | undefined =
+    search.chamber === "senate" || search.chamber === "deputies" ? search.chamber : undefined;
+  const legislature =
+    typeof search.legislature === "string" && /^\d{4}$/.test(search.legislature)
+      ? search.legislature
+      : undefined;
   return {
-    date,
+    ...search,
+    date: isISODate(search.date) ? search.date : localISODate(),
+    chamber,
+    legislature,
   };
 }
 
@@ -59,7 +71,7 @@ function NotFound() {
     <div className="card p-8 text-center space-y-3">
       <h2 className="text-xl font-semibold">{t("notFoundTitle", "Page not found")}</h2>
       <p className="text-slate-400">{t("notFoundBody", "The page you were looking for does not exist.")}</p>
-      <Link to="/" search={{ date: localISODate() }} className="btn bg-sky-700 hover:bg-sky-600">{t("backHome", "Back to overview")}</Link>
+      <Link to="/" search={{ date: localISODate(), chamber: undefined, legislature: undefined }} className="btn bg-sky-700 hover:bg-sky-600">{t("backHome", "Back to overview")}</Link>
     </div>
   );
 }
@@ -74,7 +86,7 @@ function RouteError({ error }: { error?: Error }) {
     <div className="card p-8 text-center space-y-3" role="alert">
       <h2 className="text-xl font-semibold">{t("routeErrorTitle", "Something went wrong")}</h2>
       <p className="text-slate-400">{t("routeErrorBody", "Ne pare rău, datele nu pot fi afișate.")}</p>
-      <Link to="/" search={{ date: localISODate() }} className="btn bg-sky-700 hover:bg-sky-600">{t("backHome", "Back to overview")}</Link>
+      <Link to="/" search={{ date: localISODate(), chamber: undefined, legislature: undefined }} className="btn bg-sky-700 hover:bg-sky-600">{t("backHome", "Back to overview")}</Link>
     </div>
   );
 }
@@ -89,17 +101,14 @@ interface NavLinkProps {
 
 function NavLink({ to, activeClass, inactiveClass, children }: NavLinkProps) {
   const location = useLocation();
-  const query = location.href.split("?")[1] ?? "";
-  const date = validateDateSearch({
-    date: new URLSearchParams(query).get("date"),
-  }).date;
+  const scope = useScope();
   const isActive =
     location.pathname === to ||
     (to !== "/" && location.pathname.startsWith(`${to}/`));
   return (
     <Link
       to={to}
-      search={(previous) => ({ ...previous, date })}
+      search={(previous) => ({ ...previous, ...scope.searchFor() })}
       className={`px-2 sm:px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${isActive ? activeClass : inactiveClass}`}
       aria-current={isActive ? "page" : undefined}
     >
@@ -179,9 +188,7 @@ function RootLayout() {
   const router = useRouter();
   const location = useLocation();
   const closeAbout = useCallback(() => setAboutOpen(false), []);
-  const currentDate = validateDateSearch({
-    date: new URLSearchParams(location.href.split("?")[1] ?? "").get("date"),
-  }).date;
+  const scope = useScope();
 
   // Keep the document language and SPA title in sync with route/language changes.
   useEffect(() => {
@@ -200,8 +207,14 @@ function RootLayout() {
     else if (path === "/coalitions") label = t("nav.coalitions", "Coalitions");
     else if (path === "/mps") label = t("nav.mps", "MPs");
     else if (path === "/report") label = t("nav.report", "Report");
-    else if (path === "/parties") label = t("nav.parties", "Parties");
+    else if (path === "/parties") label = t("nav.parties");
     else if (path === "/party-timeline") label = t("nav.partyTimeline", "Timeline");
+    else if (path === "/compare-mps") label = t("nav.compareMps");
+    else if (path === "/Voturi") label = t("nav.voturi");
+    else if (path === "/radar") label = t("nav.radar");
+    else if (path === "/grafice") label = t("nav.grafice");
+    else if (path === "/topuri") label = t("nav.topuri");
+    else if (path === "/ideology") label = t("nav.ideology");
     else if (path === "/institutional") label = t("institutional");
     else if (path === "/coverage") label = t("coverage");
     else if (path === "/senate-history") label = t("nav.senateHistory", t("senate"));
@@ -218,7 +231,7 @@ function RootLayout() {
         {t("skipToContent", "Skip to content")}
       </a>
       <header className="border-b border-slate-700/60 bg-ink/95 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1">
             <div className="text-base font-semibold tracking-tight">{t("title")}</div>
             <p className="text-xs text-slate-400">{t("subtitle")}</p>
@@ -227,7 +240,7 @@ function RootLayout() {
             <Search onSelect={(id) => router.navigate({
               to: "/person/$id",
               params: { id },
-              search: { date: currentDate },
+              search: scope.searchFor(),
             })} />
             <button type="button"className="btn bg-slate-700 hover:bg-slate-600"
               onClick={() => setAboutOpen(true)}
@@ -243,7 +256,7 @@ function RootLayout() {
           </div>
         </div>
         <div className="relative">
-        <nav className="flex gap-1 border-b border-slate-700 px-4 overflow-x-auto" aria-label={t("mainNavigation")}>
+        <nav className="flex gap-1 border-b border-slate-700 px-4 sm:px-6 lg:px-8 overflow-x-auto" tabIndex={0} aria-label={t("mainNavigation")}>
           <NavLink to="/" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">
             {t("overview")}
           </NavLink>
@@ -293,10 +306,19 @@ function RootLayout() {
             {t("party")}
           </NavLink>
         </nav>
+        <nav className="flex flex-wrap gap-1 border-b border-slate-700/60 px-4 py-1"
+             aria-label={t("nav.analytics", "Vote analytics")}>
+          <NavLink to="/compare-mps" activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">{t("nav.compareMps", "Compare MPs")}</NavLink>
+          <NavLink to="/Voturi"      activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">{t("nav.voturi", "Votes")}</NavLink>
+          <NavLink to="/radar"       activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">{t("nav.radar", "Vote radar")}</NavLink>
+          <NavLink to="/grafice"     activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">{t("nav.grafice", "Charts")}</NavLink>
+          <NavLink to="/topuri"      activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">{t("nav.topuri", "Vote rankings")}</NavLink>
+          <NavLink to="/ideology"    activeClass="bg-slate-800 text-slate-100 border-b-2 border-sky-500 -mb-px" inactiveClass="text-slate-400 hover:text-slate-200">{t("nav.ideology", "Ideology")}</NavLink>
+        </nav>
         <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-ink to-transparent" />
         </div>
       </header>
-      <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto w-full min-w-0 px-4 py-5 flex-1">
+      <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto w-full min-w-0 px-4 sm:px-6 lg:px-8 py-5 flex-1">
         <Outlet />
       </main>
       <Footer />
@@ -316,7 +338,7 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: () => <Suspense fallback={<Loading />}><LiveDashboard /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const electoralRoute = createRoute({
@@ -332,56 +354,49 @@ const electoralRoute = createRoute({
       },
     });
   },
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const institutionalRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/institutional",
   component: () => <Suspense fallback={<Loading />}><InstitutionalView /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const partyRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/party/$shortName",
   component: () => <Suspense fallback={<Loading />}><PartyProfile /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const personRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/person/$id",
   component: () => <Suspense fallback={<Loading />}><PersonDeepDive /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const legislatureRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/legislature/$year",
   component: () => <Suspense fallback={<Loading />}><LegislatureDetail /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const traseismRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/traseism",
   component: () => <Suspense fallback={<Loading />}><Traseism /></Suspense>,
-  validateSearch: (search) => ({
-    ...validateDateSearch(search),
-    chamber: search.chamber === "senate" ? "senate" : "deputies",
-    legislature:
-      typeof search.legislature === "string" && search.legislature
-        ? search.legislature
-        : undefined,
-  }),
+  validateSearch: validateScopeSearch,
 });
 
 const coverageRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/coverage",
   component: () => <Suspense fallback={<Loading />}><CoverageView /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 
@@ -389,112 +404,112 @@ const senateHistoryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/senate-history",
   component: () => <Suspense fallback={<Loading />}><SenateHistory /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const switchLeaderboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/leaderboard",
   component: () => <Suspense fallback={<Loading />}><SwitchLeaderboard /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const demographicsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/demographics",
   component: () => <Suspense fallback={<Loading />}><Demographics /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const committeesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/committees",
   component: () => <Suspense fallback={<Loading />}><Committees /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const partyComparisonRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/compare",
   component: () => <Suspense fallback={<Loading />}><PartyComparison /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const coalitionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/coalitions",
   component: () => <Suspense fallback={<Loading />}><Coalitions /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const mpsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/mps",
   component: () => <Suspense fallback={<Loading />}><Mps /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const mpComparisonRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/compare-mps",
   component: () => <Suspense fallback={<Loading />}><MpComparison /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const reportRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/report",
   component: () => <Suspense fallback={<Loading />}><Report /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const partiesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/parties",
   component: () => <Suspense fallback={<Loading />}><Parties /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const partyTimelineRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/party-timeline",
   component: () => <Suspense fallback={<Loading />}><PartyTimeline /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const voturiRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/Voturi",
   component: () => <Suspense fallback={<Loading />}><Voturi /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const radarRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/radar",
   component: () => <Suspense fallback={<Loading />}><Radar /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const graficeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/grafice",
   component: () => <Suspense fallback={<Loading />}><Grafice /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const topuriRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/topuri",
   component: () => <Suspense fallback={<Loading />}><Topuri /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const ideologyRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/ideology",
   component: () => <Suspense fallback={<Loading />}><Ideology /></Suspense>,
-  validateSearch: validateDateSearch,
+  validateSearch: validateScopeSearch,
 });
 
 const routeTree = rootRoute.addChildren([

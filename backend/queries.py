@@ -322,7 +322,7 @@ def search_persons(
     return out
 
 
-def get_person(session: Session, person_id: str) -> dict | None:
+def get_person(session: Session, person_id: str, as_of: date | None = None) -> dict | None:
     p = session.get(Person, person_id)
     if not p:
         return None
@@ -353,6 +353,18 @@ def get_person(session: Session, person_id: str) -> dict | None:
             select(Event).where(Event.person_id == person_id).order_by(Event.event_date)
         )
     )
+    if as_of is not None:
+        events = [e for e in events if e.event_date is not None and e.event_date <= as_of]
+
+        def _active(m: Membership) -> bool:
+            return (
+                m.start_date is not None
+                and m.start_date <= as_of
+                and (m.end_date is None or m.end_date > as_of)
+            )
+
+        ms = [m for m in ms if _active(m)]
+        committee_ms = [m for m in committee_ms if _active(m)]
     idents = list(
         session.scalars(select(PersonIdentifier).where(PersonIdentifier.person_id == person_id))
     )
@@ -385,6 +397,7 @@ def get_person(session: Session, person_id: str) -> dict | None:
         "committee_memberships": [serialize_membership(session, m) for m in committee_ms],
         "events": [serialize_event(session, e) for e in events],
         "evidence": evidence,
+        "as_of": as_of.isoformat() if as_of else None,
     }
 
 
@@ -530,12 +543,15 @@ def get_movements(
     start: date | None,
     end: date | None,
     limit: int = 200,
+    legislature: str | None = None,
 ) -> list[dict]:
     stmt = select(Event).where(Event.type.in_(["switch_group", "switch_party"]))
     if person_id:
         stmt = stmt.where(Event.person_id == person_id)
     if chamber:
         stmt = stmt.where(Event.chamber == chamber)
+    if legislature:
+        stmt = stmt.where(Event.legislature == legislature)
     if start:
         stmt = stmt.where(Event.event_date >= start)
     if end:

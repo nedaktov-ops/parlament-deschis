@@ -38,9 +38,9 @@ An unavailable check is `NOT PROVEN`, never PASS.
 
 | ID | Step | Owner | Exact command / action | Acceptance gate | Rollback | Status |
 |---|---|---|---|---|---|---|
-| A-06 | Genealogy DROP follow-through: relabel docs/UI | agent | add dated notes in `METHODOLOGY.md`, `DATA-MODEL.md`, `DATA-ENRICHMENT-RESEARCH.md`, vault notes | no current doc claims populated genealogy; `check-doc-truth.sh` 0 | `git revert <sha>` | RESEARCH DONE — DROP confirmed with corrected reasoning (ParlGov multi-valued); relabelling pending |
+| A-06 | Genealogy DROP follow-through: relabel docs/UI | agent | add dated notes in `METHODOLOGY.md`, `DATA-MODEL.md`, `DATA-ENRICHMENT-RESEARCH.md`, vault notes | no current doc claims populated genealogy; `check-doc-truth.sh` 0 | `git revert <sha>` | **DONE 2026-11-22** — §9 retitled retired + §9.5 DROP decision, column notes, research note, 2 vault notes; `e905682`; doc-truth 0, vault lint/sync clean |
 | A-07 | Senate HOLD monitoring / exact-ID source search | agent | research exact GUID→person source; re-open only with ID evidence | report with exact source or explicit HOLD | none (research) | RESEARCH DONE — HOLD confirmed (0 exact GUID→person join); lift conditions named |
-| A-08 | Seed licence register in local DBs | agent | `python -m pipeline.cli --db data/parlament.db licenses-seed` | `select count(*) from source_license` → 15, idempotent | DB backup in `/tmp` | OPEN |
+| A-08 | Seed licence register in local DBs | agent | `python -m pipeline.cli --db data/parlament.db licenses-seed` | `select count(*) from source_license` → 15, idempotent | DB backup in `/tmp` | **DONE 2026-11-22** — `licence register seeded: 15 entries written, 15 rows`; `select count(*)` → 15; idempotent |
 | A-09 | Surface coverage dimensions in UI | agent | optional UI display beside `/api/coverage/dimensions` | UI 24/24, zero axe | `git revert <sha>` | OPEN (low priority) |
 | A-10 | Verify no NULL snapshot hashes in future releases | agent | audit check already covers votes; assert in release script | next release has 0 NULL hashes | `git revert <sha>` | OPEN (low) |
 
@@ -48,9 +48,9 @@ An unavailable check is `NOT PROVEN`, never PASS.
 
 | ID | Step | Owner | Exact command / action | Acceptance gate | Rollback | Status |
 |---|---|---|---|---|---|---|
-| A-11 | H3-D: wire shared states into remaining pages | agent | apply `EmptyState`/`LoadingState` where props fit (e.g. Voturi) | lint 0/0, build 0, UI 24/24 | `git revert <sha>` | RESEARCH DONE — clean 1:1 wiring possible; implementation pending |
+| A-11 | H3-D: wire shared states into remaining pages | agent | apply `EmptyState`/`LoadingState` where props fit (e.g. Voturi) | lint 0/0, build 0, UI 24/24 | `git revert <sha>` | **DONE 2026-11-22 (verified, no change needed)** — `Voturi.tsx` already renders `AsyncState`, which wraps `LoadingState`/`EmptyState`/`ErrorState`; R-05 wiring satisfies the contract |
 | A-12 | H4-A newsletter/social proof | owner | decide data source or drop; no invented endorsements | written decision | new decision | RESEARCH DONE — DROP recommended (no endpoint/data); decision pending |
-| A-13 | Add `footer.datasetRelease` ro/en key | agent | i18n key + use it in Footer | key diff script 0 missing | `git revert <sha>` | RESEARCH DONE — key absent; broader key gate RED with 64 missing (honest gate) |
+| A-13 | Add `footer.datasetRelease` ro/en key | agent | i18n key + use it in Footer | key diff script 0 missing | `git revert <sha>` | **DONE 2026-11-22 (verified, no change needed)** — `footer.datasetRelease` present in both `i18n.ts` locales and consumed by `Footer.tsx`; i18n key diff PASS |
 | A-14 | WCAG AA re-check of touched UI | agent | axe gate via `ui_validate.py` | 24/24, zero axe | `git revert <sha>` | OPEN (continuous) |
 
 ## D. Platform and security
@@ -78,7 +78,7 @@ An unavailable check is `NOT PROVEN`, never PASS.
 ## Dependency order
 
 1. A-01 → A-02/A-03 → A-04 → A-05 (only P0 chain).
-2. In parallel with research: A-06, A-08, A-11, A-13, A-16, A-20, A-23.
+2. In parallel with research: A-16, A-20, A-21, A-22, A-23 (A-06, A-08, A-11, A-13 completed 2026-11-22).
 3. After owner decisions: A-07, A-12, A-15, A-17, A-19, A-21, A-22, A-25.
 
 ## Research fleet for missing components

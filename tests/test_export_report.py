@@ -33,6 +33,11 @@ EXPECTED_TOTALS = {
     "memberships": 2,
     "events": 2,
     "switches": 1,
+    # R-04: labelled switch definitions (additive). The fixture has one
+    # switch_group event and no switch_party events.
+    "switches_group": 1,
+    "switches_party": 0,
+    "switches_all": 1,
     "committees": 1,
     "persons_with_birth_date": 2,
 }
@@ -169,14 +174,21 @@ def _unfiltered_totals(factory) -> dict:
     """Recompute the report totals directly from the DB, with no filters."""
     session = factory()
     try:
+        switch_group = (
+            session.scalar(select(func.count(Event.id)).where(Event.type == "switch_group")) or 0
+        )
+        switch_party = (
+            session.scalar(select(func.count(Event.id)).where(Event.type == "switch_party")) or 0
+        )
         return {
             "persons": session.scalar(select(func.count(Person.id))) or 0,
             "memberships": session.scalar(select(func.count(Membership.id))) or 0,
             "events": session.scalar(select(func.count(Event.id))) or 0,
-            "switches": session.scalar(
-                select(func.count(Event.id)).where(Event.type == "switch_group")
-            )
-            or 0,
+            "switches": switch_group,
+            # R-04: labelled switch definitions (additive).
+            "switches_group": switch_group,
+            "switches_party": switch_party,
+            "switches_all": switch_group + switch_party,
             "committees": session.scalar(
                 select(func.count(Organization.id)).where(
                     Organization.classification == "committee"

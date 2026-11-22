@@ -49,14 +49,22 @@ Group size evolution over time.
 ### `GET /api/persons?q=popescu&chamber=deputies&limit=50`
 Search persons by name.
 
-### `GET /api/persons/{person_id}`
+### `GET /api/persons/{person_id}?as_of=2024-12-21`
 Person detail with memberships, events, evidence.
+
+- `as_of` (optional): ISO date. When supplied, memberships and committee
+  tenures are limited to those active on that date and events to those dated on
+  or before it; the response echoes `"as_of"`. An invalid date returns **422**;
+  omitting it preserves the current whole-corpus behaviour (`"as_of": null`).
 
 ### `GET /api/persons/{person_id}/history`
 Timeline of changes (memberships, events, etc.).
 
-### `GET /api/movements?person_id=...&chamber=deputies&from=...&to=...&limit=200`
-Events with optional filters.
+### `GET /api/movements?person_id=...&chamber=deputies&legislature=2024&from=...&to=...&limit=200`
+Events with optional filters. `legislature` is an additive four-digit filter
+matched against `Event.legislature`; omitting it preserves the previous
+whole-corpus behaviour. The filter applies to `switch_group` and
+`switch_party` events only.
 
 ### `GET /api/events/recent?limit=50`
 Most recent events across all chambers.
@@ -149,7 +157,11 @@ Delete and rebuild all stored switch waves from the current event ledger.
 Requires the `X-Admin-Token` header and `PARLAMENT_ADMIN_TOKEN`.
 
 ### `GET /api/analytics/switch-waves?chamber=deputies&legislature=2024`
-List stored switch waves with filters. This endpoint is read-only.
+List stored switch waves with filters. This endpoint is read-only. Each row
+keeps every existing field and adds `trigger_provenance`: when `trigger_event`
+is set, the value is `editor-curated lookup (pipeline/analytics.py:TRIGGER_DATES); matched within wave window or 90 days before; no per-event source URL`;
+otherwise it is `null`. Trigger labels are editor-curated proximity matches,
+not corpus assertions or coalition facts.
 
 ### `GET /api/analytics/party-cohesion?legislature=2024`
 Party switching rate per party, based on dated party-switch events attributed
@@ -235,11 +247,15 @@ Roll-call vote list, newest `vote_time` first.
 Params: `chamber` (`deputies`|`senate`), `legislature` (`YYYY`), `from`, `to`,
 `limit` (default 50, 1–200), `offset` (default 0).
 ```json
-{"status":"ok","data_exists":false,"data":[],"total":0,"offset":0,"limit":50}
+{"status":"ok","data_exists":false,"data":[],"total":0,"offset":0,"limit":50,"scopes":[]}
 ```
 A populated `data[]` row has: `id`, `native_vote_id`, `chamber`, `legislature`,
 `vote_time`, `title_raw`, `present`, `not_voting`, `yes`, `no`, `abstain`,
-`source_url`, `positions_incomplete`.
+`source_url`, `positions_incomplete`. The additive `scopes` array is derived
+from the corpus independently of `from`/`to`/`chamber`/`legislature` filters:
+each item is `{ "chamber": string, "legislature": string | null, "total": int }`,
+ordered by descending `total`. Its totals sum to the whole-corpus vote count,
+so clients can select a scope that actually has rows instead of hardcoding one.
 
 ### `GET /api/votes/{vote_id}`
 Single vote looked up by `native_vote_id` (not the numeric `id`). A missing vote
@@ -390,9 +406,10 @@ endpoints documented above):
 | Endpoint | Purpose |
 |---|---|
 | `GET /api/dashboard/stats` | Dashboard counts (see the committee-count table above); `computed_at` is regenerated per request |
+| `GET /api/coverage/summary` | Raw corpus-wide coverage totals; percentages derived from integer counts and `null` at a zero denominator |
 | `GET /api/health/live` | Liveness probe |
 | `GET /api/health/ready` | Database-readiness probe (also the Render healthcheck path) |
-| `GET /api/mps` | MP biography cards, filterable/sortable (including by `committees`) |
+| `GET /api/mps?as_of=&chamber=&legislature=` | MP biography cards, filterable/sortable (including by `committees`). Optional `as_of` (ISO date), `chamber` (`deputies`\|`senate`) and `legislature` (`YYYY`) scope the cards, their switch/committee aggregates and the displayed party. An invalid `as_of` returns **422**; omitting all three preserves the current whole-corpus behaviour. The response carries `total` (corpus-wide, independent of `limit`/`offset` — never the page length), a `definition` string and a `scope` echo. |
 | `GET /api/parties` | Party list used by the UI |
 | `GET /api/traseism/overview` | Traseism overview (`party`, `by_party`, `matrix`, `timing`) |
 | `GET /api/traseism/summary` | Per-scope traseism summary |
@@ -429,7 +446,18 @@ is **2,002** (1,217 group + 785 party). `GET /api/export/report` and
 
 The pinned release DB confirms the split: `switch_group=1217`,
 `switch_party=785` (sum 2,002), as recorded in
-`docs/AUDIT-RESOLUTIONS-2026-11-21.md` (R1).
+`docs/AUDIT-RESOLUTIONS-2026-11-21.md` (R1). The **local** development DB has
+`switch_party=0`, so its honest triple is `1217 / 0 / 1217`; both triples satisfy
+`group + party == all` (R1 is definitional evidence, not a local measurement).
+
+The API now publishes both definitions as separate labelled fields:
+`GET /api/dashboard/stats` → `data.switches_group`, `data.switches_party`,
+`data.switches_all` (with a `data.definitions` map); `GET /api/export/report`
+→ `totals.switches_group`, `totals.switches_party`, `totals.switches_all`
+(`totals.switches` is a deprecated alias of `switches_group`).
+`GET /api/traseism/summary` and `/overview` carry a `definitions` map stating
+that their `switches` field is group-only. The bare `switches` field on
+`/dashboard/stats` is a deprecated alias of `switches_all`.
 
 ### Membership counts
 

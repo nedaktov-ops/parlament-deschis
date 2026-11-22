@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { useRouter, useSearch } from "@tanstack/react-router";
+import { useScope } from "../hooks/useScope";
 import {
   api,
   traseismOverview,
@@ -15,6 +15,8 @@ import About from "../components/About";
 import SankeyFlow from "../components/SankeyFlow";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
+import TooltipText from "../components/ui/TooltipText";
 
 /** In-repo methodology document (docs/METHODOLOGY.md). */
 const METHODOLOGY_URL =
@@ -93,40 +95,18 @@ function StatCard({
   hint?: string;
   title?: string;
 }) {
+  const tipId = useId().replace(/:/g, "");
   return (
-    <div className="bg-slate-800/50 rounded p-3">
+    <div className="bg-slate-800/50 rounded-xl p-4">
       <div className="text-slate-500 text-xs">{label}</div>
-      <div className="text-2xl font-bold text-slate-100" title={title}>
+      <div
+        className="relative group text-2xl font-bold text-slate-100"
+        aria-describedby={title ? `${tipId}-stat` : undefined}
+      >
         {value}
+        {title ? <TooltipText id={`${tipId}-stat`}>{title}</TooltipText> : null}
       </div>
       {hint ? <div className="text-xs text-slate-500 mt-1">{hint}</div> : null}
-    </div>
-  );
-}
-
-function ErrorState({
-  message,
-  onRetry,
-}: {
-  message?: string;
-  onRetry?: () => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div
-      className="rounded-lg border border-rose-700/60 bg-rose-950/30 px-4 py-3"
-      role="alert"
-    >
-      <p className="text-sm text-rose-200">
-        {message ?? t("traseismLoadError")}
-      </p>
-      {onRetry ? (
-        <button type="button"onClick={onRetry}
-          className={`btn mt-2 bg-slate-700 hover:bg-slate-600 ${FOCUS}`}
-        >
-          {t("traseismRetry")}
-        </button>
-      ) : null}
     </div>
   );
 }
@@ -189,7 +169,7 @@ function MatrixTable({ scope }: { scope: TraseismScope }) {
 
   return (
     <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("traseismMatrixCaption")}>
-      <table className="w-full text-xs border-collapse">
+      <table className="w-full data-table border-collapse">
         <caption className="sr-only">{t("traseismMatrixCaption")}</caption>
         <thead>
           <tr className="text-left text-slate-500">
@@ -205,7 +185,7 @@ function MatrixTable({ scope }: { scope: TraseismScope }) {
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row} className="border-t border-slate-700/60 row-hover">
+            <tr key={row} className="border-t border-slate-700/60">
               <th scope="row" className="py-1.5 pr-3 text-left font-medium text-slate-200">
                 {row}
               </th>
@@ -232,7 +212,7 @@ function PartyNetTable({ scope }: { scope: TraseismScope }) {
 
   return (
     <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("traseismPartyNetCaption")}>
-      <table className="w-full text-xs border-collapse">
+      <table className="w-full data-table border-collapse">
         <caption className="sr-only">{t("traseismPartyNetCaption")}</caption>
         <thead>
           <tr className="text-left text-slate-500">
@@ -268,7 +248,7 @@ function PartyNetTable({ scope }: { scope: TraseismScope }) {
             return (
               <tr
                 key={row.party}
-                className="border-t border-slate-700/60 align-top row-hover"
+                className="border-t border-slate-700/60 align-top"
               >
                 <th scope="row" className="py-1.5 pr-3 text-left font-medium text-slate-200">
                   {row.party}
@@ -301,11 +281,14 @@ function PartyNetTable({ scope }: { scope: TraseismScope }) {
 function SwitchLedger({
   legislature,
   chamber,
+  scopeKey,
 }: {
   legislature: string;
   chamber: string;
+  scopeKey: readonly [string, string, string];
 }) {
   const { t } = useTranslation();
+  const tipId = useId().replace(/:/g, "");
   const [page, setPage] = useState(0);
 
   useEffect(() => {
@@ -313,7 +296,7 @@ function SwitchLedger({
   }, [legislature, chamber]);
 
   const query = useQuery({
-    queryKey: ["traseism-switches", legislature, chamber, page],
+    queryKey: ["traseism-switches", legislature, chamber, page, ...scopeKey],
     queryFn: () =>
       traseismSwitches({
         legislature,
@@ -329,6 +312,12 @@ function SwitchLedger({
   const from = total === 0 ? 0 : page * PAGE_SIZE + 1;
   const to = Math.min((page + 1) * PAGE_SIZE, total);
 
+  const view = resolveViewState({
+    isLoading: query.isLoading,
+    isError: query.isError,
+    isEmpty: query.isSuccess && rows.length === 0,
+  });
+
   return (
     <section className="card p-4">
       <h2 className="font-semibold">{t("traseismLedgerTitle")}</h2>
@@ -336,16 +325,16 @@ function SwitchLedger({
         {t("traseismLedgerDesc")}
       </p>
 
-      {query.isLoading ? (
-        <div className="text-slate-500 text-sm py-6">{t("loading")}</div>
-      ) : query.isError ? (
-        <ErrorState onRetry={() => query.refetch()} />
-      ) : rows.length === 0 ? (
-        <div className="text-slate-500 text-sm py-6">{t("traseismNoRows")}</div>
-      ) : (
+      <AsyncState
+        view={view}
+        variant="inline"
+        onRetry={() => void query.refetch()}
+        errorLabel={t("traseismLoadError")}
+        emptyTitle={t("traseismNoRows")}
+      >
         <>
           <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("traseismLedgerCaption")}>
-            <table className="w-full text-xs border-collapse">
+            <table className="w-full data-table border-collapse">
               <caption className="sr-only">{t("traseismLedgerCaption")}</caption>
               <thead>
                 <tr className="text-left text-slate-500">
@@ -370,7 +359,7 @@ function SwitchLedger({
                 {rows.map((row, index) => (
                   <tr
                     key={`${row.person_id}-${row.date ?? "nd"}-${index}`}
-                    className="border-t border-slate-700/60 align-top row-hover"
+                    className="border-t border-slate-700/60 align-top"
                   >
                     <td className="py-1.5 pr-3 text-slate-200">{row.name}</td>
                     <td className="py-1.5 pr-3 text-slate-300">
@@ -380,12 +369,8 @@ function SwitchLedger({
                       {row.to_group ?? "—"}
                     </td>
                     <td
-                      className="py-1.5 pr-3 font-mono text-slate-300"
-                      title={
-                        row.precision
-                          ? t("traseismPrecisionLabel", { value: row.precision })
-                          : undefined
-                      }
+                      className="relative group py-1.5 pr-3 font-mono text-slate-300"
+                      aria-describedby={row.precision ? `${tipId}-precision-${index}` : undefined}
                     >
                       {row.date ? (
                         <>
@@ -395,6 +380,11 @@ function SwitchLedger({
                       ) : (
                         "—"
                       )}
+                      {row.precision ? (
+                        <TooltipText id={`${tipId}-precision-${index}`}>
+                          {t("traseismPrecisionLabel", { value: row.precision })}
+                        </TooltipText>
+                      ) : null}
                     </td>
                     <td className="py-1.5">
                       {row.source_url ? (
@@ -435,9 +425,9 @@ function SwitchLedger({
                 {t("traseismNextPage")}
               </button>
             </div>
-          </div>
-        </>
-      )}
+            </div>
+          </>
+      </AsyncState>
     </section>
   );
 }
@@ -510,7 +500,7 @@ function ScopesOverview({ rows }: { rows: TraseismScope[] }) {
 
   return (
     <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("traseismAllScopesCaption")}>
-      <table className="w-full text-xs border-collapse">
+      <table className="w-full data-table border-collapse">
         <caption className="sr-only">{t("traseismAllScopesCaption")}</caption>
         <thead>
           <tr className="text-left text-slate-500">
@@ -541,7 +531,7 @@ function ScopesOverview({ rows }: { rows: TraseismScope[] }) {
             return (
               <tr
                 key={`${row.chamber}-${row.legislature}`}
-                className="border-t border-slate-700/60 align-top row-hover"
+                className="border-t border-slate-700/60 align-top"
               >
                 <td className="py-1.5 pr-3 text-slate-200">
                   {chamberLabel(row.chamber, t)}
@@ -593,17 +583,24 @@ function ScopesOverview({ rows }: { rows: TraseismScope[] }) {
 function SwitchWavesSection({
   chamber,
   legislature,
+  scopeKey,
 }: {
   chamber: string;
   legislature: string;
+  scopeKey: readonly [string, string, string];
 }) {
   const { t } = useTranslation();
   const waves = useQuery({
-    queryKey: ["switch-waves", chamber, legislature],
+    queryKey: ["switch-waves", chamber, legislature, ...scopeKey],
     queryFn: () => switchWaves(chamber, legislature),
   });
 
   const rows = (waves.data ?? []).slice(0, 10);
+  const view = resolveViewState({
+    isLoading: waves.isLoading,
+    isError: waves.isError,
+    isEmpty: waves.isSuccess && rows.length === 0,
+  });
 
   return (
     <section className="card p-4">
@@ -614,19 +611,15 @@ function SwitchWavesSection({
           "Periods where affiliation changes clustered (30-day windows, 3+ switches). Election and coalition triggers are annotated when the corpus records them.",
         )}
       </p>
-      {waves.isLoading ? (
-        <div className="text-slate-500 text-sm py-4">{t("loading")}</div>
-      ) : waves.isError ? (
-        <div className="text-red-400 text-sm py-4">
-          {t("waves.error", "Failed to load waves.")}
-        </div>
-      ) : rows.length === 0 ? (
-        <div className="text-slate-500 text-sm py-4">
-          {t("waves.empty", "No waves detected for this scope.")}
-        </div>
-      ) : (
+      <AsyncState
+        view={view}
+        variant="inline"
+        onRetry={() => void waves.refetch()}
+        errorLabel={t("waves.error", "Failed to load waves.")}
+        emptyTitle={t("waves.empty", "No waves detected for this scope.")}
+      >
         <div className="overflow-x-auto max-w-full" tabIndex={0} role="region" aria-label={t("waves.title", "Switch waves")}>
-          <table className="min-w-full text-sm">
+          <table className="min-w-full text-sm data-table">
             <thead>
               <tr className="text-left text-slate-400 border-b border-slate-700">
                 <th scope="col" className="py-2 pr-4">{t("waves.col.period", "Period")}</th>
@@ -638,7 +631,7 @@ function SwitchWavesSection({
             </thead>
             <tbody>
               {rows.map((w) => (
-                <tr key={w.id} className="border-b border-slate-700/50 row-hover">
+                <tr key={w.id} className="border-b border-slate-700/50">
                   <th scope="row" className="py-2 pr-4 text-slate-300 font-normal text-left">
                     {w.start_date ?? "?"} → {w.end_date ?? "?"}
                   </th>
@@ -656,46 +649,43 @@ function SwitchWavesSection({
             </tbody>
           </table>
         </div>
-      )}
+      </AsyncState>
     </section>
   );
 }
 
 export function Traseism() {
   const { t } = useTranslation();
-  const router = useRouter();
-  const search = useSearch({ from: "/traseism" });
+  const routeScope = useScope();
   const [aboutOpen, setAboutOpen] = useState(false);
 
-  const chamber = search.chamber === "senate" ? "senate" : "deputies";
+  const chamber = routeScope.chamber ?? "deputies";
   const meta = useQuery({ queryKey: ["meta"], queryFn: api.meta });
   const matchingLegislature = Object.entries(meta.data?.legislatures ?? {})
     .filter(([, term]) =>
       term.start !== null &&
-      term.start <= search.date &&
-      (term.end === null || term.end >= search.date),
+      term.start <= routeScope.date &&
+      (term.end === null || term.end >= routeScope.date),
     )
     .sort((a, b) => (b[1].start ?? "").localeCompare(a[1].start ?? ""))[0]?.[0];
-  const legislature = search.legislature ?? matchingLegislature ?? "2024";
+  const legislature = routeScope.legislature ?? matchingLegislature ?? "2024";
 
+  const routeLegislature = routeScope.legislature;
+  const setRouteScope = routeScope.setScope;
   useEffect(() => {
-    if (!search.legislature && matchingLegislature) {
-      router.navigate({
-        to: "/traseism",
-        search: { ...search, legislature: matchingLegislature },
-        replace: true,
-      });
+    if (!routeLegislature && matchingLegislature) {
+      setRouteScope({ legislature: matchingLegislature });
     }
-  }, [matchingLegislature, router, search]);
+  }, [matchingLegislature, routeLegislature, setRouteScope]);
 
   const overview = useQuery({
-    queryKey: ["traseism-overview"],
+    queryKey: ["traseism-overview", ...routeScope.scopeKey],
     queryFn: traseismOverview,
   });
   const summary = useQuery({
-    queryKey: ["traseism-summary", legislature, chamber],
+    queryKey: ["traseism-summary", legislature, chamber, ...routeScope.scopeKey],
     queryFn: () => traseismSummary(legislature, chamber),
-    enabled: Boolean(search.legislature || meta.data || meta.isError),
+    enabled: Boolean(routeScope.legislature || meta.data || meta.isError),
   });
 
   const legislatureOptions = useMemo(() => {
@@ -709,21 +699,30 @@ export function Traseism() {
     return [...years].sort((a, b) => b.localeCompare(a));
   }, [meta.data, overview.data]);
 
-  const scope = summary.data;
+  const scope = summary.data!;
   const coverageKey = completenessKey(scope?.coverage?.completeness ?? "none");
   const hasRecord = coverageKey !== "none";
 
-  const setScope = (next: { chamber?: string; legislature?: string }) => {
-    router.navigate({ to: "/traseism", search: { ...search, ...next } });
-  };
+  const summaryView = resolveViewState({
+    // A disabled query reports isLoading=false but isPending=true; treat that
+    // as loading so the ready branch never sees an undefined summary.
+    isLoading: summary.isPending && !summary.isError,
+    isError: summary.isError,
+    isEmpty: summary.isSuccess && !scope,
+  });
+  const overviewView = resolveViewState({
+    isLoading: overview.isLoading,
+    isError: overview.isError,
+    isEmpty: overview.isSuccess && (overview.data?.length ?? 0) === 0,
+  });
 
   return (
-    <div className="wrap space-y-6">
+    <div className="space-y-6">
       <section className="py-10 sm:py-14 lg:py-16" data-enter>
-        <div className="max-w-7xl mx-auto">
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8 lg:gap-10">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">{t("traseismTitle")}</h1>
+              <h1 className="page-title">{t("traseismTitle")}</h1>
               <p className="text-sm sm:text-base text-slate-300 mt-2 leading-relaxed max-w-2xl">{t("traseismHeadline")}</p>
               <p className="text-sm text-slate-400 mt-1 leading-relaxed max-w-2xl">{t("traseismIntro")}</p>
               <p className="text-sm text-slate-200 mt-2 font-medium">
@@ -756,12 +755,16 @@ export function Traseism() {
               accent="emerald"
             />
           </div>
+          {/* R-04: InfoStat has no `title` prop; declare the definition in a sibling note. */}
+          <p role="note" className="text-xs text-slate-400 mt-2 max-w-2xl">
+            {t("groupSwitchesOnly", "Group switches only (switch_group); see /api/dashboard/stats for all events.")}
+          </p>
           <div className="mt-8 sm:mt-10 flex flex-wrap items-baseline gap-x-4 gap-y-2 border-t border-slate-800/80 pt-8" data-moment>
-            <span className="text-5xl sm:text-6xl font-black block tracking-tight">
+            <span className="moment-value block">
               {scope?.switches ?? "--"}
             </span>
             <span className="text-sm sm:text-base text-slate-400">
-              {t("traseismTotalSwitches", "total switches in corpus")}
+              {t("traseismTotalSwitches", "group switches in scope")}
             </span>
           </div>
         </div>
@@ -769,6 +772,7 @@ export function Traseism() {
 
       <section className="card p-4 sm:p-5" aria-labelledby="traseism-scope-heading">
         <h2 id="traseism-scope-heading" className="font-semibold text-lg sm:text-xl mb-4 tracking-tight">{t("traseismScopeTitle")}</h2>
+        <p role="note" className="text-xs text-slate-400 mb-4 max-w-2xl">{t("scope.note.traseism")}</p>
         <div className="flex flex-wrap items-end gap-5 sm:gap-6">
           <div className="min-w-0">
             <div
@@ -786,7 +790,7 @@ export function Traseism() {
                 <button
                   type="button"
                   key={c}
-                  onClick={() => setScope({ chamber: c })}
+                  onClick={() => routeScope.setScope({ chamber: c })}
                   aria-pressed={chamber === c}
                   className={`btn btn-hover ${
                     chamber === c
@@ -809,7 +813,7 @@ export function Traseism() {
             <select
               id="traseism-legislature"
               value={legislature}
-              onChange={(e) => setScope({ legislature: e.target.value })}
+              onChange={(e) => routeScope.setScope({ legislature: e.target.value })}
               className={`bg-slate-800 border border-slate-700 rounded-md px-3 py-1.5 text-sm min-w-[8rem] ${FOCUS}`}
             >
               {legislatureOptions.map((year) => (
@@ -830,13 +834,12 @@ export function Traseism() {
         </div>
       </section>
 
-      {summary.isLoading ? (
-        <div className="card p-4">
-          <div className="text-slate-500 text-sm py-8">{t("loading")}</div>
-        </div>
-      ) : summary.isError || !scope ? (
-        <ErrorState onRetry={() => summary.refetch()} />
-      ) : (
+      <AsyncState
+        view={summaryView}
+        onRetry={() => void summary.refetch()}
+        errorLabel={t("traseismLoadError")}
+      >
+        {scope ? (
         <>
           <CoverageBanner coverage={scope.coverage} />
 
@@ -907,24 +910,27 @@ export function Traseism() {
             </>
           ) : null}
 
-          <SwitchLedger legislature={legislature} chamber={chamber} />
+          <SwitchLedger legislature={legislature} chamber={chamber} scopeKey={routeScope.scopeKey} />
 
-          <SwitchWavesSection chamber={chamber} legislature={legislature} />
+          <SwitchWavesSection chamber={chamber} legislature={legislature} scopeKey={routeScope.scopeKey} />
         </>
-      )}
+        ) : null}
+      </AsyncState>
 
       <section className="card p-4">
         <h2 className="font-semibold">{t("traseismAllScopes")}</h2>
         <p className="text-sm text-slate-400 mt-1 mb-3">
           {t("traseismAllScopesDesc")}
         </p>
-        {overview.isLoading ? (
-          <div className="text-slate-500 text-sm py-4">{t("loading")}</div>
-        ) : overview.isError ? (
-          <ErrorState onRetry={() => overview.refetch()} />
-        ) : (
+        <AsyncState
+          view={overviewView}
+          variant="inline"
+          onRetry={() => void overview.refetch()}
+          errorLabel={t("traseismLoadError")}
+          emptyTitle={t("noData")}
+        >
           <ScopesOverview rows={overview.data ?? []} />
-        )}
+        </AsyncState>
       </section>
 
       <section className="card p-4">
@@ -932,14 +938,23 @@ export function Traseism() {
         <p className="text-sm text-slate-400 mt-2 leading-relaxed">
           {t("traseismMethodologyBody")}
         </p>
-        <a
-          href={METHODOLOGY_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`inline-block mt-3 text-sm text-sky-400 hover:text-sky-300 hover:underline ${FOCUS}`}
-        >
-          {t("traseismMethodologyLink")} ↗
-        </a>
+        <div className="flex flex-wrap gap-2 mt-3">
+          <a
+            href={METHODOLOGY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`inline-block text-sm text-sky-400 hover:text-sky-300 hover:underline ${FOCUS}`}
+          >
+            {t("traseismMethodologyLink")} ↗
+          </a>
+          <button
+            type="button"
+            onClick={() => setAboutOpen(true)}
+            className={`inline-block text-sm text-sky-400 hover:text-sky-300 hover:underline ${FOCUS}`}
+          >
+            {t("traseismAboutButton")}
+          </button>
+        </div>
       </section>
 
       <About open={aboutOpen} onClose={() => setAboutOpen(false)} />

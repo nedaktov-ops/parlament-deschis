@@ -3,11 +3,15 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { api, type EventItem } from "../api/client";
 import { useParams } from "@tanstack/react-router";
+import { useScope } from "../hooks/useScope";
+import ScopeControls from "../components/ScopeControls";
 import MembershipGantt from "../components/MembershipGantt";
 import CitationPopover from "../components/CitationPopover";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { Sparkline } from "../components/DataViz";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
+import ProvenanceStamp from "../components/ProvenanceStamp";
 
 function typeColor(type: string): string {
   switch (type) {
@@ -31,18 +35,19 @@ function typeColor(type: string): string {
 export function PersonDeepDive() {
   const { t, i18n } = useTranslation();
   const params = useParams({ from: "/person/$id" });
+  const scope = useScope();
   const personId = params.id;
 
   const person = useQuery({
-    queryKey: ["person", personId],
-    queryFn: () => api.person(personId),
+    queryKey: ["person", personId, ...scope.scopeKey],
+    queryFn: () => api.person(personId, scope.date),
     enabled: !!personId,
   });
 
   const summary = (e: EventItem) =>
     i18n.language === "en" ? e.summary_en || e.summary_ro : e.summary_ro || e.summary_en;
 
-  const p = person.data;
+  const p = person.data!;
   const personEvents = p?.events;
 
   // All hooks must be declared before any early return (React #310).
@@ -72,31 +77,26 @@ export function PersonDeepDive() {
     return out;
   }, [personEvents]);
 
-  if (person.isLoading) {
+  const view = resolveViewState({
+    isLoading: person.isLoading,
+    isError: person.isError,
+    isEmpty: person.isSuccess && !p,
+  });
+  if (view !== "ready") {
     return (
-      <div className="card p-4">
-        <h1 className="sr-only">{t("personDeepDive.title", "Parliamentary profile")}</h1>
-        <div className="text-slate-500 text-sm py-8">{t("loading")}</div>
-      </div>
-    );
-  }
-
-  if (person.isError || !p) {
-    return (
-      <div className="card p-4" role="alert">
-        <h1 className="sr-only">{t("personDeepDive.title", "Parliamentary profile")}</h1>
-        <p className="text-rose-200 text-sm py-4">{t("personLoadError")}</p>
-        <button type="button"className="btn bg-slate-700 hover:bg-slate-600" onClick={() => person.refetch()}>
-          {t("traseismRetry")}
-        </button>
-      </div>
+      <AsyncState
+        view={view}
+        pageTitle={t("personDeepDive.title", "Parliamentary profile")}
+        onRetry={() => void person.refetch()}
+        errorLabel={t("personLoadError")}
+        emptyTitle={t("person.empty", "There are no data for this member.")}
+      />
     );
   }
 
   const totalEvents = p.events.length;
-  const switches = p.events.filter(
-    (e) => e.type === "switch_group" || e.type === "switch_party",
-  ).length;
+  // R-04: keep the "Group switches" label truthful — count group events only.
+  const switches = p.events.filter((e) => e.type === "switch_group").length;
   const chambersCovered = new Set(
     p.events.map((e) => e.chamber).filter(Boolean),
   ).size;
@@ -105,13 +105,14 @@ export function PersonDeepDive() {
   ).size;
 
   return (
-    <div className="wrap space-y-6">
+    <div className="space-y-6">
+      <ScopeControls showDate note={t("scope.note.person")} />
       {/* Section 1: Hero — MP biography graphic, fills the first screen alone */}
       <section className="hero-section" data-enter>
-        <div className="max-w-7xl mx-auto">
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight">{p.name}</h1>
+              <h1 className="page-title">{p.name}</h1>
               <p className="text-sm text-slate-400">{t("personDeepDive.subtitle")}</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
                 <InfoStat
@@ -144,7 +145,7 @@ export function PersonDeepDive() {
                 </div>
               )}
               <div className="mt-6 flex items-center gap-4" data-moment>
-                <span className="text-5xl font-black block tracking-tight">
+                <span className="moment-value block">
                   {totalEvents}
                 </span>
                 <span className="text-sm text-slate-400">{t("personDeepDive.moment")}</span>
@@ -187,7 +188,7 @@ export function PersonDeepDive() {
           {p.events.length === 0 ? (
             <div className="text-slate-500 text-sm py-4">{t("noData")}</div>
           ) : (
-            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1" tabIndex={0} role="region" aria-label={t("events", "Events")}>
               {p.events.map((e) => (
                 <div key={e.id} className="bg-slate-800/40 rounded-md p-2">
                   <div className="flex items-center gap-2 text-xs">
@@ -206,6 +207,12 @@ export function PersonDeepDive() {
                       {e.to_org?.short_name || e.to_org?.name || "—"}
                     </div>
                   )}
+                  <ProvenanceStamp
+                    sourceUrl={e.source_url}
+                    confidence={e.confidence}
+                    precision={e.precision}
+                    note={e.reason}
+                  />
                 </div>
               ))}
             </div>
@@ -224,7 +231,7 @@ export function PersonDeepDive() {
               "Dated committee tenures from the official cdep.ro ledgers (separate from party/group membership).",
             )}
           </p>
-          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1" tabIndex={0} role="region" aria-label={t("committeeService", "Committee service")}>
             {(p.committee_memberships ?? []).map((m) => (
               <div key={m.id} className="bg-slate-800/40 rounded-md p-2">
                 <div className="text-sm">
@@ -236,16 +243,7 @@ export function PersonDeepDive() {
                 <div className="text-xs text-slate-500 mt-0.5">
                   {m.start_date ?? "—"} → {m.end_date ?? "present"}
                 </div>
-                {m.source_url && (
-                  <a
-                    href={m.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-sky-400 hover:underline"
-                  >
-                    {t("source", "source")} ↗
-                  </a>
-                )}
+                <ProvenanceStamp sourceUrl={m.source_url} precision={[m.start_precision, m.end_precision].filter(Boolean).join(" / ") || null} />
               </div>
             ))}
           </div>

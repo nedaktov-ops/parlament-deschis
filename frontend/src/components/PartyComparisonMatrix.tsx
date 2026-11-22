@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 export interface SwitchMatrixCell {
   from: string;
   to: string;
@@ -15,6 +17,7 @@ export default function PartyComparisonMatrix({
   onCellClick,
   maxRows,
 }: PartyComparisonMatrixProps) {
+  const { t } = useTranslation();
   const topMatrix = matrix
     .sort((a, b) => b.count - a.count)
     .slice(0, maxRows || 8);
@@ -39,15 +42,16 @@ export default function PartyComparisonMatrix({
         </span>
       </div>
       
-      <div className="space-y-2 max-h-64 overflow-y-auto">
+      <div className="space-y-2 max-h-64 overflow-y-auto" tabIndex={0} role="region" aria-label={t("a11y.switchMatrixScroll", "Scrollable party switch matrix")}>
         {topMatrix.map((cell, idx) => {
           const intensity = Math.min(1, cell.count / 20);
           
           return (
-            <div
+            <button
+              type="button"
               key={`${cell.from}-${cell.to}-${idx}`}
               onClick={() => onCellClick?.(cell.from, cell.to)}
-              className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-700/30 cursor-pointer transition-all"
+              className="flex w-full items-center gap-3 p-2 rounded-lg hover:bg-slate-700/30 cursor-pointer transition-all btn-hover min-h-11"
             >
               <span className="text-xs text-slate-500 w-12">{cell.from} →</span>
               <div 
@@ -65,7 +69,7 @@ export default function PartyComparisonMatrix({
                 {cell.count}
               </span>
               <span className="text-xs text-slate-400">→ {cell.to}</span>
-            </div>
+            </button>
           );
         })}
       </div>

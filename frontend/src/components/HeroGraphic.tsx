@@ -14,45 +14,39 @@ const VARIANT_CONFIG: Record<
   {
     title: string;
     desc: string;
+    // Literal Tailwind classes: the JIT content scanner only sees whole strings.
     primary: string;
-    secondary: string;
   }
 > = {
   overview: {
     title: "Parliament Deschis",
     desc: "Transparent data on MPs, party switches, and committee control",
-    primary: "sky-400",
-    secondary: "slate-500",
+    primary: "text-sky-400",
   },
   switches: {
     title: "Party Switches",
     desc: "Observed group changes across legislatures",
-    primary: "amber-400",
-    secondary: "slate-500",
+    primary: "text-amber-400",
   },
   committee: {
     title: "Committee Control",
     desc: "Party chair distribution across committees",
-    primary: "emerald-400",
-    secondary: "slate-500",
+    primary: "text-emerald-400",
   },
   people: {
     title: "Members of Parliament",
     desc: "3,388 persons tracked across legislatures",
-    primary: "rose-400",
-    secondary: "slate-500",
+    primary: "text-rose-400",
   },
   wave: {
     title: "Switch Waves",
     desc: "Bursts of affiliation change over time",
-    primary: "rose-400",
-    secondary: "slate-500",
+    primary: "text-rose-400",
   },
   report: {
     title: "Transparency Report",
     desc: "One-page summary of parliament data for journalists and citizens",
-    primary: "sky-400",
-    secondary: "slate-500",
+    primary: "text-sky-400",
   },
 };
 
@@ -74,7 +68,7 @@ export default function HeroGraphic({
         viewBox="0 0 200 200"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className={`w-full max-w-[200px] h-auto ${cfg.primary}` as string}
+        className={`w-full max-w-[200px] h-auto ${cfg.primary}`}
       >
         {variant === "overview" && (
           <>

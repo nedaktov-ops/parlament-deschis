@@ -14,6 +14,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { ECharts } from "echarts/core";
 import type { EChartsOption } from "echarts";
 import { type VotePositionRow, type VoteRow } from "../api/client";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 
 echarts.use([
   HeatmapChart,
@@ -50,6 +51,7 @@ export default function PartyAgreementMatrix({
   positionsByVote,
 }: PartyAgreementMatrixProps) {
   const { t } = useTranslation();
+  const reducedMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ECharts | null>(null);
 
@@ -141,6 +143,7 @@ export default function PartyAgreementMatrix({
 
     const option: EChartsOption = {
       backgroundColor: "transparent",
+      animation: !reducedMotion,
       tooltip: {
         trigger: "item",
         backgroundColor: "#0f172a",
@@ -223,7 +226,7 @@ export default function PartyAgreementMatrix({
       chart.dispose();
       chartRef.current = null;
     };
-  }, [agreementData, parties, t]);
+  }, [agreementData, parties, t, reducedMotion]);
 
   const empty = parties.length < 2 || agreementData.length === 0;
 

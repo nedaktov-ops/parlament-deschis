@@ -744,7 +744,7 @@ python3 scripts/ui_validate.py http://127.0.0.1:5174 | tee /tmp/opencode/R-02-ba
 echo "ui_exit=${PIPESTATUS[0]}"
 ```
 Expected final line (exact):
-`UI VALIDATION PASS: 24 routes, 0 JS errors, 0 axe violations`
+`UI VALIDATION PASS: 24 routes, zero JavaScript errors, 0 axe violations`
 and `ui_exit=0`. Exit **0**. If axe is missing, the script prints `axe-SCAN-ERROR` and exits 1 → report **NOT PROVEN**, do not claim pass.
 
 ### CP-R02-10 — 320 / 768 / 1024 edge probe
@@ -814,7 +814,7 @@ oversized root; fix and re-run; do not widen the tolerance.
 | Static counts | CP-R02-02 → CP-R02-07 | exact printed values in §7 |
 | Type | `cd frontend && npm run lint` | exit 0 (`tsc --noEmit` + eslint) |
 | Build | `cd frontend && npm run build` | exit 0 |
-| UI gate | `python3 scripts/ui_validate.py …` | `UI VALIDATION PASS: 24 routes, 0 JS errors, 0 axe violations` |
+| UI gate | `python3 scripts/ui_validate.py …` | `UI VALIDATION PASS: 24 routes, zero JavaScript errors, 0 axe violations` |
 | 320/768/1024 probe | CP-R02-10 | `EDGE PROBE PASS: 72/72 checks`, gutters 16/24/32 |
 | Diff scope | `git diff --cached --stat` | 26 files, no file outside §3 |
 | Commit | `git log -1 --format='%h %s'` | single atomic R-02 commit |

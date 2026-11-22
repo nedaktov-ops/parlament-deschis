@@ -7,13 +7,13 @@ export interface DashboardCardProps {
   value: React.ReactNode | string | number;
   linkTo: string;
   searchParams?: Record<string, string>;
-  color?: "sky" | "emerald" | "amber" | "rose" | "violet" | "cyan";
+  color?: "sky" | "emerald" | "amber" | "rose";
   className?: string;
   onClick?: () => void;
 }
 
 const COLOR_VARIANTS: Record<
-  "sky" | "emerald" | "amber" | "rose" | "violet" | "cyan",
+  "sky" | "emerald" | "amber" | "rose",
   { bg: string; border: string; text: string; accent: string; hover: string }
 > = {
   sky: { 
@@ -43,20 +43,6 @@ const COLOR_VARIANTS: Record<
     text: "text-rose-400", 
     accent: "text-rose-400",
     hover: "hover:bg-rose-400/15 hover:border-t-rose-300"
-  },
-  violet: { 
-    bg: "bg-violet-400/10", 
-    border: "border-t-violet-400", 
-    text: "text-violet-400", 
-    accent: "text-violet-400",
-    hover: "hover:bg-violet-400/15 hover:border-t-violet-300"
-  },
-  cyan: { 
-    bg: "bg-cyan-400/10", 
-    border: "border-t-cyan-400", 
-    text: "text-cyan-400", 
-    accent: "text-cyan-400",
-    hover: "hover:bg-cyan-400/15 hover:border-t-cyan-300"
   }
 };
 

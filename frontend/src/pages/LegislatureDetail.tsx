@@ -2,10 +2,13 @@ import { Suspense, lazy } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
+import { useScope } from "../hooks/useScope";
 import HeroGraphic from "../components/HeroGraphic";
 import InfoStat from "../components/InfoStat";
 import { localISODate } from "../utils/date";
+import Skeleton from "../components/ui/Skeleton";
+import AsyncState, { resolveViewState } from "../components/ui/AsyncState";
 
 const TimelineChart = lazy(() => import("../components/TimelineChart"));
 
@@ -13,12 +16,17 @@ export function LegislatureDetail() {
   const { t } = useTranslation();
   const navigate = useNavigate({ from: "/legislature/$year" });
   const params = useParams({ from: "/legislature/$year" });
-  const search = useSearch({ from: "/legislature/$year", select: s => s.date });
+  const scope = useScope();
   const year = params.year;
-  const asOf = search;
+  const asOf = scope.date;
 
   const meta = useQuery({ queryKey: ["meta"], queryFn: api.meta });
   const leg = meta.data?.legislatures?.[year];
+  // R-08: guard an unknown year before any data query runs. Without this,
+  // `start` fell back to 1990 and the page showed an unrelated corpus window.
+  const knownYears = Object.keys(meta.data?.legislatures ?? {});
+  const yearUnknown = meta.isSuccess && !leg;
+  const scoped = !!leg && !yearUnknown;
   const today = localISODate();
   const start = leg?.start ?? "1990-01-01";
   const end = leg?.end ?? today;
@@ -27,35 +35,69 @@ export function LegislatureDetail() {
   const selectedDate = asOf
     ? asOf < start ? start : asOf > end ? end : asOf
     : start;
+  const chamberFilter = scope.chamber ?? "deputies";
   const chamber = useQuery({
-    queryKey: ["chamber", "deputies", selectedDate],
-    queryFn: () => api.chamber("deputies", selectedDate),
+    queryKey: ["chamber", chamberFilter, selectedDate, ...scope.scopeKey],
+    queryFn: () => api.chamber(chamberFilter, selectedDate),
+    enabled: scoped,
   });
   const movements = useQuery({
-    queryKey: ["leg-movements", year, start, selectedDate],
-    queryFn: () => api.movements({ from: start, to: selectedDate, limit: 1000 }),
+    queryKey: ["leg-movements", year, chamberFilter, start, selectedDate, ...scope.scopeKey],
+    queryFn: () => api.movements({
+      from: start,
+      to: selectedDate,
+      limit: 1000,
+      chamber: chamberFilter,
+      legislature: year,
+    }),
+    enabled: scoped,
   });
 
-  if (meta.isError) {
+  const metaView = resolveViewState({
+    isLoading: meta.isLoading,
+    isError: meta.isError,
+    isEmpty: meta.isSuccess && !leg,
+  });
+  if (metaView !== "ready") {
     return (
-      <div className="card p-4" role="alert">
-        <p className="text-rose-200 text-sm">{t("chamberLoadError")}</p>
-        <button type="button"className="btn mt-3 bg-slate-700 hover:bg-slate-600" onClick={() => {
-          void meta.refetch();
-        }}>
-          {t("traseismRetry")}
-        </button>
+      <AsyncState
+        view={metaView}
+        pageTitle={`${t("legislature")} ${year}`}
+        onRetry={() => void meta.refetch()}
+        errorLabel={t("chamberLoadError")}
+      />
+    );
+  }
+
+  if (yearUnknown) {
+    return (
+      <div className="wrap p-6" role="alert">
+        <h1 className="text-xl font-semibold">{t("legislatureUnknown", { year })}</h1>
+        <p className="text-sm text-slate-400">
+          {t("legislatureKnownYears", { years: knownYears.join(", ") || "—" })}
+        </p>
       </div>
     );
   }
 
+  const chamberView = resolveViewState({
+    isLoading: chamber.isLoading,
+    isError: chamber.isError,
+    isEmpty: chamber.isSuccess && (chamber.data?.total ?? 0) === 0,
+  });
+  const movementsView = resolveViewState({
+    isLoading: movements.isLoading,
+    isError: movements.isError,
+    isEmpty: movements.isSuccess && (movements.data?.length ?? 0) === 0,
+  });
+
   return (
-    <div className="wrap space-y-6">
-      <section className="min-h-screen flex flex-col justify-center py-8" data-enter>
-        <div className="max-w-7xl mx-auto">
+    <div className="space-y-6">
+      <section className="hero-section" data-enter>
+        <div>
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight">
+              <h1 className="page-title">
                 {t("legislature")} {year}
               </h1>
               <p className="text-sm text-slate-300 mt-2">
@@ -78,8 +120,12 @@ export function LegislatureDetail() {
               accent="emerald"
             />
             <InfoStat
-              label={t("legislatureStatSwitches", "Switches")}
-              value={movements.data?.filter((e) => e.type === "switch_group").length ?? "--"}
+              label={t("legislatureStatSwitches", "Group switches in this legislature (first 1000)")}
+              value={
+                movements.isLoading || movements.isError
+                  ? "--"
+                  : (movements.data?.filter((e) => e.type === "switch_group").length ?? "--")
+              }
               accent="amber"
             />
             <InfoStat
@@ -93,7 +139,7 @@ export function LegislatureDetail() {
             />
           </div>
           <div className="mt-8 flex items-center gap-4" data-moment>
-            <span className="text-5xl font-black block tracking-tight">
+            <span className="moment-value block">
               {chamber.data?.total ?? "--"}
             </span>
             <span className="text-sm text-slate-400">
@@ -106,51 +152,41 @@ export function LegislatureDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="card p-4">
           <h2 className="font-semibold mb-3">{t("deputies")}</h2>
-          {meta.isLoading || chamber.isLoading ? (
-            <div role="status" className="text-slate-300 text-sm py-8">{t("loading")}</div>
-          ) : chamber.isError ? (
-            <div className="text-rose-200 text-sm py-4">
-              {t("chamberLoadError")}
-              <button type="button"className="ml-3 underline" onClick={() => chamber.refetch()}>
-                {t("traseismRetry")}
-              </button>
-            </div>
-          ) : chamber.data?.total === 0 ? (
-            <div className="text-slate-300 text-sm">{t("noData")}</div>
-          ) : (
-            <>
-              <div className="space-y-2">
-                {chamber.data?.groups?.map((g) => (
-                  <div key={g.short_name} className="flex items-center justify-between bg-slate-800/50 rounded p-2">
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full" style={{ background: g.color || "#64748b" }} />
-                      <span className="font-medium">{g.short_name}</span>
-                    </div>
-                    <span className="text-slate-400">{g.count} {t("members")}</span>
+          <AsyncState
+            view={chamberView}
+            variant="inline"
+            onRetry={() => void chamber.refetch()}
+            errorLabel={t("chamberLoadError")}
+            emptyTitle={t("noData")}
+          >
+            <div className="space-y-2">
+              {chamber.data?.groups?.map((g) => (
+                <div key={g.short_name} className="flex items-center justify-between bg-slate-800/50 rounded p-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full" style={{ background: g.color || "#64748b" }} />
+                    <span className="font-medium">{g.short_name}</span>
                   </div>
-                ))}
-              </div>
-            </>
-          )}
+                  <span className="text-slate-400">{g.count} {t("members")}</span>
+                </div>
+              ))}
+            </div>
+          </AsyncState>
         </div>
 
         <div className="card p-4">
           <h2 className="font-semibold mb-3">{t("recentMovements")}</h2>
-          {movements.isLoading ? (
-            <div role="status" className="text-slate-300 text-sm">{t("loading")}</div>
-          ) : movements.isError ? (
-            <div role="alert" className="text-rose-200 text-sm">
-              {t("electoralLoadError")}
-              <button type="button"className="ml-3 underline" onClick={() => movements.refetch()}>
-                {t("traseismRetry")}
-              </button>
-            </div>
-          ) : (
+          <AsyncState
+            view={movementsView}
+            variant="inline"
+            onRetry={() => void movements.refetch()}
+            errorLabel={t("electoralLoadError")}
+            emptyTitle={t("noData")}
+          >
             <>
               {movements.data?.length === 1000 && (
-                <p className="text-amber-200 text-sm mb-2">{t("displayedMaxMovements")}</p>
+                <p role="note" className="text-amber-200 text-sm mb-2">{t("displayedMaxMovements")}</p>
               )}
-              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1" tabIndex={0} role="region" aria-label={t("recentMovements", "Recent movements")}>
                 {movements.data?.slice(0, 20).map((m) => (
                   <button type="button"key={m.id}disabled={!m.person}
                     onClick={() => {
@@ -158,7 +194,7 @@ export function LegislatureDetail() {
                         navigate({
                           to: "/person/$id",
                           params: { id: m.person.id },
-                          search: { date: selectedDate },
+                          search: scope.searchFor({ date: selectedDate }),
                         });
                       }
                     }}
@@ -176,19 +212,14 @@ export function LegislatureDetail() {
                     </div>
                   </button>
                 ))}
-                {movements.data?.length === 0 && (
-                  <div className="text-slate-300 text-sm py-8 text-center">{t("noData")}</div>
-                )}
               </div>
             </>
-          )}
+          </AsyncState>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        <Suspense fallback={
-          <div className="card p-4 h-64 animate-pulse bg-slate-800/50 rounded-xl" aria-busy="true" aria-label={t("loading")} />
-        }>
+        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
           <TimelineChart from={start} to={selectedDate} />
         </Suspense>
       </div>

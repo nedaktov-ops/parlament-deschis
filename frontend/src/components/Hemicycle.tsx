@@ -131,14 +131,14 @@ export default function Hemicycle({
           {t("hemicycleMemberList", { count: total })}
         </summary>
         <div className="mt-2 max-h-64 overflow-y-auto space-y-3" tabIndex={0} aria-label="List of all MPs in this hemicycle group">
-          {groups.map((group) => (
-            <section key={group.short_name}>
+          {groups.map((group, groupIndex) => (
+            <section key={`${group.short_name}-${groupIndex}`}>
               <h3 className="font-semibold text-slate-200">
                 {group.short_name} <span className="font-normal text-slate-300">({group.count})</span>
               </h3>
               <ul className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-1">
-                {group.members.map((member) => (
-                  <li key={member.person_id}>
+                {group.members.map((member, memberIndex) => (
+                  <li key={`${member.person_id}-${memberIndex}`}>
                     <button type="button"onClick={() => onSelect(member.person_id)}
                       className="w-full text-left px-2 py-1 rounded text-slate-200 hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
                     >

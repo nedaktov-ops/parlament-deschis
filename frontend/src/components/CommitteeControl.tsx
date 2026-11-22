@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { StateView, type ViewState } from "./ui/AsyncState";
 
 export interface CommitteeControlData {
   as_of: string;
@@ -20,34 +22,52 @@ export interface CommitteeControlData {
 }
 
 export interface CommitteeControlProps {
-  data: CommitteeControlData;
+  data?: CommitteeControlData;
   totalCommittees: number;
   onChairClick?: (chair: CommitteeControlData['chairs'][0]) => void;
   width?: number;
+  view?: ViewState;
+  onRetry?: () => void;
 }
 
 export default function CommitteeControl({
   data,
   totalCommittees,
   onChairClick,
+  view,
+  onRetry,
   // width parameter kept for API consistency
 }: CommitteeControlProps) {
-  const { parties, chairs } = data;
-  
+  const { t } = useTranslation();
+  const uid = useId().replace(/:/g, "");
+  const parties = useMemo(() => data?.parties ?? [], [data]);
+  const chairs = useMemo(() => data?.chairs ?? [], [data]);
+
   const topParties = useMemo(() => {
     return [...parties]
       .sort((a, b) => b.chairs - a.chairs)
       .slice(0, 5);
   }, [parties]);
 
-  if (!parties?.length) {
+  if (view && view !== "ready") {
     return (
-      <div className="w-full bg-slate-800/30 rounded-xl p-4 overflow-hidden">
-        <div className="text-xs text-slate-400 mb-2">Committee Control</div>
-        <div className="flex items-center justify-center h-32 text-slate-500">
-          Loading committee data...
-        </div>
-      </div>
+      <StateView
+        view={view}
+        variant="inline"
+        onRetry={onRetry}
+        errorLabel={t("committeeControl.loadError")}
+        emptyTitle={t("committeeControl.empty")}
+      />
+    );
+  }
+
+  if (!data || parties.length === 0) {
+    return (
+      <StateView
+        view="empty"
+        variant="inline"
+        emptyTitle={t("committeeControl.empty")}
+      />
     );
   }
 
@@ -74,8 +94,11 @@ export default function CommitteeControl({
                 <span className="text-xs w-8 text-slate-400">
                   {party.party}
                 </span>
-                <div 
-                  className="relative flex-1 h-3 rounded-full bg-slate-700/30 overflow-hidden cursor-pointer"
+                <button
+                  type="button"
+                  aria-label={t("a11y.committeeChair", "Show chair for {{party}}", { party: party.party })}
+                  aria-describedby={`${uid}-share-${index}`}
+                  className="relative flex-1 h-11 rounded-full bg-slate-700/30 overflow-hidden cursor-pointer btn-hover"
                   onClick={() => chairForParty && onChairClick?.(chairForParty)}
                 >
                   <div
@@ -90,12 +113,12 @@ export default function CommitteeControl({
                     className="absolute right-0 top-0 h-full w-2 rounded-r-full"
                     style={{ backgroundColor: getPartyColor(party.party, index) }}
                   />
-                </div>
+                </button>
                 <span className="text-xs w-10 text-right text-slate-300">
                   {party.chairs}
                 </span>
               </div>
-              <div className="text-xs text-slate-500 text-right">
+              <div id={`${uid}-share-${index}`} className="text-xs text-slate-500 text-right">
                 {percentage.toFixed(1)}%
               </div>
             </div>

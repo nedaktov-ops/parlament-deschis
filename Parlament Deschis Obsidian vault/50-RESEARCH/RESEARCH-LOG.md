@@ -8,7 +8,7 @@ authority: canonical
 tags: [type/state, lifecycle/active, domain/research]
 source_paths: [docs/CONTINUATION-STRATEGY-2026-11-21.md, docs/RESEARCH.md, docs/POST-INITIAL-AUDIT-2026-11-21.md, docs/GAP-ANALYSIS-2026-11-21.md, docs/COMPREHENSIVE-REVIEW-2026-11-21.md]
 created: 2026-11-21
-updated: 2026-11-21
+updated: 2026-11-22
 source_commit: 96e6fdd
 ---
 
@@ -79,6 +79,17 @@ commits; the three oldest are the review/audit commits described above.
 - **2026-11-21 — this re-anchor.** Local HEAD `96e6fdd`, eight commits above
   `origin/main` `6b848f1` (0 behind); all 2026-11-21 fixes remain unpushed and
   therefore absent from Vercel/Render.
+- **2026-11-22 — external tooling inventory.** Three research rounds on
+  website visual inspection, content/design and semantic understanding were
+  consolidated into [GITHUB-TOOLING-INVENTORY-2026-11-22](GITHUB-TOOLING-INVENTORY-2026-11-22.md).
+  Star counts were read from GitHub on 2026-11-22; curation and maintenance
+  claims are marked NOT PROVEN in that note. No product or vault-generated
+  file was changed by this research.
+- **2026-11-22 — Deep Dive Views redesign.** A supervised agent fleet researched
+  the section's history and the vault notes, then redesigned and QA-audited the
+  "Vederi detaliate" section. Progress, verified fixes, upcoming work and NOT
+  PROVEN items are recorded in
+  [DEEP-DIVE-REDESIGN-2026-11-22](DEEP-DIVE-REDESIGN-2026-11-22.md).
 
 ## Five-agent post-initial audit — provenance
 
