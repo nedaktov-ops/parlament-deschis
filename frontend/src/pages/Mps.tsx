@@ -44,7 +44,7 @@ export default function Mps() {
   // R-04: API corpus total, never the rendered page length.
   const total = cards.data?.total ?? null;
   const canPrev = offset > 0;
-  const canNext = total !== null ? offset + rows.length < total : false;
+  const canNext = total !== null ? offset + PAGE_SIZE < total : false;
 
   const view = resolveViewState({
     isLoading: cards.isLoading,
