@@ -44,7 +44,7 @@ export default function Mps() {
   // R-04: API corpus total, never the rendered page length.
   const total = cards.data?.total ?? null;
   const canPrev = offset > 0;
-  const canNext = total !== null ? offset + rows.length < total : false;
+  const canNext = total !== null ? offset + PAGE_SIZE < total : false;
 
   const view = resolveViewState({
     isLoading: cards.isLoading,
@@ -140,6 +140,12 @@ export default function Mps() {
           {t("mps.go", "Go")}
         </button>
       </form>
+
+      <div className="mb-4 flex justify-end">
+        <Link to="/compare-mps" search={scope.searchFor()} className="text-sky-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 rounded">
+          {t("mps.compareLink", "Compare MPs →")}
+        </Link>
+      </div>
 
       <AsyncState
         view={view}

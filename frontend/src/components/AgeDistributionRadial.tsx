@@ -1,6 +1,4 @@
 import { useMemo } from "react";
-import type { KeyboardEvent } from "react";
-import { activateOnKey } from "../utils/a11y";
 
 export interface CohortData {
   label: string;
@@ -13,7 +11,6 @@ export interface CohortData {
 export interface AgeDistributionRadialProps {
   cohorts: CohortData[];
   totalAge: number;
-  onCohortClick?: (cohort: CohortData) => void;
   width?: number;
   height?: number;
 }
@@ -35,7 +32,6 @@ function getCohortColor(index: number): string {
 export default function AgeDistributionRadial({
   cohorts,
   totalAge,
-  onCohortClick,
   width = 200,
   height = 200,
 }: AgeDistributionRadialProps) {
@@ -70,8 +66,6 @@ export default function AgeDistributionRadial({
     return `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} L ${centerX} ${centerY} Z`;
   };
 
-  const interactive = Boolean(onCohortClick);
-
   return (
     <div className="surface p-4 overflow-hidden">
       <div className="text-xs text-slate-400 mb-2">Age Distribution</div>
@@ -80,7 +74,7 @@ export default function AgeDistributionRadial({
           viewBox={`0 0 ${width} ${height}`}
           fill="none"
           className="w-32 h-32"
-          role={interactive ? "group" : "img"}
+          role="img"
           aria-label={`Age distribution across ${cohorts.length} cohorts, average age ${avgAge.toFixed(0)}`}
         >
           <circle
@@ -95,17 +89,6 @@ export default function AgeDistributionRadial({
               d={arcPath(slice.startAngle, slice.endAngle)}
               fill={getCohortColor(i)}
               opacity={0.85}
-              {...(interactive
-                ? {
-                    role: "button",
-                    tabIndex: 0,
-                    "aria-label": `Show details for ${slice.label} cohort`,
-                    onClick: () => onCohortClick?.(slice),
-                    onKeyDown: (e: KeyboardEvent<SVGPathElement>) =>
-                      activateOnKey(e, () => onCohortClick?.(slice)),
-                    className: "cursor-pointer hover:opacity-100 transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400",
-                  }
-                : {})}
             >
               <title>{`${slice.label}: ${slice.count} (avg ${slice.avgAge.toFixed(1)})`}</title>
             </path>

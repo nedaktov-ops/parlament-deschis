@@ -117,13 +117,13 @@ export default function Topuri() {
         <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4 mb-4">
           <label className="flex-1 min-w-0">
             <span className="block text-xs text-slate-400 mb-1">
-              Minimum votes
+              {t("filter.minVotes", "Minimum votes")}
             </span>
             <input
               type="number"
               value={minVotes}
               onChange={(e) => setMinVotes(Math.max(0, Number(e.target.value) || 0))}
-              placeholder="1"
+              placeholder={t("filter.minVotesPlaceholder", "1")}
               className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500"
             />
           </label>

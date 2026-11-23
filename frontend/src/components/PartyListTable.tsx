@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 interface PartyNode {
   id: string;
@@ -22,6 +23,7 @@ export default function PartyListTable({
   onViewAll,
   maxRows = 10,
 }: PartyListTableProps) {
+  const { t } = useTranslation();
   const sortedParties = useMemo(() => {
     return [...parties]
       .sort((a, b) => b.total_members - a.total_members)
@@ -109,7 +111,7 @@ export default function PartyListTable({
             className="btn-hover min-h-11 text-sky-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
             onClick={onViewAll}
           >
-            View all →
+            {t("common.viewAll", "View all →")}
           </button>
         )}
       </div>

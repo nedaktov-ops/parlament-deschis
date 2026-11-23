@@ -174,32 +174,37 @@ export function PartyProfile() {
         >
           <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1" tabIndex={0} role="region" aria-label={t("recentMovements", "Recent movements")}>
             {movements.data?.map((m) => (
-              <button type="button" key={m.id}
-                onClick={() => m.person && setPersonId(m.person.id)}
+              <div key={m.id}
                 className="w-full text-left bg-slate-800/40 hover:bg-slate-800 rounded-md p-2 transition-colors"
               >
-                <div className="flex items-center gap-2 text-xs">
-                  <span className={`font-semibold ${m.type === "switch_party" || m.type === "switch_group" ? "text-amber-400" : m.type === "join" ? "text-emerald-400" : "text-rose-400"}`}>
-                    {m.type}
-                  </span>
-                  <span className="text-slate-500 font-mono">{m.event_date}</span>
-                  {m.chamber && (
-                    <span className="text-xs text-slate-500 px-1.5 py-0.5 bg-slate-800 rounded">
-                      {m.chamber}
+                <button type="button"
+                  disabled={!m.person}
+                  onClick={() => m.person && setPersonId(m.person.id)}
+                  className="w-full text-left"
+                >
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={`font-semibold ${m.type === "switch_party" || m.type === "switch_group" ? "text-amber-400" : m.type === "join" ? "text-emerald-400" : "text-rose-400"}`}>
+                      {m.type}
                     </span>
-                  )}
-                </div>
-                <div className="text-sm mt-0.5">
-                  {m.person?.name ?? "—"}:
-                  {m.from_org?.short_name ?? "—"} → {m.to_org?.short_name ?? "—"}
-                </div>
+                    <span className="text-slate-500 font-mono">{m.event_date}</span>
+                    {m.chamber && (
+                      <span className="text-xs text-slate-500 px-1.5 py-0.5 bg-slate-800 rounded">
+                        {m.chamber}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm mt-0.5">
+                    {m.person?.name ?? "—"}:
+                    {m.from_org?.short_name ?? "—"} → {m.to_org?.short_name ?? "—"}
+                  </div>
+                </button>
                 <ProvenanceStamp
                   sourceUrl={m.source_url}
                   confidence={m.confidence}
                   precision={m.precision}
                   note={m.reason}
                 />
-              </button>
+              </div>
             ))}
           </div>
         </AsyncState>

@@ -148,7 +148,7 @@ export default function PartyNetwork({
             className="btn btn-hover min-h-11 ml-auto text-sky-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
             onClick={onViewAll}
           >
-            View all →
+            {t("common.viewAll", "View all →")}
           </button>
         )}
       </div>

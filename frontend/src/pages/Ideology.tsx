@@ -46,6 +46,7 @@ const PARTY_COLORS = [
 ];
 
 export default function Ideology() {
+  const ALL_YEARS = "all";
   const { t } = useTranslation();
   const reducedMotion = useReducedMotion();
   const scope = useScope();
@@ -61,7 +62,7 @@ export default function Ideology() {
 
   const ideologyQuery = useQuery({
     queryKey: ["ideology", chesYear, ...scope.scopeKey],
-    queryFn: () => ideology(chesYear),
+    queryFn: () => ideology(chesYear === ALL_YEARS ? undefined : chesYear),
   });
 
   const data = useMemo(() => ideologyQuery.data?.data ?? [], [ideologyQuery.data]);
@@ -77,7 +78,10 @@ export default function Ideology() {
   }, [data]);
 
   // Filter data by selected year (show latest year by default)
-  const selectedYear = chesYear || (years.length > 0 ? String(years[0]) : undefined);
+  const selectedYear =
+    chesYear === ALL_YEARS
+      ? undefined
+      : chesYear ?? (years.length > 0 ? String(years[0]) : undefined);
   const filteredData = useMemo(
     () =>
       selectedYear
@@ -246,11 +250,11 @@ export default function Ideology() {
               {t("filter.year", "Year")}
             </span>
             <select
-              value={selectedYear ?? ""}
-              onChange={(e) => setYear(e.target.value || undefined)}
+              value={selectedYear ?? ALL_YEARS}
+              onChange={(e) => setYear(e.target.value)}
               className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500"
             >
-              <option value="">
+              <option value={ALL_YEARS}>
                 {t("filter.year_all", "All years")}
               </option>
               {years.map((y) => (

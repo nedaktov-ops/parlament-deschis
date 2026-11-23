@@ -4,6 +4,9 @@ import { api, type VotePositionRow } from "../api/client";
 import ErrorState from "./ErrorState";
 import Skeleton from "./ui/Skeleton";
 
+// backend/routers/api.py:1387 — vote_positions limit Query(100, ge=1, le=500).
+const POSITION_LIMIT = 500;
+
 const CHOICE_COLOR: Record<string, string> = {
   yes: "#10b981", // emerald-500
   no: "#ef4444", // rose-500
@@ -19,11 +22,12 @@ export default function RollCallTable({ voteId }: RollCallTableProps) {
   const { t } = useTranslation();
 
   const query = useQuery({
-    queryKey: ["votePositions", voteId],
-    queryFn: () => api.votePositions(voteId),
+    queryKey: ["votePositions", voteId, POSITION_LIMIT],
+    queryFn: () => api.votePositions(voteId, { limit: POSITION_LIMIT }),
   });
 
   const data = query.data?.data ?? [];
+  const total = query.data?.total ?? 0;
   const dataExists = query.data?.data_exists ?? false;
 
   const choiceLabel = (choice: string) => {
@@ -74,6 +78,11 @@ export default function RollCallTable({ voteId }: RollCallTableProps) {
       tabIndex={0}
       aria-label={t("aria.positionsScroll", "Scrollable table of vote positions")}
     >
+      {total > data.length && (
+        <p className="mb-2 text-xs text-slate-400" role="note">
+          {t("vote.positionsTruncated", { n: data.length })}
+        </p>
+      )}
       <table
         className="min-w-full text-sm"
         aria-label={t("aria.rollcallTable", "Table of plenary votes and each MP's position")}

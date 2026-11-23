@@ -81,8 +81,32 @@ async def _probe(browser, name: str, route: str, mode: str) -> list[str]:
             await page.wait_for_selector('[data-state="error"]', timeout=8_000)
             if await page.locator('[data-state="empty"]').count():
                 errors.append("error branch also rendered empty copy")
-            if not await page.get_by_role("button", name=RETRY).count():
+            retry = page.get_by_role("button", name=RETRY)
+            if not await retry.count():
                 errors.append("error branch has no retry control")
+            else:
+                # Presence alone is not a retry: clicking it must produce an
+                # observable state change (a re-issued data request, or a
+                # transition out of the error state). C-07 G1 / S-13.
+                retried = False
+                try:
+                    async with page.expect_request(lambda r: "/api/" in r.url, timeout=5_000):
+                        await retry.first.click(timeout=5_000)
+                    retried = True
+                except Exception:  # noqa: BLE001 - fall through to DOM check
+                    pass
+                if not retried:
+                    try:
+                        await page.wait_for_function(
+                            "() => { const e = document.querySelector('[data-state=\"error\"]');"
+                            " return !e || e.getAttribute('data-state') !== 'error'; }",
+                            timeout=3_000,
+                        )
+                        retried = True
+                    except Exception:  # noqa: BLE001
+                        pass
+                if not retried:
+                    errors.append("retry control present but click caused no state change")
         elif mode == "slow":
             await page.wait_for_selector('[data-state="loading"]', timeout=2_000)
             for moment in await page.locator("[data-moment]").all():

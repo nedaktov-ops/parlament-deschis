@@ -48,6 +48,9 @@ export default function Voturi() {
     setOffset(0);
   }, [activeKey]);
 
+  // Search is page-local (no API title filter): reset pagination on a new query.
+  useEffect(() => setOffset(0), [query]);
+
   // Title search stays client-side; only the API-supported scope enters the key.
   const votesQuery = useQuery({
     queryKey: ["votes", ...scope.scopeKey, activeKey, offset],
@@ -166,6 +169,9 @@ export default function Voturi() {
               placeholder={t("view.voturi.searchPlaceholder", "Search by title…")}
               className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500"
             />
+            <span className="block text-xs text-slate-500 mt-1">
+              {t("view.voturi.searchHint", "Search filters the current page only")}
+            </span>
           </label>
           <div className="text-xs text-slate-400" aria-live="polite">
             {t("view.voturi.page", "{{filtered}} of {{total}} votes on this page ({{from}}–{{to}} of corpus)", {

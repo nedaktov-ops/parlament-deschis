@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { isISODate, localISODate } from "../utils/date";
 import type { ChamberScope } from "../router";
 
@@ -34,8 +34,9 @@ export function useScope(): Scope & {
 } {
   const raw = useSearch({ strict: false }) as Record<string, unknown>;
   // All routes share the validateScopeSearch shape; anchoring `from` gives
-  // TanStack a concrete search type for the reducer (no `to` = stay in place).
+  // TanStack a concrete search type for the reducer; setScope passes an explicit `to`.
   const navigate = useNavigate({ from: "/" });
+  const location = useLocation();
 
   const date = isISODate(raw.date) ? raw.date : localISODate();
   const chamber: ChamberScope | undefined =
@@ -49,6 +50,7 @@ export function useScope(): Scope & {
   const setScope = useCallback(
     (patch: Partial<Scope>) => {
       navigate({
+        to: location.pathname,
         // functional updater: never drop page-local params (q, sort, offset, year, …)
         // and always emit the three canonical keys so TanStack's derived search
         // type is satisfied (undefined values are omitted from the URL).
@@ -64,7 +66,7 @@ export function useScope(): Scope & {
         replace: false, // back/forward must step through filter changes (FN-7)
       });
     },
-    [navigate],
+    [navigate, location.pathname],
   );
   const searchFor = useCallback(
     (extra: Record<string, unknown> = {}) => ({ ...scope, ...extra }) as ScopeSearch,

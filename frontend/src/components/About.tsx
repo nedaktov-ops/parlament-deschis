@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, type CoverageItem } from "../api/client";
+import { PROJECT_URL } from "../config/links";
 
-const PROJECT_URL = "https://github.com/parlament-deschis";
 const CODE_LICENSE_FALLBACK = "AGPL-3.0-or-later";
 const DATA_LICENSE_FALLBACK = "CC-BY-4.0";
 const CODE_LICENSE_URL_FALLBACK = "https://www.gnu.org/licenses/agpl-3.0.html";

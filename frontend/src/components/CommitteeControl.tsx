@@ -87,6 +87,7 @@ export default function CommitteeControl({
           const widthPct = (party.chairs / maxVal) * 100;
           const percentage = party.share_pct;
           const chairForParty = chairs.find(c => c.party === party.party);
+          const canOpenChair = Boolean(chairForParty?.chair_person_id);
           
           return (
             <div key={party.party} className="group">
@@ -96,7 +97,8 @@ export default function CommitteeControl({
                 </span>
                 <button
                   type="button"
-                  aria-label={t("a11y.committeeChair", "Show chair for {{party}}", { party: party.party })}
+                  disabled={!canOpenChair}
+                  aria-label={canOpenChair ? t("a11y.committeeChair", "Show chair for {{party}}", { party: party.party }) : t("committee.noChair")}
                   aria-describedby={`${uid}-share-${index}`}
                   className="relative flex-1 h-11 rounded-full bg-slate-700/30 overflow-hidden cursor-pointer btn-hover"
                   onClick={() => chairForParty && onChairClick?.(chairForParty)}
