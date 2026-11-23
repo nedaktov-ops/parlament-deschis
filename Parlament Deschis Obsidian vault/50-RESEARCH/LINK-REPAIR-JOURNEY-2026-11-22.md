@@ -1429,6 +1429,19 @@ identical to the snapshot. `main` CI run `45116000848` and Deploy-verify run
 same SHA is live with all public endpoints 200. All wave verdicts remain GREEN.
 See [OWNER-ROLLOUT](../60-EVIDENCE/OWNER-ROLLOUT-2026-11-23.md).
 
+## Wave W13 — ten-agent clickable validation fleet
+
+**Code evidence — entry:** branch `test/clickable-validation`, entry HEAD
+`2da191aa3d0d049cf057feaf63f451d648d7d76f`, clean tree; local dev server
+`http://127.0.0.1:5188` HTTP 200. Backup ROOT
+`/tmp/opencode/backups/click-validation/W13`; `git bundle verify`, `tar -tzf`
+and `sha256sum -c` all exited 0. Fleet plan:
+[CLICK-VALIDATION-FLEET](../20-DIRECTION/CLICK-VALIDATION-FLEET-2026-11-23.md).
+Ten agents V-01…V-10, two batches of five, disjoint test/result paths; lead
+owns aggregation, gates and commits.
+
+_Agent results, reconciliation and verdicts pending._
+
 ## See also
 
 [CLICK-INVESTIGATION-JOURNEY](CLICK-INVESTIGATION-JOURNEY-2026-11-22.md) ·
