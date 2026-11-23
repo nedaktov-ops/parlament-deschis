@@ -67,6 +67,7 @@ export default function Voturi() {
     queryFn: () => api.voteDetail(selectedVoteId!),
     enabled: Boolean(selectedVoteId),
   });
+  const detail = voteDetailQuery.data?.data;
 
   const votes = useMemo(() => votesQuery.data?.data ?? [], [votesQuery.data]);
   const total = votesQuery.data?.total ?? 0;
@@ -351,11 +352,11 @@ export default function Voturi() {
           >
             {t("view.voturi.backToList", "← Back to votes list")}
           </button>
-          {voteDetailQuery.data && (
+          {detail && (
             <ProvenanceStamp
-              sourceUrl={voteDetailQuery.data.source_url}
-              snapshotHash={voteDetailQuery.data.snapshot_hash}
-              note={voteDetailQuery.data.truth_contract_version}
+              sourceUrl={detail.source_url}
+              snapshotHash={detail.snapshot_hash}
+              note={detail.truth_contract_version}
             />
           )}
           <RollCallTable voteId={selectedVoteId} />

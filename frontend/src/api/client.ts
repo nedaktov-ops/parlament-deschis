@@ -368,6 +368,13 @@ export interface VoteDetail {
   position_count: number;
 }
 
+/** Wire envelope returned by GET /votes/{vote_id} (api.py:1359-1381). */
+export interface VoteDetailResponse {
+  status: string;
+  data_exists: boolean;
+  data: VoteDetail | null;
+}
+
 export interface VotePositionRow {
   person_id: string;
   name_raw: string | null;
@@ -570,7 +577,7 @@ export const api = {
       return qs ? `?${qs}` : "";
     })()),
   voteDetail: (voteId: string) =>
-    get<VoteDetail>(`/votes/${encodeURIComponent(voteId)}`),
+    get<VoteDetailResponse>(`/votes/${encodeURIComponent(voteId)}`),
   votePositions: (voteId: string, query: { limit?: number; offset?: number; choice?: string } = {}) => {
     const params = new URLSearchParams();
     if (query.limit !== undefined) params.set("limit", String(query.limit));
