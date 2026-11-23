@@ -25,7 +25,7 @@ import asyncio
 import json
 import time
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -190,7 +190,7 @@ class Ctx:
         evidence_path = OUT / f"v07-evidence-{self.eid}.json"
         payload = {
             "element_id": self.eid,
-            "captured_at": datetime.now(timezone.utc).isoformat(),
+            "captured_at": datetime.now(UTC).isoformat(),
             "url": self.page.url,
             "title": None,
             "requests": self.reqs[-40:],

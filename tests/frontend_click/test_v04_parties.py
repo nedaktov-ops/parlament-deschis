@@ -24,12 +24,14 @@ import json
 import re
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from collections.abc import Callable, Coroutine
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Coroutine
+from typing import Any
 
 import pytest
-from playwright.async_api import Page, TimeoutError as PWTimeout, async_playwright
+from playwright.async_api import Page, async_playwright
+from playwright.async_api import TimeoutError as PWTimeout
 
 BASE = "http://127.0.0.1:5188"
 OUT = Path("/tmp/opencode/click-validation")
@@ -77,7 +79,7 @@ def flush() -> None:
     CONSOLE.write_text(
         json.dumps(
             {
-                "collected_at": datetime.now(timezone.utc).isoformat(),
+                "collected_at": datetime.now(UTC).isoformat(),
                 "base": BASE,
                 "pages_visited": visited,
                 "console_errors": console_errors,
@@ -105,7 +107,7 @@ async def evidence(
     path = OUT / f"v04-evidence-{eid}.json"
     capture = dict(capture)
     capture["element_id"] = eid
-    capture["captured_at"] = datetime.now(timezone.utc).isoformat()
+    capture["captured_at"] = datetime.now(UTC).isoformat()
     path.write_text(
         json.dumps(capture, indent=2, ensure_ascii=False, default=str), encoding="utf-8"
     )

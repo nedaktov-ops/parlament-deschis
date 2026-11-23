@@ -360,7 +360,6 @@ def c05_dead() -> None:
     ]
     for eid, label, src, pattern, hits in checks:
         setctx(eid)
-        file_absent = any(src.endswith(x) for x in absent_files)
         if eid in ("C05-037", "C05-038", "C05-039", "C05-043", "C05-044"):
             component = src
             present = (REPO / "frontend/src/components" / component).exists()
@@ -411,7 +410,7 @@ def route_matches(target: str, route: str) -> bool:
     ts, rs = target.strip("/").split("/"), route.strip("/").split("/")
     if len(ts) != len(rs):
         return False
-    return all(r.startswith("$") or t == r for t, r in zip(ts, rs))
+    return all(r.startswith("$") or t == r for t, r in zip(ts, rs, strict=False))
 
 
 def matched_routes(target: str, routes: list[str]) -> list[str]:
@@ -589,7 +588,7 @@ def c06_targets() -> None:
     api_calls = client_api_calls(client)
     backend = backend_routes()
     vercel = read_rel("vercel.json")
-    main_py = read_rel("backend/main.py")
+    read_rel("backend/main.py")
 
     # -- 27 router.tsx literal targets -------------------------------------
     literals: list[dict] = []
@@ -628,7 +627,7 @@ def c06_targets() -> None:
             "C06-target",
             f"frontend/src/router.tsx:{lit['line']}",
             f"resolve literal {lit['kind']} navigation target",
-            f"target resolves to a registered route",
+            "target resolves to a registered route",
             obs,
             "PASS" if ok else "FAIL",
             extra={
@@ -878,7 +877,7 @@ def c07_checks(guards: list[dict]) -> None:
         "C07-check",
         "scripts/ui_validate.py:47-75",
         "source-parse the 24 static ROUTES and resolve each against the route tree",
-        f"all declared routes resolve (no browser/axe run in V-10)",
+        "all declared routes resolve (no browser/axe run in V-10)",
         f"declared={len(paths)}; unmatched={missing}",
         "PASS" if paths and not missing else "FAIL",
         extra={

@@ -19,17 +19,15 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import re
 import subprocess
 import time
 import traceback
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-import pytest
 from playwright.async_api import async_playwright
 
 BASE = "http://127.0.0.1:5188"
@@ -90,7 +88,7 @@ CTX = Ctx()
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+    return datetime.now(UTC).isoformat(timespec="milliseconds")
 
 
 def api_get(path: str):
@@ -1131,7 +1129,7 @@ async def run_all() -> None:
                     line,
                     f"click sortable header '{label}'",
                     "th aria-sort changes to ascending/descending and row order updates",
-                    lambda lbl=label, e=eid: check_sort(page, e, lbl, line),
+                    lambda lbl=label, e=eid, line=line: check_sort(page, e, lbl, line),
                     screenshot=None,
                 )
 
@@ -1193,7 +1191,7 @@ async def run_all() -> None:
 
 def test_v03_traseism_clickables():
     """Execute the fleet slice and persist artifacts; findings are rows, not raises."""
-    run_summary = asyncio.run(run_all())
+    _run_summary = asyncio.run(run_all())
 
     OUT.mkdir(parents=True, exist_ok=True)
     # Deterministic inventory order: exactly one row per assigned ID, plus the

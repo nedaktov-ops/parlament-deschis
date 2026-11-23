@@ -28,7 +28,7 @@ import json
 import re
 import time
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -125,7 +125,7 @@ def api(path: str, timeout: int = 15):
 
 def resolve_data() -> dict:
     """Resolve every data-dependent value from the served API at runtime."""
-    data: dict = {"resolved_at": datetime.now(timezone.utc).isoformat(), "errors": []}
+    data: dict = {"resolved_at": datetime.now(UTC).isoformat(), "errors": []}
 
     def step(name, fn, default=None):
         try:

@@ -28,10 +28,11 @@ import re
 import subprocess
 import urllib.parse
 import urllib.request
+from collections.abc import Callable
+from datetime import UTC, datetime
 from datetime import date as date_cls
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from playwright.async_api import async_playwright
 
@@ -68,7 +69,7 @@ RESOLVERS = {
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def api_get(path: str) -> Any:
@@ -171,7 +172,7 @@ def attach_listeners(page: Any, ctx: Ctx) -> None:
         if msg.type == "error":
             ctx.console.append(
                 {
-                    "ts": datetime.now(timezone.utc).timestamp(),
+                    "ts": datetime.now(UTC).timestamp(),
                     "element": ctx.current_id,
                     "kind": "console.error",
                     "test_induced": ctx.test_induced,
@@ -183,7 +184,7 @@ def attach_listeners(page: Any, ctx: Ctx) -> None:
     def on_pageerror(exc: Any) -> None:
         ctx.console.append(
             {
-                "ts": datetime.now(timezone.utc).timestamp(),
+                "ts": datetime.now(UTC).timestamp(),
                 "element": ctx.current_id,
                 "kind": "pageerror",
                 "test_induced": ctx.test_induced,

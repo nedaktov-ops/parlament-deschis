@@ -24,9 +24,10 @@ import json
 import re
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from playwright.async_api import async_playwright
 
@@ -61,7 +62,7 @@ RESOLVERS = {
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def api_get(path: str) -> Any:

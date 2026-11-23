@@ -595,8 +595,8 @@ async def navigation(browser) -> None:
             txt = (await link.inner_text())[:40]
             try:
                 await link.click(timeout=10_000)
-                await page.wait_for_url(lambda u: path_of(u) == target, timeout=15_000)
-            except Exception as exc:  # noqa: BLE001
+                await page.wait_for_url(lambda u, target=target: path_of(u) == target, timeout=15_000)
+            except Exception:  # noqa: BLE001
                 pass
             landed = path_of(page.url)
             obs = f"index={idx}; label={txt!r}; href={href!r}; landed path={landed}"
@@ -620,7 +620,7 @@ async def navigation(browser) -> None:
             txt = (await link.inner_text())[:40]
             try:
                 await link.click(timeout=10_000)
-                await page.wait_for_url(lambda u: path_of(u) == target, timeout=15_000)
+                await page.wait_for_url(lambda u, target=target: path_of(u) == target, timeout=15_000)
             except Exception:  # noqa: BLE001
                 pass
             landed = path_of(page.url)
@@ -686,7 +686,7 @@ async def footer(browser) -> None:
             txt = (await link.inner_text())[:40]
             try:
                 await link.click(timeout=10_000)
-                await page.wait_for_url(lambda u: path_of(u) == target, timeout=15_000)
+                await page.wait_for_url(lambda u, target=target: path_of(u) == target, timeout=15_000)
             except Exception:  # noqa: BLE001
                 pass
             landed = path_of(page.url)
