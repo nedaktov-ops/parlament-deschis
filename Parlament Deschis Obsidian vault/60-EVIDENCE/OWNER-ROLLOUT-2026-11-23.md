@@ -110,6 +110,42 @@ same SHA is **live**, with SPA, `/api` rewrite, health, coverage and traseism al
 scheduled `Data` workflow failure at `12:48Z` is unrelated to this rollout and
 is not claimed as fixed.
 
+## Independent post-deployment verification (fresh checks)
+
+Re-verified from scratch after the rollout, using live commands rather than
+earlier reports:
+
+| Target | Check | Observed |
+|---|---|---|
+| GitHub | `git fetch && git rev-parse origin/main` | `2f79b031505d6cfe237c77ff82619260ce11c821` |
+| GitHub | `gh pr view 77` | `MERGED`, merge SHA identical to `origin/main` |
+| GitHub | `git show origin/main:frontend/src/pages/Traseism.tsx` | L-25 guard present: `if (!query.isSuccess) return;` at :313 |
+| GitHub | `git show origin/main:frontend/src/api/client.ts` + `Voturi.tsx` | `VoteDetailResponse` at :372, `get<VoteDetailResponse>` at :580, `const detail = voteDetailQuery.data?.data` at :70 |
+| GitHub | `git ls-tree origin/main tests/frontend_click/` | all ten `test_v01…v10` suites present |
+| GitHub | `gh run view 45181922067` / `45182314181` | CI success on head `2f79b03…`; Deploy verify success on the same SHA |
+| GitHub | protection API | 4 required checks, review 1, enforce-admins true, force/delete false — restored |
+| Vercel | MCP `get_deployment dpl_4Tt5S8xtbqwsEXPCvv8kNLqcSL5b` | `READY`, target production, sha `2f79b03…`, branch main, alias `parlament-deschis.vercel.app`; runtime-error query 24h → none |
+| Vercel | public `curl /` and `/api/health` | `/` 200 with root div; `/api/health` first attempt timed out at 30 s (cold upstream), retry 200 in 0.36 s with release `data-20261121-votes-001` |
+| Render | public endpoints | `/api/health`, `/live`, `/ready`, `/coverage`, `/traseism/overview` all 200; health persons 3381 / memberships 6614, correct release tag |
+| Render | Deploy-verify log | `Render: deploy for 2f79b031… is live`; SPA, `/api` rewrite, health, coverage, traseism 200 |
+
+**Production behavior of the two repaired defects (browser, Vercel origin):**
+
+- `/traseism?date=2024-01-01&chamber=deputies&legislature=2024`: clicking
+  "Pagina următoare" changed "Pagina 1 din 2" → "Pagina 2 din 2" and enabled
+  "Pagina anterioară" — raw capture `/tmp/opencode/verify-prod-pagination2.json`.
+  The first attempt used the wrong button label and was discarded, not claimed.
+- `/Voturi?date=2026-11-22` with a clicked vote row: exactly one
+  "Vezi sursa originală ↗" anchor with
+  `href=https://www.cdep.ro/ords/pls/steno/evot2015.xml?par1=2&par2=34551`,
+  `target=_blank`, `rel=noopener noreferrer` — raw capture
+  `/tmp/opencode/verify-prod-provenance2.json`.
+
+**Conclusion:** the most recent updates are entirely, accurately and
+successfully deployed on all three systems. The transient 30 s Vercel API
+timeout is disclosed; its retry and the Deploy-verify log both show 200. An
+unrelated scheduled `Data` workflow failure at `12:48Z` is outside this rollout.
+
 ## See also
 
 [LINK-REPAIR-JOURNEY](../50-RESEARCH/LINK-REPAIR-JOURNEY-2026-11-22.md) W12 ·

@@ -1596,6 +1596,11 @@ exact prior state. Main CI `45181922067` and Deploy-verify `45182314181`
 succeeded; Vercel `dpl_4Tt5S8xtbqwsEXPCvv8kNLqcSL5b` READY on the production
 alias, Render deploy for the same SHA live. Full evidence:
 [OWNER-ROLLOUT](../60-EVIDENCE/OWNER-ROLLOUT-2026-11-23.md) §Second owner rollout.
+A fresh independent verification then confirmed `origin/main`, both repaired
+code paths and all ten test suites in `main`, Vercel deployment READY with no
+runtime errors, Render deploy live, all public endpoints 200, and the two fixed
+behaviors working on the Vercel origin (pagination 1→2; provenance anchor with
+the correct `data.source_url`). See §Independent post-deployment verification.
 
 ## See also
 
