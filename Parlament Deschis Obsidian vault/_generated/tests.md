@@ -7,9 +7,9 @@ status: active
 authority: mirror
 tags: [type/reference, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py, tests/]
-created: 2026-11-22T23:07:32+02:00
-updated: 2026-11-22T23:07:32+02:00
-source_commit: 0481541ed433dfffcaeb94ebd660fe81fee364c8
+created: 2026-11-23T14:32:59+02:00
+updated: 2026-11-23T14:32:59+02:00
+source_commit: a130bb5cccc64ac9e1292c1e43d2424ce9c82411
 generated: true
 generator: scripts/vault_sync.py
 ---
@@ -20,13 +20,23 @@ generator: scripts/vault_sync.py
 
 Counts come from the source-commit versions of tracked files under `tests/`.
 
-- Python test files: 52; `def test_` definitions: 392.
+- Python test files: 62; `def test_` definitions: 402.
 - Bats test files: 0; `@test` cases: 0.
 
 | File | Pattern | Count |
 |---|---|---:|
 | `tests/__init__.py` | `def test_` | 0 |
 | `tests/conftest.py` | `def test_` | 0 |
+| `tests/frontend_click/test_v01_shell.py` | `def test_` | 1 |
+| `tests/frontend_click/test_v02_overview.py` | `def test_` | 1 |
+| `tests/frontend_click/test_v03_traseism.py` | `def test_` | 1 |
+| `tests/frontend_click/test_v04_parties.py` | `def test_` | 1 |
+| `tests/frontend_click/test_v05_mps_person.py` | `def test_` | 1 |
+| `tests/frontend_click/test_v06_institutional.py` | `def test_` | 1 |
+| `tests/frontend_click/test_v07_votes.py` | `def test_` | 1 |
+| `tests/frontend_click/test_v08_analytics.py` | `def test_` | 1 |
+| `tests/frontend_click/test_v09_primitives.py` | `def test_` | 1 |
+| `tests/frontend_click/test_v10_crosscut.py` | `def test_` | 1 |
 | `tests/test_admin_lockout.py` | `def test_` | 4 |
 | `tests/test_analytics.py` | `def test_` | 5 |
 | `tests/test_analytics_transparency.py` | `def test_` | 3 |
