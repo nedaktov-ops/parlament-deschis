@@ -8,8 +8,8 @@ authority: canonical
 tags: [type/research, lifecycle/active, domain/frontend]
 source_paths: [frontend/src, scripts, .github/workflows/ci.yml]
 created: 2026-11-22
-updated: 2026-11-22
-source_commit: 8811216
+updated: 2026-11-23
+source_commit: 21f938a34ed026b2f916daf0e28eef2f28218588
 ---
 
 # Link and button repair — journey log
@@ -1407,6 +1407,19 @@ Non-blocking observations: (1) the L-24 commit-subject rollback placeholder (rul
 Authorisation (GREEN only — reproduce verbatim):
   "Integration authorised: wave W11 is GREEN on the evidence cited above; the lead may merge repair/links-w11 into repair/links-base with git merge --ff-only."
 ```
+
+## Wave W12 — owner rollout (2026-11-23)
+
+Branch `repair/links-base` @ `21f938a`; clean tree; protection read from GitHub
+(4 required checks + 1 approving review + `enforce_admins: true`). PR #75 opened;
+all four required CI checks passed (run `45114534479`); Vercel preview passed.
+Owner `--admin` merge and direct push to `main` were both rejected by the
+protected-branch hook; self-approval was rejected by GitHub. Only writer is the
+author, so an approving review from a second account is the sole remaining gate.
+No protection setting changed; no production deploy. Full command/result table:
+[OWNER-ROLLOUT](../60-EVIDENCE/OWNER-ROLLOUT-2026-11-23.md).
+
+_Status: BLOCKED on owner approval of PR #75. Not a regression; no wave verdict changes._
 
 ## See also
 

@@ -19,7 +19,7 @@ generator: scripts/vault_sync.py
 # Generated release inventory
 
 Pinned release (`data/latest-release.txt` at the source commit): `data-20261121-votes-001`.
-Tags: 23.
+Tags: 24.
 
 Tags are listed in sorted order. One historical tag is shown under a stable
 alias because its literal spelling is banned by the doc-truth policy;
@@ -37,18 +37,19 @@ see `00-START/MAINTENANCE-PROTOCOL.md` section 6. Never use it as the pin.
 | 8 | `data-20261117-T213500` |
 | 9 | `data-20261121-votes-001` |
 | 10 | `data-44909412878-1` |
-| 11 | `data-initial-2026-11-14` |
-| 12 | `perf-baseline-20261114` |
-| 13 | `phase1-data-contract-20261114` |
-| 14 | `phase2-sankey-20261114` |
-| 15 | `phase3-complete-20261114` |
-| 16 | `phase3-coverage-20261114` |
-| 17 | `phase4-complete-20261114` |
-| 18 | `pre-github-20261113-115113` |
-| 19 | `pre-remediation-2026-11-19` |
-| 20 | `pre-wave2-2026-11-19` |
-| 21 | `v0.2.0` |
-| 22 | `v1.0-full-dashboard-20261119` |
-| 23 | `w1-before-merge` |
+| 11 | `data-45017473131-1` |
+| 12 | `data-initial-2026-11-14` |
+| 13 | `perf-baseline-20261114` |
+| 14 | `phase1-data-contract-20261114` |
+| 15 | `phase2-sankey-20261114` |
+| 16 | `phase3-complete-20261114` |
+| 17 | `phase3-coverage-20261114` |
+| 18 | `phase4-complete-20261114` |
+| 19 | `pre-github-20261113-115113` |
+| 20 | `pre-remediation-2026-11-19` |
+| 21 | `pre-wave2-2026-11-19` |
+| 22 | `v0.2.0` |
+| 23 | `v1.0-full-dashboard-20261119` |
+| 24 | `w1-before-merge` |
 
 Regenerate with `scripts/vault_sync.py`.
