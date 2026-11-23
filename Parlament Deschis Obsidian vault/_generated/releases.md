@@ -7,9 +7,9 @@ status: active
 authority: mirror
 tags: [type/reference, lifecycle/active, domain/ops]
 source_paths: [scripts/vault_sync.py, data/latest-release.txt]
-created: 2026-11-23T15:03:00+02:00
-updated: 2026-11-23T15:03:00+02:00
-source_commit: 44671816ba2c07ff8607ba0bda4df2a3e207c7bd
+created: 2026-11-23T15:11:40+02:00
+updated: 2026-11-23T15:11:40+02:00
+source_commit: f17c5376c6977a6a2ef859234c4aebbe0ea6f1c5
 generated: true
 generator: scripts/vault_sync.py
 ---
@@ -19,7 +19,7 @@ generator: scripts/vault_sync.py
 # Generated release inventory
 
 Pinned release (`data/latest-release.txt` at the source commit): `data-20261121-votes-001`.
-Tags: 24.
+Tags: 25.
 
 Tags are listed in sorted order. One historical tag is shown under a stable
 alias because its literal spelling is banned by the doc-truth policy;
@@ -38,18 +38,19 @@ see `00-START/MAINTENANCE-PROTOCOL.md` section 6. Never use it as the pin.
 | 9 | `data-20261121-votes-001` |
 | 10 | `data-44909412878-1` |
 | 11 | `data-45017473131-1` |
-| 12 | `data-initial-2026-11-14` |
-| 13 | `perf-baseline-20261114` |
-| 14 | `phase1-data-contract-20261114` |
-| 15 | `phase2-sankey-20261114` |
-| 16 | `phase3-complete-20261114` |
-| 17 | `phase3-coverage-20261114` |
-| 18 | `phase4-complete-20261114` |
-| 19 | `pre-github-20261113-115113` |
-| 20 | `pre-remediation-2026-11-19` |
-| 21 | `pre-wave2-2026-11-19` |
-| 22 | `v0.2.0` |
-| 23 | `v1.0-full-dashboard-20261119` |
-| 24 | `w1-before-merge` |
+| 12 | `data-45177732268-1` |
+| 13 | `data-initial-2026-11-14` |
+| 14 | `perf-baseline-20261114` |
+| 15 | `phase1-data-contract-20261114` |
+| 16 | `phase2-sankey-20261114` |
+| 17 | `phase3-complete-20261114` |
+| 18 | `phase3-coverage-20261114` |
+| 19 | `phase4-complete-20261114` |
+| 20 | `pre-github-20261113-115113` |
+| 21 | `pre-remediation-2026-11-19` |
+| 22 | `pre-wave2-2026-11-19` |
+| 23 | `v0.2.0` |
+| 24 | `v1.0-full-dashboard-20261119` |
+| 25 | `w1-before-merge` |
 
 Regenerate with `scripts/vault_sync.py`.

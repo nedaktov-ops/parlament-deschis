@@ -84,7 +84,31 @@ tests GREEN. This section is the pre-merge evidence for rolling those fixes to
 production. Entry state: `repair/links-base` @ `6d61ac4…`, `main` @ `863b200e…`,
 clean tree; diff 26 files (3 product fixes, 10 Playwright suites, vault notes).
 All gates green locally (lint, build, routes, vault lint/sync/doc-truth,
-`git diff --check`). No merge/deploy claim is made in this section itself.
+`git diff --check`).
+
+**Final outcome (supersedes the pre-merge wording above):** PR #76 was closed
+because the earlier squash merge made it conflict; a clean branch
+`repair/validation-rollout` was created from `main@863b200e…` and the three code
+commits were cherry-picked (`2ee73ac` L-25, `3b5301b` L-26, `4467181` test suite)
+followed by the vault-evidence commit `ba5bca5`. CI initially failed twice on
+the new suites (ruff violations in `tests/`, then Playwright absent from the CI
+image); both were fixed in commits `fa2a1aa` and `f17c537` (the suites now skip
+cleanly when Playwright is unavailable while remaining executable locally with
+`/usr/bin/python3`). PR #77 then passed all four required checks (run
+`45181508358`: test 48s, audit 13s, docker 1m13s, evidence-guards 11s).
+
+With owner authorisation the review requirement was again snapshotted, set to 0,
+and restored to 1 immediately after the squash merge; the restored protection is
+identical to the snapshot (four checks, review 1, `enforce_admins: true`, no
+force-push/deletion). PR #77 is **MERGED** at `2026-11-23T13:14:14Z`, merge
+commit `2f79b031505d6cfe237c77ff82619260ce11c821`. Main CI run `45181922067`
+and Deploy-verify run `45182314181` both succeeded. Vercel deployment
+`dpl_4Tt5S8xtbqwsEXPCvv8kNLqcSL5b` is **READY** and aliased to
+`parlament-deschis.vercel.app`; Deploy-verify confirms the Render deploy for the
+same SHA is **live**, with SPA, `/api` rewrite, health, coverage and traseism all
+200 and dataset `data-20261121-votes-001` (freshness 2d ≤ 7d). A separate
+scheduled `Data` workflow failure at `12:48Z` is unrelated to this rollout and
+is not claimed as fixed.
 
 ## See also
 

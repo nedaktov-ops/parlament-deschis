@@ -1587,7 +1587,15 @@ defects found by the ten-agent validation fleet were repaired on this branch
 gates exit 0. Pre-merge evidence:
 [OWNER-ROLLOUT](../60-EVIDENCE/OWNER-ROLLOUT-2026-11-23.md) §Second owner rollout.
 
-_Push/merge and Vercel/Render verification pending._
+**Resolved:** PR #76 (conflicting after the earlier squash merge) was closed;
+clean branch `repair/validation-rollout` from `main@863b200e…` carried the three
+code commits plus vault evidence. After two CI lint/tooling failures were fixed,
+PR #77 passed all four required checks and was squash-merged at
+`2f79b031…`. Owner-authorised temporary review relaxation was restored to its
+exact prior state. Main CI `45181922067` and Deploy-verify `45182314181`
+succeeded; Vercel `dpl_4Tt5S8xtbqwsEXPCvv8kNLqcSL5b` READY on the production
+alias, Render deploy for the same SHA live. Full evidence:
+[OWNER-ROLLOUT](../60-EVIDENCE/OWNER-ROLLOUT-2026-11-23.md) §Second owner rollout.
 
 ## See also
 
