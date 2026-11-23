@@ -33,7 +33,9 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from playwright.async_api import async_playwright
+
+pytest.importorskip("playwright", reason="external Playwright validation tool; see scripts/ui_validate.py")
+from playwright.async_api import async_playwright  # noqa: E402
 
 BASE = "http://127.0.0.1:5188"
 CHROMIUM = "/usr/bin/chromium"

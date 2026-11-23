@@ -35,7 +35,10 @@ import subprocess
 import time
 from pathlib import Path
 
-from playwright.async_api import async_playwright
+import pytest
+
+pytest.importorskip("playwright", reason="external Playwright validation tool; see scripts/ui_validate.py")
+from playwright.async_api import async_playwright  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 OUT = Path("/tmp/opencode/click-validation")

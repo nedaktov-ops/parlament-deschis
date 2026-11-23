@@ -24,7 +24,10 @@ import urllib.request
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from playwright.async_api import async_playwright
+import pytest
+
+pytest.importorskip("playwright", reason="external Playwright validation tool; see scripts/ui_validate.py")
+from playwright.async_api import async_playwright  # noqa: E402
 
 BASE = "http://127.0.0.1:5188"
 OUT = Path("/tmp/opencode/click-validation")

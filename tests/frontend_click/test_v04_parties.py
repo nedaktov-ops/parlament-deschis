@@ -30,8 +30,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from playwright.async_api import Page, async_playwright
-from playwright.async_api import TimeoutError as PWTimeout
+
+pytest.importorskip("playwright", reason="external Playwright validation tool; see scripts/ui_validate.py")
+from playwright.async_api import Page, async_playwright  # noqa: E402
+from playwright.async_api import TimeoutError as PWTimeout  # noqa: E402
 
 BASE = "http://127.0.0.1:5188"
 OUT = Path("/tmp/opencode/click-validation")
