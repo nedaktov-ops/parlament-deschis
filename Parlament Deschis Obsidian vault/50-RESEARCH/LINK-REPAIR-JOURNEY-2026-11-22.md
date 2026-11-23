@@ -1452,7 +1452,17 @@ Corrective recipes L-25/W14 and L-26/W15 authored by the supervisor with
 disjoint file sets. Full report:
 [CLICK-VALIDATION-FLEET](../60-EVIDENCE/CLICK-VALIDATION-FLEET-2026-11-23.md).
 
-_W14 and W15 corrections, regression re-runs and supervisor verdicts pending._
+### W14/W15 corrective wave
+
+Branch `repair/click-validation-fixes` from `4173c927…`; backup ROOT
+`/tmp/opencode/backups/click-validation/W14` verified (`git bundle verify`,
+`tar -tzf`, `sha256sum -c` exit 0). Two disjoint agents:
+L-25 owns `frontend/src/pages/Traseism.tsx` + `tests/frontend_click/test_v03_traseism.py`;
+L-26 owns `frontend/src/api/client.ts`, `frontend/src/pages/Voturi.tsx` +
+`tests/frontend_click/test_v07_votes.py`. Each agent must re-run its own test
+and prove FAIL → PASS; lead owns gates, commits and aggregation.
+
+_Corrections, regression re-runs and supervisor verdicts pending._
 
 ## See also
 
