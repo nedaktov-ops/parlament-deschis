@@ -310,8 +310,9 @@ function SwitchLedger({
   const total = query.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   useEffect(() => {
+    if (!query.isSuccess) return; // a newly-keyed, pending query has total=0
     setPage((p) => Math.min(p, totalPages - 1));
-  }, [totalPages]);
+  }, [query.isSuccess, totalPages]);
   const from = total === 0 ? 0 : page * PAGE_SIZE + 1;
   const to = Math.min((page + 1) * PAGE_SIZE, total);
 
