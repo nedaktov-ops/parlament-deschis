@@ -106,6 +106,16 @@ Results are **local dev only** — no production claim. axe/AT, data-dependent
 links and external reachability remain NOT PROVEN with the resolvers above. This
 report is an aggregation of executed tests, not a new investigation.
 
+## 7. Post-correction state (W14)
+
+After L-25 and L-26, the re-run JSON totals are **365 items — 346 PASS, 0 FAIL,
+19 SKIP**. The difference from §1 is solely the V-03 re-run: its 19 original rows
+were replaced by 20 (three FAILs flipped to PASS plus one added second-Next
+regression row). V-07 remains 14/14 PASS. All three real defects are repaired and
+regression-proven; the 19 SKIPs are unchanged, each with its named resolver.
+Supervisor verdicts: fleet W13 GREEN, L-25 GREEN, L-26 GREEN, wave W14 GREEN
+(no merge to `main` without the owner gate).
+
 ## See also
 
 [CLICK-INVESTIGATION-JOURNEY](../50-RESEARCH/CLICK-INVESTIGATION-JOURNEY-2026-11-22.md) ·

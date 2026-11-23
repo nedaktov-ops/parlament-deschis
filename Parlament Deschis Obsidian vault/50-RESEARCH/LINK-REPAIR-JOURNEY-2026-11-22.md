@@ -1452,6 +1452,37 @@ Corrective recipes L-25/W14 and L-26/W15 authored by the supervisor with
 disjoint file sets. Full report:
 [CLICK-VALIDATION-FLEET](../60-EVIDENCE/CLICK-VALIDATION-FLEET-2026-11-23.md).
 
+### Supervisor sign-off — fleet (§F template)
+
+```text
+WAVE SIGN-OFF
+Wave ID:            W13 (ten-agent clickable validation fleet)
+Recipes:            V-01…V-10, two batches of five, one Playwright test file and one vNN-* artifact prefix each (CLICK-VALIDATION-FLEET §2)
+Entry HEAD/branch:  2da191aa3d0d049cf057feaf63f451d648d7d76f / test/clickable-validation (W13 :1434-1435); main and origin/main 863b200e1adc70aadb289fdd4df52a7e5be2c483 (supervisor re-read)
+Backup ROOT:        /tmp/opencode/backups/click-validation/W13
+Manifest evidence:  git bundle verify, tar -tzf and sha256sum -c exit 0 at entry (W13 :1436-1438); pre.sha = 2da191aa3d0d049cf057feaf63f451d648d7d76f; supervisor re-read manifest-check.txt (four OK lines).
+Diff/artifacts:     ten disjoint test files under tests/frontend_click/ and ten disjoint /tmp/opencode/click-validation/vNN-* result prefixes; no agent committed or edited the vault. Supervisor recomputed from the ten vNN-results.json files: all 258 inventory IDs from C-01…C-05 present exactly once, zero duplicates.
+Results:            pre-correction fleet record W13 :1445-1447 — 364 items, 342 PASS, 3 FAIL, 19 SKIP; supervisor recomputed the same partition from the then-current JSON. Current JSON after the W14 corrections: 365 items, 346 PASS, 0 FAIL, 19 SKIP — the delta is exactly the three FAIL→PASS flips plus one added second-Next regression row in V-03. Both records are consistent; the current files are the post-fix state.
+Console:            supervisor reclassified all ten vNN-console.json files: every captured console.error is induced/test-injected and labelled (V-01 2, V-02 12, V-03 27, V-06 22, V-08 13, V-09 19; others 0); non-induced product errors = 0. Induced retry errors are recorded, not suppressed, and do not trigger §C R2.
+Gates:              fleet contract CLICK-VALIDATION-FLEET §5: pytest exit 0 per file / all ten result JSONs valid and schema-conformant / every evidence artifact present / 258-ID reconciliation / four vault gates. Supervisor independently re-ran at final state: python3 scripts/vault_lint.py → "VAULT LINT PASS: 79 notes", python3 scripts/vault_sync.py --check → "clean — 5 generated notes", bash scripts/check-doc-truth.sh → "false-claims: 0", git diff --check → no output — all exit 0.
+Findings:           three real FAILs, all validated with raw artifacts — C02-026/C02-027 (Traseism pagination clamp regression from W2/L-06; corrective recipe L-25) and C04-012 (vote-detail envelope not unwrapped; corrective recipe L-26). Per fleet §6 a FAIL is a finding, not an automatic RED, provided the validation was sound; both recipes were authored before W14 and executed there.
+Acceptance items:   10/10 agents GREEN; 342 PASS + 3 FAIL + 19 SKIP reconciled; 19/19 SKIP rows carry a named resolver; zero non-induced console errors; every FAIL has an approved corrective recipe.
+Verdict:            GREEN (fleet)
+
+Citations (exact note/section or file:line for every judgement):
+  - This note W13 :1432-1453; master report 60-EVIDENCE/CLICK-VALIDATION-FLEET-2026-11-23.md (counts, SKIP resolvers, console classification, findings); per-agent vNN-results.json and vNN-console.json; raw v07-evidence-C04-012.json and v03-evidence-C02-026/C02-027.json.
+  - CLICK-VALIDATION-FLEET §5 (gates and verdict conditions), §6 (write-back); supervision protocol §C (G1-G8, A2, A5, R1-R9), §D, §E; corrective notes LINK-PAGINATION-CORRECTION and LINK-PROVENANCE-CORRECTION.
+  - Supervisor read-only re-verification (2026-11-23): branch/entry HEAD, backup manifests, ten result JSONs (258-ID reconciliation, status totals, SKIP resolvers), ten console JSONs (induced classification), four vault gates re-run, main/origin/main unchanged. No browser or network tool was run by the supervisor.
+
+Required remediations (owner: lead; each must be closed before next verdict):
+  - none at fleet level. The three FAILs are validated findings closed by L-25/L-26 in W14, not W13 remediations.
+
+Non-blocking observation: the lead-authored W13 section records results and console classification but not a per-command gate table; the master report and the supervisor re-run above supply the required command/exit evidence. Future fleet waves should attach per-command gate excerpts in the lead-authored section (§D item 5, G4).
+
+Authorisation (GREEN only — reproduce verbatim):
+  "Integration authorised: wave W13 is GREEN on the evidence cited above; the lead may merge test/clickable-validation into repair/links-base with git merge --ff-only."
+```
+
 ### W14/W15 corrective wave
 
 Branch `repair/click-validation-fixes` from `4173c927…`; backup ROOT
@@ -1481,7 +1512,72 @@ validation suite). Combined diff: 3 product files + 10 test files.
 - Gates: lint, build, routes guard, py_compile, four vault gates, `git diff
   --check` all exit 0; `_generated/*` regenerated by `vault_sync.py`.
 
-Supervisor verdict pending. No merge to `main` without the owner gate.
+### Supervisor per-recipe verdicts
+
+**L-25 (pagination clamp) — GREEN.** Root cause was verified independently:
+`Traseism.tsx:309-314` derived `totalPages` from `query.data` and the W2/L-06
+clamp reset `page` to 0 on the transient `total=0` of a newly-keyed pending
+query. The committed change at `65e786f` guards the clamp with
+`if (!query.isSuccess) return;` and depends on `[query.isSuccess, totalPages]`,
+preserving L-06's no-out-of-range-page goal. V-03 re-run recorded 20/20 PASS
+(19 IDs + the new second-Next regression row): C02-026 and C02-027 flipped
+FAIL → PASS, `Pagina 1 din 2 → 2 din 2`, first row changed, Previous enabled,
+and the deeper 2012/deputies scope reached pages 2 and 3 with offsets 25/50
+(W14 results :1472-1476; current v03-results.json recomputed 20/20 PASS).
+No scope reset, query key, `PAGE_SIZE`, `staleTime` or `disabled` predicate was
+changed (supervisor re-read the diff). Acceptance 5/5 PASS.
+
+**L-26 (vote-detail provenance) — GREEN.** Backend `api.py:1344-1381` returns
+the envelope `{status, data_exists, data:{source_url…}}`; `client.ts` declared
+the unwrapped `VoteDetail` and `Voturi.tsx:354-359` read top-level fields, so
+`ProvenanceStamp` returned null. The committed change at `fc301b4` adds the
+`VoteDetailResponse` envelope type, corrects `voteDetail()`'s return type and
+unwraps `data?.data` at the call site — consistent with RollCallTable, Radar,
+Committees and Ideology. V-07 re-run recorded 14/14 PASS: C04-012 flipped
+FAIL → PASS with exactly one provenance anchor whose href equals the live
+`data.source_url` (W14 results :1477-1480; current v07-results.json recomputed
+14/14 PASS). Labels, provenance semantics, backend and other endpoints are
+unchanged (supervisor re-read the diff). Acceptance 5/5 PASS.
+
+**L-26 commit metadata — non-blocking note (not wave-level AMBER).** The
+`fc301b4` subject carries the literal marker `<L-25-sha>` in its rollback
+field; the actual predecessor is `65e786f`, verifiable from git and recorded in
+the commit chain. No gate reads commit-subject text and the additive rollback
+command is stated in the sign-off below. Same class as the W11 L-24 subject
+marker; **do not amend** (history rewrite is forbidden).
+
+### Supervisor sign-off — corrections (§F template)
+
+```text
+WAVE SIGN-OFF
+Wave ID:            W14 (combined correction wave for L-25 and L-26; recorded as "W14/W15")
+Recipes:            L-25 (pagination, Traseism.tsx + test_v03_traseism.py), L-26 (provenance, client.ts + Voturi.tsx + test_v07_votes.py); two disjoint agents, no agent commits; lead owns commits and gates
+Entry HEAD/branch:  4173c9274031e319121eec73e8342edcb31ab9b2 / repair/click-validation-fixes; final HEAD 84bedb40629975bfe2baca48538da310f993dab2; main and origin/main still 863b200e1adc70aadb289fdd4df52a7e5be2c483 (supervisor re-read)
+Backup ROOT:        /tmp/opencode/backups/click-validation/W14 (one backup shared by both disjoint recipes)
+Manifest evidence:  git bundle verify, tar -tzf and sha256sum -c exit 0; pre.sha = 4173c9274031e319121eec73e8342edcb31ab9b2; supervisor re-read manifest-check.txt (four OK lines). W13 backup at /tmp/opencode/backups/click-validation/W13 also verified (pre.sha = 2da191aa…).
+Diff (name-only):   4173c927..84bedb4 = 3 product files (frontend/src/pages/Traseism.tsx, frontend/src/api/client.ts, frontend/src/pages/Voturi.tsx), 10 test files under tests/frontend_click/, the journey note and five regenerated _generated/* notes. L-25 and L-26 file sets are strictly disjoint (supervisor re-ran git diff --name-only on both commit ranges). Extra paths are the ten-agent suite and mandated vault write-back/regeneration, not scope breaches.
+Checkpoint SHAs:    entry 4173c927 (also L-25 rollback SHA); L-25 65e786f; L-26 fc301b4 (actual predecessor 65e786f, subject marker non-blocking); suite a130bb5; evidence 84bedb4. Additive rollback, reverse order: git revert a130bb5, git revert fc301b4, git revert 65e786f. No reset, force-push, tag move or history rewrite.
+Gates (cmd/exit):   lead-recorded at W14 :1481-1482 — npm run lint, npm run build, node scripts/check_routes_nav.mjs, python3 -m py_compile on the probe, the four vault gates and git diff --check all exit 0; _generated/* regenerated by vault_sync.py. Supervisor independently re-ran the four vault gates at final state: "VAULT LINT PASS: 79 notes" exit 0, "vault_sync --check: clean — 5 generated notes" exit 0, "false-claims: 0" exit 0, empty git diff --check exit 0. Frontend gates not re-run by the supervisor (build writes dist); recorded output examined.
+Browser evidence:   V-03 and V-07 re-runs are recorded at W14 :1472-1480 with raw v03-*/v07-* artifacts. Current v03-results.json recomputed 20/20 PASS and v07-results.json 14/14 PASS by the supervisor; the three original FAIL states are corroborated by the preserved raw C02-026/C02-027/C04-012 evidence artifacts and the W13 record. No browser tool was run by the supervisor.
+Code evidence:      supervisor re-read both committed diffs: the clamp guard at Traseism.tsx:312-315 with deps [query.isSuccess, totalPages], and VoteDetailResponse + call-site unwrap at client.ts:372,579-580 and Voturi.tsx detail guard. No label, i18n, backend, cache-policy or other-endpoint change.
+Acceptance items:   L-25 5/5 PASS; L-26 5/5 PASS; all ten agents' current result JSONs reconcile (365 items, 346 PASS, 0 FAIL, 19 SKIP with resolvers); zero non-induced console errors; four vault gates clean. Wave GREEN.
+Verdict:            GREEN (L-25 GREEN, L-26 GREEN)
+
+Citations (exact note/section or file:line for every judgement):
+  - This note W13 :1432-1453 and W14 :1455-1484; master report 60-EVIDENCE/CLICK-VALIDATION-FLEET-2026-11-23.md; corrective notes LINK-PAGINATION-CORRECTION and LINK-PROVENANCE-CORRECTION; raw v03-evidence-C02-026/C02-027.json and v07-evidence-C04-012.json.
+  - CLICK-VALIDATION-FLEET §5/§6; LINK-FOLLOWUP-PARALLEL-RECIPES §2 (disjoint ownership, overlap STOP); supervision protocol §C (G1-G8, A1, A2, A5, R1-R9), §D, §E, §F; strategy §2.5, §5, §6, §9.
+  - Supervisor read-only re-verification (2026-11-23): branch/entry/final HEAD, both backup manifests, both committed diffs, commit subjects/parents, per-recipe test re-run states from the result JSONs, all ten console JSONs (non-induced = 0), four vault gates re-run, main/origin/main unchanged.
+
+Required remediations (owner: lead; each must be closed before next verdict):
+  - none.
+
+Owner gates (explicitly NOT performed): no merge to main, no PR merge, no push to main, no deploy and no branch-protection change. main remains 863b200e1adc70aadb289fdd4df52a7e5be2c483. Any rollout of these corrections requires a separate owner decision recorded in the vault (strategy §9; W7/W12 owner sections).
+
+Non-blocking observation: the L-26 commit-subject rollback marker is ruled non-blocking above (W11 precedent); the correction record labels the two recipes W14/W15 while execution used one branch and one backup, and this sign-off covers both under wave W14.
+
+Authorisation (GREEN only — reproduce verbatim):
+  "Integration authorised: wave W14 is GREEN on the evidence cited above; the lead may merge repair/click-validation-fixes into repair/links-base with git merge --ff-only."
+```
 
 ## See also
 
