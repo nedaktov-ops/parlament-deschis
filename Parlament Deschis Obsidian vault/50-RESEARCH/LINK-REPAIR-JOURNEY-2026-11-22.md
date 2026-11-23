@@ -1579,6 +1579,16 @@ Authorisation (GREEN only — reproduce verbatim):
   "Integration authorised: wave W14 is GREEN on the evidence cited above; the lead may merge repair/click-validation-fixes into repair/links-base with git merge --ff-only."
 ```
 
+## Wave W15 — second owner rollout (validation corrections)
+
+Entry: `repair/links-base` @ `6d61ac4…`; `main` @ `863b200e…`. The three real
+defects found by the ten-agent validation fleet were repaired on this branch
+(L-25 pagination, L-26 provenance) with all regression tests GREEN and all local
+gates exit 0. Pre-merge evidence:
+[OWNER-ROLLOUT](../60-EVIDENCE/OWNER-ROLLOUT-2026-11-23.md) §Second owner rollout.
+
+_Push/merge and Vercel/Render verification pending._
+
 ## See also
 
 [CLICK-INVESTIGATION-JOURNEY](CLICK-INVESTIGATION-JOURNEY-2026-11-22.md) ·

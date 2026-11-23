@@ -75,6 +75,17 @@ evidence trail for why an owner-authorised permission action was required.
 Not applicable — GitHub/Git operations only. Vercel preview deployment passed
 as a PR check, which is not a production deployment claim.
 
+## Second owner rollout (validation fleet corrections)
+
+After the first rollout, the ten-agent validation fleet
+([results](CLICK-VALIDATION-FLEET-2026-11-23.md)) found three real
+defects; L-25 and L-26 repaired them on `repair/links-base` with all regression
+tests GREEN. This section is the pre-merge evidence for rolling those fixes to
+production. Entry state: `repair/links-base` @ `6d61ac4…`, `main` @ `863b200e…`,
+clean tree; diff 26 files (3 product fixes, 10 Playwright suites, vault notes).
+All gates green locally (lint, build, routes, vault lint/sync/doc-truth,
+`git diff --check`). No merge/deploy claim is made in this section itself.
+
 ## See also
 
 [LINK-REPAIR-JOURNEY](../50-RESEARCH/LINK-REPAIR-JOURNEY-2026-11-22.md) W12 ·
