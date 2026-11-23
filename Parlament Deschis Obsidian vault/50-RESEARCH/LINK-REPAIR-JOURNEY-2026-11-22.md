@@ -1419,7 +1419,15 @@ author, so an approving review from a second account is the sole remaining gate.
 No protection setting changed; no production deploy. Full command/result table:
 [OWNER-ROLLOUT](../60-EVIDENCE/OWNER-ROLLOUT-2026-11-23.md).
 
-_Status: BLOCKED on owner approval of PR #75. Not a regression; no wave verdict changes._
+**Resolved (same day):** the owner authorised temporary permission management;
+the review requirement was reduced to 0 with a full snapshot, PR #75 was
+squash-merged (`863b200e…`), and the requirement was restored to 1 and verified
+identical to the snapshot. `main` CI run `45116000848` and Deploy-verify run
+`45116232797` both succeeded. Vercel deployment
+`dpl_kgFLxCBrMtuxJkkwwm8WaGTDqx7h` is READY and aliased to
+`parlament-deschis.vercel.app`; Deploy-verify confirms the Render deploy for the
+same SHA is live with all public endpoints 200. All wave verdicts remain GREEN.
+See [OWNER-ROLLOUT](../60-EVIDENCE/OWNER-ROLLOUT-2026-11-23.md).
 
 ## See also
 
