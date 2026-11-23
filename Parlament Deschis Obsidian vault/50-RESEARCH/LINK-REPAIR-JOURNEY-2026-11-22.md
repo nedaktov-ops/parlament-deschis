@@ -1440,7 +1440,19 @@ and `sha256sum -c` all exited 0. Fleet plan:
 Ten agents V-01…V-10, two batches of five, disjoint test/result paths; lead
 owns aggregation, gates and commits.
 
-_Agent results, reconciliation and verdicts pending._
+### Results (recomputed from the ten `vNN-results.json` files)
+
+364 items — **342 PASS, 3 FAIL, 19 SKIP**. V-01 61/58/0/3, V-02 20/20/0/0,
+V-03 19/17/2/0, V-04 17/15/0/2, V-05 27/24/0/3, V-06 26/26/0/0,
+V-07 14/13/1/0, V-08 12/12/0/0, V-09 52/43/0/9, V-10 116/114/0/2.
+All console errors were test-induced retry probes; no product-origin error.
+Three real FAILs: C02-026/C02-027 (Traseism pagination clamp regression from
+W2/L-06) and C04-012 (vote-detail provenance envelope not unwrapped).
+Corrective recipes L-25/W14 and L-26/W15 authored by the supervisor with
+disjoint file sets. Full report:
+[CLICK-VALIDATION-FLEET](../60-EVIDENCE/CLICK-VALIDATION-FLEET-2026-11-23.md).
+
+_W14 and W15 corrections, regression re-runs and supervisor verdicts pending._
 
 ## See also
 
